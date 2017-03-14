@@ -5,8 +5,6 @@ output: html_document
 
 # Pipeline for contemporary samples
 
-Karolina & Elena & María
-
 ##  Overview & variable definition
 
 This is the pipeline for Illumina read merging and bwa mapping of modern libraries generated using the double stranded protocol. Merged and unmerged PE reads are mapped.
@@ -221,10 +219,9 @@ The base recalibration process involves two key steps:
 A) first the program builds a model of covariation based on the data and a set of known variants (which you can bootstrap if there is none available for your organism) 
 B) then it adjusts the base quality scores in the data based on the model. 
 
+### SNP calling
+
 ```{r, engine=bash, eval=FALSE}
-
-## SNP calling
-
 # Define new variables
 
 POP=("po")
@@ -250,14 +247,16 @@ java  -XX:MaxMetaspaceSize=1g -XX:+UseG1GC  -XX:+UseStringDeduplication -Xms64g 
 /opt/vcflib/bin/vcffilter -f "QD > 2 & MQ > 40 & FS < 100 " "${pop}"_n"$number_id"_raw_round-"$ROUND".vcf > "${pop}"_n"$number_id"_raw_round-"$ROUND"_filtered.vcf
 done
 
+```
 
-## Recalibration 
+### Recalibration 
+
+```{r, engine=bash, eval=FALSE}
 
 REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa
 POP=("ya")
 ROUND=1
 PREVIOUS_ROUND=$(expr $ROUND - 1)
-
 
 for pop in ${POP[@]}
 do
@@ -271,15 +270,10 @@ do
 echo $id
 java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T BaseRecalibrator -R $REF -I ${id} -knownSites "${pop}"_n"$number_id"_raw_round-"$ROUND"_filtered.vcf -o ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-"$ROUND".table}
 java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T PrintReads -R $REF -I ${id} -BQSR ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-"$ROUND".table} -o ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_round-"$ROUND".bam}
+
 # Be sure that you have install and running in R the following packages:
-# 
-# R
-# library("ggplot2")
-# library("gplots")
-# library("reshape")
-# library("grid")
-# library("tools") 
-# library("gsalib")
+# R: library("ggplot2"), library("gplots"), library("reshape"), library("grid"), library("tools"), library("gsalib")
+
 if [ "$ROUND" -eq "1" ]; 
 then
 echo "AnalyzeCovariates  round ""$ROUND" " sample ""${id}"
@@ -347,15 +341,10 @@ done
 
 cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test
 #To launch one by one
-
 POP="c_ll_po"  # <--CHANGE POP HERE
-
 screen -S "$POP"_qc_test
-
 POP="c_ll_po"  # <--CHANGE POP HERE
-
 script "$POP"_qc.log
-
 POP="c_ll_po"  # <--CHANGE POP HERE
 
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
