@@ -254,7 +254,7 @@ done
 ```{r, engine=bash, eval=FALSE}
 
 REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa
-POP=("ya")
+POP=("cr")
 ROUND=1
 PREVIOUS_ROUND=$(expr $ROUND - 1)
 
