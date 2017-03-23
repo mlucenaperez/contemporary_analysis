@@ -312,14 +312,19 @@ zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.bo
 done
 
 rm stats_LYNX_14.csv
+
+rm raw.R2 
 for sample in "${SAMPLESLIST[@]}"
 do
 echo "${sample}"
 NAME="${sample}"
-# TOTAL_SEQ="$(cat "${sample}"*.rawseq | awk '{sum+=$1}END{print sum}')"
-TOTAL_MAPPED="$(grep "in total" "${sample}".stats | cut -d "+" -f 1 ')"
-DUPLICATES="$(grep "duplicates" "${sample}"_sorted_rmdup_sorted.stats | cut -d "+" -f 1 ')"
-echo "$NAME,$TOTAL_MAPPED,$DUPLICATES">> stats_LYNX_14.csv
+TOTAL_SEQ="$(cat "${sample}"*.rawseq | awk '{sum+=$1}END{print sum}')"
+#TOTAL_MAPPED="$(grep "in total" "${sample}".stats | cut -d "+" -f 1 ')"
+#DUPLICATES="$(grep "duplicates" "${sample}"_sorted_rmdup_sorted.stats | cut -d "+" -f 1 ')"
+echo "$NAME, $TOTAL_SEQ" >> raw.R2 
+done
+
+$TOTAL_MAPPED,$DUPLICATES">> stats_LYNX_14.csv
 done
 
 
