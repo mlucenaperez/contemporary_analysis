@@ -254,7 +254,7 @@ done
 ```{r, engine=bash, eval=FALSE}
 
 REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa
-POP=("cr")
+POP=("mt")
 ROUND=1
 PREVIOUS_ROUND=$(expr $ROUND - 1)
 
@@ -268,7 +268,7 @@ echo $number_id
 for id in ${INPUT_BAMS_FOR_RECALIBRATING[@]}
 do
 echo $id
-java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T BaseRecalibrator -R $REF -I ${id} -knownSites "${pop}"_n"$number_id"_raw_round-"$ROUND"_filtered.vcf -o ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-"$ROUND".table}
+java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC  -XX:+UseStringDeduplication -Xms10g  -Xmx64g -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar   -T BaseRecalibrator -R $REF -I ${id} -knownSites "${pop}"_n"$number_id"_raw_round-"$ROUND"_filtered.vcf -o ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-"$ROUND".table}
 java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T PrintReads -R $REF -I ${id} -BQSR ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-"$ROUND".table} -o ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_round-"$ROUND".bam}
 
 # Be sure that you have install and running in R the following packages:
@@ -312,8 +312,15 @@ zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.bo
 done
 
 rm stats_LYNX_14.csv
-
 rm raw.R2 
+
+for sample in "${SAMPLESLIST[@]}"
+do
+cat "${sample}"*.borrar1.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R1.rawseq
+cat "${sample}"*.borrar2.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R2.rawseq
+done
+
+
 for sample in "${SAMPLESLIST[@]}"
 do
 echo "${sample}"
@@ -321,15 +328,24 @@ NAME="${sample}"
 TOTAL_SEQ="$(cat "${sample}"*.rawseq | awk '{sum+=$1}END{print sum}')"
 #TOTAL_MAPPED="$(grep "in total" "${sample}".stats | cut -d "+" -f 1 ')"
 #DUPLICATES="$(grep "duplicates" "${sample}"_sorted_rmdup_sorted.stats | cut -d "+" -f 1 ')"
-echo "$NAME, $TOTAL_SEQ" >> raw.R2 
+echo "$NAME, $TOTAL_SEQ" >> raw.stats 
 done
 
-$TOTAL_MAPPED,$DUPLICATES">> stats_LYNX_14.csv
+```
+
+## Coverage
+
+```{r, engine=bash, eval=FALSE}
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+
+SAMPLELIST=($(ls *bam | uniq ))
+for sample in "${SAMPLELIST[@]}"
+do
+java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC  -XX:+UseStringDeduplication -Xms10g  -Xmx64g -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -I ${sample} -o ${sample/.bam/.coverage} -T DepthOfCoverage -R $REF
 done
 
-
-# declare -A BARCODEID=(["C9KH6ANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KN6ANXX_7_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_1_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_2_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_3_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_4_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KH6ANXX_5_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KN6ANXX_7_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_1_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_2_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_3_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_4_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_5_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KH6ANXX_5_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KN6ANXX_7_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_1_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_2_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_3_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_4_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_5_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KH6ANXX_5_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KN6ANXX_7_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_1_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_2_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_3_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_4_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_5_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KH6ANXX_5_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KN6ANXX_7_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_1_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_2_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_3_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_4_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_5_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KH6ANXX_5_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KN6ANXX_7_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_1_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_2_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_3_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_4_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_5_LYNX7-706ii5-4"]="h_lp_mt_1025" ["CA3D2ANXX_3_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KH6ANXX_5_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KN6ANXX_7_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_1_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_2_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_3_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_4_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_5_LYNX7-687ii5-4"]="h_lp_mt_1087" ["CA3D2ANXX_3_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KH6ANXX_5_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KN6ANXX_7_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_1_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_2_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_3_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_4_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_5_LYNX7-700ii5-4"]="h_lp_mt_1117" ["CA3D2ANXX_3_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KH6ANXX_5_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KN6ANXX_7_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_1_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_2_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_3_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_4_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_5_LYNX7-693ii5-4"]="h_lp_mt_1141" ["CA3D2ANXX_3_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KH6ANXX_5_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KN6ANXX_7_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_1_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_2_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_3_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_4_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_5_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KH6ANXX_5_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KN6ANXX_7_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_1_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_2_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_3_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_4_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_5_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KH6ANXX_5_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KN6ANXX_7_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_1_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_2_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_3_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_4_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_5_LYNX7-708ii5-4"]="h_lp_mt_1305" ["CA3D2ANXX_3_LYNX7-708ii5-4"]="h_lp_mt_1305")
-
+ -omitBaseOutput	false	
+ -omitIntervals false
 
 ```
 
@@ -358,7 +374,7 @@ c_ll_ya #lynx lynx 		contemporary 	yakutia samples
 
 POPS=("c_ll_ki" "c_ll_po" "c_ll_no" "c_ll_vl" "c_ll_ya" "c_lp_sm" "c_lp_do" "c_lp_do-c_lp_sm" "c_ll_ki-c_ll_no-c_ll_po-c_ll_vl-c_ll_ya" "c_ll_ki-c_ll_no-c_ll_po-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm")
 
-POPS=("c_ll_tu")
+# POPS=("c_ll_tu")
 
 cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD
 
@@ -391,7 +407,7 @@ script "$POP"_qc.log
 POP="c_lp_do"  # <--CHANGE POP HERE
 
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
-THREADS=10                    # no. of computer cores used 20 = OK, >20 = ask people first!
+THREADS=5                    # no. of computer cores used 20 = OK, >20 = ask people first!
 
 BAMLIST=$(ls ../"$POP"_n*.bamlist)
 NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
