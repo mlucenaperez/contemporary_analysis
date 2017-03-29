@@ -371,10 +371,8 @@ c_ll_ya #lynx lynx 		contemporary 	yakutia samples
 
 # Hago un .bamlist por poblacion. los salvo en  /home/emarmesat/grupolince/immunocapture/ansgd/qc_test. A saber:
 # Este script es una maravilla. Coje todas las poblaciones que tu hayas definido y hace los bamlist con su nombre adecuado.  
-POPS=("c_ll_cr" "c_ll_ka" "c_ll_ki" "c_ll_la" "c_ll_no" "c_ll_og" "c_ll_po" "c_ll_to" "c_ll_tu" "c_ll_vl" "c_ll_ya" "c_lp_do" "c_lp_sm")
+POPS=("h_lp_mt")
 
-
-POPS=("c_ll_ki" "c_ll_po" "c_ll_no" "c_ll_vl" "c_ll_ya" "c_lp_sm" "c_lp_do" "c_lp_do-c_lp_sm" "c_ll_ki-c_ll_no-c_ll_po-c_ll_vl-c_ll_ya" "c_ll_ki-c_ll_no-c_ll_po-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm")
 
 # POPS=("c_ll_tu")
 
@@ -388,7 +386,7 @@ IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
 for POP1 in "${POPS1[@]}"
 do
 echo "$POP --> $POP1"
-ls /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/${POP1}_*_recal_round-1.bam  >> "$POP".bamlist
+ls /home/mlucena/grupolince/lynx_genomes_5x/hcal$$$$$$$$$$$$$$$$$$$$$$$/${POP1}_*_recal_round-1.bam  >> "$POP".bamlist
 done
 NUMBER_IND=$(printf "%03d" `wc -l "$POP".bamlist | cut -f1 -d " "`);
 mv "$POP".bamlist "$POP"_n"$NUMBER_IND".bamlist
