@@ -371,6 +371,8 @@ c_ll_ya #lynx lynx 		contemporary 	yakutia samples
 
 # Hago un .bamlist por poblacion. los salvo en  /home/emarmesat/grupolince/immunocapture/ansgd/qc_test. A saber:
 # Este script es una maravilla. Coje todas las poblaciones que tu hayas definido y hace los bamlist con su nombre adecuado.  
+POPS=("c_ll_cr" "c_ll_ka" "c_ll_ki" "c_ll_la" "c_ll_no" "c_ll_og" "c_ll_po" "c_ll_to" "c_ll_tu" "c_ll_vl" "c_ll_ya" "c_lp_do" "c_lp_sm")
+
 
 POPS=("c_ll_ki" "c_ll_po" "c_ll_no" "c_ll_vl" "c_ll_ya" "c_lp_sm" "c_lp_do" "c_lp_do-c_lp_sm" "c_ll_ki-c_ll_no-c_ll_po-c_ll_vl-c_ll_ya" "c_ll_ki-c_ll_no-c_ll_po-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm")
 
@@ -400,11 +402,11 @@ done
 
 cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test
 #To launch one by one
-POP="c_lp_do"  # <--CHANGE POP HERE
+POP="c_ll_la"  # <--CHANGE POP HERE
 screen -S "$POP"_qc_test
-POP="c_lp_do"  # <--CHANGE POP HERE
+POP="c_ll_la"  # <--CHANGE POP HERE
 script "$POP"_qc.log
-POP="c_lp_do"  # <--CHANGE POP HERE
+POP="c_ll_la"  # <--CHANGE POP HERE
 
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
 THREADS=5                    # no. of computer cores used 20 = OK, >20 = ask people first!
