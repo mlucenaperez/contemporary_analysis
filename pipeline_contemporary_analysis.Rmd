@@ -402,11 +402,11 @@ done
 
 cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test
 #To launch one by one
-POP="c_ll_la"  # <--CHANGE POP HERE
+POP="c_ll_ka"  # <--CHANGE POP HERE
 screen -S "$POP"_qc_test
-POP="c_ll_la"  # <--CHANGE POP HERE
+POP="c_ll_ka"  # <--CHANGE POP HERE
 script "$POP"_qc.log
-POP="c_ll_la"  # <--CHANGE POP HERE
+POP="c_ll_ka"  # <--CHANGE POP HERE
 
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
 THREADS=5                    # no. of computer cores used 20 = OK, >20 = ask people first!
