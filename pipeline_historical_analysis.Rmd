@@ -349,6 +349,61 @@ done
 
 ```
 
+## Transitions vs transversion
+
+```{r, engine=bash, eval=FALSE}
+
+/opt/vcftools_0.1.13/bin/vcftools --vcf mt_n012_raw_round-1_filtered.vcf --TsTv-summary
+
+# For mt:
+# After filtering, kept 12 out of 12 Individuals
+# Outputting Ts/Tv summary
+# Ts/Tv ratio: 2.151
+# After filtering, kept 20178063 out of a possible 20178063 Sites
+
+# For yakutia
+#After filtering, kept 8 out of 8 Individuals
+#Outputting Ts/Tv summary
+#Ts/Tv ratio: 2.195
+#After filtering, kept 10899647 out of a possible 10899647 Sites
+
+# For kirov:
+# After filtering, kept 13 out of 13 Individuals
+# Outputting Ts/Tv summary
+# Ts/Tv ratio: 2.176
+# After filtering, kept 10561306 out of a possible 10561306 Sites
+
+# For sm:
+# After filtering, kept 19 out of 19 Individuals
+# Outputting Ts/Tv summary
+# Ts/Tv ratio: 1.813
+# After filtering, kept 3846063 out of a possible 3846063 Sites
+
+# For do:
+# After filtering, kept 12 out of 12 Individuals
+# Outputting Ts/Tv summary
+# Ts/Tv ratio: 1.746
+# After filtering, kept 2816348 out of a possible 2816348 Sites
+
+MY_VCF="mt_n012_raw_round-1_filtered.vcf"
+
+ARRAY=($(vcfsamplenames $MY_VCF))
+
+for i in  ${ARRAY[@]};
+do
+echo $i
+vcfkeepsamples $MY_VCF ${i} | vcffixup - | vcffilter -f "AC > 0"  > ${i}.vcf
+/opt/vcftools_0.1.13/bin/vcftools --vcf ${i}.vcf --out ${i} --TsTv-summary
+done
+
+
+| grep -v "GT:GQ:DP:RO:QR:AO:QA:GL[[:space:]]0:" | vcffilter -g "GT = 1" | vcffixup - | vcffilter -f "AC > 0" 
+
+
+vcfstats $MY_VCF | grep "ts\|bial"
+
+```
+
 ##  QC-test: MaxDepth. Creating BAMlist.
 
 My populations are:
