@@ -1,0 +1,153 @@
+---
+title: "pipeline_contemporary_sfs"
+output: html_document
+---
+
+# Generating SAF
+
+## Defining variables:
+
+```{r, engine=bash, eval=FALSE}
+
+####### CAREFUL BAM FILES MUST BE INDEXED!!!!!
+####### MODIFY ALL THE MAXDEPTH.CSV NAME FILES TO BE ABLE TO GET INTO THE LOOP!
+
+# The newest version of the programs:
+
+ANGSD=/opt/angsd 
+NGSTOOLS=/opt/ngsTools_19092016
+
+
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa
+
+# ANC=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa
+
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+
+
+# I'll use the parameters calculated by the (ANGDS-2-b_depth_global_to_choose_MaxDepthGlobal.R) script:
+
+scp /Users/marialucenaperez/Dropbox/PhD/contemporary/qc/mean_sd_depthGlobal_folds2.csv mlucena@genomics-b.ebd.csic.es:/home/GRUPOS/grupolince/analysis_genomes_5x/sfs/sfs_results/
+
+# I have modified the names to be in the format: c_lypa_don... that I think it will be very useful. 
+
+# Separo lo que es per_pop de los globales ( podría hacerlo junto pero para que vaya más rápido)
+
+grep " all " mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv  > mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a_all.csv 
+grep -v " all " mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv  > mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a_perpop.csv 
+
+
+#The read command will read one line at a time from mean_sd_depthGlobal_lynx_per_pop_sd_folds2.csv
+# put the first field (fields being blank separated, and where backslash can be used to escape the field or line separator) in the variable $discard, the second in $x, the third in $y and the rest of the fields in $discard.
+
+
+####################################################################################################################################
+
+# I don't think we will do this part! 
+
+
+# The diversity indexes will be calculated in relation to the features described by F Ablascal in /home/GRUPOS/grupolince/copia_fabascal/FEATURES ( I suspect that here only the region with synteny to cat appear $$ --> We may need to change that!)
+# interesting fearures:
+
+# 
+# FEATURES=( "cds" "centr" "exons" "genes" "intergenic" "introns" "promoters" "tel10m" "tel2m" )
+# HEADERS="pop "
+# for feature in "${FEATURES[@]}"
+# do
+# APPEND=$(echo ""$feature"_watterson_average "$feature"_watterson_sd "$feature"_pairwise_average "$feature"_pairwise_sd "$feature"_tajimasD_average ")
+# HEADERS=$HEADERS$APPEND
+# done
+# # I create a table to store the diversity indexes (tab separated9
+# echo $HEADERS | sed 's/ /\t/g'> theta_features_per_pop.tsv
+# 
+# 
+####################################################################################################################################
+
+### Copiar los bamlist a algún sitio de interes en el servidor de interes (A o B):
+
+while read epoch sp pop mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated; 
+do
+
+MYPOP=$epoch"_"$sp"_"$pop
+N_IND=$(wc -l /home/GRUPOS/grupolince/immunocapture/ansgd/qc_test/$MYPOP.bamlist | cut -f 1 -d " ") ####### Modificar ruta!!
+MIN_IND=$(expr $N_IND / 2)
+
+# ANGSD analysis: Theta per site.
+
+# SAF (likelihood):
+
+$ANGSD/angsd -P 8 -b /home/GRUPOS/grupolince/immunocapture/ansgd/qc_test/$MYPOP.bamlist -ref $REF -anc $ANC \
+-out $MYPOP \
+$FILTER1 \
+-minMapQ 30 -minQ 20 -MIN_IND $MIN_IND  -doCounts 1 \
+-GL 1 -doSaf 1 -fold 1 -setMaxDepth $maxDepth 
+
+
+# SFS:(I dont require the -rf file as the saf already only contains the -rf sites)
+
+$NGSTOOLS/realSFS $MYPOP.saf.idx  -P 10 > $MYPOP.sfs
+
+
+# SAF (postprob) + theta:
+
+$ANGSD/angsd -P 8 -b /home/GRUPOS/grupolince/immunocapture/ansgd/qc_test/$MYPOP.bamlist -ref $REF -anc $ANC \
+-out $MYPOP.postprob \
+$FILTER1 \
+$FILTER2 \
+-GL 1 -doSaf 1 -fold 1 \
+-MIN_IND $MIN_IND -setMaxDepth $maxDepth \
+-doThetas 1 -pest $MYPOP.sfs 
+
+
+# Make bed theta:
+
+
+$NGSTOOLS/thetaStat  make_bed $MYPOP.postprob.thetas.gz
+
+
+# Transform the coordinates to use 0Based bedtools
+zcat $MYPOP.postprob.thetas.gz | awk 'NR>1 {print  $1" "$2-1" "$2}' > $MYPOP.0basedcoordinates.borrar
+# log transformation of watterson and pairwise:
+zcat $MYPOP.postprob.thetas.gz | awk 'NR>1 {print  "e("$3")"}'  | bc -l > "$MYPOP".watterson.borrar
+zcat $MYPOP.postprob.thetas.gz | awk 'NR>1 {print  "e("$4")"}'  | bc -l > "$MYPOP".pairwise.borrar 
+
+# Create a header for the "$MYPOP".transformedThetas file
+echo "scaffold position1 position2 watterson pairwise pairwise-watterson" > "$MYPOP".transformedThetas
+paste $MYPOP.0basedcoordinates.borrar "$MYPOP".watterson.borrar "$MYPOP".pairwise.borrar | awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4}' >> "$MYPOP".transformedThetas
+
+echo
+echo
+echo "---------------------------------------------------$MYPOP---------------------------------------------------"
+echo $MYPOP > "$MYPOP".averages.borrar
+# Make diversity calculations per each feature
+for feature in "${FEATURES[@]}"
+do
+echo "Calculating   $feature"
+	
+#Intersect bed of the feature (first remove header)
+tail -n +2 "$MYPOP".transformedThetas | bedtools intersect -a stdin -b /home/GRUPOS/grupolince/copia_fabascal/FEATURES/"$feature".bed > "$MYPOP"."$feature".transformedThetas.borrar
+
+# Calculate averages, and standatd deviations and paste them
+paste <(cut -f 4 "$MYPOP"."$feature".transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf "%f %f \n", sum[i]/NR, sqrt((sumsq[i]-sum[i]^2/NR)/NR)}}') \
+<(cut -f 5 "$MYPOP"."$feature".transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf "%f %f \n", sum[i]/NR, sqrt((sumsq[i]-sum[i]^2/NR)/NR)}}') \
+<(awk -v OFS='\t' '{x+=$6;y+=$6^2}END{print sqrt(y/NR-(x/NR)^2)}' "$MYPOP"."$feature".transformedThetas.borrar)\
+>> "$MYPOP".averages.borrar
+
+rm "$MYPOP"."$feature".transformedThetas.borrar
+
+done
+
+sed ':a;N;$!ba;s/\n/\t/g' "$MYPOP".averages.borrar | sed 's/ /\t/g' | tr -s "\t" >> theta_features_per_pop.tsv
+
+done
+
+done < mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a_all.csv
+
+
+# CHECK!
+
+rm *borrar
+
+
+```
