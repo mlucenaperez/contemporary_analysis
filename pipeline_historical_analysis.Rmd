@@ -403,22 +403,26 @@ vcfkeepsamples $MY_VCF ${i} | vcffixup - | vcffilter -f "AC > 0"  > ${i}.vcf
 /opt/vcftools_0.1.13/bin/vcftools --vcf ${i}.vcf --out ${i} --TsTv-summary
 done
 
+# Report per sample.
+grep "Ts/Tv ratio: " *.log | sed -e 's/.log:Ts\/Tv ratio: /\t/' | sort -k2 -n > per_sample_Ts-Tv.tsv
 ```
 
 The result per sample is:
 
-Ts/Tv ratio: 2.082
-Ts/Tv ratio: 2.039
-Ts/Tv ratio: 1.851
-Ts/Tv ratio: 1.863
-Ts/Tv ratio: 1.853
-Ts/Tv ratio: 2.199
-Ts/Tv ratio: 5.946 ** <- "h_lp_mt_1087"
-Ts/Tv ratio: 2.233
-Ts/Tv ratio: 1.88
-Ts/Tv ratio: 2.103
-Ts/Tv ratio: 1.777
-Ts/Tv ratio: 1.481
+cat per_sample_Ts-Tv.tsv
+
+h_lp_mt_1141	1.88
+h_lp_mt_1305	1.481
+h_lp_mt_1295	1.777
+h_lp_mt_0976	1.851
+h_lp_mt_0979	1.853
+h_lp_mt_0978	1.863
+h_lp_mt_0885	2.039
+h_lp_mt_0884	2.082
+h_lp_mt_1272	2.103
+h_lp_mt_1025	2.199
+h_lp_mt_1117	2.233
+h_lp_mt_1087	5.946 ***
 
 This sample seems to habe way more transitions than transversions. 
 I have checked map damage and it didn't seems to be at the end of the read. 
@@ -428,6 +432,10 @@ I will try to see if most SNPs come from this sample:
 ```{r, engine=bash, eval=FALSE}
 
 vcfremovesamples mt_n012_raw_round-1_filtered.vcf h_lp_mt_1087 | vcffixup - | vcffilter -f "AC > 0"  > mt_n012_raw_round-1_filtered_without_lp_1087.vcf
+
+
+grep -v "#" mt_n012_raw_round-1_filtered_without_lp_1087.vcf | wc -l
+17672985
 
 ```
 
