@@ -351,44 +351,51 @@ done
 
 ## Transitions vs transversion
 
+I have run the following command for several populations:
+
 ```{r, engine=bash, eval=FALSE}
 
 /opt/vcftools_0.1.13/bin/vcftools --vcf mt_n012_raw_round-1_filtered.vcf --TsTv-summary
 
-# For mt:
-# After filtering, kept 12 out of 12 Individuals
-# Outputting Ts/Tv summary
-# Ts/Tv ratio: 2.151
-# After filtering, kept 20178063 out of a possible 20178063 Sites
+```
 
-# For yakutia
-#After filtering, kept 8 out of 8 Individuals
-#Outputting Ts/Tv summary
-#Ts/Tv ratio: 2.195
-#After filtering, kept 10899647 out of a possible 10899647 Sites
+For mt:
+After filtering, kept 12 out of 12 Individuals
+Outputting Ts/Tv summary
+Ts/Tv ratio: 2.151
+After filtering, kept 20178063 out of a possible 20178063 Sites
 
-# For kirov:
-# After filtering, kept 13 out of 13 Individuals
-# Outputting Ts/Tv summary
-# Ts/Tv ratio: 2.176
-# After filtering, kept 10561306 out of a possible 10561306 Sites
+For yakutia
+fter filtering, kept 8 out of 8 Individuals
+utputting Ts/Tv summary
+s/Tv ratio: 2.195
+fter filtering, kept 10899647 out of a possible 10899647 Sites
 
-# For sm:
-# After filtering, kept 19 out of 19 Individuals
-# Outputting Ts/Tv summary
-# Ts/Tv ratio: 1.813
-# After filtering, kept 3846063 out of a possible 3846063 Sites
+For kirov:
+After filtering, kept 13 out of 13 Individuals
+Outputting Ts/Tv summary
+Ts/Tv ratio: 2.176
+After filtering, kept 10561306 out of a possible 10561306 Sites
 
-# For do:
-# After filtering, kept 12 out of 12 Individuals
-# Outputting Ts/Tv summary
-# Ts/Tv ratio: 1.746
-# After filtering, kept 2816348 out of a possible 2816348 Sites
+For sm:
+After filtering, kept 19 out of 19 Individuals
+Outputting Ts/Tv summary
+Ts/Tv ratio: 1.813
+After filtering, kept 3846063 out of a possible 3846063 Sites
+
+For do:
+After filtering, kept 12 out of 12 Individuals
+Outputting Ts/Tv summary
+Ts/Tv ratio: 1.746
+After filtering, kept 2816348 out of a possible 2816348 Sites
+
+*In general it looks like there's no a big bias in the results, however we will do it by sample. 
+
+
+```{r, engine=bash, eval=FALSE}
 
 MY_VCF="mt_n012_raw_round-1_filtered.vcf"
-
 ARRAY=($(vcfsamplenames $MY_VCF))
-
 for i in  ${ARRAY[@]};
 do
 echo $i
@@ -396,13 +403,36 @@ vcfkeepsamples $MY_VCF ${i} | vcffixup - | vcffilter -f "AC > 0"  > ${i}.vcf
 /opt/vcftools_0.1.13/bin/vcftools --vcf ${i}.vcf --out ${i} --TsTv-summary
 done
 
+```
 
-| grep -v "GT:GQ:DP:RO:QR:AO:QA:GL[[:space:]]0:" | vcffilter -g "GT = 1" | vcffixup - | vcffilter -f "AC > 0" 
+The result per sample is:
 
+Ts/Tv ratio: 2.082
+Ts/Tv ratio: 2.039
+Ts/Tv ratio: 1.851
+Ts/Tv ratio: 1.863
+Ts/Tv ratio: 1.853
+Ts/Tv ratio: 2.199
+Ts/Tv ratio: 5.946 ** <- "h_lp_mt_1087"
+Ts/Tv ratio: 2.233
+Ts/Tv ratio: 1.88
+Ts/Tv ratio: 2.103
+Ts/Tv ratio: 1.777
+Ts/Tv ratio: 1.481
 
-vcfstats $MY_VCF | grep "ts\|bial"
+This sample seems to habe way more transitions than transversions. 
+I have checked map damage and it didn't seems to be at the end of the read. 
+
+I will try to see if most SNPs come from this sample:
+
+```{r, engine=bash, eval=FALSE}
+
+vcfremovesamples mt_n012_raw_round-1_filtered.vcf h_lp_mt_1087 | vcffixup - | vcffilter -f "AC > 0"  > mt_n012_raw_round-1_filtered_without_lp_1087.vcf
 
 ```
+
+
+****************************************************************************************************
 
 ##  QC-test: MaxDepth. Creating BAMlist.
 
