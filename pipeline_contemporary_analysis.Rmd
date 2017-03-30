@@ -378,7 +378,7 @@ POPS=("c_ll_ki" "c_ll_po" "c_ll_no" "c_ll_vl" "c_ll_ya" "c_lp_sm" "c_lp_do" "c_l
 
 # POPS=("c_ll_tu")
 
-cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD
+cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test
 
 for POP in ${POPS[@]}
 do
@@ -432,15 +432,151 @@ MAXDEPTH=$(expr $NUMBER_IND \* 1000)
 
 
 ```
+
+I have an issue with c_ll_ka and c_ll_og when calculating doDepth: 
+bgzp read block error -1 after x of x bytes. ABORT
+
+This error was reported for a given scaffold position, when I try to open it using igv it reported that the index file is likely to be corrupted: 
+"Error encountered querying alignments: java.nio.BufferUnderflowException This is often caused by a corrupt index file."
+
+First, I will try to validate sam
+c_ll_ka_0184_recal_round-1.bam
+c_ll_ka_0186_recal_round-1.bam
+c_ll_ka_0188_recal_round-1.bam
+c_ll_ka_0189_recal_round-1.bam
+
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=c_ll_ka_0184_recal_round-1.bam  MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000
+
+Exception in thread "main" htsjdk.samtools.SAMException: Value was put into PairInfoMap more than once.  0: 7001450:312:CA3D2ANXX:5:1311:7301:38680
+	at htsjdk.samtools.CoordinateSortedPairInfoMap.ensureSequenceLoaded(CoordinateSortedPairInfoMap.java:133)
+	at htsjdk.samtools.CoordinateSortedPairInfoMap.access$300(CoordinateSortedPairInfoMap.java:53)
+	at htsjdk.samtools.CoordinateSortedPairInfoMap$MapIterator.advanceToNextNonEmptyReferenceIndex(CoordinateSortedPairInfoMap.java:227)
+	at htsjdk.samtools.CoordinateSortedPairInfoMap$MapIterator.<init>(CoordinateSortedPairInfoMap.java:221)
+	at htsjdk.samtools.CoordinateSortedPairInfoMap$MapIterator.<init>(CoordinateSortedPairInfoMap.java:211)
+	at htsjdk.samtools.CoordinateSortedPairInfoMap.iterator(CoordinateSortedPairInfoMap.java:208)
+	at htsjdk.samtools.SamFileValidator$CoordinateSortedPairEndInfoMap.iterator(SamFileValidator.java:753)
+	at htsjdk.samtools.SamFileValidator.validateUnmatchedPairs(SamFileValidator.java:233)
+	at htsjdk.samtools.SamFileValidator.validateSamFile(SamFileValidator.java:201)
+	at htsjdk.samtools.SamFileValidator.validateSamFileSummary(SamFileValidator.java:128)
+	at picard.sam.ValidateSamFile.doWork(ValidateSamFile.java:187)
+	at picard.cmdline.CommandLineProgram.instanceMain(CommandLineProgram.java:209)
+	at picard.cmdline.PicardCommandLine.instanceMain(PicardCommandLine.java:95)
+	at picard.cmdline.PicardCommandLine.main(PicardCommandLine.java:105)
+
+
+Este error también lo da al correr una muestra cualquiera de c_ll_og_0181:
+
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=c_ll_og_0181_recal_round-1.bam  MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000
+
+
+Vamos a probar una cualquiera porque lo que interpretamos es que son alineamientos secundarios. Ese error también lo daría en una muestra cualquiera:
+
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=c_ll_ya_0143_recal_round-1.bam  MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000
+
+
+
+Vamos a correr el índice para las muestras y hacer diff a ver si hay fallo en el índice:
+ARRAY=($(c_ll_og))
+
+for i in ${ARRAY[@]}
+do
+echo ${i}
+samtools index ${i}
+done
+
+
+**********************************************************************************************
+
 ### MaxDepth R 
   
-Cuando acabo me llevo los archivos generados de GlobalDepth a mi ordenador para aplicarles el script de R (ANGDS-2-b_depth_global_to_choose_MaxDepthGlobal.R) y calcular la cobertura mínima y máxima en cada caso.
-scp emarmesat@genomics-a.ebd.csic.es:/home/emarmesat/grupolince/immunocapture/ansgd/qc_test/*.depth* /Users/elena/Dropbox/immunocapture/analysis/ANSGD/qc_test/
-scp emarmesat@genomics-a.ebd.csic.es:/home/emarmesat/grupolince/immunocapture/ansgd/qc_test/*.bamlist /Users/elena/Dropbox/immunocapture/analysis/ANSGD/qc_test/
+Cuando acabo me llevo los archivos generados de GlobalDepth a mi ordenador para aplicarles el script de R y calcular la cobertura mínima y máxima en cada caso.
 
+```{r, engine=bash, eval=FALSE}
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/*.depth* /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/*.bamlist /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/
+```
 
-AN
+RScript:
 
-/home/mlucena/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa
+```{r}
 
+library(dplyr)
+library(plyr)
+library(ggplot2)
+library(gridExtra)
 
+## Functions
+get_mean <- function(dat) { with(dat, sum(as.numeric(freq)*value)/sum(as.numeric(freq))) }
+get_sd <- function(dat) { mu <- get_mean (dat) 
+with (dat, sqrt(sum(as.numeric(freq)*(value-mu)^2)/(sum(as.numeric(freq))-1))) } 
+###########################################################################################
+
+setwd("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test")
+my_files_depthGlobal = list.files(pattern="*.depthGlobal$") 
+for (i in 1:length(my_files_depthGlobal)) { assign(my_files_depthGlobal[i], (scan(my_files_depthGlobal[i], sep = " ", dec = ".")) %>% .[!is.na(.)])}
+sd_folds = 2
+depth_per_sample <- data.frame()
+#Compute globaldepth for all populations found
+###########################################################################################
+for (i in 1:length(my_files_depthGlobal)) 
+  {
+DF = read.table(my_files_depthGlobal[i],head=F, stringsAsFactors=F)
+
+freq_table_DF <- data.frame (value = 1:length (DF), freq = t(DF))
+freq_table_truncated_DF <- filter(freq_table_DF, value < (nrow(freq_table_DF)))
+
+# Mean depth:
+
+my_mean_DF <-  get_mean (freq_table_DF)
+my_mean_truncated_DF <- get_mean (freq_table_truncated_DF)
+my_sd_DF <-  get_sd (freq_table_DF)
+my_sd_truncated_DF <- get_sd (freq_table_truncated_DF)
+
+# Max and min depth:
+
+maxDepth_DF = my_mean_DF + (sd_folds * my_sd_DF)
+minDepth_DF  = my_mean_DF - (sd_folds * my_sd_DF)
+maxDepth_truncated_DF = my_mean_truncated_DF + (sd_folds * my_sd_truncated_DF)
+minDepth_truncated_DF  = my_mean_truncated_DF - (sd_folds * my_sd_truncated_DF)
+
+#Per sample
+epoch=unlist(strsplit(my_files_depthGlobal[i],"_"))[1]
+specie=unlist(strsplit(my_files_depthGlobal[i],"_"))[2]
+population2=unlist(strsplit(my_files_depthGlobal[i],"_"))[3]
+population=unlist(strsplit(population2,"[.]"))[1]
+
+depth_per_sample <- rbind(depth_per_sample, 
+  data.frame( epoch=epoch,  sp=specie, pop = population,
+  mean = my_mean_DF, sd = my_sd_DF, 
+  mean_truncated =  my_mean_truncated_DF, sd_truncated = my_sd_truncated_DF,
+  maxDepth = maxDepth_DF, minDepth = minDepth_DF,
+  maxDepth_truncated = maxDepth_truncated_DF, minDepth_truncated = minDepth_truncated_DF)) 
+
+# Plotting:
+
+ggplot(freq_table_truncated_DF, aes(x = value, y = freq)) + 
+  geom_bar(stat = "identity", color = "black") +
+  scale_x_continuous(breaks = 0:250*10, limits = c(0, maxDepth_truncated_DF*1.5))+
+  scale_y_continuous(expand=c(0,0))+
+  ggtitle (paste(my_files_depthGlobal[i],"_",  maxDepth_truncated_DF, "_",maxDepth_DF) ) +
+  geom_vline(xintercept=maxDepth_DF,
+             linetype="dashed", size=0.5)+ 
+  geom_vline(xintercept=minDepth_DF,
+             linetype="dashed", size=0.5)+ 
+  geom_vline(xintercept=maxDepth_truncated_DF, colour ="grey",
+             linetype="dashed", size=0.5)+ 
+  geom_vline(xintercept=minDepth_truncated_DF,colour ="grey",
+             linetype="dashed", size=0.5)+ 
+  theme_classic()+ 
+  theme(text = element_text(size=10))
+
+plot_name=paste(my_files_depthGlobal[i],".pdf",sep="")
+ggsave(filename = plot_name)
+
+}
+
+#When finished write the table to sfs folder
+write.csv(x = depth_per_sample,file = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_sd_folds2.csv")
+write.table(x = depth_per_sample,file = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv",quote=FALSE, col.names = FALSE, row.names = FALSE, sep= " ")
+
+```
