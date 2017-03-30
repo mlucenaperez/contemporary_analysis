@@ -474,15 +474,39 @@ Vamos a probar una cualquiera porque lo que interpretamos es que son alineamient
 java -jar /opt/picard-tools/picard.jar ValidateSamFile I=c_ll_ya_0143_recal_round-1.bam  MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000
 
 
+Vamos a correr el índice para las muestras:
 
-Vamos a correr el índice para las muestras y hacer diff a ver si hay fallo en el índice:
-ARRAY=($(c_ll_og))
-
+ARRAY=($(c_ll_og*))
 for i in ${ARRAY[@]}
 do
 echo ${i}
 samtools index ${i}
 done
+
+Haciendo el índice nos devuelve error.
+Probamos en el servidor a y tenemos el mismo problema. Por tanto voy a probar a hacer el índice en el archivo inmediatamente interior (indelrealign). 
+
+Con esto no hemos tenido problema, por tanto he leído y parece que la muestra recal-1 no está ordenada. He procedido a ordenar y ya si hemos podido hacer el índice así que voy a ordenar todas las que han dado problemas:
+
+ARRAY=($(ls c_ll_og*bam))
+for i in ${ARRAY[@]}
+do
+echo ${i}
+samtools sort ${i} ${i/.bam/_sort.bam}
+mv ${i/.bam/_sort.bam} ${i}
+samtools index ${i}
+done
+
+ARRAY=($(ls c_ll_ka*bam))
+for i in ${ARRAY[@]}
+do
+echo ${i}
+samtools sort ${i} ${i/.bam/_sort.bam}
+mv ${i/.bam/_sort.bam} ${i}
+samtools index ${i}
+done
+
+
 
 
 **********************************************************************************************
