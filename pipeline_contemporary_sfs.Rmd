@@ -7,6 +7,198 @@ output: html_document
 
 ## Defining variables:
 
+```{r}
+#I'll need to calculate SAF SFS and all the thigs required to report variability samples
+
+mkdir /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs 
+cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs
+#I'll use the parameters calculated by the (ANGDS-2-b_depth_global_to_choose_MaxDepthGlobal.R) script:
+
+scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_sd_folds_2*.csv mlucena@genomics-b.ebd.csic.es:/home/GRUPOS/grupolince/analysis_genomes_5x/ANGSD/sfs/
+
+#I checked that all bam files were indexed --> OK
+
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+# STILL NEED TO RUN THIS:
+  
+######################################################################################
+#                              Global diversity checks                               #
+######################################################################################
+#The diversity indexes will be calculated in relation to the features described by F Ablascal in /home/emarmesat/grupolince/copia_fabascal/FEATURES ( I suspect that here only the region with synteny to cat appear $$ --> We may need to change that!)
+# interesting fearures:
+
+cd /home/emarmesat/grupolince/immunocapture/ansgd/sfs
+
+FEATURES=( "cds" "centr" "exons" "genes" "intergenic" "introns" "promoters" "tel10m" "tel2m" )
+HEADERS="pop "
+for feature in "${FEATURES[@]}"
+do
+APPEND=$(echo ""$feature"_watterson_average "$feature"_watterson_sd "$feature"_pairwise_average "$feature"_pairwise_sd "$feature"_tajimasD_average ")
+HEADERS=$HEADERS$APPEND
+done
+# I create a table to store the diversity indexes (tab separated9
+echo $HEADERS | sed 's/ /\t/g'> theta_features_per_pop.tsv
+
+##############################################################################################################################################################################################################################################################################################################################################################################################################################
+
+######################################################################################
+#                              Global variables                                      #
+######################################################################################
+
+
+cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs
+#To launch one by one ( because otherwise it's too slow I'll launch single pops in a and groups in b)
+
+POP="c_ll_ka"  # <--CHANGE POP HERE
+
+screen -S "$POP"_sfs
+
+POP="c_ll_ka"  # <--CHANGE POP HERE
+
+script "$POP"_sfs.log
+
+POP="c_ll_ka"  # <--CHANGE POP HERE
+
+THREADS=6                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+awk '{print $1"_"$2"_"$3,$4,$5,$6,$7,$8,$9,$10,$11}' mean_sd_depthGlobal_lynx_per_pop_sd_folds_2_a.csv | grep "${POP} "  > "$POP"_mean_sd_depthGlobal_lynx_per_pop_sd_folds_2_a.csv
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < "$POP"_mean_sd_depthGlobal_lynx_per_pop_sd_folds_2_a.csv
+
+#screen -S allpops_saf_sfs_thetas #Lanzar esto si voy a lanzar todas las poblaciones a la vez
+ANGSD="/opt/angsd"
+NGSTOOLS="/opt/angsd/misc"
+
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/mlucena/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+
+FEATURES=( "cds" "centr" "exons" "genes" "intergenic" "introns" "promoters" "tel10m" "tel2m" )
+
+
+######################################################################################
+#                              FOLDED SAF and SFS                                    #
+######################################################################################
+
+#The read command will read one line at a time from mean_sd_depthGlobal_lynx_per_pop_sd_folds2.csv
+# put the first field (fields being blank separated, and where backslash can be used to escape the field or line separator) in the variable $discard, the second in $x, the third in $y and the rest of the fields in $discard.
+
+
+#while read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated; 
+#do
+
+N_IND=$(echo ${POP: -3} )
+MIN_IND=$(expr $N_IND / 2)
+
+
+##########################
+#  SAF (likelihood):     #
+##########################
+echo "-------$POP----------SAF (likelihood)-----------------------------------------"
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$POP"_n*.bamlist -ref $REF -anc $ANC \
+-out "$POP".unfolded-lr \
+$FILTER1 \
+$FILTER2 \
+-GL 1 -doSaf 1 -setMaxDepth $maxDepth 
+
+
+
+$$$$$$$$$$$$$$$$$$$$$
+#### Till here
+
+##########################
+#  SFS                   #(I dont require the -rf file as the saf already only contains the -rf sites
+##########################
+echo "-------$POP----------SFS------------------------------------------------------"
+
+$NGSTOOLS/realSFS "$POP".unfolded-lr.saf.idx  -P $THREADS > "$POP".unfolded-lr.sfs
+
+
+##########################
+#  SAF (postprob)        #
+##########################
+echo "-------$POP----------SAF (postprob)-----------------------------------------"
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$POP"_n*.bamlist -ref $REF -anc $ANC \
+-out "$POP".unfolded-lr.postprob \
+$FILTER1 \
+$FILTER2 \
+-GL 1 -doSaf 1  \
+-minInd  $MIN_IND -setMaxDepth $maxDepth \
+-doThetas 1 -pest "$POP".unfolded-lr.sfs 
+
+
+##########################
+#  Make bed theta        #
+##########################
+echo "-------$POP----------Make bed theta -----------------------------------------"
+
+$NGSTOOLS/thetaStat  make_bed $POP.postprob.thetas.gz
+
+
+# Transform the coordinates to use 0Based bedtools
+zcat $POP.postprob.thetas.gz | awk 'NR>1 {print  $1" "$2-1" "$2}' > $POP.0basedcoordinates.borrar
+# log transformation of watterson and pairwise:
+zcat $POP.postprob.thetas.gz | awk 'NR>1 {print  "e("$3")"}'  | bc -l > "$POP".watterson.borrar
+zcat $POP.postprob.thetas.gz | awk 'NR>1 {print  "e("$4")"}'  | bc -l > "$POP".pairwise.borrar 
+
+# Create a header for the "$POP".transformedThetas file
+echo "scaffold position1 position2 watterson pairwise pairwise-watterson" > "$POP".transformedThetas
+paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar | awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4}' >> "$POP".transformedThetas
+
+
+
+
+
+
+
+
+
+
+
+
+echo "---------------------------------------------------$POP---------------------------------------------------"
+echo $POP > "$POP".averages.borrar
+# Make diversity calculations per each feature
+for feature in "${FEATURES[@]}"
+do
+echo "Calculating   $feature"
+	
+#Intersect bed of the feature (first remove header)
+tail -n +2 "$POP".transformedThetas | bedtools intersect -a stdin -b /home/GRUPOS/grupolince/copia_fabascal/FEATURES/"$feature".bed > "$POP"."$feature".transformedThetas.borrar
+
+# Calculate averages, and standatd deviations and paste them
+paste <(cut -f 4 "$POP"."$feature".transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf "%f %f \n", sum[i]/NR, sqrt((sumsq[i]-sum[i]^2/NR)/NR)}}') \
+<(cut -f 5 "$POP"."$feature".transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf "%f %f \n", sum[i]/NR, sqrt((sumsq[i]-sum[i]^2/NR)/NR)}}') \
+<(awk -v OFS='\t' '{x+=$6;y+=$6^2}END{print sqrt(y/NR-(x/NR)^2)}' "$POP"."$feature".transformedThetas.borrar) \
+>> "$POP".averages.borrar
+done
+sed ':a;N;$!ba;s/\n/\t/g' "$POP".averages.borrar | sed 's/ /\t/g' | tr -s "\t" >> theta_features_per_pop.tsv
+touch finished_sfs_thetas."$POP" #Just to quickly check what has finished
+rm "$POP"*borrar
+
+#done < "$POP"_mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv #mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv 
+
+
+rm *borrar
+
+scp emarmesat@genomics-a.ebd.csic.es:/home/emarmesat/grupolince/immunocapture/ansgd/sfs/theta_features_per_pop.tsv /home/elena/Dropbox/immunocapture/analysis/ANSGD/sfs/
+
+
+
+
+
+
+
+
+
+
+```
+
+
+
 ```{r, engine=bash, eval=FALSE}
 
 ####### CAREFUL BAM FILES MUST BE INDEXED!!!!!
@@ -17,71 +209,49 @@ output: html_document
 ANGSD=/opt/angsd 
 NGSTOOLS=/opt/ngsTools_19092016
 
-
 REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa
-
-# ANC=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa
+ANC=/home/mlucena/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa
 
 FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
 FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
 
 
-# I'll use the parameters calculated by the (ANGDS-2-b_depth_global_to_choose_MaxDepthGlobal.R) script:
+# I'll use the parameters calculated by the end of the script pipeline_contemporary_analysis / mapping:
 
-scp /Users/marialucenaperez/Dropbox/PhD/contemporary/qc/mean_sd_depthGlobal_folds2.csv mlucena@genomics-b.ebd.csic.es:/home/GRUPOS/grupolince/analysis_genomes_5x/sfs/sfs_results/
-
-# I have modified the names to be in the format: c_lypa_don... that I think it will be very useful. 
-
-# Separo lo que es per_pop de los globales ( podría hacerlo junto pero para que vaya más rápido)
-
-grep " all " mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv  > mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a_all.csv 
-grep -v " all " mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv  > mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a_perpop.csv 
+scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_sd_folds_2*.csv mlucena@genomics-b.ebd.csic.es:/home/GRUPOS/grupolince/analysis_genomes_5x/ANGSD/sfs/
 
 
 #The read command will read one line at a time from mean_sd_depthGlobal_lynx_per_pop_sd_folds2.csv
 # put the first field (fields being blank separated, and where backslash can be used to escape the field or line separator) in the variable $discard, the second in $x, the third in $y and the rest of the fields in $discard.
 
-
-####################################################################################################################################
-
-# I don't think we will do this part! 
-
-
-# The diversity indexes will be calculated in relation to the features described by F Ablascal in /home/GRUPOS/grupolince/copia_fabascal/FEATURES ( I suspect that here only the region with synteny to cat appear $$ --> We may need to change that!)
-# interesting fearures:
-
-# 
-# FEATURES=( "cds" "centr" "exons" "genes" "intergenic" "introns" "promoters" "tel10m" "tel2m" )
-# HEADERS="pop "
-# for feature in "${FEATURES[@]}"
-# do
-# APPEND=$(echo ""$feature"_watterson_average "$feature"_watterson_sd "$feature"_pairwise_average "$feature"_pairwise_sd "$feature"_tajimasD_average ")
-# HEADERS=$HEADERS$APPEND
-# done
-# # I create a table to store the diversity indexes (tab separated9
-# echo $HEADERS | sed 's/ /\t/g'> theta_features_per_pop.tsv
-# 
-# 
-####################################################################################################################################
-
 ### Copiar los bamlist a algún sitio de interes en el servidor de interes (A o B):
+
+# Usually it will be enougth starting with while if you want to run everything in a loop. As I don't want that, I will separate the file to start. 
+cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs/
+
+EPOCA="c"
+ESPECIE="ll"
+POBLACION="po"
+
 
 while read epoch sp pop mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated; 
 do
 
 MYPOP=$epoch"_"$sp"_"$pop
-N_IND=$(wc -l /home/GRUPOS/grupolince/immunocapture/ansgd/qc_test/$MYPOP.bamlist | cut -f 1 -d " ") ####### Modificar ruta!!
+N_IND=$(wc -l /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$MYPOP"_n*.bamlist | cut -f 1 -d " ") ####### Modificar ruta!!
 MIN_IND=$(expr $N_IND / 2)
+
+# echo $MYPOP
+# echo $N_IND
+# echo $MIN_IND
 
 # ANGSD analysis: Theta per site.
 
 # SAF (likelihood):
+                      
+$ANGSD/angsd -P 8 -b /home/GRUPOS/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$MYPOP"_n*.bamlist -ref "$REF" -anc "$ANC" -out "$MYPOP" "$FILTER1" -minMapQ 30 -minQ 20 -MIN_IND "$MIN_IND"  -doCounts 1 -GL 1 -doSaf 1 -fold 1 -setMaxDepth $maxDepth 
 
-$ANGSD/angsd -P 8 -b /home/GRUPOS/grupolince/immunocapture/ansgd/qc_test/$MYPOP.bamlist -ref $REF -anc $ANC \
--out $MYPOP \
-$FILTER1 \
--minMapQ 30 -minQ 20 -MIN_IND $MIN_IND  -doCounts 1 \
--GL 1 -doSaf 1 -fold 1 -setMaxDepth $maxDepth 
+done < <(grep $EPOCA mean_sd_depthGlobal_lynx_per_pop_sd_folds_2_a.csv | grep $ESPECIE | grep $POBLACION)
 
 
 # SFS:(I dont require the -rf file as the saf already only contains the -rf sites)
@@ -91,7 +261,7 @@ $NGSTOOLS/realSFS $MYPOP.saf.idx  -P 10 > $MYPOP.sfs
 
 # SAF (postprob) + theta:
 
-$ANGSD/angsd -P 8 -b /home/GRUPOS/grupolince/immunocapture/ansgd/qc_test/$MYPOP.bamlist -ref $REF -anc $ANC \
+$ANGSD/angsd -P 8 -b home/GRUPOS/grupolince/analysis_genomes_5x/ANGSD/qc_test/$MYPOP.bamlist -ref $REF -anc $ANC \
 -out $MYPOP.postprob \
 $FILTER1 \
 $FILTER2 \
@@ -104,6 +274,7 @@ $FILTER2 \
 
 
 $NGSTOOLS/thetaStat  make_bed $MYPOP.postprob.thetas.gz
+
 
 
 # Transform the coordinates to use 0Based bedtools
@@ -142,7 +313,7 @@ sed ':a;N;$!ba;s/\n/\t/g' "$MYPOP".averages.borrar | sed 's/ /\t/g' | tr -s "\t"
 
 done
 
-done < mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a_all.csv
+done < mean_sd_depthGlobal_lynx_per_pop_sd_folds_2.csv
 
 
 # CHECK!

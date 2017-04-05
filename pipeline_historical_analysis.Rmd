@@ -299,6 +299,7 @@ done
 # Check ARRAY, SAMPLELIST AND BARCODEID
 
 ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq))                     
+SAMPLESLIST=($(echo ${BARCODEID[@]} | tr ' ' '\n' | sort | uniq | tr ' ' '\n'))
 
 # This part calculates how many reads do I have in the fastq file and name with the sample name so that latter we can added if they are coming from the same library.
 # In case they are different libraries, you should use it, cause you have to calculate your statistics per library not per sample. 
@@ -331,6 +332,22 @@ TOTAL_SEQ="$(cat "${sample}"*.rawseq | awk '{sum+=$1}END{print sum}')"
 echo "$NAME, $TOTAL_SEQ" >> raw.stats 
 done
 
+for i in ${ARRAY[@]}
+do
+echo ${i}_1.fastq.gz
+zcat ${i}_1.fastq.gz | paste - - - - | cut -f2 | wc -c > ${BARCODEID["${i}"]}_${i}.borrar.rawbases
+done
+
+for sample in "${SAMPLESLIST[@]}"
+do
+cat "${sample}"_*.borrar.rawbases | awk '{sum+=$1}END{print sum*2}' > "${sample}"_R1.rawbases
+done
+
+for sample in "${SAMPLESLIST[@]}"
+do
+b=$(cat "${sample}"_R1.rawbases)
+paste ${sample} "${b}"
+done
 ```
 
 ## Coverage
@@ -348,6 +365,39 @@ done
  -omitIntervals false
 
 ```
+
+## Leght distribution
+
+```{r, engine=bash, eval=FALSE}
+
+for sample in *recal_round-1.bam
+do
+samtools view $sample | head -n 1000000 | cut -f 10 | perl -ne 'chomp;print length($_) . "\n"' | sort | uniq -c > ${sample/.bam/.legthdistribution}
+done
+
+for sample in *recal_round-1.bam
+do
+samtools view $sample | cut -f 10 | perl -ne 'chomp;print length($_) . "\n"' | sort | uniq -c > ${sample/.bam/.lengthdistribution}
+done
+
+
+# Metrics for the insert size
+for sample in *recal_round-1.bam
+do
+java  -Xms10g  -Xmx40g -jar /home/tmp/Software/Picard/picard-tools-1.66/CollectInsertSizeMetrics.jar I=$sample H=${sample/.bam/.histogram_length} O=${sample/.bam/.picard_length}
+done
+
+
+samtools view h_lp_mt_1305_recal_round-1.bam | head -10000  | awk '{ if ($9 > 0) { N+=1; S+=$9; S2+=$9*$9 }} END { M=S/N; print "n="N", mean="M", stdev="sqrt ((S2-M*M*N)/(N-1))}'
+
+```
+
+Esto te da una distribución que para una muestra cualquiera es:
+
+102535 = 126
+897465 < 126
+340821 < 63
+
 
 ## Transitions vs transversion
 

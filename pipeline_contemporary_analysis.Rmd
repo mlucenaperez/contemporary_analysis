@@ -335,17 +335,32 @@ done
 
 ## Coverage
 
+Hay dos formas de calcularlo
+
+
+
 ```{r, engine=bash, eval=FALSE}
 REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
 
-SAMPLELIST=($(ls *bam | uniq ))
+SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
 for sample in "${SAMPLELIST[@]}"
 do
 java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC  -XX:+UseStringDeduplication -Xms10g  -Xmx64g -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -I ${sample} -o ${sample/.bam/.coverage} -T DepthOfCoverage -R $REF
 done
 
- -omitBaseOutput	false	
- -omitIntervals false
+
+SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
+rm global_coverage.tsv
+echo -e "sample\taverage\tstdev" > global_coverage.tsv
+for sample in "${SAMPLELIST[@]}"
+do
+echo $sample
+DEPTH=$(samtools depth $sample | awk '{sum+=$3; sumsq+=$3*$3} END { print sum/2413209059; print sqrt(sumsq/2413209059 - (sum/2413209059)**2)}')
+paste \
+<(echo $sample ) \
+<(echo $DEPTH ) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  global_coverage.tsv
+done
 
 ```
 
@@ -411,7 +426,7 @@ POP="c_ll_ka"  # <--CHANGE POP HERE
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
 THREADS=5                    # no. of computer cores used 20 = OK, >20 = ask people first!
 
-BAMLIST=$(ls ../"$POP"_n*.bamlist)
+BAMLIST=$(ls "$POP"_n*.bamlist)
 NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
 MAXDEPTH=$(expr $NUMBER_IND \* 1000)
 
@@ -493,7 +508,7 @@ for i in ${ARRAY[@]}
 do
 echo ${i}
 samtools sort ${i} ${i/.bam/_sort.bam}
-mv ${i/.bam/_sort.bam} ${i}
+mv ${i/.bam/_sort.bam.bam} ${i}
 samtools index ${i}
 done
 
@@ -502,7 +517,7 @@ for i in ${ARRAY[@]}
 do
 echo ${i}
 samtools sort ${i} ${i/.bam/_sort.bam}
-mv ${i/.bam/_sort.bam} ${i}
+mv ${i/.bam/_sort.bam.bam} ${i}
 samtools index ${i}
 done
 
@@ -561,10 +576,16 @@ my_sd_truncated_DF <- get_sd (freq_table_truncated_DF)
 
 # Max and min depth:
 
-maxDepth_DF = my_mean_DF + (sd_folds * my_sd_DF)
-minDepth_DF  = my_mean_DF - (sd_folds * my_sd_DF)
-maxDepth_truncated_DF = my_mean_truncated_DF + (sd_folds * my_sd_truncated_DF)
-minDepth_truncated_DF  = my_mean_truncated_DF - (sd_folds * my_sd_truncated_DF)
+# maxDepth_DF = my_mean_DF + (sd_folds * my_sd_DF)
+# minDepth_DF  = my_mean_DF - (sd_folds * my_sd_DF)
+# maxDepth_truncated_DF = my_mean_truncated_DF + (sd_folds * my_sd_truncated_DF)
+# minDepth_truncated_DF  = my_mean_truncated_DF - (sd_folds * my_sd_truncated_DF)
+
+maxDepth_DF = my_mean_DF * sd_folds
+minDepth_DF  = my_mean_DF * sd_folds
+maxDepth_truncated_DF = my_mean_truncated_DF * sd_folds
+minDepth_truncated_DF  = my_mean_truncated_DF * sd_folds
+
 
 #Per sample
 epoch=unlist(strsplit(my_files_depthGlobal[i],"_"))[1]
@@ -585,7 +606,7 @@ ggplot(freq_table_truncated_DF, aes(x = value, y = freq)) +
   geom_bar(stat = "identity", color = "black") +
   scale_x_continuous(breaks = 0:250*10, limits = c(0, maxDepth_truncated_DF*1.5))+
   scale_y_continuous(expand=c(0,0))+
-  ggtitle (paste(my_files_depthGlobal[i],"_",  maxDepth_truncated_DF, "_",maxDepth_DF) ) +
+  ggtitle (paste(my_files_depthGlobal[i],"_", sd_folds, "_",maxDepth_truncated_DF, "_",maxDepth_DF) ) +
   geom_vline(xintercept=maxDepth_DF,
              linetype="dashed", size=0.5)+ 
   geom_vline(xintercept=minDepth_DF,
@@ -597,13 +618,13 @@ ggplot(freq_table_truncated_DF, aes(x = value, y = freq)) +
   theme_classic()+ 
   theme(text = element_text(size=10))
 
-plot_name=paste(my_files_depthGlobal[i],".pdf",sep="")
+plot_name=paste(my_files_depthGlobal[i],"_",sd_folds,".pdf",sep="")
 ggsave(filename = plot_name)
 
 }
 
 #When finished write the table to sfs folder
-write.csv(x = depth_per_sample,file = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_sd_folds2.csv")
-write.table(x = depth_per_sample,file = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv",quote=FALSE, col.names = FALSE, row.names = FALSE, sep= " ")
+write.csv(x = depth_per_sample,file = paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_sd_folds_",sd_folds,".csv", sep= ""))
+write.table(x = depth_per_sample,file = paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_sd_folds_",sd_folds,"_a.csv", sep= ""),quote=FALSE, col.names = FALSE, row.names = FALSE, sep= " ")
 
 ```
