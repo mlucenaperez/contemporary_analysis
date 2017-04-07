@@ -366,37 +366,79 @@ done
 
 ```
 
-## Leght distribution
+## Read lenght distribution
 
 ```{r, engine=bash, eval=FALSE}
 
-for sample in *recal_round-1.bam
-do
-samtools view $sample | head -n 1000000 | cut -f 10 | perl -ne 'chomp;print length($_) . "\n"' | sort | uniq -c > ${sample/.bam/.legthdistribution}
-done
-
-for sample in *recal_round-1.bam
+for sample in *recal_round-1.bam # If you want it to run faster add: samtools view $sample | head -n 1000000 |
 do
 samtools view $sample | cut -f 10 | perl -ne 'chomp;print length($_) . "\n"' | sort | uniq -c > ${sample/.bam/.lengthdistribution}
 done
 
+# Now I would like to plot the results, so I download them:
 
-# Metrics for the insert size
+
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/grupolince/lynx_genomes_5x/hcal_alignments/*lengthdistribution /Users/marialucenaperez/Dropbox/PhD/ancient_historical/diario/historico/20170407_length_distribution_insert_size
+
+
+```
+
+Now I plot them:
+
+```{r}
+library(dplyr)
+library(plyr)
+library(ggplot2)
+library(gridExtra)
+
+
+setwd("/Users/marialucenaperez/Dropbox/PhD/ancient_historical/diario/historico/20170407_length_distribution_insert_size")
+my_files_lengthdistribution = list.files(pattern="*lengthdistribution$") 
+datalist = list()
+
+for (i in 1:length(my_files_lengthdistribution)){
+dat <- read.table(my_files_lengthdistribution[i],head=F, stringsAsFactors=F)
+# dat$i <- i  # maybe you want to keep track of which iteration produced it?
+names(dat)[names(dat) == "V1"] <- my_files_lengthdistribution[i] # replacing name of the first column by name of the dataframe so that latter I could join and keep track of the sample 
+datalist[[i]]<- dat # add it to your list
+}
+
+# big_data = do.call(rbind, datalist) -> If you want to join all the column. 
+
+length_distribution_all <- join_all(datalist, by=names(datalist[[2]][2])) %>% arrange (., V2) %>% 
+  mutate (., groups = if_else (V2 < 126, "A", if_else(V2==126, "B", "C")))
+
+collapsed <- data.frame(rbind(colSums(filter(length_distribution_all, groups=="A")%>%select(-groups, -V2)), colSums(filter(length_distribution_all, groups=="B")%>%select(-groups, -V2)))) 
+final <- as.data.frame(t(collapsed))
+colnames(final) <- c("less_126","equal_126") 
+final_ratio <- final %>% mutate (final, ratio_less_divided_equal = less_126/equal_126)
+
+```
+
+## Insert size distribution
+
+```{r, engine=bash, eval=FALSE}
+
+
+# This approach for samtools is not working properly with unmerged data:
+samtools view h_lp_mt_1305_recal_round-1.bam | head -10000  | awk '{ if ($9 > 0) { N+=1; S+=$9; S2+=$9*$9 }} END { M=S/N; print "n="N", mean="M", stdev="sqrt ((S2-M*M*N)/(N-1))}'
+
+# I run picard tool with the option H, that output an histogram. 
 for sample in *recal_round-1.bam
 do
 java  -Xms10g  -Xmx40g -jar /home/tmp/Software/Picard/picard-tools-1.66/CollectInsertSizeMetrics.jar I=$sample H=${sample/.bam/.histogram_length} O=${sample/.bam/.picard_length}
 done
 
 
-samtools view h_lp_mt_1305_recal_round-1.bam | head -10000  | awk '{ if ($9 > 0) { N+=1; S+=$9; S2+=$9*$9 }} END { M=S/N; print "n="N", mean="M", stdev="sqrt ((S2-M*M*N)/(N-1))}'
+for picard_file in *.picard_length 
+do
+echo $picard_file
+tail -n+12 $picard_file | awk '($1 > 30) {print $1*$2}' | paste -sd+ | bc | awk '{print $1/2413209059}'
+done
 
+
+awk ' ' foo > bar
 ```
-
-Esto te da una distribución que para una muestra cualquiera es:
-
-102535 = 126
-897465 < 126
-340821 < 63
 
 
 ## Transitions vs transversion

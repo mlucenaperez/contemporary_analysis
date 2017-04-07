@@ -8,11 +8,11 @@ output: html_document
 ## Defining variables:
 
 ```{r}
-#I'll need to calculate SAF SFS and all the thigs required to report variability samples
 
 mkdir /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs 
 cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs
-#I'll use the parameters calculated by the (ANGDS-2-b_depth_global_to_choose_MaxDepthGlobal.R) script:
+
+#I'll use the parameters calculated by the (depth_global_to_choose_MaxDepthGlobal.R inside previous pipeline) script:
 
 scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_sd_folds_2*.csv mlucena@genomics-b.ebd.csic.es:/home/GRUPOS/grupolince/analysis_genomes_5x/ANGSD/sfs/
 
