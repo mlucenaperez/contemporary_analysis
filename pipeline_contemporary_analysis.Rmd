@@ -294,10 +294,24 @@ done
 
 ## Report
 
+
+
 ```{r, engine=bash, eval=FALSE}
 
-# Check ARRAY, SAMPLELIST AND BARCODEID
+# Get in with Godoy's account.
 
+mkdir /home/jagodoy/backup/raw_data/stats # En este directorio voy a almacenar todos los archivos que genere de los distintos proyectos.
+
+# Voy a llevar la cuenta de los que estoy haciendo en una hoja excel para hacerlo sobre todos los proyectos que tenemos. 
+cd /home/jagodoy/backup/raw_data/LYNX_06_08/LYNX_06_08_not_trimmed # LYNX_06_08
+cd /home/jagodoy/backup/raw_data/LYNX_09/LYNX_09_not_trimmed # LYNX_09
+cd /home/jagodoy/backup/raw_data/LYNX_13/20170127/LYNX_13_not_trimmed # LYNX_13
+cd /home/jagodoy/backup/raw_data/LYNX_15/20170206/FASTQ # LYNX_15
+cd /home/jagodoy/backup/raw_data/LYNX_16/20170206/FASTQ # LYNX_16
+
+# Corre el BARCODEID que corresponda
+
+SAMPLESLIST=($(echo ${BARCODEID[@]} | tr ' ' '\n' | sort | uniq | tr ' ' '\n'))
 ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq))                     
 
 # This part calculates how many reads do I have in the fastq file and name with the sample name so that latter we can added if they are coming from the same library.
@@ -307,12 +321,13 @@ for i in ${ARRAY[@]}
 do
 echo $i
 echo ${BARCODEID["${i}"]}_${i}
-zcat ${i}_1.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar1.rawseq
-zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar2.rawseq
+zcat ${i}_1.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar1.rawseq
+zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar2.rawseq
 done
 
-rm stats_LYNX_14.csv
-rm raw.R2 
+
+
+cd /home/jagodoy/backup/raw_data/stats
 
 for sample in "${SAMPLESLIST[@]}"
 do
