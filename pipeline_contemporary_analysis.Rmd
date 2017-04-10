@@ -341,7 +341,6 @@ zcat ${i}_R2.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_da
 done
 
 
-
 cd /home/jagodoy/backup/raw_data/stats
 
 for sample in "${SAMPLESLIST[@]}"
