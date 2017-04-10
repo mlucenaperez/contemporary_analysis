@@ -628,3 +628,4 @@ write.csv(x = depth_per_sample,file = paste("/Users/marialucenaperez/Dropbox/PhD
 write.table(x = depth_per_sample,file = paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_sd_folds_",sd_folds,"_a.csv", sep= ""),quote=FALSE, col.names = FALSE, row.names = FALSE, sep= " ")
 
 ```
+
