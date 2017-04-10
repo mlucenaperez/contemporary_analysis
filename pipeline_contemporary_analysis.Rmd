@@ -337,17 +337,18 @@ done
 
 Hay dos formas de calcularlo
 
-
-
 ```{r, engine=bash, eval=FALSE}
-REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
 
-SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
-for sample in "${SAMPLELIST[@]}"
-do
-java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC  -XX:+UseStringDeduplication -Xms10g  -Xmx64g -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -I ${sample} -o ${sample/.bam/.coverage} -T DepthOfCoverage -R $REF
-done
+# GATK: Slower.
 
+# REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+# SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
+# for sample in "${SAMPLELIST[@]}"
+# do
+# java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC  -XX:+UseStringDeduplication -Xms10g  -Xmx64g -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -I ${sample} -o ${sample/.bam/.coverage} -T DepthOfCoverage -R $REF
+# done
+
+# Samtools: The one I am doing 
 
 SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
 rm global_coverage.tsv
