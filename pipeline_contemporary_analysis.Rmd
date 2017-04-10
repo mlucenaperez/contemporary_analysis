@@ -302,6 +302,9 @@ done
 
 mkdir /home/jagodoy/backup/raw_data/stats # En este directorio voy a almacenar todos los archivos que genere de los distintos proyectos.
 
+mkdir /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/stats_information # Los transfiero a la carpeta BAM para poder fusionarlos con los de los mapeados. 
+
+
 # Voy a llevar la cuenta de los que estoy haciendo en una hoja excel para hacerlo sobre todos los proyectos que tenemos. 
 cd /home/jagodoy/backup/raw_data/LYNX_06_08/LYNX_06_08_not_trimmed # LYNX_06_08
 cd /home/jagodoy/backup/raw_data/LYNX_09/LYNX_09_not_trimmed # LYNX_09
@@ -326,7 +329,6 @@ zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_dat
 done
 
 
-
 cd /home/jagodoy/backup/raw_data/stats
 
 for sample in "${SAMPLESLIST[@]}"
@@ -334,6 +336,9 @@ do
 cat "${sample}"*.borrar1.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R1.rawseq
 cat "${sample}"*.borrar2.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R2.rawseq
 done
+
+rm *borrar*
+scp *rawseq /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/stats_information
 
 
 for sample in "${SAMPLESLIST[@]}"
