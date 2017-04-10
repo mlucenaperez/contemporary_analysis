@@ -43,7 +43,8 @@ ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the 
 # BARCODE LYNX_16:
 # declare -A BARCODEID=(["CA2W6ANXX_4_23nf"]="h_ll_ba_0214" ["CA2W6ANXX_4_25nf"]="c_ll_ba_0216" ["CA2W6ANXX_4_27nf"]="h_ll_ba_0215" ["CA3D2ANXX_6_23nf"]="h_ll_ba_0214" ["CA3D2ANXX_6_25nf"]="c_ll_ba_0216" ["CA3D2ANXX_6_27nf"]="h_ll_ba_0215")
 
-
+# BARCODE MACROGEN:
+# declare -A BARCODEID=(["LC1"]="c_lc_xx_0001" ["LL112"]="c_ll_vl_0112" ["LL146"]="c_ll_ya_0146" ["LL212"]="c_ll_cr_0212" ["LL90"]="c_ll_ki_0090" ["LR1"]="c_lr_xx_0001")
 ```
 
 ## 	FastQC: quality summary of raw data 
@@ -294,8 +295,6 @@ done
 
 ## Report
 
-
-
 ```{r, engine=bash, eval=FALSE}
 
 # Get in with Godoy's account.
@@ -306,15 +305,16 @@ mkdir /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/stats_information
 
 
 # Voy a llevar la cuenta de los que estoy haciendo en una hoja excel para hacerlo sobre todos los proyectos que tenemos. 
+
 cd /home/jagodoy/backup/raw_data/LYNX_06_08/LYNX_06_08_not_trimmed # LYNX_06_08
 cd /home/jagodoy/backup/raw_data/LYNX_09/LYNX_09_not_trimmed # LYNX_09
 cd /home/jagodoy/backup/raw_data/LYNX_13/20170127/LYNX_13_not_trimmed # LYNX_13
 cd /home/jagodoy/backup/raw_data/LYNX_15/20170206/FASTQ # LYNX_15
 cd /home/jagodoy/backup/raw_data/LYNX_16/20170206/FASTQ # LYNX_16
+cd /home/jagodoy/backup/raw_data/MACROGEN/MACROGEN_not_trimmed # MACROGEN
+
 
 # Corre el BARCODEID que corresponda
-
-SAMPLESLIST=($(echo ${BARCODEID[@]} | tr ' ' '\n' | sort | uniq | tr ' ' '\n'))
 ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq))                     
 
 # This part calculates how many reads do I have in the fastq file and name with the sample name so that latter we can added if they are coming from the same library.
@@ -327,6 +327,19 @@ echo ${BARCODEID["${i}"]}_${i}
 zcat ${i}_1.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar1.rawseq
 zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar2.rawseq
 done
+
+
+
+# For MACROGEN SAMPLES:
+ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1 | uniq))
+for i in ${ARRAY[@]}
+do
+echo $i
+echo ${BARCODEID["${i}"]}_${i}
+zcat ${i}_R1.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar1.rawseq
+zcat ${i}_R2.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar2.rawseq
+done
+
 
 
 cd /home/jagodoy/backup/raw_data/stats
