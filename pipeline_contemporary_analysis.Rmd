@@ -293,9 +293,14 @@ done
 
 ```
 
-## Report
+## Fastq & BAM stats
 
 ```{r, engine=bash, eval=FALSE}
+
+
+ # FASTQ
+ ######################################################################### 
+
 
 # Get in with Godoy's account.
 
@@ -329,19 +334,21 @@ zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_dat
 done
 
 
-
-# For MACROGEN SAMPLES:
-ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1 | uniq))
-for i in ${ARRAY[@]}
-do
-echo $i
-echo ${BARCODEID["${i}"]}_${i}
-zcat ${i}_R1.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar1.rawseq
-zcat ${i}_R2.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar2.rawseq
-done
+# # For MACROGEN SAMPLES:
+# ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1 | uniq))
+# for i in ${ARRAY[@]}
+# do
+# echo $i
+# echo ${BARCODEID["${i}"]}_${i}
+# zcat ${i}_R1.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar1.rawseq
+# zcat ${i}_R2.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar2.rawseq
+# done
 
 
 cd /home/jagodoy/backup/raw_data/stats
+
+SAMPLESLIST=($(echo ${BARCODEID[@]} | tr ' ' '\n' | sort | uniq | tr ' ' '\n'))
+
 
 for sample in "${SAMPLESLIST[@]}"
 do
@@ -352,18 +359,57 @@ done
 rm *borrar*
 scp *rawseq /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/stats_information
 
+cd /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/
 
+  
+ # BAM  
+ ######################################################################### 
+  
+# Generalizo el samplelist: (lo podría haber hecho así también antes)
+  
+  
+SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
+for sample in "${SAMPLELIST[@]}"
+do
+echo $sample
+samtools flagstat $sample  >  /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/${sample}_bam.stats
+done
+  
+  
 for sample in "${SAMPLESLIST[@]}"
 do
 echo "${sample}"
 NAME="${sample}"
-TOTAL_SEQ="$(cat "${sample}"*.rawseq | awk '{sum+=$1}END{print sum}')"
+TOTAL_SEQ="$(cat /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/"${sample}"*.rawseq | awk '{sum+=$1}END{print sum}')"
 #TOTAL_MAPPED="$(grep "in total" "${sample}".stats | cut -d "+" -f 1 ')"
 #DUPLICATES="$(grep "duplicates" "${sample}"_sorted_rmdup_sorted.stats | cut -d "+" -f 1 ')"
 echo "$NAME, $TOTAL_SEQ" >> raw.stats 
 done
 
 ```
+
+
+## Insert size distribution
+
+Hay dos formas de calcularlo
+
+```{r, engine=bash, eval=FALSE}
+
+# I run picard tool with the option H, that output an histogram. 
+for sample in *recal_round-1.bam
+do
+java  -Xms10g  -Xmx40g -jar /home/tmp/Software/Picard/picard-tools-1.66/CollectInsertSizeMetrics.jar I=$sample H=${sample/.bam/.histogram_length} O=${sample/.bam/.picard_length}
+done
+
+
+for picard_file in *.picard_length 
+do
+echo $picard_file
+tail -n+12 $picard_file | awk '($1 > 30) {print $1*$2}' | paste -sd+ | bc | awk '{print $1/2413209059}'
+done
+
+```
+
 
 ## Coverage
 
@@ -396,4 +442,31 @@ sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  global_coverage.tsv
 done
 
 ```
+
+
+## Summary report
+
+
+```{r, engine=bash, eval=FALSE}
+
+
+```
+
+
+
+## Summary report
+
+
+```{r, engine=bash, eval=FALSE}
+
+SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
+for sample in "${SAMPLELIST[@]}"
+do
+echo $sample
+# samtools index $sample
+done
+
+```
+
+
 
