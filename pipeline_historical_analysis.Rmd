@@ -436,8 +436,6 @@ echo $picard_file
 tail -n+12 $picard_file | awk '($1 > 30) {print $1*$2}' | paste -sd+ | bc | awk '{print $1/2413209059}'
 done
 
-
-awk ' ' foo > bar
 ```
 
 
