@@ -1,0 +1,336 @@
+---
+title: "pipeline_PCA"
+output: html_document
+---
+
+```{r, engine=bash, eval=FALSE}
+
+####################################################################################
+#
+#      								Population Structure (PCA, MDS(ngsDist))
+#
+#										María Lucena Pérez
+#
+####################################################################################
+
+# Info from ANGSD page, and github Fumagalli/ngsTools/TUTORIAL.md
+# One solution would be to perform a Principal Component Analysis (PCA) or a Multidimensional Scaling (MDS) or some clustering based on genetic distances among samples. 
+# We are here showing how to perform these analyses using ngsTools/ANGSD in case of low-depth data.
+
+
+##################################################################################################
+
+################################ PCA ################################
+					# Genotype likelihood approach # 
+
+
+# Matteo Fumagallis methods for doing PCA/Covariance based on ANGSD output files:
+
+# Fumagalli, M, Vieira, FG, Korneliussen, TS, Linderoth, T, Huerta-Sánchez, E, Albrechtsen, A, Nielsen, R (2013). 
+# Quantifying population genetic differentiation from next-generation sequencing data. Genetics, 195, 3:979-92.
+
+# This works without the need to call SNPs or genotypes based on genotype likelihoods.
+
+# NB! If you have very different depths for the different samples, e.i. some very low and others medium and high, 
+# then you might want to use the single base sampling approach PCA_MDS. ---> Explained latter. 
+
+# The main documentation for this is found here: https://github.com/mfumagalli/ngsTools and here https://github.com/mfumagalli/ngsTools#ngscovar
+
+
+# To do this, we first need to assign genotype probabilities at each site for each individual. The specific option in ANGSD is -doGeno.
+
+# $ANGSD/angsd -doGeno
+# 	-doGeno 0
+#        1: write major and minor
+#        2: write the called genotype encoded as -1,0,1,2, -1=not called
+#        4: write the called genotype directly: eg AA,AC etc
+#        8: write the posterior probability of all possible genotypes
+#        16: write the posterior probability of called gentype
+#        32: write the posterior probability of called gentype as binary
+#        -> A combination of the above can be choosen by summing the values, EG write 0,1,2 types with majorminor as -doGeno 3
+#        -postCutoff=0.333333 (Only genotype to missing if below this threshold)
+#        -geno_minDepth=-1       (-1 indicates no cutof)
+#        -geno_maxDepth=-1       (-1 indicates no cutof)
+#        -geno_minMM=-1.000000   (minimum fraction af major-minor bases)
+#        -MIN_IND=0       (only keep sites if you call genotypes from this number of individuals)
+
+#        NB When writing the posterior the -postCutoff is not used
+#        NB geno_minDepth requires -doCounts
+#        NB geno_maxDepth requires -doCounts
+
+# Therefore, if we set -doGeno 2, genotypes are coded as 0,1,2, as the number of alternate alleles. 
+# If we want to print the major and minor alleles as well then we set -doGeno 3.
+
+# To calculate the posterior probability of genotypes we need to define a model.
+
+# $ANGSD/angsd -doPost
+
+#	-doPost 0       (Calculate posterior prob 3xgprob)
+#        1: Using frequency as prior
+#        2: Using uniform prior
+
+
+# -doPost 1 uses the estimate per-site allele frequency as a prior for genotype proportions, assuming Hardy Weinberg Equilibrium. 
+# When the assumption of HWE is not valid, you can use an estimate of the inbreeding coefficient, for instance calculated using ngsF.
+
+# For most cases, we want to restrict this analysis on a set of putative polymorphic sites (SNPs), as non-variable sites (across all samples) will not carry information regarding population structure or differentiation. 
+# The rationale for assigning probabilities of being variable at each site is based on the estimation of the allele frequencies.
+
+# ANGSD has an option to estimate allele frequencies called -doMaf:
+
+# $ANGSD/angsd -doMaf
+#	-doMaf  0 (Calculate persite frequencies '.mafs.gz')
+#        1: Frequency (fixed major and minor)
+#        2: Frequency (fixed major unknown minor)
+#        4: Frequency from genotype probabilities
+#        8: AlleleCounts based method (known major minor)
+
+#        NB. Filedumping is supressed if value is negative
+
+#	-doPost 0       (Calculate posterior prob 3xgprob)
+#        1: Using frequency as prior
+#        2: Using uniform prior
+# Filters:
+#        -minMaf         -1.000000       (Remove sites with MAF below)
+#        -SNP_pval       1.000000        (Remove sites with a pvalue larger)
+#        -rmTriallelic   0.000000        (Remove sites with a pvalue lower)
+# Extras:
+#        -ref    (null)  (Filename for fasta reference)
+#        -anc    (null)  (Filename for fasta ancestral)
+#        -eps    0.001000 [Only used for -doMaf &8]
+#        -beagleProb     0 (Dump beagle style postprobs)
+#        -indFname       (null) (file containing individual inbreedcoeficients)
+
+# NB These frequency estimators requires major/minor -doMajorMinor
+
+
+# Therefore, the estimation of allele frequencies requires the specification of how to assign the major and minor alleles (if biallelic).
+
+# $ANGSD/angsd -doMajorMinor
+#	-doMajorMinor   0
+#        1: Infer major and minor from GL
+#        2: Infer major and minor from allele counts
+#        3: use major and minor from a file (requires -sites file.txt)
+#        4: Use reference allele as major (requires -ref)
+#        5: Use ancestral allele as major (requires -anc)
+#        -rmTrans: remove transitions 0
+#        -skipTriallelic 0
+
+# Finally, you need to specify which genotype likelihood model to use.
+
+# $ANGSD/angsd -GL
+#	-GL=0:
+#        1: SAMtools
+#        2: GATK
+#        3: SOAPsnp
+#        4: SYK
+#        5: phys
+#        -trim           0               (zero means no trimming)
+#        -tmpdir         angsd_tmpdir/   (used by SOAPsnp)
+#        -errors         (null)          (used by SYK)
+#        -MIN_IND         0               (0 indicates no filtering)
+
+# Filedumping:
+# 	-doGlf  0
+#        1: binary glf (10 log likes)    .glf.gz
+#        2: beagle likelihood file       .beagle.gz
+#        3: binary 3 times likelihood    .glf.gz
+#        4: text version (10 log likes)  .glf.gz
+
+# If we are interested in looking at allele frequencies only for sites that are actually variable in our sample, 
+# we need to perform a SNP calling first. There are two main ways to call SNPs using ANGSD with these options:
+
+ #       -minMaf         0.000000        (Remove sites with MAF below)
+ #       -SNP_pval       1.000000        (Remove sites with a pvalue larger)
+
+# Therefore we can consider assigning as SNPs sites whose estimated allele frequency is above a certain threhsold 
+# (e.g. the frequency of a singleton) or whose probability of being variable is above a specified value.
+
+#######################################################################################################################################
+#### Principal Component Analysis 
+#######################################################################################################################################
+
+
+# Back to our example, we are now performing a principal component analyses (PCA) without relying on called genotypes, 
+# but rather by taking their uncertainty into account. 
+# More specifically, the next program we are going to use (ngsTools) takes as input genotype probabilities in binary format, 
+# so we need to specify -doGeno 32. Also, we are using a HWE-based prior with -doPost 1. 
+# Recalling also our choice for data filtering, our command line is:
+
+# Create a directory
+mkdir /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/test_with_intergenic_Elena
+
+cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/test_with_intergenic_Elena
+# I want to produce PCAs for the whole dataset, each specie, and within iberian with and without historical samples. 
+# I think that per population PCAs make no sense
+
+#To launch one by one ( because otherwise it's too slow I'll launch single pops in a and groups in b)
+#Lanzo cada uno en una sesión de screen diferente y con un log distinto ( mediante script). lanzo el script conpleto dandole como input el csv que acabo de crear. Ejemplo:
+
+POP="c_ll_la"  # <--CHANGE POP HERE
+screen -S "$POP"_pca
+POP="c_ll_la"  # <--CHANGE POP HERE
+script "$POP"_pca.log
+POP="c_ll_la"  # <--CHANGE POP HERE
+
+# Set paths to software and some commom files
+ANGSD=/opt/angsd
+NGSTOOLS=/opt/ngsTools_19092016/
+THREADS=2                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/lr1_ref_norecal.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+REGIONFILE="/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/test_with_intergenic_Elena/no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+SFSDIR="/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs"
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < "$SFSDIR"/"$POP"_mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv
+
+N_IND=$(echo ${POP: -3} )
+MIN_IND=$(expr $N_IND / 2)
+
+
+### Calling genotype likelihoods: 
+ 
+$ANGSD/angsd -P $THREADS -b /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/$POP.bamlist -ref $REF -out $POP \
+$FILTER1 $FILTER2 \
+-minInd $MIN_IND -setMaxDepth $maxDepth  \
+-rf $REGIONFILE \
+-GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
+-SNP_pval 1e-3 \
+-doGeno 32 -doPost 1
+
+# SNP_pval = #ind*(2allelos/ind) = x alelos ; 1/x = y  # esto sería un filtro aceptable. En mi caso el dataset más pequeño (h_lypa_all) es de 55 indivíduos (1/(2*55)=9e-3) y el más grande (x_lyxx_all) de 189 (1/(2*189)=2.6e-3)
+# Para el PCA vamos a usar 1e-3 porque es un filtro suuuper light.
+
+
+# Unzip the results (but you cannot open it since it is in binary format)
+
+gunzip $POP.geno.gz
+
+### ngsCovar
+
+# We are going to use ngsCovar, which estimates the covariance matrix between individuals based on genotype probabilities. 
+# Then this matrix will be decomposed into principal components which will be investigated for population structure analyses. 
+# Note that although ngsCovar can account for SNPs uncertanity, we find that it is faster to perform a light SNP filtering first 
+# (as we did using -SNP_pval 1e-3) than using all sites.
+
+# If you type:
+
+# $NGSTOOLS/ngsPopGen/ngsCovar
+
+# you will see a list of possible options. 
+# For instance, we need to define how many sites we have. To retrieve such value, we can inspect the file with allele frequencies:
+
+#less -S $POP.mafs.gz
+N_SITES=`zcat $POP.mafs.gz | tail -n+2 | wc -l`
+echo $N_SITES
+
+# In my case I have xx sites.
+
+# Now we can perform a PCA by estimating the covariance matrix first:
+# $$$Do we want to add the SFS file??
+
+$NGSTOOLS/ngsPopGen/ngsCovar -probfile $POP.geno -outfile $POP.covar -nind $N_IND  -nsites $N_SITES -call 0 -norm 0 &> /dev/null
+
+# with the options -call 0 meaning that we do not perform genotype calling 
+# and -norm 0 that we are not normalising by allele frequency. 
+# The latter may give more weight to low frequency variants which are harder to estimate.
+
+# Look at the output file:
+
+#less -S $POP.covar
+
+# which represents a matrix of NxN with N individuals giving the covariance. Note that this matrix is symmetric.
+
+# Finally, we perform an eigenvector decomposition and plot the resulting map:
+
+# create a cluster-like file defining the labelling (population) for each sample
+
+#Example: Rscript -e 'write.table(cbind(seq(1,60),rep(1,60),c(rep("LWK",20),rep("TSI",20),rep("PEL",20))), row.names=F, sep=" ", col.names=c("FID","IID","CLUSTER"), file="Results/ALL.clst", quote=F)'
+
+echo "FID" > $POP.ALL1.clst.borrar
+seq $N_IND >> $POP.ALL1.clst.borrar
+#yes "1" | head -n $N_IND > ALL2.clst.borrar
+echo "IID" > $POP.ALL3.clst.borrar
+cat /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/$POP.bamlist | sed -e 's$/home/mlucena/grupolince/immunocapture/alignments_merged_cap_wg_ontarget/$$g' | cut -d "_" -f 1,2,3,4 >> $POP.ALL3.clst.borrar
+paste $POP.ALL1.clst.borrar $POP.ALL3.clst.borrar> $POP.ALL.clst
+
+rm $POP.*clst.borrar
+
+
+# run and plot
+
+# Rscript $NGSTOOLS/Scripts/plotPCA.R -i Results/ALL.covar -c 1-2 -a Results/ALL.clst -o Results/ALL.pca.pdf
+#Rscript $NGSTOOLS/Scripts/plotPCA.R -i $POP.ALL.covar -c 1-2 -a $POP.ALL.clst -o $POP.ALL.pca.pdf #--> No corre porque no puedo instalar librerías así que lo hago en mi propio ordenador
+# evince Results/ALL.pca.pdf
+
+# where the parameter -c 1-2 specifies that we are plotting only the first and second component. On the screen, you will see a series of numbers. These are the percentage of explained variance for each component.
+
+#scp mlucena@genomics-a.ebd.csic.es:/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/*.ALL.clst /home/elena/Dropbox/immunocapture/analysis/ANSGD/pca
+#scp mlucena@genomics-a.ebd.csic.es:/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/*.covar /home/elena/Dropbox/immunocapture/analysis/ANSGD/pca
+#scp mlucena@genomics-a.ebd.csic.es:/opt/ngsTools_19092016/Scripts/plotPCA.R /home/elena/Dropbox/immunocapture/scripts/ANSGD/
+
+#######################################################################################################################################
+### Genetic distances
+#######################################################################################################################################
+
+# An alternative approach would be to compute genetic distances first, and then perform a Multi Dimensional Scaling (MDS) on those. 
+# We are using ngsDist to estimate pairwise genetic distances from genotype probabilities.
+
+# Again, we run ANGSD to compute genotype psoterior probabilities assuming HWE and specifying the output format with -doGeno:
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/$POP.bamlist -ref $REF -out $POP.MDS \
+-rf $REGIONFILE \
+$FILTER1 $FILTER2 \
+-minInd $MININD -setMaxDepth $maxDepth
+-GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
+-SNP_pval 1e-3 \
+-doGeno 8 -doPost 1 
+        
+        
+# Record how many sites we retrieve (although this should be equal what found earlier):
+
+N_SITES=`zcat $POP.MDS.mafs.gz | tail -n+2 | wc -l`
+echo $N_SITES
+
+
+# For plotting purposes, we now create a file with labels indicating the population of interest for each sample.
+#$$ Not used now. I'll plot with the samples name
+#Rscript -e 'cat(paste(rep(c("LWK","TSI","PEL"),each=20), rep(1:20, 3), sep="_"), sep="\n", file="Data/pops.label")'
+#cat Data/pops.label
+echo "IID" > $POP.ALL3.clst.borrar
+cat /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/$POP.bamlist | sed -e 's$/home/mlucena/grupolince/immunocapture/alignments_merged_cap_wg_ontarget/$$g' | cut -d "_" -f 1,2,3,4 >> $POP.ALL3.clst.borrar
+
+# With ngsDist we can compute pairwise genetic distances without relying on individual genotype calls.
+
+$NGSTOOLS/ngsDist/ngsDist -verbose 1 -geno $POP.MDS.geno.gz -probs -n_ind $N_IND -n_sites $N_SITES -labels $POP.label -o $MININD.MDS.dist -n_threads 8 &> /dev/null
+#less -S Results/ALL.dist
+
+# We can visualise the pairwise genetic distances in form of a tree (in Newick format) using FastME:
+# $$I don't know if it's installed
+#$FASTME -D 1 -i Results/ALL.dist -o Results/ALL.tree -m b -n b &> /dev/null
+#cat Results/ALL.tree
+
+# We can use some R packages to plot the resulting tree.
+
+#Rscript -e 'library(ape); library(phangorn); pdf(file="Results/ALL.tree.pdf"); plot(read.tree("Results/ALL.tree"), cex=0.5); dev.off();' &> /dev/null
+#evince Results/ALL.tree.pdf
+
+# From these distances, we can also perform a MDS analysis and investigate the population genetic structure of our samples.
+
+
+#tail -n +3 Results/ALL.dist | head -n $N_IND | Rscript --vanilla --slave $NGSTOOLS/Scripts/getMDS.R --no_header --data_symm -n 4 -m "mds" -o Results/ALL.mds &> /dev/null
+#less -S Results/ALL.mds
+
+# The first line gives the proportion of explained variance by each component, and the other lines specify the coordinates of each sample on each component.
+
+
+#done < $SFSDIR/inline.csv
+
+
+
+
+
+
+```
+
