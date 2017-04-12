@@ -26,7 +26,7 @@ ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the 
 # declare -A BARCODEID=(["C6DUUANXX_2_12nf"]="c_ll_po_0001" ["C6DV6ANXX_1_12nf"]="c_ll_po_0001" ["C6DUUANXX_3_13nf"]="c_ll_po_0002" ["C6DV6ANXX_1_13nf"]="c_ll_po_0002" ["C6DUUANXX_3_14nf"]="c_ll_po_0003" ["C6DV6ANXX_1_14nf"]="c_ll_po_0003" ["C6DUUANXX_3_15nf"]="c_ll_po_0011" ["C6DV6ANXX_1_15nf"]="c_ll_po_0011" ["C6DUUANXX_2_16nf"]="c_ll_po_0014" ["C6DV6ANXX_1_16nf"]="c_ll_po_0014" ["C6DUUANXX_3_18nf"]="c_ll_po_0019" ["C6DV6ANXX_1_18nf"]="c_ll_po_0019" ["C6DUUANXX_4_19nf"]="c_ll_po_0105" ["C6DV6ANXX_1_19nf"]="c_ll_po_0105" ["C6DUUANXX_4_20nf"]="c_ll_po_0106" ["C6DV6ANXX_1_20nf"]="c_ll_po_0106" ["C6DUUANXX_2_21nf"]="c_ll_vl_0107" ["C6DV6ANXX_1_21nf"]="c_ll_vl_0107" ["C6DV6ANXX_7_5nf"]="c_ll_vl_0108" ["C6DUUANXX_2_22nf"]="c_ll_vl_0109" ["C6DUUANXX_1_23nf"]="c_ll_vl_0110" ["C6DV6ANXX_1_23nf"]="c_ll_vl_0110")
 
 # BARCODES LYNX_PROYECT:
-# declare -A BARCODEID=(["B09HCABXX_2_0"]="c_lp_do_0153" ["B09HCABXX_1_0"]="c_lp_do_0153" ["B0B5KABXX_1_0"]="c_lp_do_0153" ["B0B5KABXX_2_0"]="c_lp_do_0153" ["B09HCABXX_5_0"]="c_lp_do_0173" ["B09HCABXX_6_0"]="c_lp_do_0173" ["B0B5KABXX_6_0"]="c_lp_do_0173" ["B0B5KABXX_5_0"]="c_lp_do_0173" ["D0D6JABXX_4_0"]="c_lp_do_0443" ["D0D6JABXX_3_0"]="c_lp_do_0443" ["B0999ABXX_3_0"]="c_lp_do_0443" ["B0999ABXX_4_0"]="c_lp_do_0443" ["B09HCABXX_3_0"]="c_lp_sm_0138" ["B09HCABXX_4_0"]="c_lp_sm_0138" ["B0B5KABXX_3_0"]="c_lp_sm_0138" ["B0B5KABXX_4_0"]="c_lp_sm_0138" ["C02CHABXX_1_0"]="c_lp_sm_0140" ["C02CHABXX_2_0"]="c_lp_sm_0140" ["C02CHABXX_4_0"]="c_lp_sm_0140" ["C02CHABXX_3_0"]="c_lp_sm_0140" ["D0D6JABXX_2_0"]="c_lp_sm_0185" ["D0D6JABXX_1_0"]="c_lp_sm_0185" ["B0999ABXX_2_0"]="c_lp_sm_0185" ["B0999ABXX_1_0"]="c_lp_sm_0185" ["D0D6JABXX_5_0"]="c_lp_sm_0186" ["D0D6JABXX_6_0"]="c_lp_sm_0186" ["B0999ABXX_6_0"]="c_lp_sm_0186" ["B0999ABXX_5_0"]="c_lp_sm_0186" ["621CYAAXX_lane1_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane1_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane5_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane2_sequence_0"]="c_lp_sm_0221" ["D0D6JABXX_8_0"]="c_lp_sm_0298" ["D0D6JABXX_7_0"]="c_lp_sm_0298" ["B0999ABXX_7_0"]="c_lp_sm_0298" ["B0999ABXX_8_0"]="c_lp_sm_0298" ["C02CHABXX_6_0"]="c_lp_sm_0359" ["C02CHABXX_7_0"]="c_lp_sm_0359" ["C02CHABXX_5_0"]="c_lp_sm_0359" ["C02CHABXX_8_0"]="c_lp_sm_0359" ["B09HCABXX_8_0"]="h_lp_do_0007" ["B09HCABXX_7_0"]="h_lp_do_0007" ["B0B5KABXX_7_0"]="h_lp_do_0007" ["B0B5KABXX_8_0"]="h_lp_do_0007")
+# declare -A BARCODEID=(["B09HCABXX_2_0"]="c_lp_do_0153" ["B09HCABXX_1_0"]="c_lp_do_0153" ["B0B5KABXX_1_0"]="c_lp_do_0153" ["B0B5KABXX_2_0"]="c_lp_do_0153" ["B09HCABXX_5_0"]="c_lp_do_0173" ["B09HCABXX_6_0"]="c_lp_do_0173" ["B0B5KABXX_6_0"]="c_lp_do_0173" ["B0B5KABXX_5_0"]="c_lp_do_0173" ["D0D6JABXX_4_0"]="c_lp_do_0443" ["D0D6JABXX_3_0"]="c_lp_do_0443" ["B0999ABXX_3_0"]="c_lp_do_0443" ["B0999ABXX_4_0"]="c_lp_do_0443" ["B09HCABXX_3_0"]="c_lp_sm_0138" ["B09HCABXX_4_0"]="c_lp_sm_0138" ["B0B5KABXX_3_0"]="c_lp_sm_0138" ["B0B5KABXX_4_0"]="c_lp_sm_0138" ["C02CHABXX_1_0"]="c_lp_sm_0140" ["C02CHABXX_2_0"]="c_lp_sm_0140" ["C02CHABXX_4_0"]="c_lp_sm_0140" ["C02CHABXX_3_0"]="c_lp_sm_0140" ["D0D6JABXX_2_0"]="c_lp_sm_0185" ["D0D6JABXX_1_0"]="c_lp_sm_0185" ["B0999ABXX_2_0"]="c_lp_sm_0185" ["B0999ABXX_1_0"]="c_lp_sm_0185" ["D0D6JABXX_5_0"]="c_lp_sm_0186" ["D0D6JABXX_6_0"]="c_lp_sm_0186" ["B0999ABXX_6_0"]="c_lp_sm_0186" ["B0999ABXX_5_0"]="c_lp_sm_0186" ["D0D6JABXX_8_0"]="c_lp_sm_0298" ["D0D6JABXX_7_0"]="c_lp_sm_0298" ["B0999ABXX_7_0"]="c_lp_sm_0298" ["B0999ABXX_8_0"]="c_lp_sm_0298" ["C02CHABXX_6_0"]="c_lp_sm_0359" ["C02CHABXX_7_0"]="c_lp_sm_0359" ["C02CHABXX_5_0"]="c_lp_sm_0359" ["C02CHABXX_8_0"]="c_lp_sm_0359" ["B09HCABXX_8_0"]="h_lp_do_0007" ["B09HCABXX_7_0"]="h_lp_do_0007" ["B0B5KABXX_7_0"]="h_lp_do_0007" ["B0B5KABXX_8_0"]="h_lp_do_0007")
 
 # BARCODE LYNX_13:
 # declare -A BARCODEID=(["C9KJ0ANXX_1_22nf"]="c_ll_vl_0113" ["CA5U3ANXX_2_22nf"]="c_ll_vl_0113" ["C9KH1ANXX_7_25nf"]="c_ll_vl_0128" ["C9KH3ANXX_8_25nf"]="c_ll_vl_0128" ["C9KJ0ANXX_2_23nf"]="c_ll_vl_0132" ["CA5U3ANXX_2_23nf"]="c_ll_vl_0132" ["C9KH1ANXX_5_21nf"]="c_ll_ya_0138" ["C9KH3ANXX_7_21nf"]="c_ll_ya_0138" ["C9KH1ANXX_5_10nf"]="c_ll_ya_0139" ["C9KH3ANXX_7_10nf"]="c_ll_ya_0139" ["C9KH1ANXX_5_11nf"]="c_ll_ya_0140" ["C9KH3ANXX_7_11nf"]="c_ll_ya_0140" ["C9KH1ANXX_5_12nf"]="c_ll_ya_0142" ["C9KH3ANXX_7_12nf"]="c_ll_ya_0142" ["C9KH1ANXX_5_15nf"]="c_ll_ya_0143" ["C9KH3ANXX_7_15nf"]="c_ll_ya_0143" ["C9KH1ANXX_7_14nf"]="c_ll_ya_0145" ["C9KH3ANXX_7_14nf"]="c_ll_ya_0145" ["C9KH1ANXX_5_13nf"]="c_ll_ya_0147" ["C9KH3ANXX_7_13nf"]="c_ll_ya_0147" ["C9KJ0ANXX_4_19nf"]="c_ll_cr_0205" ["CA5U3ANXX_2_19nf"]="c_ll_cr_0205" ["CA2W6ANXX_4_16nf"]="c_ll_cr_0206" ["CA5U3ANXX_2_16nf"]="c_ll_cr_0206" ["C9KJ0ANXX_3_20nf"]="c_ll_cr_0207" ["CA5U3ANXX_2_20nf"]="c_ll_cr_0207" ["CA2W6ANXX_4_18nf"]="c_ll_cr_0208" ["CA5U3ANXX_2_18nf"]="c_ll_cr_0208" ["C9KH1ANXX_7_27nf"]="c_ll_cr_0209" ["C9KH3ANXX_8_27nf"]="c_ll_cr_0209")
@@ -34,14 +34,14 @@ ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the 
 # BARCODE LYNX_14:
 # declare -A BARCODEID=(["C9KH6ANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KN6ANXX_7_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_1_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_2_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_3_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_4_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KH6ANXX_5_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KN6ANXX_7_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_1_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_2_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_3_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_4_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_5_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KH6ANXX_5_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KN6ANXX_7_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_1_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_2_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_3_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_4_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_5_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KH6ANXX_5_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KN6ANXX_7_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_1_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_2_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_3_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_4_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_5_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KH6ANXX_5_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KN6ANXX_7_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_1_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_2_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_3_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_4_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_5_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KH6ANXX_5_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KN6ANXX_7_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_1_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_2_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_3_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_4_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_5_LYNX7-706ii5-4"]="h_lp_mt_1025" ["CA3D2ANXX_3_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KH6ANXX_5_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KN6ANXX_7_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_1_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_2_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_3_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_4_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_5_LYNX7-687ii5-4"]="h_lp_mt_1087" ["CA3D2ANXX_3_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KH6ANXX_5_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KN6ANXX_7_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_1_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_2_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_3_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_4_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_5_LYNX7-700ii5-4"]="h_lp_mt_1117" ["CA3D2ANXX_3_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KH6ANXX_5_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KN6ANXX_7_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_1_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_2_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_3_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_4_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_5_LYNX7-693ii5-4"]="h_lp_mt_1141" ["CA3D2ANXX_3_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KH6ANXX_5_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KN6ANXX_7_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_1_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_2_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_3_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_4_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_5_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KH6ANXX_5_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KN6ANXX_7_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_1_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_2_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_3_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_4_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_5_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KH6ANXX_5_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KN6ANXX_7_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_1_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_2_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_3_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_4_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_5_LYNX7-708ii5-4"]="h_lp_mt_1305" ["CA3D2ANXX_3_LYNX7-708ii5-4"]="h_lp_mt_1305")
 
-# BARCODE NEW_CANDILES (6 samples that I added lately):
-# declare -A BARCODEID=(["6220RAAXX_lane3_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane4_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane6_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane7_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane8_sequence_0"]="c_lp_sm_0221" ["62AHEAAXX_lane1_sequence_0"]="c_lp_sm_0221")
+# BARCODE CANDILES (6 samples that I added lately + (12/04/2017) I also added finally all the CANDILES here, because I need to have them in a separate array for the stats checkings): 
+# declare -A BARCODEID=(["6220RAAXX_lane3_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane4_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane6_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane7_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane8_sequence_0"]="c_lp_sm_0221" ["62AHEAAXX_lane1_sequence_0"]="c_lp_sm_0221" ["621CYAAXX_lane1_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane1_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane5_sequence_0"]="c_lp_sm_0221" ["6220RAAXX_lane2_sequence_0"]="c_lp_sm_0221")
 
 # BARCODE LYNX_15:
 # declare -A BARCODEID=(["C9KH1ANXX_7_1nf"]="c_ll_to_0191" ["C9KH1ANXX_7_7nf"]="c_ll_la_0053" ["C9KH1ANXX_7_10nf"]="c_ll_la_0054" ["C9KH1ANXX_8_11nf"]="c_ll_la_0044" ["C9KH1ANXX_8_12nf"]="c_ll_tu_0157" ["C9KH1ANXX_8_13nf"]="c_ll_tu_0158" ["C9KH1ANXX_8_14nf"]="c_ll_tu_0159" ["C9KH1ANXX_8_15nf"]="c_ll_tu_0165" ["C9KH1ANXX_8_18nf"]="c_ll_tu_0166" ["C9KH1ANXX_8_19nf"]="c_ll_tu_0153" ["C9KH3ANXX_7_1nf"]="c_ll_to_0191" ["C9KH3ANXX_8_7nf"]="c_ll_la_0053" ["C9KH3ANXX_8_10nf"]="c_ll_la_0054" ["C9KH3ANXX_8_11nf"]="c_ll_la_0044" ["C9KH3ANXX_8_12nf"]="c_ll_tu_0157" ["C9KH3ANXX_8_13nf"]="c_ll_tu_0158" ["CA2W6ANXX_1_1nf"]="c_ll_og_0181" ["CA2W6ANXX_1_2nf"]="c_ll_og_0187" ["CA2W6ANXX_1_3nf"]="c_ll_ka_0184" ["CA2W6ANXX_1_4nf"]="c_ll_ka_0186" ["CA2W6ANXX_2_5nf"]="c_ll_ka_0189" ["CA2W6ANXX_2_7nf"]="c_ll_to_0190" ["CA2W6ANXX_2_8nf"]="c_ll_la_0047" ["CA2W6ANXX_4_6nf"]="c_ll_ka_0188" ["CA3D2ANXX_5_1nf"]="c_ll_og_0181" ["CA3D2ANXX_5_2nf"]="c_ll_og_0187" ["CA3D2ANXX_5_3nf"]="c_ll_ka_0184" ["CA3D2ANXX_5_4nf"]="c_ll_ka_0186" ["CA3D2ANXX_5_5nf"]="c_ll_ka_0189" ["CA3D2ANXX_5_6nf"]="c_ll_ka_0188" ["CA3D2ANXX_6_7nf"]="c_ll_to_0190" ["CA3D2ANXX_6_8nf"]="c_ll_la_0047" ["CA3D2ANXX_6_9nf"]="c_ll_la_0048" ["CA3D2ANXX_6_21nf"]="c_ll_la_0052" ["CAABGANXX_5_14nf"]="c_ll_tu_0159" ["CAABGANXX_5_15nf"]="c_ll_tu_0165" ["CAABGANXX_5_18nf"]="c_ll_tu_0166" ["CAABGANXX_5_19nf"]="c_ll_tu_0153" ["CAABGANXX_5_9nf"]="c_ll_la_0048" ["CAABGANXX_5_21nf"]="c_ll_la_0052")
 
 # BARCODE LYNX_16:
-# declare -A BARCODEID=(["CA2W6ANXX_4_23nf"]="h_ll_ba_0214" ["CA2W6ANXX_4_25nf"]="c_ll_ba_0216" ["CA2W6ANXX_4_27nf"]="h_ll_ba_0215" ["CA3D2ANXX_6_23nf"]="h_ll_ba_0214" ["CA3D2ANXX_6_25nf"]="c_ll_ba_0216" ["CA3D2ANXX_6_27nf"]="h_ll_ba_0215")
+# declare -A BARCODEID=(["CA2W6ANXX_4_23nf"]="h_ll_ba_0214" ["CA2W6ANXX_4_25nf"]="c_ll_ba_0216" ["CA2W6ANXX_4_27nf"]="h_ll_ba_0215" ["CA3D2ANXX_6_23nf"]="h_ll_ba_0214" ["CA3D2ANXX_6_25nf"]="c_ll_ba_0216" ["CA3D2ANXX_6_27nf"]="h_ll_ba_0215") 
 
 # BARCODE MACROGEN:
 # declare -A BARCODEID=(["LC1"]="c_lc_xx_0001" ["LL112"]="c_ll_vl_0112" ["LL146"]="c_ll_ya_0146" ["LL212"]="c_ll_cr_0212" ["LL90"]="c_ll_ki_0090" ["LR1"]="c_lr_xx_0001")
@@ -317,7 +317,7 @@ cd /home/jagodoy/backup/raw_data/LYNX_13/20170127/LYNX_13_not_trimmed # LYNX_13
 cd /home/jagodoy/backup/raw_data/LYNX_15/20170206/FASTQ # LYNX_15
 cd /home/jagodoy/backup/raw_data/LYNX_16/20170206/FASTQ # LYNX_16
 cd /home/jagodoy/backup/raw_data/MACROGEN/MACROGEN_not_trimmed # MACROGEN
-
+cd /home/jagodoy/backup/raw_data/genome_project_raw_data_used_for_5x_project # genome proyect
 
 # Corre el BARCODEID que corresponda
 ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq))                     
@@ -327,11 +327,12 @@ ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq))
 
 for i in ${ARRAY[@]}
 do
-echo $i
-echo ${BARCODEID["${i}"]}_${i}
+echo $i 
+echo ${BARCODEID["${i}"]}_${i} >> kk
 zcat ${i}_1.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar1.rawseq
 zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar2.rawseq
 done
+
 
 
 # # For MACROGEN SAMPLES:
@@ -343,6 +344,41 @@ done
 # zcat ${i}_R1.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar1.rawseq
 # zcat ${i}_R2.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar2.rawseq
 # done
+#
+# For the genome proyect I run them lately after copying the former files, so I keep them in the same folder and them copy and move.
+# 
+# # For genome project
+# ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq | grep -v "^6")) # grep -v "^6" es para quitar todos los run de candiles que se corren aparte
+# for i in ${ARRAY[@]}
+# do
+# echo $i
+# echo ${BARCODEID["${i}"]}_${i}
+# zcat ${i}_1.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar1.rawseq
+# zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar2.rawseq
+# done
+# 
+# # For CANDILES:
+# ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-4 | uniq | grep "^6"))                     
+# for i in ${ARRAY[@]}
+# do
+# echo $i
+# echo ${BARCODEID["${i}"]}_${i}
+# zcat ${i}_1.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar1.rawseq
+# zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar2.rawseq
+# done
+
+# --> to do with genome proyect:
+
+# for sample in "${SAMPLESLIST[@]}"
+# SAMPLESLIST=($(echo ${BARCODEID[@]} | tr ' ' '\n' | sort | uniq | tr ' ' '\n'))
+# for sample in "${SAMPLESLIST[@]}"
+# do
+# cat "${sample}"*.borrar1.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R1.rawseq
+# cat "${sample}"*.borrar2.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R2.rawseq
+# done
+# rm *borrar*
+# --> scp /home/jagodoy/backup/raw_data/genome_project_raw_data_used_for_5x_project/*rawseq /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/stats_information
+# --> mv /home/jagodoy/backup/raw_data/genome_project_raw_data_used_for_5x_project/*rawseq /home/jagodoy/backup/raw_data/stats/
 
 
 cd /home/jagodoy/backup/raw_data/stats
@@ -374,16 +410,21 @@ do
 echo $sample
 samtools flagstat $sample  >  /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/${sample}_bam.stats
 done
-  
-  
-for sample in "${SAMPLESLIST[@]}"
+ 
+ 
+SAMPLELIST=($(ls *_recal_round-1.bam | cut -d "_" -f1-4 | sort | uniq ))  
+cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
+
+echo "sample_name,total_seq,total_reads,duplicates,mapped" > raw.stats 
+for sample in "${SAMPLELIST[@]}"
 do
 echo "${sample}"
 NAME="${sample}"
 TOTAL_SEQ="$(cat /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/"${sample}"*.rawseq | awk '{sum+=$1}END{print sum}')"
-#TOTAL_MAPPED="$(grep "in total" "${sample}".stats | cut -d "+" -f 1 ')"
-#DUPLICATES="$(grep "duplicates" "${sample}"_sorted_rmdup_sorted.stats | cut -d "+" -f 1 ')"
-echo "$NAME, $TOTAL_SEQ" >> raw.stats 
+TOTAL_READS="$(grep "in total" "${sample}"*.stats | cut -d "+" -f 1)"
+DUPLICATES="$(grep "duplicates" "${sample}"*.stats | cut -d "+" -f 1)"
+MAPPED="$(grep "0 mapped" "${sample}"*.stats | cut -d "+" -f 1)"
+echo "$NAME,$TOTAL_SEQ,$TOTAL_READS,$DUPLICATES,$MAPPED" >> raw.stats 
 done
 
 ```
@@ -398,6 +439,7 @@ Hay dos formas de calcularlo
 # I run picard tool with the option H, that output an histogram. 
 for sample in *recal_round-1.bam
 do
+echo $sample
 java  -Xms10g  -Xmx40g -jar /home/tmp/Software/Picard/picard-tools-1.66/CollectInsertSizeMetrics.jar I=$sample H=${sample/.bam/.histogram_length} O=${sample/.bam/.picard_length}
 done
 
