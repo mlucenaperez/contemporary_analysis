@@ -44,7 +44,7 @@ ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the 
 # declare -A BARCODEID=(["CA2W6ANXX_4_23nf"]="h_ll_ba_0214" ["CA2W6ANXX_4_25nf"]="c_ll_ba_0216" ["CA2W6ANXX_4_27nf"]="h_ll_ba_0215" ["CA3D2ANXX_6_23nf"]="h_ll_ba_0214" ["CA3D2ANXX_6_25nf"]="c_ll_ba_0216" ["CA3D2ANXX_6_27nf"]="h_ll_ba_0215") 
 
 # BARCODE MACROGEN:
-# declare -A BARCODEID=(["LC1"]="c_lc_xx_0001" ["LL112"]="c_ll_vl_0112" ["LL146"]="c_ll_ya_0146" ["LL212"]="c_ll_cr_0212" ["LL90"]="c_ll_ki_0090" ["LR1"]="c_lr_xx_0001")
+# declare -A BARCODEID=(["LC1"]="c_lc_zz_0001" ["LL112"]="c_ll_vl_0112" ["LL146"]="c_ll_ya_0146" ["LL212"]="c_ll_cr_0212" ["LL90"]="c_ll_ki_0090" ["LR1"]="c_lr_zz_0001")
 ```
 
 ## 	FastQC: quality summary of raw data 
@@ -411,6 +411,9 @@ echo $sample
 samtools flagstat $sample  >  /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/${sample}_bam.stats
 done
  
+
+
+
  
 SAMPLELIST=($(ls *_recal_round-1.bam | cut -d "_" -f1-4 | sort | uniq ))  
 cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
