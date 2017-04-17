@@ -425,20 +425,7 @@ diff recal_list stats_list  # ok! none!
 
 ## 
 
-cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final
-SAMPLELIST=($(ls *_recal_round-1.bam | cut -d "_" -f1-4 | sort | uniq )) 
-cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
-echo "sample_name,total_seq,total_reads,duplicates,mapped" > raw.stats 
-for sample in "${SAMPLELIST[@]}"
-do
-echo "${sample}"
-NAME="${sample}"
-TOTAL_SEQ="$(cat /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/"${sample}"*.rawseq | awk '{sum+=$1}END{print sum}')"
-TOTAL_READS="$(grep "in total" "${sample}"*.stats | cut -d "+" -f 1)"
-DUPLICATES="$(grep "duplicates" "${sample}"*.stats | cut -d "+" -f 1)"
-MAPPED="$(grep "0 mapped" "${sample}"*.stats | cut -d "+" -f 1)"
-echo "$NAME,$TOTAL_SEQ,$TOTAL_READS,$DUPLICATES,$MAPPED" | sed 's/ //g' >> raw.stats 
-done
+
 
 ```
 
@@ -450,18 +437,18 @@ Hay dos formas de calcularlo
 ```{r, engine=bash, eval=FALSE}
 
 # I run picard tool with the option H, that output an histogram. 
+cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/
+  
 for sample in *recal_round-1.bam
 do
 echo $sample
 java  -Xms10g  -Xmx40g -jar /home/tmp/Software/Picard/picard-tools-1.66/CollectInsertSizeMetrics.jar I=$sample H=${sample/.bam/.histogram_length} O=${sample/.bam/.picard_length}
 done
 
+mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*.picard_length /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
 
-for picard_file in *.picard_length 
-do
-echo $picard_file
-tail -n+12 $picard_file | awk '($1 > 30) {print $1*$2}' | paste -sd+ | bc | awk '{print $1/2413209059}'
-done
+mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*.histogram_length /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
+
 
 ```
 
@@ -482,10 +469,11 @@ Hay dos formas de calcularlo
 # done
 
 # Samtools: The one I am doing 
+# If I run it again add the last sed after the loop so that is comparable with the previous stats!!! 
 
 SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
 rm global_coverage.tsv
-echo -e "sample\taverage\tstdev" > global_coverage.tsv
+echo -e "sample_name\taverage\tstdev" > global_coverage.tsv
 for sample in "${SAMPLELIST[@]}"
 do
 echo $sample
@@ -496,6 +484,11 @@ paste \
 sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  global_coverage.tsv
 done
 
+# I modify the name so that it has a common field with the previous report:
+cat global_coverage.tsv | sed 's/_recal_round-1.bam//g' | sed 's/\t/,/g' > coverage_samtools
+rm global_coverage.tsv
+
+
 ```
 
 
@@ -504,22 +497,30 @@ done
 
 ```{r, engine=bash, eval=FALSE}
 
-
-```
-
-
-
-## Summary report
-
-
-```{r, engine=bash, eval=FALSE}
-
-SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
+cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final
+SAMPLELIST=($(ls *_recal_round-1.bam | cut -d "_" -f1-4 | sort | uniq )) 
+cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
+  
+echo "sample_name,total_seq,total_reads,duplicates,mapped,uniq_mapped,uniq_mapped_vs_total_reads,duplicates_vs_total_reads,coverage_based_distribution" > raw.stats 
 for sample in "${SAMPLELIST[@]}"
 do
-echo $sample
-# samtools index $sample
+echo "${sample}"
+NAME="${sample}"
+TOTAL_SEQ="$(cat /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/"${sample}"*.rawseq | awk '{sum+=$1}END{print sum}')"
+TOTAL_READS="$(grep "in total" "${sample}"*.stats | cut -d "+" -f 1)"
+DUPLICATES="$(grep "duplicates" "${sample}"*.stats | cut -d "+" -f 1)"
+MAPPED="$(grep "0 mapped" "${sample}"*.stats | cut -d "+" -f 1)"
+UNIQ_MAPPED="$(echo "$MAPPED - $DUPLICATES" | bc )"
+UNIQ_MAPPED_vs_TOTAL_READS="$(echo "scale=5; $UNIQ_MAPPED *100 / $TOTAL_READS"  | bc -l)"
+DUPLICATES_vs_TOTAL_READS="$(echo "scale=5; $DUPLICATES / $TOTAL_READS" | bc -l )"
+COVERAGE_BASED_DISTRIBUTION=$(tail -n+12 "${sample}"*.picard_length  | awk '($1 > 30) {print $1*$2}' | paste -sd+ | bc | awk '{print $1/2413209059}')
+echo "$NAME,$TOTAL_SEQ,$TOTAL_READS,$DUPLICATES,$MAPPED,$UNIQ_MAPPED,$UNIQ_MAPPED_vs_TOTAL_READS,$DUPLICATES_vs_TOTAL_READS,$COVERAGE_BASED_DISTRIBUTION" | sed 's/ //g' >> raw.stats 
 done
+
+
+LANG=en_EN  join -1 1 -2 1 -t","  <(head -n 2 raw.stats && tail -n +3 raw.stats | LANG=en_EN sort -k 1,1) <(head -n 2 coverage_samtools && tail -n +3 coverage_samtools | LANG=en_EN sort -k 1,1 ) > global_stats_all_samples.csv # de esta manera tiene en cuenta el header. 
+                                                                                                              
+
 
 ```
 
