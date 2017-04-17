@@ -425,6 +425,8 @@ cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
 ls *rawseq | cut -d "_" -f1-4 | sort | uniq > rawseq_list
 ls *stats | cut -d "_" -f1-4 | sort | uniq > stats_list
 
+diff rawseq_list stats_list # ok! none! 
+diff recal_list stats_list  # ok! none!
 
 cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
 
