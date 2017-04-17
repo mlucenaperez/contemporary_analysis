@@ -403,7 +403,6 @@ cd /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/
   
 # Generalizo el samplelist: (lo podría haber hecho así también antes)
   
-  
 SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
 for sample in "${SAMPLELIST[@]}"
 do
@@ -412,13 +411,9 @@ samtools flagstat $sample  >  /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_
 done
  
 
-
-
- 
-SAMPLELIST=($(ls *_recal_round-1.bam | cut -d "_" -f1-4 | sort | uniq )) 
+# Checks:
 
 # * He tenido que modificar h_lp_do_007 a c_lp_do_007, y c_lr_xx y c_lc_xx a c_lr_zz y c_lc_zz respectivamente para que sean comparables. 
-# Checks:
 cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final
 ls *_recal_round-1.bam | cut -d "_" -f1-4 | sort | uniq > stats_information/recal_list
 cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
@@ -428,8 +423,11 @@ ls *stats | cut -d "_" -f1-4 | sort | uniq > stats_list
 diff rawseq_list stats_list # ok! none! 
 diff recal_list stats_list  # ok! none!
 
-cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
+## 
 
+cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final
+SAMPLELIST=($(ls *_recal_round-1.bam | cut -d "_" -f1-4 | sort | uniq )) 
+cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
 echo "sample_name,total_seq,total_reads,duplicates,mapped" > raw.stats 
 for sample in "${SAMPLELIST[@]}"
 do
@@ -439,7 +437,7 @@ TOTAL_SEQ="$(cat /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_i
 TOTAL_READS="$(grep "in total" "${sample}"*.stats | cut -d "+" -f 1)"
 DUPLICATES="$(grep "duplicates" "${sample}"*.stats | cut -d "+" -f 1)"
 MAPPED="$(grep "0 mapped" "${sample}"*.stats | cut -d "+" -f 1)"
-echo "$NAME,$TOTAL_SEQ,$TOTAL_READS,$DUPLICATES,$MAPPED" >> raw.stats 
+echo "$NAME,$TOTAL_SEQ,$TOTAL_READS,$DUPLICATES,$MAPPED" | sed 's/ //g' >> raw.stats 
 done
 
 ```
