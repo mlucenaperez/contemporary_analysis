@@ -169,10 +169,53 @@ $FILTER1 $FILTER2 \
 -SNP_pval 1e-3 \
 -doGeno 32 -doPost 1
 
+-----------------------------------------------------
+# Because it's taking to long I am affraid that it is no doing anything, I will check the format of rf file:
+
+  mkdir /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/test_pca
+scp no_genes_Lypa_10000longest_center_final_slop20_dot.rf /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/test_pca
+mv no_genes_Lypa_10000longest_center_final_slop20_dot.rf no_genes_Lypa_10000longest_center_final_slop20_dot.test.rf 
+
+cat no_genes_Lypa_10000longest_center_final_slop20_dot.test.rf | sed 's/\t/:/' | sed 's/\t/-/' > no_genes_Lypa_10000longest_center_final_slop20_dot.test1.rf 
+
+POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
+screen -S test_pca_1
+POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
+script test_pca_1.log
+POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
+
+# Set paths to software and some commom files
+ANGSD=/opt/angsd
+NGSTOOLS=/opt/ngsTools_19092016/
+THREADS=20                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+REGIONFILE="/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/test_pca/no_genes_Lypa_10000longest_center_final_slop20_dot.test1.rf "
+SFSDIR="/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs"
 
 
-  
------------  
+# I won't use max depth filter now. 
+# read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < "$SFSDIR"/"$POP"_mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv
+
+N_IND=$(wc -l /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$POP"_n*.bamlist | awk '{print $1}') 
+MIN_IND=$(expr $N_IND / 2)
+
+
+### Calling genotype likelihoods: 
+ 
+$ANGSD/angsd -P $THREADS -b /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/$POP*.bamlist -ref $REF -out $POP \
+$FILTER1 $FILTER2 \
+-minInd $MIN_IND  \
+-rf $REGIONFILE \
+-GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
+-SNP_pval 1e-3 \
+-doGeno 32 -doPost 1
+
+
+------------------------------------------------------- 
+
 ### $$HASTA AQUI
 
 

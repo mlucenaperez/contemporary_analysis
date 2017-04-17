@@ -23,7 +23,10 @@ Asumimos ( mirando el archivo ) que es uno based.We are in server a.
 ```{r, engine=bash, eval=FALSE}
 
 cd /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/
-mkdir /home/mlucena/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/maria_curation
+
+  
+# I create a folder and store there everything that is older as we want to run this script again:
+# mkdir /home/mlucena/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/maria_curation
 
 ```
 
@@ -31,89 +34,32 @@ mkdir /home/mlucena/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/maria_
 
 ```{r, engine=bash, eval=FALSE}
 
-cat <(cut -f 2 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/Anotacion_PrincipaIsoforms_Nando/genes2transcript.nr.list | awk '{print $1";"}' ) <(echo -e "EVM_PASA\tgene") | \ # de esta manera seleccionamos los genes que si no se quedaría fuera puesto que no van seguidos del nombre de la isoforma que es con lo que estamos filtrando.
-grep -f - /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | sed 's/^\(.\{4\}\)/\1./' > \ 
-/home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 
+cat <(cut -f 2 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/Anotacion_PrincipaIsoforms_Nando/genes2transcript.nr.list | awk '{print $1";"}' ) <(echo -e "EVM_PASA\tgene") | grep -f - /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | sed 's/^\(.\{4\}\)/\1./' > /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 
+
+# Al usar "EVM_PASA\tgene" podemos seleccionar todos los genes y no solo aquellos que están en el file de la isoforma principal. Esto pasaría por ejemplo para genes que sólo tengan una isoforma.
 
 ```
 
-How many genes are not in genes2transcript.nr.list file? I remove those that seems to be lnc (that is a special case) and ENS that are also deriving from lnc genes. 
-I remove them, cause we have an updated file with the correct lncRNA that we will add at the end. 
+---> Sanity check: They are OK! 
 
-```{r, engine=bash, eval=FALSE}
-diff <(cut -f 1 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3| awk '{split ($0,a,"="); split (a[2],b,"T"); print b[1]}' | grep -v '^$' | sort | uniq | grep "LYPA" | sed 's/> //g') <(grep -v '^###$' /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | awk '{split ($0,a,"="); split (a[2],b,"T"); print b[1]}' | grep -v '^$' | sort | uniq | grep -v "lnc" | grep "LYPA" | sed 's/> //g')
-```
-
-List of genes that are not present:
-
-LYPA23C002668
-LYPA23C004649
-LYPA23C008987
-LYPA23C009331
-LYPA23C009496
-LYPA23C010275
-LYPA23C011646
-LYPA23C012832
-LYPA23C014627
-LYPA23C016632
-LYPA23C016712
-LYPA23C020330
-LYPA23C022117
-LYPA23C022314
-
-Do they have more that one transcript?
+How many genes are not in genes2transcript.nr.list file and are in my file? 
 
 ```{r, engine=bash, eval=FALSE}
 
-while read GENEID ;
-do
-grep "$GENEID"  /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3  | grep "T2" 
-done < <(diff <(cut -f 1 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/Anotacion_PrincipaIsoforms_Nando/genes2transcript.nr.list) <(grep -v '^###$' /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | \
-awk '{split ($0,a,"="); split (a[2],b,"T"); print b[1]}' | grep -v '^$' | sort | uniq | grep -v "lnc" | grep "LYPA" | sed 's/> //g') | grep ">" | awk '{print $2}')# Nope! 
+diff <(cut -f 9 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 | awk '{split ($0,a,"="); split (a[2],b,"T"); print b[1]}' | grep -v '^$' | sort | uniq | grep "LYPA" | sed 's/> //g') <(grep -v '^###$' /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | awk '{split ($0,a,"="); split (a[2],b,"T"); print b[1]}' | grep -v '^$' | sort | uniq | grep -v "lnc" | grep "LYPA" | sed 's/> //g')
+## NONE!
 ```
 
-Add them to my nr file:
 
-```{r, engine=bash, eval=FALSE}
 
-while read GENEID ;
-do
-grep "$GENEID"  /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | grep -P -v "EVM_PASA\tgene" | sed 's/^\(.\{4\}\)/\1./' >> extra.genes.borrar # using EVM_PASA\tgene I remove the gene entry that was already in the file thanks to the first filtering and I can add only the isoforms. 
-done < <(diff <(cut -f 1 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/Anotacion_PrincipaIsoforms_Nando/genes2transcript.nr.list) <(grep -v '^###$' /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | \
-awk '{split ($0,a,"="); split (a[2],b,"T"); print b[1]}' | grep -v '^$' | sort | uniq | grep -v "lnc" | grep "LYPA" | sed 's/> //g') | grep ">" | awk '{print $2}')
 
-```
 
-Check that the file has everything: Ok!
-
-```{r, engine=bash, eval=FALSE}
-awk '{split ($0,a,"="); split (a[2],b,"T"); print b[1]}' extra.genes.borrar | grep -v '^$' | sort | uniq 
-
-# LYPA23C002668
-# LYPA23C004649
-# LYPA23C008987
-# LYPA23C009331
-# LYPA23C009496
-# LYPA23C010275
-# LYPA23C011646
-# LYPA23C012832
-# LYPA23C014627
-# LYPA23C016632
-# LYPA23C016712
-# LYPA23C020330
-# LYPA23C022117
-# LYPA23C022314
-
-cat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 extra.genes.borrar > /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3
-rm extra.genes.borrar 
-
-```
 
 ## 2. Get the features represented in the bedfile
 
 ```{r, engine=bash, eval=FALSE}
 
-cut -f 3 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3 | sort | uniq
+cut -f 3 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3  | sort | uniq
 
 # CDS
 # exon
@@ -143,33 +89,7 @@ probable que el isoforma ha alineado contra fragmentos) pondria un corte de tres
 lp23.s10430	3817466	3817966	PROMOTER:LYPA23C008622T2	0	+
 
 
-```{r, engine=bash, eval=FALSE}
-
-rm LYPA23C.promoters_full_length_genes.nr.gff3
-while read GENEID ;
-do
-echo "$GENEID"
-grep "$GENEID" /home/GRUPOS/grupolince/copia_fabascal/FEATURES/promoters.bed | \
-awk -v OFS='\t' '{split($4,a,":"); split(a[2],b,"T"); print $1,"EVM_PASA","promoter",$2+1,$3,".",$6,$5,"ID="b[1]}'>> LYPA23C.promoters_full_length_genes.nr.gff3
-done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
-
-```
- 
-Esta lista está pasada a 1-based que es lo que me interesa. 
-Ahora tenemos información de 7396 genes con la siguiente distribución de tamaños:    
-
-3 0
-1 25
-1 51
-1 93
-1 106
-1 110
-1 127
-1 297
-7386 499
-
-He comprobado que por lo menos 1 promotor solapa con el gen. Es el caso de LYPA23C013748. No se si puede ser normal o no. 
-Tras hablar con Fede, nos ha confirmado que para la dirección - los promotores no están bien definidos, por tanto vamos a volver a definirlos nosotros desde el principio. 
+- No usamos la lista de Fede porque gracias a algunos sanity checks comprobé que al menos un promotor solapaba con un gen (si quieres saber cómo lo supe: script antiguo). Tras hablar con Fede, nos ha confirmado que para la dirección - los promotores no están bien definidos, por tanto vamos a volver a definirlos nosotros desde el principio. 
 
 Como los tenemos que definir de nuevo, los vamos a definir en base a una lista de 250, 500 y 1000bp. 
 
@@ -182,7 +102,7 @@ while read GENEID ;
 do
 # 250
 echo "$GENEID"
-grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
+grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
 awk -v OFS='\t' '{split($0,a,":"); if ($7=="+") print $1,"manual","promoter",$4-250,$4-1,$6,$7,$8,$9"_promoter"; else print $1,"manual","promoter",$5+250,$5+1,$6,$7,$8,$9"_promoter"}'>> LYPA23C.promoters_full_length_genes.nr.250bp.gff3
 done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
 
@@ -191,7 +111,7 @@ while read GENEID ;
 do
 # 500
 echo "$GENEID"
-grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
+grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
 awk -v OFS='\t' '{split($0,a,":"); if ($7=="+") print $1,"manual","promoter",$4-500,$4-1,$6,$7,$8,$9"_promoter"; else print $1,"manual","promoter",$5+500,$5+1,$6,$7,$8,$9"_promoter"}'>> LYPA23C.promoters_full_length_genes.nr.500bp.gff3
 done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
 
@@ -200,97 +120,60 @@ while read GENEID ;
 do
 # 1000
 echo "$GENEID"
-grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
+grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
 awk -v OFS='\t' '{split($0,a,":"); if ($7=="+") print $1,"manual","promoter",$4-1000,$4-1,$6,$7,$8,$9"_promoter"; else print $1,"manual","promoter",$5+1000,$5+1,$6,$7,$8,$9"_promoter"}'>> LYPA23C.promoters_full_length_genes.nr.1000bp.gff3
 done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
 
-rm *.borrar
-
-##################
 
 ```
 
-## No se para que sirve
-
+--- Sanity check para comprobar si la longitud de los mRNA y de los genes es igual o no. 
 ```{r, engine=bash, eval=FALSE}
+while read GENEID ;
+do
+echo "$GENEID"
+grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 | grep -P 'EVM_PASA\tgene' | awk -v OFS='\t' '{print $4,$5}' > temp.gene.to.merge.borrar
+grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 | grep -P 'EVM_PASA\tmRNA' | awk -v OFS='\t' '{print $4,$5,$7}' > temp.mRNA.to.merge.borrar
+paste <(echo $GENEID) <(cat temp.gene.to.merge.borrar ) <(cat temp.mRNA.to.merge.borrar) >> GENE_vs_mRNA1.borrar
+done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g' )
+ 
 
-# while read GENEID ;
-# do
-# echo "$GENEID"
-# grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3 | grep -P 'EVM_PASA\tgene' | awk -v OFS='\t' '{print $4,$5}' > temp.gene.to.merge.borrar
-# grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3 | grep -P 'EVM_PASA\tmRNA' | awk -v OFS='\t' '{print $4,$5,$7}' > temp.mRNA.to.merge.borrar
-# 
-# paste <(echo $GENEID) <(cat temp.gene.to.merge.borrar ) <(cat temp.mRNA.to.merge.borrar) >> GENE_vs_mRNA1.borrar
-# 
-# done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g' )
-# 
-# echo -e "GENE\tGENEstart\tGENEend\tmRNAstart\tmRNAend\tsense" > header.borrar
-# cat header.borrar GENE_vs_mRNA1.borrar > GENE_vs_mRNA
-# rm GENE_vs_mRNA1.borrar
-# 
-# 
-# cat GENE_vs_mRNA | awk '{if ($6=="+") print $1,$2,$3,$4,$5,$4-$2,$6; else print $1,$2,$3,$4,$5,$3-$5,$6}' | grep -v " 0 +" | grep -v " 0 -" > GENE_vs_mRNA_not_coincident.csv
-# 
-# 
-# {if ($9==prev) counter++; else counter=1; 
-# 
-# 
-# GENE    GENEstart       GENEend mRNAstart       mRNAend sense
-# LYPA23C000003   320799  328962  320799  328962  -
-# 
-# 
-# 
-# 
-# 
-# grep LYPA23C012674 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3
-# 
-# grep LYPA23C012674 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/Anotacion_PrincipaIsoforms_Nando/genes2transcript.nr.list
-# 
-# grep LYPA23C012674 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3 | grep -P 'EVM_PASA\tgene' | awk -v OFS='\t' '{print $4,$5}'
-# 
-# grep -P -v '\t0$' GENE_vs_mRNA
-# 
-# 
-# # Cuantos 
-# 
-# zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g' > list_appris
-# grep "1257920" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3 
-# 
-#  
-# grep "LYPA23C007917" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | grep -v "exon" | grep -v "CDS" | less -S
-# 
-# grep "LYPA23C008218" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | grep -v "exon" | grep -v "CDS" | less -S
-# 
-# grep "LYPA23C008025" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | grep -v "exon" | grep -v "CDS" | less -S
-# 
-# grep "LYPA23C008241" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | grep -v "exon" | grep -v "CDS" | less -S
-#  
-# 
-# cat <(cut -f 2 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/Anotacion_PrincipaIsoforms_Nando/genes2transcript.nr.list) <(echo -e "EVM_PASA\tgene") | grep -f - /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | sed 's/^\(.\{4\}\)/\1./' > /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 
-# 
+echo -e "GENE\tGENEstart\tGENEend\tmRNAstart\tmRNAend\tsense" > header.borrar
+cat header.borrar GENE_vs_mRNA1.borrar > GENE_vs_mRNA
+rm GENE_vs_mRNA1.borrar
+
+cat GENE_vs_mRNA | awk '{if ($6=="+") print $1,$2,$3,$4,$5,$4-$2,$6; else print $1,$2,$3,$4,$5,$3-$5,$6}' | grep -v " 0 +" | grep -v " 0 -" > GENE_vs_mRNA_not_coincident.csv
+
+
+rm *borrar
 ```
+They are not always coincident, the file is called: "GENE_vs_mRNA_not_coincident.csv". What then?
+
+
+
 
 ### 3.b. Introns 
 
+--- Sanity check para comprobar que es seguro usar el bed de Fede.
 ```{r, engine=bash, eval=FALSE}
 
 # Comprobar que están bien calculados con algún ej a ojo. Tomo para el ejemplo los 10 primeros genes
-# grep gene LYPA23C.all.fix.nr.gff3 | head | awk '{ split($0,a,"ID="); print a[2] }'
-# 
-# GENES=('LYPA23C013748' 'LYPA23C013847' 'LYPA23C013736' 'LYPA23C013679' 'LYPA23C013712' 'LYPA23C013832' 'LYPA23C013840' 'LYPA23C013755' 'LYPA23C013826' 'LYPA23C013809')
-# rm check.introns.borrar
-# for GENEID in "${GENES[@]}"
-# do
-# echo "---------------------GENE = $GENEID---------------------------" >> check.introns.borrar
-# grep "ID=$GENEID" LYPA23C.all.fix.nr.gff3 | grep gene  >> check.introns.borrar
-# echo "---------------------EXONS---------------------------" >> check.introns.borrar
-# grep "$GENEID" LYPA23C.all.fix.nr.gff3 | grep exon  >> check.introns.borrar
-# echo "---------------------INTRONS---------------------------" >> check.introns.borrar
-# grep "ID=$GENEID" LYPA23C.introns.nr.gff3 | grep intron  >> check.introns.borrar
-# echo >> check.introns.borrar
-# echo >> check.introns.borrar
-# done
+grep gene LYPA23C.all.fix.nr.gff3 | head | awk '{ split($0,a,"ID="); print a[2] }'
 
+GENES=('LYPA23C013748' 'LYPA23C013847' 'LYPA23C013736' 'LYPA23C013679' 'LYPA23C013712' 'LYPA23C013832' 'LYPA23C013840' 'LYPA23C013755' 'LYPA23C013826' 'LYPA23C013809')
+rm check.introns.borrar
+for GENEID in "${GENES[@]}"
+do
+echo "---------------------GENE = $GENEID---------------------------" >> check.introns.borrar
+grep "ID=$GENEID" LYPA23C.all.fix.nr.gff3 | grep gene  >> check.introns.borrar
+echo "---------------------EXONS---------------------------" >> check.introns.borrar
+grep "$GENEID" LYPA23C.all.fix.nr.gff3 | grep exon  >> check.introns.borrar
+echo "---------------------INTRONS---------------------------" >> check.introns.borrar
+grep "ID=$GENEID" LYPA23C.introns.nr.gff3 | grep intron  >> check.introns.borrar
+echo >> check.introns.borrar
+echo >> check.introns.borrar
+done
+ 
 # Hemos comprobado que tenemos definidos intrones para menos genes de los que hay. Comprobamos que estos genes en cuestión no tienen más de un exón y por tanto no tienen intrones definidos.
 
 rm exon_per_genes_in_my_nr_file_and_not_in_introns_bed.list
@@ -300,16 +183,15 @@ echo $GENE
 grep $GENE /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3 | grep -e $'\t''EVM_PASA'$'\t''CDS'$'\t' | awk '{split ($9,a,";"); print a[1]}' | uniq -c | sort -k1,1 | grep -v "1 Parent" >> CDS_per_genes_in_my_nr_file_and_not_in_introns_bed.list
 done < <(cat genes_in_my_nr_file_and_not_in_introns_bed.list)
 
-
-
-
-# Vemos que los intrones están bien, solo tendríamos que corregir que están como 0based y nosotros queremos pasarlo a 1 based para el gff. Ya está corregido con este script.
-# lp23.s10430	3818298	3917427	INTRON:LYPA23C008622T2	0	+
-awk -v OFS='\t' '{split($4,a,":"); print $1,"MANUAL","intron",$2+1,$3,".",$6,$5,"ID="a[2]}' /home/GRUPOS/grupolince/copia_fabascal/FEATURES/introns.bed | \
-awk -v OFS='\t' '{if ($9==prev) counter++; else counter=1; print ($1,$2,$3,$4,$5,$6,$7,$8,$9"_intron_"counter); prev=$9}'  > LYPA23C.introns.nr.gff3
+# Hablando con Fede y me ha comentado "Sólo he mirado el primero y el segundo. El intrón del gen LYPA23C001262 solapa con el UTR de otro gen. Por eso no se considera intrón “puro”. Lo mismo pasa con el segundo. Los genomas son muy raros ;-)". Por tanto estos intrones no se considerarían. 
 
 ```
+Tras discutir con Fede las dudas que tenías vemos que los intrones están bien, solo tendríamos que corregir que están como 0based y nosotros queremos pasarlo a 1 based para el gff. 
 
+Corregimos a 0 based:
+```{r, engine=bash, eval=FALSE}
+awk -v OFS='\t' '{split($4,a,":"); print $1,"MANUAL","intron",$2+1,$3,".",$6,$5,"ID="a[2]}' /home/GRUPOS/grupolince/copia_fabascal/FEATURES/introns.bed | awk -v OFS='\t' '{if ($9==prev) counter++; else counter=1; print ($1,$2,$3,$4,$5,$6,$7,$8,$9"_intron_"counter); prev=$9}'  > LYPA23C.introns.nr.gff3
+```
 
 ### 3.c. UTRs
 
@@ -328,152 +210,45 @@ awk -v OFS='\t' '{if ($9==prev) counter++; else counter=1; print ($1,$2,$3,$4,$5
 # que han alineado bien proteinas al menos dos especies (y asi es menos
 # probable que el isoforma ha alineado contra fragmentos) pondria un corte de tres.
 
-rm LYPA23C.UTRs_gene-exon.nr.gff3
-rm LYPA23C.UTRs_gene-cds.nr.gff3
-rm LYPA23C.UTRs_exon-cds.nr.gff3
 
+# Las UTR se podrían definir como gene-exon,gene-cds y exon-cds. Tras discutir cual es la mejor aproximación, nos vamos a quedar con gene-cds
+
+rm LYPA23C.UTRs_gene-cds.nr.gff3
 while read GENEID ;
 do
 echo "$GENEID" 
 # gene
-grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3   | # Solo si uso el file con todas las isoformas sed 's/^\(.\{4\}\)/\1./'  | \
+grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3   | # Solo si uso el file con todas las isoformas sed 's/^\(.\{4\}\)/\1./'  | \
 grep -e $'\t''EVM_PASA'$'\t''gene'$'\t' \
 >gene.iter.bed.borrar
-
-# exon-1
-grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3   | # Solo si uso el file con todas las isoformassed 's/^\(.\{4\}\)/\1./'  | \
-grep -e $'\t''EVM_PASA'$'\t''exon'$'\t' | \
-awk -v OFS='\t' 'NR == 1 {min = $4} NR>1 && $4<min {min = $4}; NR == 1 {max = $5} NR>1 && $5>max {max = $5} END {print $1, min,max-1}'   \
->exon-1.iter.bed.borrar
-
-# exon
-grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3  | # Solo si uso el file con todas las isoformassed 's/^\(.\{4\}\)/\1./'  | \
-grep -e $'\t''EVM_PASA'$'\t''exon'$'\t' | \
-awk -v OFS='\t' 'NR == 1 {min = $4} NR>1 && $4<min {min = $4}; NR == 1 {max = $5} NR>1 && $5>max {max = $5}; {split($0,a,"ID=");split(a[2],b,"T")} END {print  $1,$2,$3, min,max,$6,$7,$8,"ID="b[1]}'   \
->exon.iter.bed.borrar
-
 # cds
-grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.extra.genes.gff3  | # Solo si uso el file con todas las isoformassed 's/^\(.\{4\}\)/\1./'  | \
+grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3  | # Solo si uso el file con todas las isoformassed 's/^\(.\{4\}\)/\1./'  | \
 grep -e $'\t''EVM_PASA'$'\t''CDS'$'\t' | \
-awk -v OFS='\t' 'NR == 1 {min = $4} NR>1 && $4<min {min = $4}; NR == 1 {max = $5} NR>1 && $5>max {max = $5} END {print  $1,min,max-1}'  \
+awk -v OFS='\t' 'NR == 1 {min = $4} NR>1 && $4<min {min = $4}; NR == 1 {max = $5} NR>1 && $5>max {max = $5} END {print  $1,min,max}'  \
 > cds-1.iter.bed.borrar
-
 # Get UTRs by doing gene-exon, gene-cds and exon-cds:
-bedtools subtract -a gene.iter.bed.borrar -b exon-1.iter.bed.borrar > gene-exon.iter.bed.borrar
 bedtools subtract -a gene.iter.bed.borrar -b cds-1.iter.bed.borrar > gene-cds.iter.bed.borrar
-bedtools subtract -a exon.iter.bed.borrar -b cds-1.iter.bed.borrar > exon-cds.iter.bed.borrar
-
 # Get UTRs
-
-awk -v OFS='\t' 'NR==1 {if ($7=="+") print $1,$2,"5UTR",$4,$5,$6,$7,$8,$9,$5-$4 ; else print $1,$2,"3UTR",$4,$5,$6,$7,$8,$9,$5-$4} \
-NR==2 {if ($7=="+") print $1,$2,"3UTR",$4,$5,$6,$7,$8,$9,$5-$4; else print $1,$2,"5UTR",$4,$5,$6,$7,$8,$9,$5-$4 }' gene-exon.iter.bed.borrar | \
- awk -v OFS='\t' '$10>1 {print $1,$2,$3,$4+1,$5,$6,$7,$8,$9}'  >>  LYPA23C.UTRs_gene-exon.nr.gff3   ### Lo que hace es quitarme todos los UTR que sean de un tamañao de 1 o 0.
-
 awk -v OFS='\t' 'NR==1 {if ($7=="+") print $1,$2,"5UTR",$4,$5,$6,$7,$8,$9,$5-$4 ; else print $1,$2,"3UTR",$4,$5,$6,$7,$8,$9,$5-$4} \
 NR==2 {if ($7=="+") print $1,$2,"3UTR",$4,$5,$6,$7,$8,$9,$5-$4; else print $1,$2,"5UTR",$4,$5,$6,$7,$8,$9,$5-$4 }' gene-cds.iter.bed.borrar | \
- awk -v OFS='\t' '$10>1 {print $1,$2,$3,$4+1,$5,$6,$7,$8,$9}' >>  LYPA23C.UTRs_gene-cds.nr.gff3    ### Lo que hace es quitarme todos los UTR que sean de un tamañao de 1 o 0.
-
-awk -v OFS='\t' 'NR==1 {if ($7=="+") print $1,$2,"5UTR",$4,$5,$6,$7,$8,$9,$5-$4 ; else print $1,$2,"3UTR",$4,$5,$6,$7,$8,$9,$5-$4} \
-NR==2 {if ($7=="+") print $1,$2,"3UTR",$4,$5,$6,$7,$8,$9,$5-$4; else print $1,$2,"5UTR",$4,$5,$6,$7,$8,$9,$5-$4 }' exon-cds.iter.bed.borrar | \
- awk -v OFS='\t' '$10>1 {print $1,$2,$3,$4+1,$5,$6,$7,$8,$9}' >>  LYPA23C.UTRs_exon-cds.nr.gff3   ###  Lo que hace es quitarme todos los UTR que sean de un tamañao de 1 o 0.
-
+awk -v OFS='\t' '$10>1 {print $1,$2,$3,$4+1,$5,$6,$7,$8,$9}' >>  LYPA23C.UTRs_gene-cds.nr.gff3  # Lo que hace es quitarme todos los UTR que sean de un tamañao de 1 o 0.
 done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
 
+
+$$$$$$$$$$$$$$ Voy por aquí he cambiado lo de awk -v OFS='\t' 'NR == 1 {min = $4} NR>1 && $4<min {min = $4}; NR == 1 {max = $5} NR>1 && $5>max {max = $5} END {print  $1,min+1,max-1}'  \
+> cds-1.iter.bed.borrar; antes no ponía min+1 o max-1. 
+
+# También se podría hacer como gene-exon o exon-cds. Esas combinaciones están en script antiguo. 
+
+# Esto te daría 1 based directamente.
 # From 0-based to 1-based
 
-awk -v OFS='\t' '{print $1,$2,$3,$4+1,$5,$6,$7,$8,$9}' LYPA23C.UTRs_gene-exon.nr.gff3 | LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n > LYPA23C.UTRs_gene-exon.nr.1based.gff3
 awk -v OFS='\t' '{print $1,$2,$3,$4+1,$5,$6,$7,$8,$9}' LYPA23C.UTRs_gene-cds.nr.gff3 | LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n > LYPA23C.UTRs_gene-cds.nr.1based.gff3
-awk -v OFS='\t' '{print $1,$2,$3,$4+1,$5,$6,$7,$8,$9}' LYPA23C.UTRs_exon-cds.nr.gff3 | LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n > LYPA23C.UTRs_exon-cds.nr.1based.gff3
-
 
 ### No nos ha salido bien, así que modificamos el que vamos a usar que es el de gene-cds (LYPA23C.UTRs_gene-cds.nr.1based.gff3). Borro los demás. 
 
-
 awk -v OFS='\t' '{if ($7=="+" && $3=="5UTR") print $1,$2,$3,$4,$5-1,$6,$7,$8,$9; else if ($7=="+" && $3=="3UTR") print $1,$2,$3,$4+1,$5,$6,$7,$8,$9; \
 else if ($7=="-" && $3=="3UTR") print $1,$2,$3,$4,$5-1,$6,$7,$8,$9; else if ($7=="-" && $3=="5UTR") print $1,$2,$3,$4+1,$5,$6,$7,$8,$9}' LYPA23C.UTRs_gene-cds.nr.1based.gff3 > LYPA23C.UTRs_gene-cds.nr.positions.fixed.gff3
-
-rm LYPA23C.UTRs_gene-cds.nr.1based.gff3
-
-
-### This was some test that I did for a previous file that I create but finally we are not using it. 
-# Check distribution
-# cut LYPA23C.UTRs.nr.gff3 -f 9 | sort | uniq -c |sort | tr -s ' ' | cut -d ' ' -f 2 | uniq -c
-# 3555 1 --> Genes that contain only one UTR
-# 8931 2 --> Genes that contain both UTRs
-# --> (3555+8931)=12486 Genes that contain at least one UTRs --> 21243-12486=8757 contains no UTRs
-# That was a file that did not include all 3UTR and 5UTR. We made one that include them by leave the min value (as 
-# it is 0 based, substract will include the position, and substracting one to maximum value so that substract also include it). 
-# wc -l  LYPA23C.UTRs.nr.gff3
-# 42485 LYPA23C.UTRs.nr.gff3
-# grep "5UTR" LYPA23C.UTRs.nr.gff3  |  wc -l 
-# 21242
-# grep "3UTR" LYPA23C.UTRs.nr.gff3  |  wc -l 
-# 21243
-# We lack one 5UTR in one gene, which one?
-# cut LYPA23C.UTRs.nr.gff3 -f 9 | sort | uniq -c |sort | head
-# 1 ID=LYPA23C002947
-# 2 ID=LYPA23C000001
-# LYPA23C002947 is the problematic one. 
-# GENEID=LYPA23C002947
-# And get everything again, and...
-# cat gene.iter.bed.borrar
-# lp23.s10508	EVM_PASA	gene	525987	537044	.	-	.	ID=LYPA23C002947
-# cat cds.iter.bed.borrar
-# lp23.s10508	525981	537043
-# We should have both but substract does...
-# cat UTRs.iter.bed.borrar 
-# lp23.s10508	EVM_PASA	gene	537043	537044	.	-	.	ID=LYPA23C002947
-# Just for that gene, but anyway we count how many 3UTR and 5UTR do we have:
-# grep "5UTR" LYPA23C.UTRs.nr.gff3  | grep "     0$" | wc -l 
-# 5538
-# grep "5UTR" LYPA23C.UTRs.nr.gff3  | cut -f 10 | sort -n | uniq -c  | head # and then tail
-#    5538 0          HEAD
-#    5662 1
-#     109 2
-#      56 3
-#      11 4
-#      22 5
-#      31 6
-#      23 7
-#      17 8
-#      25 9
-# --------------------
-#       1 154454     TAIL
-#       1 156506
-#       1 156945
-#       1 156983
-#       1 169688
-#       1 177664
-#       1 198794
-#       1 200754
-#       1 205328
-#       1 245204
-# grep "3UTR" LYPA23C.UTRs.nr.gff3 | grep "      0$" | wc -l
-# 4902
-# grep "3UTR" LYPA23C.UTRs.nr.gff3  | cut -f 10 | sort -n | uniq -c  | head # and then tail  
-#    4902 0         HEAD
-#    4976 1
-#       3 2
-#      10 3
-#       4 4
-#       9 5
-#       9 6
-#       6 7
-#       2 8
-#       4 9
-# -------------------     
-#       1 52906      TAIL
-#       1 59522
-#       1 61817
-#       1 68211
-#       1 68490
-#       1 69362
-#       1 77226
-#       1 78296
-#       1 94410
-#       1 104344
-# awk '{print $5-$4}' UTRs.gff3.borrar | sort -n | uniq -c
-
 
 
 rm *.iter.bed.borrar
@@ -534,7 +309,8 @@ head -n20 /home/GRUPOS/grupolince/copia_fabascal/FEATURES/intergenic.bed | LANG=
 LANG=en_EN sort  -k 1,1 -k 2,2n  /home/GRUPOS/grupolince/copia_fabascal/FEATURES/intergenic.bed > /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/intergenic_sorted.bed
 
 bedtools merge -i /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/intergenic_sorted.bed > /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/intergenic_sorted_nr.bed 
-```
+
+
 
 ## 4. Merge outfles  
 

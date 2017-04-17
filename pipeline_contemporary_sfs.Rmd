@@ -79,6 +79,7 @@ FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
 FEATURES=( "cds" "centr" "exons" "genes" "intergenic" "introns" "promoters" "tel10m" "tel2m" )
 
 echo $POP
+
 ######################################################################################
 #                              FOLDED SAF and SFS                                    #
 ######################################################################################
