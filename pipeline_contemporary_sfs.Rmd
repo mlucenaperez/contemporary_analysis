@@ -50,17 +50,19 @@ echo $HEADERS | sed 's/ /\t/g'> theta_features_per_pop.tsv
 cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs
 #To launch one by one ( because otherwise it's too slow I'll launch single pops in a and groups in b)
 
-POP="c_ll_ya"  # <--CHANGE POP HERE
+POP="c_ll_no"  # <--CHANGE POP HERE
 
-screen -S "$POP"_sfs
+# screen -S "$POP"_sfs
+screen -S "$POP"_thetas
 
-POP="c_ll_ya"  # <--CHANGE POP HERE
+POP="c_ll_no"  # <--CHANGE POP HERE
 
-script "$POP"_sfs.log
+# script "$POP"_sfs.log
+script "$POP"_thetas.log
 
-POP="c_ll_ya"  # <--CHANGE POP HERE
+POP="c_ll_no"  # <--CHANGE POP HERE
 
-THREADS=6                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+THREADS=15                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 awk '{print $1"_"$2"_"$3,$4,$5,$6,$7,$8,$9,$10,$11}' mean_sd_depthGlobal_lynx_per_pop_sd_folds_2_a.csv | grep "${POP} "  > "$POP"_mean_sd_depthGlobal_lynx_per_pop_sd_folds_2_a.csv
 read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < "${POP}"_mean_sd_depthGlobal_lynx_per_pop_sd_folds_2_a.csv
 
@@ -76,7 +78,7 @@ FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
 
 FEATURES=( "cds" "centr" "exons" "genes" "intergenic" "introns" "promoters" "tel10m" "tel2m" )
 
-
+echo $POP
 ######################################################################################
 #                              FOLDED SAF and SFS                                    #
 ######################################################################################
@@ -90,18 +92,19 @@ FEATURES=( "cds" "centr" "exons" "genes" "intergenic" "introns" "promoters" "tel
 
 N_IND=$(wc -l /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$POP"_n*.bamlist | awk '{print $1}') 
 MIN_IND=$(expr $N_IND / 2)
-
+echo $MIN_IND
 
 ##########################
-#  SAF (likelihood):     #
+#  SAF (likelihood):     # DONE FOR ALL POP
 ##########################
-echo "-------$POP----------SAF (likelihood)-----------------------------------------"
 
-$ANGSD/angsd -P $THREADS -b /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$POP"_n*.bamlist -ref $REF -anc $ANC \
--out "$POP".unfolded-lr \
-$FILTER1 \
-$FILTER2 \
--GL 1 -doSaf 1 -setMaxDepth $maxDepth 
+# echo "-------$POP----------SAF (likelihood)-----------------------------------------"
+# 
+# $ANGSD/angsd -P $THREADS -b /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$POP"_n*.bamlist -ref $REF -anc $ANC \
+# -out "$POP".unfolded-lr \
+# $FILTER1 \
+# $FILTER2 \
+# -GL 1 -doSaf 1 -setMaxDepth $maxDepth 
 
 
 ##########################
@@ -135,15 +138,14 @@ $NGSTOOLS/thetaStat  make_bed $POP.postprob.thetas.gz
 
 
 # Transform the coordinates to use 0Based bedtools
-zcat $POP.postprob.thetas.gz | awk 'NR>1 {print  $1" "$2-1" "$2}' > $POP.0basedcoordinates.borrar
+zcat $POP.unfolded-lr.postprob.thetas.gz | awk 'NR>1 {print  $1" "$2-1" "$2}' > $POP.0basedcoordinates.borrar
 # log transformation of watterson and pairwise:
-zcat $POP.postprob.thetas.gz | awk 'NR>1 {print  "e("$3")"}'  | bc -l > "$POP".watterson.borrar
-zcat $POP.postprob.thetas.gz | awk 'NR>1 {print  "e("$4")"}'  | bc -l > "$POP".pairwise.borrar 
+zcat $POP.unfolded-lr.postprob.thetas.gz | awk 'NR>1 {print  "e("$3")"}'  | bc -l > "$POP".watterson.borrar
+zcat $POP.unfolded-lr.postprob.thetas.gz | awk 'NR>1 {print  "e("$4")"}'  | bc -l > "$POP".pairwise.borrar 
 
 # Create a header for the "$POP".transformedThetas file
 echo "scaffold position1 position2 watterson pairwise pairwise-watterson" > "$POP".transformedThetas
 paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar | awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4}' >> "$POP".transformedThetas
-
 
 
 
