@@ -50,17 +50,17 @@ echo $HEADERS | sed 's/ /\t/g'> theta_features_per_pop.tsv
 cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs
 #To launch one by one ( because otherwise it's too slow I'll launch single pops in a and groups in b)
 
-POP="c_ll_no"  # <--CHANGE POP HERE
+POP="c_ll_po"  # <--CHANGE POP HERE
 
 # screen -S "$POP"_sfs
 screen -S "$POP"_thetas
 
-POP="c_ll_no"  # <--CHANGE POP HERE
+POP="c_ll_po"  # <--CHANGE POP HERE
 
 # script "$POP"_sfs.log
 script "$POP"_thetas.log
 
-POP="c_ll_no"  # <--CHANGE POP HERE
+POP="c_ll_po"  # <--CHANGE POP HERE
 
 THREADS=15                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 awk '{print $1"_"$2"_"$3,$4,$5,$6,$7,$8,$9,$10,$11}' mean_sd_depthGlobal_lynx_per_pop_sd_folds_2_a.csv | grep "${POP} "  > "$POP"_mean_sd_depthGlobal_lynx_per_pop_sd_folds_2_a.csv
