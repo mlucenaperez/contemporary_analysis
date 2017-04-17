@@ -415,7 +415,11 @@ done
 
 
  
-SAMPLELIST=($(ls *_recal_round-1.bam | cut -d "_" -f1-4 | sort | uniq ))  
+SAMPLELIST=($(ls *_recal_round-1.bam | cut -d "_" -f1-4 | sort | uniq )) 
+
+# * He tenido que modificar h_lp_do_007 a c_lp_do_007, y c_lr_xx y c_lc_xx a c_lr_zz y c_lc_zz respectivamente para que sean comparables. 
+
+
 cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
 
 echo "sample_name,total_seq,total_reads,duplicates,mapped" > raw.stats 
