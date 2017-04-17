@@ -473,7 +473,7 @@ Hay dos formas de calcularlo
 
 SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
 rm global_coverage.tsv
-echo -e "sample_name\taverage\tstdev" > global_coverage.tsv
+echo -e "sample_name\tcoverage_based_samtools\tstdev_based_samtools" > global_coverage.tsv
 for sample in "${SAMPLELIST[@]}"
 do
 echo $sample
