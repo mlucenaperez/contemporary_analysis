@@ -3,24 +3,15 @@ title: "PCA_test"
 output: html_document
 ---
 
+
+# Principal Component Analysis: TEST
+
+I am doing a test on the whole european populations.
+
+
 ```{r, engine=bash, eval=FALSE}
 
-####################################################################################
-#
-#      								Population Structure (PCA, MDS(ngsDist))
-#
-#										María Lucena Pérez
-#
-####################################################################################
-
-
-
-#######################################################################################################################################
-#### Principal Component Analysis :TEST
-#######################################################################################################################################
-
-
-# I am doing a test on the whole 
+# 
 
 POPS=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
 
@@ -75,82 +66,21 @@ REGIONFILE="/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/test_with_int
 SFSDIR="/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs"
 
 
-# I won't use max depth filter now. 
-# read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < "$SFSDIR"/"$POP"_mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv
+# I will use Elena intergenic region file as it is a sanity check:
 
-N_IND=$(wc -l /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$POP"_n*.bamlist | awk '{print $1}') 
-MIN_IND=$(expr $N_IND / 2)
-
-
-### Calling genotype likelihoods: 
- 
-$ANGSD/angsd -P $THREADS -b /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/$POP*.bamlist -ref $REF -out $POP \
-$FILTER1 $FILTER2 \
--minInd $MIN_IND  \
--rf $REGIONFILE \
--GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
--SNP_pval 1e-3 \
--doGeno 32 -doPost 1
-
-
------------------------------------------------------
-# TEST ON B:
-  
-
-POPS=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
-
-cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final
-
-for POP in ${POPS[@]}
-do
-echo $POP
-rm "$POP"_n*.bamlist
-IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
-for POP1 in "${POPS1[@]}"
-do
-echo "$POP --> $POP1"
-ls /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/${POP1}_*_recal_round-1.bam  >> "$POP".bamlist
-done
-NUMBER_IND=$(printf "%03d" `wc -l "$POP".bamlist | cut -f1 -d " "`);
-mv "$POP".bamlist "$POP"_n"$NUMBER_IND".bamlist
-done
-
-
-
-
-# I checked that it is OK
-cat c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba_n105.bamlist  | cut -d "/" -f 7 | cut -d "_" -f 1-3 | sort | uniq -c
-
-Yes!!! it is.
-
-mv /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba_n105.bamlist /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/
-
-# We start the analysis now:
-
-# Create a directory
-
-mkdir -p /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/test_with_intergenic_Elena
-cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/test_with_intergenic_Elena
-
-# I want to produce PCAs for iberian and european based on the small intergenic region of Elena's.
-
-POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
-screen -S test_pca
-POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
-script test_pca.log
-POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
-
-# Set paths to software and some commom files
-ANGSD=/opt/angsd
-NGSTOOLS=/opt/ngsTools_19092016/
-THREADS=20                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
-REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
-ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
-FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
-FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
-REGIONFILE="/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/test_with_intergenic_Elena/no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
-SFSDIR="/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs"
-
+# This is how it looks. 
+# 
+# head no_genes_Lypa_10000longest_center_final_slop20_dot.rf 
+# lp23.s00001:347022-347220
+# lp23.s00001:385836-386034
+# lp23.s00001:822333-822531
+# lp23.s00001:921261-921459
+# lp23.s00001:1019736-1019934
+# lp23.s00001:1981325-1981523
+# lp23.s00001:2512442-2512640
+# lp23.s00001:3743219-3743417
+# lp23.s00001:4114439-4114637
+# lp23.s00001:4951132-4951330
 
 # I won't use max depth filter now. 
 # read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < "$SFSDIR"/"$POP"_mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv
@@ -168,55 +98,6 @@ $FILTER1 $FILTER2 \
 -GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
 -SNP_pval 1e-3 \
 -doGeno 32 -doPost 1
-
------------------------------------------------------
-# Because it's taking to long I am affraid that it is no doing anything, I will check the format of rf file:
-
-  mkdir /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/test_pca
-scp no_genes_Lypa_10000longest_center_final_slop20_dot.rf /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/test_pca
-mv no_genes_Lypa_10000longest_center_final_slop20_dot.rf no_genes_Lypa_10000longest_center_final_slop20_dot.test.rf 
-
-cat no_genes_Lypa_10000longest_center_final_slop20_dot.test.rf | sed 's/\t/:/' | sed 's/\t/-/' > no_genes_Lypa_10000longest_center_final_slop20_dot.test1.rf 
-
-POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
-screen -S test_pca_1
-POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
-script test_pca_1.log
-POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
-
-# Set paths to software and some commom files
-ANGSD=/opt/angsd
-NGSTOOLS=/opt/ngsTools_19092016/
-THREADS=20                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
-REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
-ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
-FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
-FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
-REGIONFILE="/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/test_pca/no_genes_Lypa_10000longest_center_final_slop20_dot.test1.rf "
-SFSDIR="/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs"
-
-
-# I won't use max depth filter now. 
-# read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < "$SFSDIR"/"$POP"_mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv
-
-N_IND=$(wc -l /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$POP"_n*.bamlist | awk '{print $1}') 
-MIN_IND=$(expr $N_IND / 2)
-
-
-### Calling genotype likelihoods: 
- 
-$ANGSD/angsd -P $THREADS -b /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/$POP*.bamlist -ref $REF -out $POP \
-$FILTER1 $FILTER2 \
--minInd $MIN_IND  \
--rf $REGIONFILE \
--GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
--SNP_pval 1e-3 \
--doGeno 32 -doPost 1
-
-
-------------------------------------------------------- 
-
-### $$HASTA AQUI
 
 
 # SNP_pval = #ind*(2allelos/ind) = x alelos ; 1/x = y  # esto sería un filtro aceptable. En mi caso el dataset más pequeño (h_lypa_all) es de 55 indivíduos (1/(2*55)=9e-3) y el más grande (x_lyxx_all) de 189 (1/(2*189)=2.6e-3)
@@ -244,7 +125,7 @@ gunzip $POP.geno.gz
 N_SITES=`zcat $POP.mafs.gz | tail -n+2 | wc -l`
 echo $N_SITES
 
-# In my case I have xx sites.
+# In my case I have 7324 sites (I am using Elena's intergenic region). 
 
 # Now we can perform a PCA by estimating the covariance matrix first:
 # $$$Do we want to add the SFS file??
@@ -269,10 +150,12 @@ $NGSTOOLS/ngsPopGen/ngsCovar -probfile $POP.geno -outfile $POP.covar -nind $N_IN
 
 echo "FID" > $POP.ALL1.clst.borrar
 seq $N_IND >> $POP.ALL1.clst.borrar
-#yes "1" | head -n $N_IND > ALL2.clst.borrar
-echo "IID" > $POP.ALL3.clst.borrar
-cat /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/$POP.bamlist | sed -e 's$/home/mlucena/grupolince/immunocapture/alignments_merged_cap_wg_ontarget/$$g' | cut -d "_" -f 1,2,3,4 >> $POP.ALL3.clst.borrar
-paste $POP.ALL1.clst.borrar $POP.ALL3.clst.borrar> $POP.ALL.clst
+echo "IID" > $POP.ALL2.clst.borrar
+# yes "1" | head -n $N_IND >> $POP.ALL2.clst.borrar
+cat /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/$POP*.bamlist | sed -e 's$/home/mlucena/datos/BAM_files_final/$$g' | cut -d "_" -f 1,2,3,4 >> $POP.ALL2.clst.borrar
+echo "CLUSTER" > $POP.ALL3.clst.borrar
+cat /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/$POP*.bamlist | sed -e 's$/home/mlucena/datos/BAM_files_final/$$g' | cut -d "_" -f 1,2,3 >> $POP.ALL3.clst.borrar
+paste $POP.ALL1.clst.borrar $POP.ALL2.clst.borrar $POP.ALL3.clst.borrar> $POP.ALL.clst
 
 rm $POP.*clst.borrar
 
@@ -280,75 +163,140 @@ rm $POP.*clst.borrar
 # run and plot
 
 # Rscript $NGSTOOLS/Scripts/plotPCA.R -i Results/ALL.covar -c 1-2 -a Results/ALL.clst -o Results/ALL.pca.pdf
-#Rscript $NGSTOOLS/Scripts/plotPCA.R -i $POP.ALL.covar -c 1-2 -a $POP.ALL.clst -o $POP.ALL.pca.pdf #--> No corre porque no puedo instalar librerías así que lo hago en mi propio ordenador
+# Rscript $NGSTOOLS/Scripts/plotPCA.R -i $POP.covar -c 1-2 -a $POP.ALL.clst -o $POP.ALL.pca.pdf #--> No corre porque no puedo instalar librerías así que lo hago en mi propio ordenador
 # evince Results/ALL.pca.pdf
 
 # where the parameter -c 1-2 specifies that we are plotting only the first and second component. On the screen, you will see a series of numbers. These are the percentage of explained variance for each component.
 
-#scp mlucena@genomics-a.ebd.csic.es:/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/*.ALL.clst /home/elena/Dropbox/immunocapture/analysis/ANSGD/pca
-#scp mlucena@genomics-a.ebd.csic.es:/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/*.covar /home/elena/Dropbox/immunocapture/analysis/ANSGD/pca
-#scp mlucena@genomics-a.ebd.csic.es:/opt/ngsTools_19092016/Scripts/plotPCA.R /home/elena/Dropbox/immunocapture/scripts/ANSGD/
-
-#######################################################################################################################################
-### Genetic distances
-#######################################################################################################################################
-
-# An alternative approach would be to compute genetic distances first, and then perform a Multi Dimensional Scaling (MDS) on those. 
-# We are using ngsDist to estimate pairwise genetic distances from genotype probabilities.
-
-# Again, we run ANGSD to compute genotype psoterior probabilities assuming HWE and specifying the output format with -doGeno:
-
-$ANGSD/angsd -P $THREADS -b /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/$POP.bamlist -ref $REF -out $POP.MDS \
--rf $REGIONFILE \
-$FILTER1 $FILTER2 \
--minInd $MININD -setMaxDepth $maxDepth
--GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
--SNP_pval 1e-3 \
--doGeno 8 -doPost 1 
-        
-        
-# Record how many sites we retrieve (although this should be equal what found earlier):
-
-N_SITES=`zcat $POP.MDS.mafs.gz | tail -n+2 | wc -l`
-echo $N_SITES
+scp mlucena@genomics-a.ebd.csic.es:/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/test_with_intergenic_Elena/*.ALL.clst /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena
+scp mlucena@genomics-a.ebd.csic.es:/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/test_with_intergenic_Elena/*.covar /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena
+scp mlucena@genomics-a.ebd.csic.es:/opt/ngsTools_19092016/Scripts/plotPCA.R /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA
 
 
-# For plotting purposes, we now create a file with labels indicating the population of interest for each sample.
-#$$ Not used now. I'll plot with the samples name
-#Rscript -e 'cat(paste(rep(c("LWK","TSI","PEL"),each=20), rep(1:20, 3), sep="_"), sep="\n", file="Data/pops.label")'
-#cat Data/pops.label
-echo "IID" > $POP.ALL3.clst.borrar
-cat /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/$POP.bamlist | sed -e 's$/home/mlucena/grupolince/immunocapture/alignments_merged_cap_wg_ontarget/$$g' | cut -d "_" -f 1,2,3,4 >> $POP.ALL3.clst.borrar
-
-# With ngsDist we can compute pairwise genetic distances without relying on individual genotype calls.
-
-$NGSTOOLS/ngsDist/ngsDist -verbose 1 -geno $POP.MDS.geno.gz -probs -n_ind $N_IND -n_sites $N_SITES -labels $POP.label -o $MININD.MDS.dist -n_threads 8 &> /dev/null
-#less -S Results/ALL.dist
-
-# We can visualise the pairwise genetic distances in form of a tree (in Newick format) using FastME:
-# $$I don't know if it's installed
-#$FASTME -D 1 -i Results/ALL.dist -o Results/ALL.tree -m b -n b &> /dev/null
-#cat Results/ALL.tree
-
-# We can use some R packages to plot the resulting tree.
-
-#Rscript -e 'library(ape); library(phangorn); pdf(file="Results/ALL.tree.pdf"); plot(read.tree("Results/ALL.tree"), cex=0.5); dev.off();' &> /dev/null
-#evince Results/ALL.tree.pdf
-
-# From these distances, we can also perform a MDS analysis and investigate the population genetic structure of our samples.
+```
 
 
-#tail -n +3 Results/ALL.dist | head -n $N_IND | Rscript --vanilla --slave $NGSTOOLS/Scripts/getMDS.R --no_header --data_symm -n 4 -m "mds" -o Results/ALL.mds &> /dev/null
-#less -S Results/ALL.mds
+```{r}
 
-# The first line gives the proportion of explained variance by each component, and the other lines specify the coordinates of each sample on each component.
+library(methods)
+library(optparse)
+library(ggplot2)
+library(dplyr)
+library(threejs)
+library(RColorBrewer)
+
+setwd ("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena")
+# samples_info <-read.csv("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena/c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba.ALL.clst")
+pop= c("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
+
+# 
+###########################################################################################
+#for (pop in pops) 
+#{
+
+# Annotation file is in plink cluster format
+
+#################################################################################
+
+# Read input file
+covar <- read.table(paste(pop, ".covar", sep=''), stringsAsFact=F);
+
+# Read annot file
+annot <- read.table(paste(pop, ".ALL.clst", sep=""), header=TRUE) 
+
+# Parse components to analyze
+# comp <- as.numeric(strsplit("component1-component2", "-", fixed=TRUE)[[1]])
+# comp <- as.numeric(strsplit(opt$comp, "-", fixed=TRUE)[[1]])
+
+comp <- c(1,2)
+
+# Eigenvalues
+eig <- eigen(covar, symm=TRUE);
+eig$val <- eig$val/sum(eig$val);
+cat(signif(eig$val, digits=3)*100,"\n");
+
+# Plot
+PC <- as.data.frame(eig$vectors)
+colnames(PC) <- gsub("V", "PC", colnames(PC))
+PC$Pop <- factor(annot$CLUSTER)
+
+title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
+
+x_axis = paste("PC",comp[1],sep="")
+y_axis = paste("PC",comp[2],sep="")
+
+ggplot() + 
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Pop", shape="Pop"), size = 3) + 
+  scale_shape_manual(values=1:15) + ggtitle(title)
+ggsave(paste(pop, "_pca.TEST.eps", sep=""),units="mm",  width=270, height=190)
+unlink("Rplots.pdf", force=TRUE)
+
+# 3D PCA
+
+#################################################################################
+# 
+# PC_col <- PC %>% group_by(.,Pop) %>% 
+#   mutate(., 
+#          color = ifelse (Nivel3 == "Montes_de_Toledo",  brewer.pal(8,"Blues")[6], 
+#                          ifelse(Nivel3 == "E_SM_rest" | Nivel3 == "Andujar-Cardena", brewer.pal(8,"Greens")[6],
+#                          ifelse(Nivel3 == "E_Sierra_Morena_Palomar",brewer.pal(8,"Greys")[6],
+#                          ifelse(Nivel3 == "Donana_hist" | Nivel3 == "Donana_cont", brewer.pal(8,"Purples")[6],
+#                          ifelse(Nivel3 == "malcata", brewer.pal(8,"RdPu")[6], 
+#                          ifelse(Nivel3 == "Algarve-Odemira-Sado", brewer.pal(8,"Reds")[6], NA)))))), 
+#          pop.label = ifelse (Nivel3 == "Montes_de_Toledo", "Montes de Toledo", 
+#                      ifelse(Nivel3 == "E_SM_rest" , "E. Sierra Morena", 
+#                      ifelse( Nivel3 == "Andujar-Cardena" ,"E. Sierra Morena", 
+#                      ifelse(Nivel3 == "E_SM_Palomar","Far-E. Sierra Morena",
+#                      ifelse(Nivel3 == "W_Sierra-Morena","W.Sierra Morena",
+#                      ifelse(Nivel3 == "Donana_hist" , "Doñana",
+#                      ifelse(Nivel3 == "Donana_cont", "Doñana", 
+#                      ifelse(Nivel3 == "malcata", "Central Range", 
+#ifelse(Nivel3 == "Vale_do_Sado", "Vale do Sado", NA))))))))) )
+# 
+# color <- c()
+# for(i in 1:length(Nivel3_all_3DsP_date_col$Nivel3) )
+# {
+#   color[i] <- colorRampPalette(brewer.pal(8, Nivel3_all_3DsP_date_col$palette[i]))(years_n)[match(Nivel3_all_3DsP_date_col$assignedDate[i],years_uniq)]
+# }
+# Nivel3_all_3DsP_date_col$color <- color
 
 
-#done < $SFSDIR/inline.csv
+###########################################################################################
+# 3D plot
+###########################################################################################
 
+setwd ("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena")
+samples_info <-read.csv("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena/c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba.ALL.clst")
+pop= c("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
 
+# 
+###########################################################################################
+# Read input file
+covar <- read.table(paste(pop, ".covar", sep=''), stringsAsFact=F);
+# Read annot file
+annot <- read.table(paste(pop, ".ALL.clst", sep=""), header=TRUE) 
+# Parse components to analyze
+comp <- c(1,2,3)
 
+# Eigenvalues
+eig <- eigen(covar, symm=TRUE);
+eig$val <- eig$val/sum(eig$val);
+cat(signif(eig$val, digits=3)*100,"\n");
+
+# Plot
+PC <- as.data.frame(eig$vectors)
+colnames(PC) <- gsub("V", "PC", colnames(PC))
+PC$Pop <- factor(annot$CLUSTER)
+PC$ID <- factor(annot$IID)
+
+scatterplot3js(PC$PC1, PC$PC2, PC$PC3, 
+                col=PC$POP,  labels=PC$ID,
+               size=0.7, grid=FALSE, renderer = "canvas")
 
 
 
 ```
+
+
+
+
