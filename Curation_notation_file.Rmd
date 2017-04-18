@@ -52,81 +52,6 @@ diff <(cut -f 9 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_fin
 
 
 
-
-
-
-## 2. Get the features represented in the bedfile
-
-```{r, engine=bash, eval=FALSE}
-
-cut -f 3 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3  | sort | uniq
-
-# CDS
-# exon
-# gene
-# mRNA
-
-```
-
-## 3. Get the features not represented (i.e., promoters, introns, 5'UTR and 3'UTR, lncRNA & ncRNA, intergenic) 
-
-La estructura que queremos es SCAFFOLD EVM_PASA FEATURE START END POINT STRANDNESS FRAME IDRAW
-
-### 3.a. Promoters. 
-
-- Vamos a usar sólo la lista de los genes que están completos en toda su longitud filtrado desde el archivo generado con APPRIS
-
-- Lista de genes que nos interesan, son los genes que están en appris_data.corsair.lynx_pardinus.gff3.gz y tienen una puntuación mayor que 3 en la 6th columna. Escogemos este corte porque:
-
-Email Michael Trees: 
-Si quieres sacar datos ya el fichero correcto es appris_data.corsair.lynx_pardinus.gff3.
-Aparte del gen y transcrito lo importante seria el score de CORSAIR, que es la
-columna justo despues de las coordinadas. Como lo hemos calculado
-entonces habia un punto para cada especia alineado corectamente (aunque
-perro valia 0.8, pollo 2, xenopus 2 y danio 2.5. Entonces para asegurar
-que han alineado bien proteinas al menos dos especies (y asi es menos
-probable que el isoforma ha alineado contra fragmentos) pondria un corte de tres.
-lp23.s10430	3817466	3817966	PROMOTER:LYPA23C008622T2	0	+
-
-
-- No usamos la lista de Fede porque gracias a algunos sanity checks comprobé que al menos un promotor solapaba con un gen (si quieres saber cómo lo supe: script antiguo). Tras hablar con Fede, nos ha confirmado que para la dirección - los promotores no están bien definidos, por tanto vamos a volver a definirlos nosotros desde el principio. 
-
-Como los tenemos que definir de nuevo, los vamos a definir en base a una lista de 250, 500 y 1000bp. 
-
-```{r, engine=bash, eval=FALSE}
-
-rm LYPA23C.promoters_full_length_genes.nr.gff3 # Removing the former file. 
-
-rm LYPA23C.promoters_full_length_genes.nr.250bp.gff3
-while read GENEID ;
-do
-# 250
-echo "$GENEID"
-grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
-awk -v OFS='\t' '{split($0,a,":"); if ($7=="+") print $1,"manual","promoter",$4-250,$4-1,$6,$7,$8,$9"_promoter"; else print $1,"manual","promoter",$5+250,$5+1,$6,$7,$8,$9"_promoter"}'>> LYPA23C.promoters_full_length_genes.nr.250bp.gff3
-done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
-
-rm LYPA23C.promoters_full_length_genes.nr.500bp.gff3
-while read GENEID ;
-do
-# 500
-echo "$GENEID"
-grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
-awk -v OFS='\t' '{split($0,a,":"); if ($7=="+") print $1,"manual","promoter",$4-500,$4-1,$6,$7,$8,$9"_promoter"; else print $1,"manual","promoter",$5+500,$5+1,$6,$7,$8,$9"_promoter"}'>> LYPA23C.promoters_full_length_genes.nr.500bp.gff3
-done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
-
-rm LYPA23C.promoters_full_length_genes.nr.1000bp.gff3
-while read GENEID ;
-do
-# 1000
-echo "$GENEID"
-grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
-awk -v OFS='\t' '{split($0,a,":"); if ($7=="+") print $1,"manual","promoter",$4-1000,$4-1,$6,$7,$8,$9"_promoter"; else print $1,"manual","promoter",$5+1000,$5+1,$6,$7,$8,$9"_promoter"}'>> LYPA23C.promoters_full_length_genes.nr.1000bp.gff3
-done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
-
-
-```
-
 --- Sanity check para comprobar si la longitud de los mRNA y de los genes es igual o no. 
 ```{r, engine=bash, eval=FALSE}
 while read GENEID ;
@@ -152,9 +77,83 @@ They are not always coincident, the file is called: "GENE_vs_mRNA_not_coincident
 
 
 
+
+## 2. Get the features represented in the bedfile
+
+```{r, engine=bash, eval=FALSE}
+
+cut -f 3 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3  | sort | uniq
+
+# CDS
+# exon
+# gene
+# mRNA
+
+```
+
+## 3. Get the features not represented (i.e., promoters, introns, 5'UTR and 3'UTR, lncRNA & ncRNA, intergenic) 
+
+La estructura que queremos es SCAFFOLD EVM_PASA FEATURE START END POINT STRANDNESS FRAME IDRAW
+
+### 3.a. Gene promoters. 
+
+- Vamos a usar sólo la lista de los genes que están completos en toda su longitud filtrado desde el archivo generado con APPRIS
+
+- Lista de genes que nos interesan, son los genes que están en appris_data.corsair.lynx_pardinus.gff3.gz y tienen una puntuación mayor que 3 en la 6th columna. Escogemos este corte porque:
+
+Email Michael Trees: 
+Si quieres sacar datos ya el fichero correcto es appris_data.corsair.lynx_pardinus.gff3.
+Aparte del gen y transcrito lo importante seria el score de CORSAIR, que es la
+columna justo despues de las coordinadas. Como lo hemos calculado
+entonces habia un punto para cada especia alineado corectamente (aunque
+perro valia 0.8, pollo 2, xenopus 2 y danio 2.5. Entonces para asegurar
+que han alineado bien proteinas al menos dos especies (y asi es menos
+probable que el isoforma ha alineado contra fragmentos) pondria un corte de tres.
+lp23.s10430	3817466	3817966	PROMOTER:LYPA23C008622T2	0	+
+
+
+- No usamos la lista de Fede porque gracias a algunos sanity checks comprobé que al menos un promotor solapaba con un gen (si quieres saber cómo lo supe: script antiguo). Tras hablar con Fede, nos ha confirmado que para la dirección - los promotores no están bien definidos, por tanto vamos a volver a definirlos nosotros desde el principio. 
+
+Como los tenemos que definir de nuevo, los vamos a definir en base a una lista de 250, 500 y 1000bp. 
+
+```{r, engine=bash, eval=FALSE}
+
+rm LYPA23C.promoters_full_length_genes.nr.250bp.gff3
+while read GENEID ;
+do
+# 250
+echo "$GENEID"
+grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
+awk -v OFS='\t' '{split($0,a,":"); if ($7=="+") print $1,"manual","promoter",$4-250,$4-1,$6,$7,$8,$9"_promoter"; else print $1,"manual","promoter",$5+1,$5+250,$6,$7,$8,$9"_promoter"}'>> LYPA23C.promoters_full_length_genes.nr.250bp.gff3
+done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
+
+rm LYPA23C.promoters_full_length_genes.nr.500bp.gff3
+while read GENEID ;
+do
+# 500
+echo "$GENEID"
+grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
+awk -v OFS='\t' '{split($0,a,":"); if ($7=="+") print $1,"manual","promoter",$4-500,$4-1,$6,$7,$8,$9"_promoter"; else print $1,"manual","promoter",$5+1,$5+500,$6,$7,$8,$9"_promoter"}'>> LYPA23C.promoters_full_length_genes.nr.500bp.gff3
+done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
+
+rm LYPA23C.promoters_full_length_genes.nr.1000bp.gff3
+while read GENEID ;
+do
+# 1000
+echo "$GENEID"
+grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
+awk -v OFS='\t' '{split($0,a,":"); if ($7=="+") print $1,"manual","promoter",$4-1000,$4-1,$6,$7,$8,$9"_promoter"; else print $1,"manual","promoter",$5+1,$5+1000,$6,$7,$8,$9"_promoter"}'>> LYPA23C.promoters_full_length_genes.nr.1000bp.gff3
+done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
+
+
+```
+
+
+
 ### 3.b. Introns 
 
 --- Sanity check para comprobar que es seguro usar el bed de Fede.
+
 ```{r, engine=bash, eval=FALSE}
 
 # Comprobar que están bien calculados con algún ej a ojo. Tomo para el ejemplo los 10 primeros genes
@@ -189,29 +188,31 @@ done < <(cat genes_in_my_nr_file_and_not_in_introns_bed.list)
 Tras discutir con Fede las dudas que tenías vemos que los intrones están bien, solo tendríamos que corregir que están como 0based y nosotros queremos pasarlo a 1 based para el gff. 
 
 Corregimos a 0 based:
+
 ```{r, engine=bash, eval=FALSE}
 awk -v OFS='\t' '{split($4,a,":"); print $1,"MANUAL","intron",$2+1,$3,".",$6,$5,"ID="a[2]}' /home/GRUPOS/grupolince/copia_fabascal/FEATURES/introns.bed | awk -v OFS='\t' '{if ($9==prev) counter++; else counter=1; print ($1,$2,$3,$4,$5,$6,$7,$8,$9"_intron_"counter); prev=$9}'  > LYPA23C.introns.nr.gff3
 ```
 
 ### 3.c. UTRs
 
+For each gene
+
+Vamos a usar sólo la lista de los genes que están completos en toda su longitud filtrado desde el archivo generado con APPRIS
+
+Lista de genes que nos interesan, son los genes que están en appris_data.corsair.lynx_pardinus.gff3.gz y tienen una puntuación mayor que 3 en la 6th columna. Escogemos este corte porque:
+
+Email Michael Trees: 
+Si quieres sacar datos ya el fichero correcto es appris_data.corsair.lynx_pardinus.gff3.
+Aparte del gen y transcrito lo importante seria el score de CORSAIR, que es la
+columna justo despues de las coordinadas. Como lo hemos calculado
+entonces habia un punto para cada especia alineado corectamente (aunque
+perro valia 0.8, pollo 2, xenopus 2 y danio 2.5. Entonces para asegurar
+que han alineado bien proteinas al menos dos especies (y asi es menos
+probable que el isoforma ha alineado contra fragmentos) pondria un corte de tres.
+
+Las UTR se podrían definir como gene-exon,gene-cds y exon-cds. Tras discutir cual es la mejor aproximación, nos vamos a quedar con gene-cds
+
 ```{r, engine=bash, eval=FALSE}
-
-# For each gene
-# Vamos a usar sólo la lista de los genes que están completos en toda su longitud filtrado desde el archivo generado con APPRIS
-# Lista de genes que nos interesan, son los genes que están en appris_data.corsair.lynx_pardinus.gff3.gz y tienen una puntuación mayor que 3 en la 6th columna. Escogemos este corte porque:
-
-# Email Michael Trees: 
-# Si quieres sacar datos ya el fichero correcto es appris_data.corsair.lynx_pardinus.gff3.
-# Aparte del gen y transcrito lo importante seria el score de CORSAIR, que es la
-# columna justo despues de las coordinadas. Como lo hemos calculado
-# entonces habia un punto para cada especia alineado corectamente (aunque
-# perro valia 0.8, pollo 2, xenopus 2 y danio 2.5. Entonces para asegurar
-# que han alineado bien proteinas al menos dos especies (y asi es menos
-# probable que el isoforma ha alineado contra fragmentos) pondria un corte de tres.
-
-
-# Las UTR se podrían definir como gene-exon,gene-cds y exon-cds. Tras discutir cual es la mejor aproximación, nos vamos a quedar con gene-cds
 
 rm LYPA23C.UTRs_gene-cds.nr.gff3
 while read GENEID ;
@@ -219,37 +220,30 @@ do
 echo "$GENEID" 
 # gene
 grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3   | # Solo si uso el file con todas las isoformas sed 's/^\(.\{4\}\)/\1./'  | \
-grep -e $'\t''EVM_PASA'$'\t''gene'$'\t' \
->gene.iter.bed.borrar
+grep -e $'\t''EVM_PASA'$'\t''gene'$'\t' | awk -v OFS='\t' '{print $1,$2,$3,$4-1,$5,$6,$7,$8,$9}' \
+> gene.iter.bed.borrar
+# He convertido el archivo en 0-based para hacer el substract. 
 # cds
 grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3  | # Solo si uso el file con todas las isoformassed 's/^\(.\{4\}\)/\1./'  | \
 grep -e $'\t''EVM_PASA'$'\t''CDS'$'\t' | \
-awk -v OFS='\t' 'NR == 1 {min = $4} NR>1 && $4<min {min = $4}; NR == 1 {max = $5} NR>1 && $5>max {max = $5} END {print  $1,min,max}'  \
-> cds-1.iter.bed.borrar
+awk -v OFS='\t' 'NR == 1 {min = $4} NR>1 && $4<min {min = $4}; NR == 1 {max = $5} NR>1 && $5>max {max = $5} END {print  $1,min-1,max}'  \
+> cds.iter.bed.borrar
+# He convertido el archivo en 0-based para hacer el substract. 
 # Get UTRs by doing gene-exon, gene-cds and exon-cds:
-bedtools subtract -a gene.iter.bed.borrar -b cds-1.iter.bed.borrar > gene-cds.iter.bed.borrar
+bedtools subtract -a gene.iter.bed.borrar -b cds.iter.bed.borrar > gene-cds.iter.bed.borrar
 # Get UTRs
 awk -v OFS='\t' 'NR==1 {if ($7=="+") print $1,$2,"5UTR",$4,$5,$6,$7,$8,$9,$5-$4 ; else print $1,$2,"3UTR",$4,$5,$6,$7,$8,$9,$5-$4} \
 NR==2 {if ($7=="+") print $1,$2,"3UTR",$4,$5,$6,$7,$8,$9,$5-$4; else print $1,$2,"5UTR",$4,$5,$6,$7,$8,$9,$5-$4 }' gene-cds.iter.bed.borrar | \
-awk -v OFS='\t' '$10>1 {print $1,$2,$3,$4+1,$5,$6,$7,$8,$9}' >>  LYPA23C.UTRs_gene-cds.nr.gff3  # Lo que hace es quitarme todos los UTR que sean de un tamañao de 1 o 0.
+awk -v OFS='\t' '$10>1 {print $1,$2,$3,$4+1,$5,$6,$7,$8,$9}' >>  LYPA23C.UTRs_gene-cds.nr.gff3  
+# Lo que hace es quitarme todos los UTR que sean de un tamañao de 1 o 0. Además lo hago 1-based. 
 done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
 
-
-$$$$$$$$$$$$$$ Voy por aquí he cambiado lo de awk -v OFS='\t' 'NR == 1 {min = $4} NR>1 && $4<min {min = $4}; NR == 1 {max = $5} NR>1 && $5>max {max = $5} END {print  $1,min+1,max-1}'  \
-> cds-1.iter.bed.borrar; antes no ponía min+1 o max-1. 
+# Este fallo se debe a que gene es igual a cds. 
+# Error: Invalid record in file gene.iter.bed.borrar. Record is 
+# lp23.s26762	EVM_PASA	gene	0	1635	.	-	.	ID=LYPA23C003834
 
 # También se podría hacer como gene-exon o exon-cds. Esas combinaciones están en script antiguo. 
-
-# Esto te daría 1 based directamente.
-# From 0-based to 1-based
-
-awk -v OFS='\t' '{print $1,$2,$3,$4+1,$5,$6,$7,$8,$9}' LYPA23C.UTRs_gene-cds.nr.gff3 | LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n > LYPA23C.UTRs_gene-cds.nr.1based.gff3
-
-### No nos ha salido bien, así que modificamos el que vamos a usar que es el de gene-cds (LYPA23C.UTRs_gene-cds.nr.1based.gff3). Borro los demás. 
-
-awk -v OFS='\t' '{if ($7=="+" && $3=="5UTR") print $1,$2,$3,$4,$5-1,$6,$7,$8,$9; else if ($7=="+" && $3=="3UTR") print $1,$2,$3,$4+1,$5,$6,$7,$8,$9; \
-else if ($7=="-" && $3=="3UTR") print $1,$2,$3,$4,$5-1,$6,$7,$8,$9; else if ($7=="-" && $3=="5UTR") print $1,$2,$3,$4+1,$5,$6,$7,$8,$9}' LYPA23C.UTRs_gene-cds.nr.1based.gff3 > LYPA23C.UTRs_gene-cds.nr.positions.fixed.gff3
-
+# Esto te daría 1-based directamente.
 
 rm *.iter.bed.borrar
 
@@ -295,54 +289,101 @@ sed 's/^\(.\{4\}\)/\1./' infernal_1e6.gff3 > infernal_1e6_fixed.gff3
 ```
 
 
-### 3.f. Intergenic
+### 3.f. lncRNA introns
 
 ```{r, engine=bash, eval=FALSE}
 
-# lp23.s10430	3818298	3917427	INTRON:LYPA23C008622T2	0	+
-head -n20 /home/GRUPOS/grupolince/copia_fabascal/FEATURES/intergenic.bed | LANG=en_EN sort -k1,1 -k2,2  | awk -v OFS='\t' '{print $1,"MANUAL","intergenic", $2+1,$3}' | \
-> LYPA23C.
 
 
-# Let's check if it's overlapping with something that is functional.
+```
 
-LANG=en_EN sort  -k 1,1 -k 2,2n  /home/GRUPOS/grupolince/copia_fabascal/FEATURES/intergenic.bed > /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/intergenic_sorted.bed
+### 3.f. lncRNA promoters
 
-bedtools merge -i /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/intergenic_sorted.bed > /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/intergenic_sorted_nr.bed 
+```{r, engine=bash, eval=FALSE}
+
+rm LYPA23C.promoters_full_length_lncRNA.250bp.gff3
+while read LNCRNA_ID ;
+do
+# 250
+echo $LNCRNA_ID
+grep "$LNCRNA_ID" lncRNAs_fixed_sorted.gff3 | \
+awk -v OFS='\t' 'NR == 1 {min = $4} NR>1 && $4<min {min = $4}; NR == 1 {max = $5} NR>1 && $5>max {max = $5} END {print  $1,min,max,$7}' | 
+awk -v OFS='\t' '{if ($4=="+") print $1,"manual","promoter_lncRNA",$2-250,$2-1,".",$4,".","GID='${LNCRNA_ID}'_promoter"; else print $1,"manual","promoter_lncRNA",$3+1,$3+250,".",$4,".","GID='${LNCRNA_ID}'_promoter"}' >> LYPA23C.promoters_full_length_lncRNA.250bp.gff3
+done < <( cat lncRNAs_fixed_sorted.gff3 | awk '{ split($0,a,"GID="); print a[2] }' | awk '{ split($0,a,"_"); print a[1]"_"a[2] }' | sort | uniq )
 
 
+rm LYPA23C.promoters_full_length_lncRNA.500bp.gff3
+while read LNCRNA_ID ;
+do
+# 500
+echo $LNCRNA_ID
+grep "$LNCRNA_ID" lncRNAs_fixed_sorted.gff3 | \
+awk -v OFS='\t' 'NR == 1 {min = $4} NR>1 && $4<min {min = $4}; NR == 1 {max = $5} NR>1 && $5>max {max = $5} END {print  $1,min,max,$7}' | 
+awk -v OFS='\t' '{if ($4=="+") print $1,"manual","promoter_lncRNA",$2-500,$2-1,".",$4,".","GID='${LNCRNA_ID}'_promoter"; else print $1,"manual","promoter_lncRNA",$3+1,$3+500,".",$4,".","GID='${LNCRNA_ID}'_promoter"}' >> LYPA23C.promoters_full_length_lncRNA.500bp.gff3
+done < <( cat lncRNAs_fixed_sorted.gff3 | awk '{ split($0,a,"GID="); print a[2] }' | awk '{ split($0,a,"_"); print a[1]"_"a[2] }' | sort | uniq )
 
-## 4. Merge outfles  
+
+rm LYPA23C.promoters_full_length_lncRNA.1000bp.gff3
+while read LNCRNA_ID ;
+do
+# 1000
+echo $LNCRNA_ID
+grep "$LNCRNA_ID" lncRNAs_fixed_sorted.gff3 | \
+awk -v OFS='\t' 'NR == 1 {min = $4} NR>1 && $4<min {min = $4}; NR == 1 {max = $5} NR>1 && $5>max {max = $5} END {print  $1,min,max,$7}' | 
+awk -v OFS='\t' '{if ($4=="+") print $1,"manual","promoter_lncRNA",$2-1000,$2-1,".",$4,".","GID='${LNCRNA_ID}'_promoter"; else print $1,"manual","promoter_lncRNA",$3+1,$3+1000,".",$4,".","GID='${LNCRNA_ID}'_promoter"}' >> LYPA23C.promoters_full_length_lncRNA.1000bp.gff3
+done < <( cat lncRNAs_fixed_sorted.gff3 | awk '{ split($0,a,"GID="); print a[2] }' | awk '{ split($0,a,"_"); print a[1]"_"a[2] }' | sort | uniq )
+
+RLOC_00000001
+RLOC_00000003
+```
+
+
+## 4. Merging functional part of the genome (merging)
 
 
 ```{r, engine=bash, eval=FALSE}
+
 
 # FUNCTIONAL FILE:
 # Name: LYPA23C.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.nr.gff3 
+
 # Files included:
-# 	ORIGINAL FILE (CDS/EXON/GENE/mRNA)
-# 	promoters
+# 	1. Original file LYPA23C.all.fix.nr.gff3 (CDS/EXON/GENE/mRNA)
+# 	2. Promoters (Nos quedamos con el archivo de promoters 1000 pb para ser conservadores a la hora de        decir lo que es intergénico)
 # 	introns
-# 	5'UTR and 3'UTR (UTR es la región no traducida del gen por tanto nos quedamos con: LYPA23C.UTRs_gene-cds.nr.gff3)
+# 	5'UTR and 3'UTR (UTR es la región no traducida del gen por tanto nos quedamos con:                     LYPA23C.UTRs_gene-cds.nr.gff3)
 # 	lncRNA
 # 	ncRNA
 
-cat LYPA23C.all.fix.nr.extra.genes.gff3 LYPA23C.promoters_full_length_genes.nr.gff3 LYPA23C.introns.nr.gff3 LYPA23C.UTRs_gene-cds.nr.positions.fixed.gff3 lncRNAs_fixed_sorted.gff3 infernal_1e6_fixed.gff3 | LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n > LYPA23C.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.nr.gff3 
+cat LYPA23C.all.fix.nr.gff3 LYPA23C.promoters_full_length_genes.nr.1000bp.gff3 LYPA23C.introns.nr.gff3 LYPA23C.UTRs_gene-cds.nr.gff3  lncRNAs_fixed_sorted.gff3 infernal_1e6_fixed.gff3 | LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n > LYPA23C.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.nr.gff3 
+
+
+## Shall we add introns from lncRNA and promoters from lncRNA?
+
+```
 
 
 
+## 5. Defining intergenic regions
 
-#####-----> CHECK INTERGENIC
+Fede tiene un bed de intergénico, pero dado que nosotros hemos:
 
-# To check if intergenic is somehow merging with functional:
+1. Corregido los promotores que no estaban bien definidos para los genes -.
+2. Añadido lncRNA y sncRNA
+3. 
 
-# First create bed file based on the previous file:
+Por tanto, voy a usar mi file de funcional y restarle al genoma todas esas regiones. 
 
-awk -v OFS='\t' '{print $1, $4, $5 }' LYPA23C.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.nr.gff3 | bedtools merge -i stdin -d 1 > LYPA.functional.bed
+```{r, engine=bash, eval=FALSE}
 
-# Check intersection:
 
-bedtools intersect -a LYPA.functional.bed -b intergenic_sorted_nr.bed > intersect_functional_vs_intergenic.bed
+# First create bed file based on the previous file. Como es un bed es 0-based.
+
+awk -v OFS='\t' '{print $1, $4-1, $5 }' LYPA23C.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.nr.gff3 | bedtools merge -i stdin -d 1 > LYPA.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.nr.bed
+
+# Define intergenic region
+
+bedtools subtract -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome.bed -b LYPA.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.nr.bed > LP
 
 # Do we have intersect?
 
