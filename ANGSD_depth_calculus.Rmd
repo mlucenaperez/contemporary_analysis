@@ -29,6 +29,8 @@ c_ll_ya #lynx lynx 		contemporary 	yakutia samples
 # Este script es una maravilla. Coje todas las poblaciones que tu hayas definido y hace los bamlist con su nombre adecuado.  
 POPS=("c_ll_cr" "c_ll_ka" "c_ll_ki" "c_ll_la" "c_ll_no" "c_ll_og" "c_ll_po" "c_ll_to" "c_ll_tu" "c_ll_vl" "c_ll_ya" "c_lp_do" "c_lp_sm")
 
+# All European:
+POPS=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-h_ll_ba")
 
 POPS=("c_ll_ki" "c_ll_po" "c_ll_no" "c_ll_vl" "c_ll_ya" "c_lp_sm" "c_lp_do" "c_lp_do-c_lp_sm" "c_ll_ki-c_ll_no-c_ll_po-c_ll_vl-c_ll_ya" "c_ll_ki-c_ll_no-c_ll_po-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm")
 
@@ -55,6 +57,8 @@ done
 ### MaxDepth
 
 ```{r, engine=bash, eval=FALSE}
+
+# For single or small populations:
 
 cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test
 #To launch one by one
@@ -85,6 +89,43 @@ MAXDEPTH=$(expr $NUMBER_IND \* 1000)
 -doDepth 1 \
 -doCounts 1 \
 -maxDepth $MAXDEPTH  
+
+
+# For huge populations:
+
+
+cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test
+#To launch one by one
+POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-h_ll_ba"  # <--CHANGE POP HERE
+screen -S european_lynx_qc_test
+POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-h_ll_ba"  # <--CHANGE POP HERE
+script european_lynx_qc.log
+POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-h_ll_ba"  # <--CHANGE POP HERE
+
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
+THREADS=5                    # no. of computer cores used 20 = OK, >20 = ask people first!
+REGIONFILE="/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/test_with_intergenic_Elena/no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+
+BAMLIST=$(ls "$POP"_n*.bamlist)
+NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
+MAXDEPTH=$(expr $NUMBER_IND \* 1000)
+
+/opt/angsd/angsd \
+-P $THREADS \
+-b $BAMLIST \
+-ref $REF \
+-out ${BAMLIST/.bamlist/.qc} \
+-uniqueOnly 1 \
+-remove_bads 1 \
+-only_proper_pairs 1 \
+-rf $REGIONFILE \
+-baq 1 \
+-C 50 \
+-doQsDist 1 \
+-doDepth 1 \
+-doCounts 1 \
+-maxDepth $MAXDEPTH  
+
 
 
 ```
