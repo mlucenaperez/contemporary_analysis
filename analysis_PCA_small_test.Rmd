@@ -298,5 +298,9 @@ scatterplot3js(PC$PC1, PC$PC2, PC$PC3,
 ```
 
 
+-minInd [int]
+Only keep sites with at least minIndDepth (default is 1) from at least [int] individuals
+-minIndDepth [int]
+Only works with the -minInd filter. Change the minimum depth the individuals must have in order to keep the site. Default is 1.
 
 
