@@ -304,3 +304,20 @@ Only keep sites with at least minIndDepth (default is 1) from at least [int] ind
 Only works with the -minInd filter. Change the minimum depth the individuals must have in order to keep the site. Default is 1.
 
 
+
+
+for i in $( ls *.bam ); do
+    samtools view $i -H > OUTPUTPREFIX${i%.bam}.sam 
+    while read -r -a myArray; do 
+        samtools view $i ${myArray[0]}:${myArray[1]}-${myArray[2]} >> OUTPUTPREFIX${i%.bam}.sam
+     done < INPUTFILE.bed 
+done
+
+
+
+# ouput header only, once
+samtools view -Hb aln.bam > mysam.sam
+while read line;do
+    samtools view -b aln.bam $line >> mysam.sam
+done < regions.txt
+
