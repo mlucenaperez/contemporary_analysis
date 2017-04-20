@@ -102,9 +102,9 @@ POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_l
 script european_lynx_qc.log
 POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-h_ll_ba"  # <--CHANGE POP HERE
 
-REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
-THREADS=5                    # no. of computer cores used 20 = OK, >20 = ask people first!
-REGIONFILE="/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/test_with_intergenic_Elena/no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+REF="/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
+THREADS=50                    # no. of computer cores used 20 = OK, >20 = ask people first!
+REGIONFILE="no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
 
 BAMLIST=$(ls "$POP"_n*.bamlist)
 NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
