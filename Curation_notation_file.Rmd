@@ -161,6 +161,17 @@ grep "$GENEID" LYPA23C.all.fix.nr.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
 awk -v OFS='\t' '{split($0,a,":"); if ($7=="+") print $1,"manual","promoter_gene_250",$4-250,$4-1,$6,$7,$8,$9"_promoter"; else print $1,"manual","promoter_gene_250",$5+1,$5+251,$6,$7,$8,$9"_promoter"}'>> LYPA23C.promoters_full_length_genes.nr.250bp.gff3
 done < <( zcat APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
 
+# Me he dado cuenta haciendo un sanity check que los promotores pueden ir más alla del 0 al restar a un numero 250 500 o 1000. Por tanto lo voy a modificar para que esas posiciones empiecen en 1. 
+
+awk -v OFS='\t'  '{if ($4<0) print $1,$2,$3,"1",$5,$6,$7,$8,$9; else print $0}' LYPA23C.promoters_full_length_genes.nr.250bp.gff3 | sort -nk 4,4 | head 
+
+
+
+# Tengo que corregir esto!
+
+lp23.s00904	manual	promoter_gene_250	-138	111	.	+	.	ID=LYPA23C011008T1
+
+
 rm LYPA23C.promoters_full_length_genes.nr.500bp.gff3
 while read GENEID ;
 do
@@ -178,6 +189,7 @@ echo "$GENEID"
 grep "$GENEID" LYPA23C.all.fix.nr.gff3 | grep -P 'EVM_PASA\tmRNA'  | \
 awk -v OFS='\t' '{split($0,a,":"); if ($7=="+") print $1,"manual","promoter_gene_1000",$4-1000,$4-1,$6,$7,$8,$9"_promoter"; else print $1,"manual","promoter_gene_1000",$5+1,$5+1001,$6,$7,$8,$9"_promoter"}'>> LYPA23C.promoters_full_length_genes.nr.1000bp.gff3
 done < <( zcat APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
+
 
 
 ```
@@ -462,7 +474,7 @@ cat LYPA23C.GENE.mRNA.CDS.fix.nr.gff3 LYPA23C.promoters_full_length_genes.nr.250
 ```
 
 
---- Sanity check para comprobar que cada archivo tiene lo que se espera de él. 
+---> Sanity check para comprobar que cada archivo tiene lo que se espera de él. 
 
 ```{r, engine=bash, eval=FALSE}
 
@@ -471,7 +483,8 @@ cut -f 3 LYPA23C.GENE.mRNA.CDS.fix.nr.gff3  | sort | uniq
 cut -f 3 LYPA23C.promoters_full_length_genes.nr.250bp.gff3  | sort | uniq
 cut -f 3 LYPA23C.promoters_full_length_genes.nr.500bp.gff3  | sort | uniq
 cut -f 3 LYPA23C.promoters_full_length_genes.nr.1000bp.gff3  | sort | uniq
-cut -f 3 LYPA23C.introns.nr.gff3 LYPA23C.UTRs_gene-cds.nr.gff3  | sort | uniq
+cut -f 3 LYPA23C.introns.nr.gff3  | sort | uniq
+cut -f 3 LYPA23C.UTRs_gene-cds.nr.gff3  | sort | uniq
 cut -f 3 LYPA23C.infernal_1e6_fixed.gff3  | sort | uniq
 cut -f 3 LYPA23C.lncRNAs_fixed_sorted.gff3  | sort | uniq
 cut -f 3 LYPA23C.introns_lncRNA.gff3  | sort | uniq
@@ -479,11 +492,50 @@ cut -f 3 LYPA23C.promoters_lncRNA.250bp.gff3  | sort | uniq
 cut -f 3 LYPA23C.promoters_lncRNA.500bp.gff3  | sort | uniq
 cut -f 3 LYPA23C.promoters_lncRNA.1000bp.gff3 | sort | uniq
 
+# Salen todas bien!
+
 
 cut -f 3 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3  | sort | uniq
+# 3UTR
+# 5UTR
+# CDS
+# gene
+# intron
+# intron_lncRNA
+# lncRNA
+# mRNA
+# ncRNA
+# promoter_gene_1000
+# promoter_gene_250
+# promoter_gene_500
+# promoter_lncRNA_1000
+# promoter_lncRNA_250
+# promoter_lncRNA_500
+# 
+# Perfecto!
+
+
 
 ```
 
+---> Sanity check para comprobar que cada archivo tiene lo que se espera de él. 
+
+```{r, engine=bash, eval=FALSE}
+
+# Miro a ver si nuestras construcciones ha provocado que algo se vaya más allá de cero. 
+
+sort -nk 4,4 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3 | awk '($4<0){print $3}' | sort | uniq -c 
+     # 13 promoter_gene_1000
+     #  9 promoter_gene_250
+     # 10 promoter_gene_500
+     # 32 promoter_lncRNA_1000
+     # 20 promoter_lncRNA_250
+     # 24 promoter_lncRNA_500
+
+     
+```
+
+     
 ## 5. Defining intergenic regions
 
 Fede tiene un bed de intergénico, pero dado que nosotros hemos:
@@ -504,7 +556,7 @@ Vamos a construir dos tipos de regiones intergénicas:
 
 # First create bed file based on the previous file. Como es un bed lo pasamos a es 0-based.
 
-awk -v OFS='\t' '{print $1, $4-1, $5 }' LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3 | bedtools merge -i stdin -d 1 > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.bed
+awk -v OFS='\t' '{print $1, $4-1, $5}' LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3 | bedtools merge -i stdin -d 1 > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.bed
 
 # Define intergenic region
 
