@@ -1,12 +1,12 @@
 ---
-title: "PCA_test"
+title: "PCA_test_intergenic_Elena_capture"
 output: html_document
 ---
 
 
 # Principal Component Analysis: TEST
 
-I am doing a test on the whole european populations.
+I am doing a test using Elena's intergenic capture on the whole european populations. To see whether it behave as we expect or we have any contamination. 
 
 
 ```{r, engine=bash, eval=FALSE}
