@@ -215,6 +215,8 @@ Cuando acabo me llevo los archivos generados de GlobalDepth a mi ordenador para 
 ```{r, engine=bash, eval=FALSE}
 scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/*.depth* /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/
 scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/*.bamlist /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/
+  
+  
 ```
 
 RScript:
@@ -231,7 +233,7 @@ get_mean <- function(dat) { with(dat, sum(as.numeric(freq)*value)/sum(as.numeric
 get_sd <- function(dat) { mu <- get_mean (dat) 
 with (dat, sqrt(sum(as.numeric(freq)*(value-mu)^2)/(sum(as.numeric(freq))-1))) } 
 
-*******************************************************************************************
+#*******************************************************************************************
 
 setwd("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test")
 my_files_depthGlobal = list.files(pattern="*.depthGlobal$") 
@@ -240,11 +242,11 @@ mean_folds = 2
 depth_per_sample <- data.frame()
 
 #Compute globaldepth for all populations found
-*******************************************************************************************
+#*******************************************************************************************
   
 for (i in 1:length(my_files_depthGlobal)) 
   {
-DF = read.table(my_files_depthGlobal[i],head=F, stringsAsFactors=F)
+DF = read.table(my_files_depthGlobal[i],head=F, stringsAsFactors=F, check.names=FALSE)
 
 freq_table_DF <- data.frame (value = 1:length (DF), freq = t(DF))
 freq_table_truncated_DF <- filter(freq_table_DF, value < (nrow(freq_table_DF)))
@@ -264,23 +266,34 @@ my_sd_truncated_DF <- get_sd (freq_table_truncated_DF)
 # minDepth_truncated_DF  = my_mean_truncated_DF - (mean_folds * my_sd_truncated_DF)
 
 maxDepth_DF = my_mean_DF * mean_folds
-minDepth_DF  = my_mean_DF * mean_folds
+minDepth_DF  = my_mean_DF / mean_folds
 maxDepth_truncated_DF = my_mean_truncated_DF * mean_folds
-minDepth_truncated_DF  = my_mean_truncated_DF * mean_folds
+minDepth_truncated_DF  = my_mean_truncated_DF / mean_folds
 
-
+# Esto funciona para una población
 #Per sample
-epoch=unlist(strsplit(my_files_depthGlobal[i],"_"))[1]
-specie=unlist(strsplit(my_files_depthGlobal[i],"_"))[2]
-population2=unlist(strsplit(my_files_depthGlobal[i],"_"))[3]
-population=unlist(strsplit(population2,"[.]"))[1]
+# epoch=unlist(strsplit(my_files_depthGlobal[i],"_"))[1]
+# specie=unlist(strsplit(my_files_depthGlobal[i],"_"))[2]
+# population2=unlist(strsplit(my_files_depthGlobal[i],"_"))[3]
+# # population=unlist(strsplit(population2,"[.]"))[1]
+# 
+# depth_per_sample <- rbind(depth_per_sample, 
+#   data.frame( epoch=epoch,  sp=specie, pop = population,
+#   mean = my_mean_DF, sd = my_sd_DF, 
+#   mean_truncated =  my_mean_truncated_DF, sd_truncated = my_sd_truncated_DF,
+#   maxDepth = maxDepth_DF, minDepth = minDepth_DF,
+#   maxDepth_truncated = maxDepth_truncated_DF, minDepth_truncated = minDepth_truncated_DF)) 
+
+# Para una o más poblaciones:
+population=unlist(strsplit(my_files_depthGlobal[i],"[.]"))[1]
 
 depth_per_sample <- rbind(depth_per_sample, 
-  data.frame( epoch=epoch,  sp=specie, pop = population,
-  mean = my_mean_DF, sd = my_sd_DF, 
-  mean_truncated =  my_mean_truncated_DF, sd_truncated = my_sd_truncated_DF,
-  maxDepth = maxDepth_DF, minDepth = minDepth_DF,
-  maxDepth_truncated = maxDepth_truncated_DF, minDepth_truncated = minDepth_truncated_DF)) 
+data.frame( pop = population,
+mean = my_mean_DF, sd = my_sd_DF, 
+mean_truncated =  my_mean_truncated_DF, sd_truncated = my_sd_truncated_DF,
+maxDepth = maxDepth_DF, minDepth = minDepth_DF,
+maxDepth_truncated = maxDepth_truncated_DF, minDepth_truncated = minDepth_truncated_DF)) 
+
 
 # Plotting:
 
@@ -310,6 +323,7 @@ write.csv(x = depth_per_sample,file = paste("/Users/marialucenaperez/Dropbox/PhD
 write.table(x = depth_per_sample,file = paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_",mean_folds,"_a.csv", sep= ""),quote=FALSE, col.names = FALSE, row.names = FALSE, sep= " ")
 
 ```
-
+```{r, engine=bash, eval=FALSE}
+scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_2*.csv mlucena@genomics-b.ebd.csic.es:/home/mlucena/do_depth_european/
 
 ```
