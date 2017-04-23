@@ -748,142 +748,79 @@ Vamos a construir dos tipos de regiones intergénicas:
 
 ```{r, engine=bash, eval=FALSE}
 
-# 1. Por un lado, tendríamos las regiones intergénicas que salen directamente de la resta del genoma menos la región funcional.
+# 1. 
+
+
+# Por un lado, tendríamos las regiones intergénicas que salen directamente de la resta del genoma menos la región funcional.
 
 # First create bed file based on the previous file. Como es un bed lo pasamos a es 0-based.
 
 awk -v OFS='\t' '{print $1, $4-1, $5}' LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3 | bedtools merge -i stdin -d 1 > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.bed
 
 #### ---> Sanity check:
-
 # wc -l LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3
 # 468341 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3
 # [mlucena@genomics_b Lyp_annotation_Apr14_final]$ wc -l LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.bed
 # 29799 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.bed
-# 
 # ¡¡¡Solapan muchas cosas!!! Tambien tenemos que tener en cuenta que tenemos gene y mRNA que solapan, pero también promotores 250, 500 y 100 para genes y lncRNa que solapan también completamente. 
-#   
 ##### 
 
 
-# Define intergenic region
+# Define intergenic region 1-based!!
 
-bedtools subtract -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome.bed -b LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.bed > LYPA23C.intergenic.gff3
+bedtools subtract -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome.bed -b LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.bed > LYPA23C.intergenic.bed
 
 
 
-# 2. Por otro vamos a crear un intergénico que recoja las regiones que estén al menos a 1000pb de cualquier zona funcional. 
+
+# 2. 
+
+
+# Por otro vamos a crear un intergénico que recoja las regiones que estén al menos a 1000pb de cualquier zona funcional. 
 # First create bed file based on the previous file. Como es un bed lo pasamos a es 0-based.
 
+# con este awk sustituyo la columna que yo quiero por un valor concreto y el resto lo dejo igual. 
+
+awk -v OFS='\t' '{$4=$4-1000; $5=$5+1000; print}' LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3 > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.gff3
 
 
-awk -v OFS='\t' '{if () print $1, $4-1001, $5+1000 }' LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3 | bedtools merge -i stdin -d 1 > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.bed
+join -1 1 -2 1 <(cat /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23)  <(LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.gff3) |  
+awk -v OFS='\t' '{if ($5<0) {$5="1"} else {$5=$5}; print}' | awk -v OFS='\t' '{if ($6>$2) {$6=$2} else {$6=$6}; print $1,$5-1,$6}' | bedtools merge -i stdin -d 1 > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.bed
+
+## Nota:Con este awk:
+# awk -v OFS='\t' '{if ($5<0) {$5="1"} else {$5=$5}; print}' | awk -v OFS='\t' '{if ($6>$2) {$6=$2} else {$6=$6}; print $1,$5-1,$6}'
+ # Lo que hago es mirar que nada se escape por debajo de 0 y si es así lo sustituyo por 1, lo que no se escapa se imprime igualmente. Además mira que nada sea más grande que el scaffold, y si es así, lo sustituyo por el valor de la longitud del scaffold, si no es más grande deja el mismo valor. En ambos casos, elimino del archivo el valor longitud de scaffold que está en columna 2 porque ya hemos hecho las comprobaciones que queremos. 
+# También he guardado este archivito resultante de hacer estos awk e hice algunas comprobaciones. Concretamente miré que nada se escapaba por debajo de 0 en el límite superior y que nada se escapaba por encima de la longitud del scaffold. En definitiva, que el script funcionaba bien. 
+# Este script además te imprime solo las columnas de las coordenadas en formato 0-based. 
+# Si quisieras eliminar una columna, por ejemplo la 6: awk -v OFS='\t' '{if ($5<0) {$5="1"; $6=""} else {$5=$5; $6=""}; print}'
 
 
-# Define intergenic region
+# Define strict intergenic region 1-based!!
 
-bedtools subtract -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome.bed -b LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.bed > LYPA23C.intergenic.PLUS1000.gff3
+bedtools subtract -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome.bed -b LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.bed > LYPA23C.intergenic.PLUS1000.bed
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```
 
 
 
 
 
 
-# Do we have intersect?
-
-head intersect_functional_vs_intergenic.bed 
-lp23.s00001	98144	98644
-lp23.s00001	182045	182094
-lp23.s00001	253081	253183
-lp23.s00001	362028	362528
-lp23.s00001	406838	407920
-lp23.s00001	408133	408172
-lp23.s00001	408528	408686
-lp23.s00001	408829	408883
-lp23.s00001	427565	427732
-
-## YES!
-
-head LYPA.functional.bed
-lp23.s00001	16012	16984
-lp23.s00001	33317	36294
-lp23.s00001	42533	43669
-lp23.s00001	57643	59375
-lp23.s00001	98144	102823
-lp23.s00001	124260	132558
-lp23.s00001	140480	166118
-lp23.s00001	172611	178853
-lp23.s00001	182045	182094
-lp23.s00001	209951	212866
-
-head intergenic_sorted_nr.bed
-lp23.s00001	0	16012
-lp23.s00001	16984	33317
-lp23.s00001	36294	42533
-lp23.s00001	43669	57643
-lp23.s00001	59375	98644
-lp23.s00001	102823	124260
-lp23.s00001	132558	140480
-lp23.s00001	166118	172611
-lp23.s00001	178853	209951
-lp23.s00001	212866	216796
-
-# For instances, the first intersect section is..
-
-grep lp23.s00001  LYPA23C.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.nr.gff3 | grep 98144
-lp23.s00001	EVM_PASA	promoter	98144	98643	.	+	0	ID=LYPA23C013712
-lp23.s00001	EVM_PASA	promoter	98144	98643	.	+	0	ID=LYPA23C013712
-
-# And some others...
-
-grep lp23.s00001 LYPA23C.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.nr.gff3 | grep 182045
-lp23.s00001	INFERNAL	ncRNA	182045	182094	1.1e-07	+	.	ID=RF00004-182045;Name=U2;Alias=RF00004;Is_truncate=no
-
-grep lp23.s00001  LYPA23C.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.nr.gff3 | grep 253081
-lp23.s00001	INFERNAL	ncRNA	253081	253183	3e-08	-	.	ID=RF00998-253081;Name=mir-562;Alias=RF00998;Is_truncate=no
-
-grep lp23.s00001  LYPA23C.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.nr.gff3 | grep 408528
-lp23.s00001	PipeR	exon	408528	408686	.	-	.	GID=RLOC_00000001_TCONS_00000014_exon_3
 
 
-# So it seems that all of them are either ncRNA or promoters that I added lately. Therefore those areas should be remove from the intergenic regions. 
 
 
-bedtools subtract -a intergenic_sorted_nr.bed -b intersect_functional_vs_intergenic.bed > intergenic_sorted_nr_fixed.bed
 
-head intergenic_sorted_nr_fixed.bed
-lp23.s00001	0	16012
-lp23.s00001	16984	33317
-lp23.s00001	36294	42533
-lp23.s00001	43669	57643
-lp23.s00001	59375	98144
-lp23.s00001	102823	124260
-lp23.s00001	132558	140480
-lp23.s00001	166118	172611
-lp23.s00001	178853	182045
-lp23.s00001	182094	209951
 
-### It is solved!! 
-# Now I create an artificial intergenic gff3 file for the calculus of the diversity per unit. 
 
-awk -v OFS='\t' '{print $1, "MANUAL", "intergenic", $2, $3,"x","x","x","ID=none"}' intergenic_sorted_nr_fixed.bed > intergenic_sorted_nr_fixed.gff3
-# I included entries for strand frame etc so that it keeps the structure while running the calculus.
+
+
+
+## 6. Merging all categories.
+
+
+
+```{r, engine=bash, eval=FALSE}
 
 ################################
 
