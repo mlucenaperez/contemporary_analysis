@@ -1,0 +1,20 @@
+
+mkdir /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic
+
+screen -S extracting_intergenic_from_bam_files
+script extracting_intergenic_from_bam_files.log
+
+OUTPUT_DIR="/home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic"
+INPUTFILE_BED="/home/mlucena/Lyp_annotation_Apr14_final/LYPA23C.intergenic.PLUS1000.bed"
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final
+for i in $( ls *.bam )
+do
+echo $i
+samtools view -bH -@ 40 $i > $OUTPUT_DIR/${i/_recal_round-1/_intergenic}
+while read -r -a myArray; do 
+samtools view -b -@ 40 $i ${myArray[0]}:${myArray[1]}-${myArray[2]} >> $OUTPUT_DIR/${i/_recal_round-1/_intergenic}
+done < $INPUTFILE_BED
+done
+
