@@ -3,7 +3,9 @@ title: "ANGSD_depth_calculus"
 output: html_document
 ---
 
-##  QC-test: MaxDepth. Creating BAMlist.
+##  QC-test: Creating BAMlist & MaxDepth.
+
+### Creating BAMlist
 
 ```{r, engine=bash, eval=FALSE}
 
@@ -27,14 +29,16 @@ c_ll_ya #lynx lynx 		contemporary 	yakutia samples
 
 # Hago un .bamlist por poblacion. los salvo en  /home/emarmesat/grupolince/immunocapture/ansgd/qc_test. A saber:
 # Este script es una maravilla. Coje todas las poblaciones que tu hayas definido y hace los bamlist con su nombre adecuado.  
+
 POPS=("c_ll_cr" "c_ll_ka" "c_ll_ki" "c_ll_la" "c_ll_no" "c_ll_og" "c_ll_po" "c_ll_to" "c_ll_tu" "c_ll_vl" "c_ll_ya" "c_lp_do" "c_lp_sm")
 
 # All European:
 POPS=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-h_ll_ba")
 
+# Populations for the PhD.
 POPS=("c_ll_ki" "c_ll_po" "c_ll_no" "c_ll_vl" "c_ll_ya" "c_lp_sm" "c_lp_do" "c_lp_do-c_lp_sm" "c_ll_ki-c_ll_no-c_ll_po-c_ll_vl-c_ll_ya" "c_ll_ki-c_ll_no-c_ll_po-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm")
 
-# Both species
+# 1pop-both species
 POPS=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
 
 # POPS=("c_ll_tu")
@@ -57,11 +61,14 @@ done
 
 ```
 
+
 ### MaxDepth
 
-```{r, engine=bash, eval=FALSE}
+Distinguimos entre poblaciones únicas que se corren con todo el genoma, y poblaciones más grandes que por optimización de tiempo vamos a correr usando el intergénico de Elena.
 
-# For single or small populations:
+#### For single or small populations:
+
+```{r, engine=bash, eval=FALSE}
 
 cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test
 #To launch one by one
@@ -92,49 +99,12 @@ MAXDEPTH=$(expr $NUMBER_IND \* 1000)
 -doDepth 1 \
 -doCounts 1 \
 -maxDepth $MAXDEPTH  
-
-
-# For huge populations:
-
-
-cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test
-#To launch one by one
-POP=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
-screen -S european_lynx_qc_test
-POP=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
-script european_lynx_qc.log
-POP=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
-
-REF="/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
-THREADS=50                    # no. of computer cores used 20 = OK, >20 = ask people first!
-REGIONFILE="no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
-
-BAMLIST=$(ls "$POP"_n*.bamlist)
-NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
-MAXDEPTH=$(expr $NUMBER_IND \* 1000)
-
-/opt/angsd/angsd \
--P $THREADS \
--b $BAMLIST \
--ref $REF \
--out ${BAMLIST/.bamlist/.qc} \
--uniqueOnly 1 \
--remove_bads 1 \
--only_proper_pairs 1 \
--rf $REGIONFILE \
--baq 1 \
--C 50 \
--doQsDist 1 \
--doDepth 1 \
--doCounts 1 \
--maxDepth $MAXDEPTH  
-
 ```
 
-I have an issue with c_ll_ka and c_ll_og when calculating doDepth: 
-bgzp read block error -1 after x of x bytes. ABORT
-
-This error was reported for a given scaffold position, when I try to open it using igv it reported that the index file is likely to be corrupted: 
+---> I have an issue with c_ll_ka and c_ll_og when calculating doDepth: Solved!!
+```{r, engine=bash, eval=FALSE}
+# bgzp read block error -1 after x of x bytes. ABORT
+# This error was reported for a given scaffold position, when I try to open it using igv it reported that the index file is likely to be corrupted: 
 "Error encountered querying alignments: java.nio.BufferUnderflowException This is often caused by a corrupt index file."
 
 First, I will try to validate sam
@@ -171,8 +141,7 @@ Vamos a probar una cualquiera porque lo que interpretamos es que son alineamient
 
 java -jar /opt/picard-tools/picard.jar ValidateSamFile I=c_ll_ya_0143_recal_round-1.bam  MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000
 
-
-Vamos a correr el índice para las muestras:
+#Vamos a correr el índice para las muestras:
 
 ARRAY=($(c_ll_og*))
 for i in ${ARRAY[@]}
@@ -203,11 +172,55 @@ samtools sort ${i} ${i/.bam/_sort.bam}
 mv ${i/.bam/_sort.bam.bam} ${i}
 samtools index ${i}
 done
+```
 
 
+#### For huge populations:
+
+En este caso usamos el intergénico de Elena. 
+Lo hemos corrido así para las siguientes poblaciones:
+
+1pop-2sps (boreal y pardinus contemporaneo): 
+c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba
+
+1pop-1sps(boreal):
+c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-h_ll_ba
 
 
-**********************************************************************************************
+```{r, engine=bash, eval=FALSE}
+cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test
+#To launch one by one
+POP=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
+screen -S european_lynx_qc_test
+POP=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
+script european_lynx_qc.log
+POP=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
+
+REF="/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
+THREADS=50                    # no. of computer cores used 20 = OK, >20 = ask people first!
+REGIONFILE="no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+
+BAMLIST=$(ls "$POP"_n*.bamlist)
+NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
+MAXDEPTH=$(expr $NUMBER_IND \* 1000)
+
+/opt/angsd/angsd \
+-P $THREADS \
+-b $BAMLIST \
+-ref $REF \
+-out ${BAMLIST/.bamlist/.qc} \
+-uniqueOnly 1 \
+-remove_bads 1 \
+-only_proper_pairs 1 \
+-rf $REGIONFILE \
+-baq 1 \
+-C 50 \
+-doQsDist 1 \
+-doDepth 1 \
+-doCounts 1 \
+-maxDepth $MAXDEPTH  
+
+```
 
 ### MaxDepth R 
   
