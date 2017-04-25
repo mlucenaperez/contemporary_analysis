@@ -56,9 +56,12 @@ POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_l
 grep -P "^${POP}_n\d\d\d" mean_sd_depthGlobal_lynx_per_pop_mean_folds_2_a.csv > "$POP"_mean_sd_depthGlobal_lynx_per_pop_mean_folds_2_a.csv
 read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < "$POP"_mean_sd_depthGlobal_lynx_per_pop_mean_folds_2_a.csv
 
+
+echo $POP
+
 ANGSD=/opt/angsd
 NGSTOOLS=/opt/ngsTools_19092016/
-THREADS=50                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+THREADS=60                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
 ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
 FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
@@ -83,7 +86,7 @@ N_IND=$(wc -l /home/mlucena/do_depth_european/"$POP".bamlist | awk '{print $1}')
 ## custom:
 
 # MIN_IND_DEPTH=3 ---> No se puede porque es de la última versión. 
-MIN_IND=74
+MIN_IND=105
 
 ### Calling genotype likelihoods: 
  
@@ -241,29 +244,13 @@ PC <- PC %>%  mutate(.,
                           ifelse(Pop == "c_ll_ya", "Lynx_lynx_wrangeli",     
                                  NA))))))))
 
-
-
-PC <- as.data.frame(eig$vectors)
-colnames(PC) <- gsub("V", "PC", colnames(PC))
-PC$Pop <- factor(annot$CLUSTER)
-PC <- PC %>% mutate(., 
-         subspecies = ifelse (Pop == "c_ll_po" | Pop == "c_ll_ki" | Pop == "c_ll_la" | Pop == "c_ll_no", "Lynx_lynx_lynx",        
-                          ifelse(Pop == "c_ll_ba" | Pop == "h_ll_ba", "Lynx_lynx_balcanicus" ,
-                          ifelse(Pop == "c_ll_cr","Lynx_lynx_carpathicus",
-                          ifelse(Pop == "c_ll_to" | Pop == "c_ll_tu" | Pop == "c_ll_ka", "Lynx_lynx_kozlovi", 
-                          ifelse(Pop == "c_ll_og", "Lynx_lynx_isabellinus", 
-                          ifelse(Pop == "c_ll_vl", "Lynx_lynx_stroganovi", 
-                          ifelse(Pop == "c_ll_ya", "Lynx_lynx_wrangeli",     
-                                 NA))))))))
-
-
-cols <- c("c_ll_po"= brewer.pal(8,"Blues")[4], 
-          "c_ll_ba"= brewer.pal(8,"Greens")[3], 
-          "h_ll_ba"= brewer.pal(8,"Greens")[3], 
+cols <- c("c_ll_po"= brewer.pal(8,"Greens")[7], 
+          "c_ll_ba"= brewer.pal(8,"Greens")[4], 
+          "h_ll_ba"= brewer.pal(8,"Greens")[4], 
           "c_ll_cr"= brewer.pal(8,"BuGn")[6], 
-          "c_ll_ki"= brewer.pal(8,"Purples")[6], 
-          "c_ll_la"= brewer.pal(8,"Greens")[5], 
-          "c_ll_no"= brewer.pal(8,"Blues")[7], 
+          "c_ll_ki"= brewer.pal(8,"Blues")[5], 
+          "c_ll_la"= brewer.pal(8,"Blues")[8], 
+          "c_ll_no"= brewer.pal(8,"YlGnBu")[5], 
           "c_ll_to"= brewer.pal(8,"RdPu")[8], 
           "c_ll_tu"= brewer.pal(8,"RdPu")[5], 
           "c_ll_ka"= brewer.pal(8,"PuRd")[3], 
@@ -271,7 +258,19 @@ cols <- c("c_ll_po"= brewer.pal(8,"Blues")[4],
           "c_ll_vl"= brewer.pal(8,"YlOrRd")[5], 
           "c_ll_ya"= brewer.pal(8,"YlOrRd")[3]  )
                            
-
+cols <- c("c_ll_po"= brewer.pal(12,"Paired")[4], 
+          "c_ll_ba"= brewer.pal(12,"Paired")[2], 
+          "h_ll_ba"= brewer.pal(12,"Paired")[2], 
+          "c_ll_cr"= brewer.pal(12,"Paired")[1], 
+          "c_ll_ki"= brewer.pal(12,"Paired")[3], 
+          "c_ll_la"= brewer.pal(12,"Paired")[9], 
+          "c_ll_no"= brewer.pal(12,"Paired")[10], 
+          "c_ll_to"= brewer.pal(12,"Paired")[5], 
+          "c_ll_tu"= brewer.pal(12,"Paired")[6], 
+          "c_ll_ka"= brewer.pal(12,"Paired")[7], 
+          "c_ll_og"= brewer.pal(12,"Paired")[8], 
+          "c_ll_vl"= brewer.pal(12,"Paired")[11], 
+          "c_ll_ya"= brewer.pal(12,"Paired")[12]  )
 
 title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
 
@@ -281,27 +280,32 @@ y_axis = paste("PC",comp[2],sep="")
 ggplot() + 
   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Pop", shape="Pop"), size = 3) + 
   scale_shape_manual(values=1:15) + ggtitle(title)
-ggsave(paste(WORKING_DIR,pop, "_pca.TEST.eps", sep=""),units="mm",  width=270, height=190)
-unlink("Rplots.pdf", force=TRUE)
-
-
+# ggsave(paste(WORKING_DIR,pop, "_pca.TEST.eps", sep=""),units="mm",  width=270, height=190)
+# unlink("Rplots.pdf", force=TRUE)
 ggplot() + 
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Pop", shape="Pop"), size = 3) + 
+    scale_colour_manual(values = cols)+
+  scale_shape_manual(values=1:15) + ggtitle(title)
+
+b<-ggplot() + 
   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Pop", shape="subspecies"), size = 3) + 
   scale_colour_manual(values = cols)+
   scale_shape_manual(values=1:7)
 
-ggplot() + 
+a<-ggplot() + 
   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Pop"), size = 3) + 
   scale_colour_manual(values = cols)
 
 ggplot() + 
   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, shape="subspecies"), size = 3) + 
   scale_shape_manual(values=1:7)
-
 ggplot() + 
-  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="subspecies"), size = 3)  
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="subspecies",shape="subspecies"), size = 3)  +
+  scale_shape_manual(values=1:7)
 
+ggsave(paste(WORKING_DIR,pop, "_pca.TEST.eps", sep=""),plot=a, units="mm",  width=270, height=190)
 
+ggsave(paste(WORKING_DIR,pop, "_pca2.TEST.eps", sep=""),plot=b, units="mm",  width=270, height=190)
 ```
 
 
