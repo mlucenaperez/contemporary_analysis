@@ -235,77 +235,81 @@ PC <- as.data.frame(eig$vectors)
 colnames(PC) <- gsub("V", "PC", colnames(PC))
 PC$Pop <- factor(annot$CLUSTER)
 PC <- PC %>%  mutate(., 
-         subspecies = ifelse (Pop == "c_ll_po" | Pop == "c_ll_ki" | Pop == "c_ll_la" | Pop == "c_ll_no", "Lynx_lynx_lynx",        
-                          ifelse(Pop == "c_ll_ba" | Pop == "h_ll_ba", "Lynx_lynx_balcanicus" ,
-                          ifelse(Pop == "c_ll_cr","Lynx_lynx_carpathicus",
-                          ifelse(Pop == "c_ll_to" | Pop == "c_ll_tu" | Pop == "c_ll_ka", "Lynx_lynx_kozlovi", 
-                          ifelse(Pop == "c_ll_og", "Lynx_lynx_isabellinus", 
-                          ifelse(Pop == "c_ll_vl", "Lynx_lynx_stroganovi", 
-                          ifelse(Pop == "c_ll_ya", "Lynx_lynx_wrangeli",     
-                                 NA))))))))
+         Subspecies = ifelse (Pop == "c_ll_po" | Pop == "c_ll_ki" | Pop == "c_ll_la" | Pop == "c_ll_no", "L.l.lynx",        
+                          ifelse(Pop == "c_ll_ba" | Pop == "h_ll_ba", "L.l.balcanicus" ,
+                          ifelse(Pop == "c_ll_cr","L.l.carpathicus",
+                          ifelse(Pop == "c_ll_to" | Pop == "c_ll_tu" | Pop == "c_ll_ka", "L.l.kozlovi", 
+                          ifelse(Pop == "c_ll_og", "L.l.isabellinus", 
+                          ifelse(Pop == "c_ll_vl", "L.l.stroganovi", 
+                          ifelse(Pop == "c_ll_ya", "L.l.wrangeli",     
+                                 NA)))))))) %>% 
+  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Poland",
+                          ifelse (Pop == "c_ll_ki", "Kirov",
+                          ifelse (Pop == "c_ll_la", "Latvia",
+                          ifelse (Pop == "c_ll_no", "Norway",
+                          ifelse (Pop == "c_ll_ba" | Pop == "h_ll_ba", "Balkans" ,
+                          ifelse (Pop == "c_ll_cr","Carpathians",
+                          ifelse (Pop == "c_ll_to", "Tov",
+                          ifelse (Pop == "c_ll_tu", "Tuva",
+                          ifelse (Pop == "c_ll_ka", "Khentii-Aimag", 
+                          ifelse (Pop == "c_ll_og", "Omnogovi", 
+                          ifelse (Pop == "c_ll_vl", "Vladivostok", 
+                          ifelse (Pop == "c_ll_ya", "Yakutia",NA)))))))))))))
 
-cols <- c("c_ll_po"= brewer.pal(8,"Greens")[7], 
-          "c_ll_ba"= brewer.pal(8,"Greens")[4], 
-          "h_ll_ba"= brewer.pal(8,"Greens")[4], 
-          "c_ll_cr"= brewer.pal(8,"BuGn")[6], 
-          "c_ll_ki"= brewer.pal(8,"Blues")[5], 
-          "c_ll_la"= brewer.pal(8,"Blues")[8], 
-          "c_ll_no"= brewer.pal(8,"YlGnBu")[5], 
-          "c_ll_to"= brewer.pal(8,"RdPu")[8], 
-          "c_ll_tu"= brewer.pal(8,"RdPu")[5], 
-          "c_ll_ka"= brewer.pal(8,"PuRd")[3], 
-          "c_ll_og"= brewer.pal(8,"YlOrRd")[7], 
-          "c_ll_vl"= brewer.pal(8,"YlOrRd")[5], 
-          "c_ll_ya"= brewer.pal(8,"YlOrRd")[3]  )
-                           
-cols <- c("c_ll_po"= brewer.pal(12,"Paired")[4], 
-          "c_ll_ba"= brewer.pal(12,"Paired")[2], 
-          "h_ll_ba"= brewer.pal(12,"Paired")[2], 
-          "c_ll_cr"= brewer.pal(12,"Paired")[1], 
-          "c_ll_ki"= brewer.pal(12,"Paired")[3], 
-          "c_ll_la"= brewer.pal(12,"Paired")[9], 
-          "c_ll_no"= brewer.pal(12,"Paired")[10], 
-          "c_ll_to"= brewer.pal(12,"Paired")[5], 
-          "c_ll_tu"= brewer.pal(12,"Paired")[6], 
-          "c_ll_ka"= brewer.pal(12,"Paired")[7], 
-          "c_ll_og"= brewer.pal(12,"Paired")[8], 
-          "c_ll_vl"= brewer.pal(12,"Paired")[11], 
-          "c_ll_ya"= brewer.pal(12,"Paired")[12]  )
+cols <- c("Poland"= brewer.pal(12,"Paired")[4], 
+          "Balkans"= brewer.pal(12,"Paired")[2], 
+          "Carpathians"= brewer.pal(12,"Paired")[1], 
+          "Kirov"= brewer.pal(12,"Paired")[3], 
+          "Latvia"= brewer.pal(12,"Paired")[9], 
+          "Norway"= brewer.pal(12,"Paired")[10], 
+          "Tov"= brewer.pal(12,"Paired")[5], 
+          "Tuva"= brewer.pal(12,"Paired")[6], 
+          "Khentii-Aimag"= brewer.pal(12,"Paired")[7], 
+          "Omnogovi"= brewer.pal(12,"Paired")[8], 
+          "Vladivostok"= brewer.pal(12,"Paired")[11], 
+          "Yakutia"= brewer.pal(12,"Paired")[12]  )
 
 title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
 
 x_axis = paste("PC",comp[1],sep="")
 y_axis = paste("PC",comp[2],sep="")
 
-ggplot() + 
-  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Pop", shape="Pop"), size = 3) + 
-  scale_shape_manual(values=1:15) + ggtitle(title)
-# ggsave(paste(WORKING_DIR,pop, "_pca.TEST.eps", sep=""),units="mm",  width=270, height=190)
-# unlink("Rplots.pdf", force=TRUE)
-ggplot() + 
-  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Pop", shape="Pop"), size = 3) + 
-    scale_colour_manual(values = cols)+
-  scale_shape_manual(values=1:15) + ggtitle(title)
-
-b<-ggplot() + 
-  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Pop", shape="subspecies"), size = 3) + 
-  scale_colour_manual(values = cols)+
-  scale_shape_manual(values=1:7)
-
-a<-ggplot() + 
-  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Pop"), size = 3) + 
-  scale_colour_manual(values = cols)
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Pop_label", shape="Pop"), size = 3) + 
+#   scale_shape_manual(values=1:15) + ggtitle(title)
+# # ggsave(paste(WORKING_DIR,pop, "_pca.TEST.eps", sep=""),units="mm",  width=270, height=190)
+# # unlink("Rplots.pdf", force=TRUE)
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Pop", shape="Pop"), size = 3) + 
+#     scale_colour_manual(values = cols)+
+#   scale_shape_manual(values=1:15) + ggtitle(title)
+# 
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Pop", shape="subspecies"), size = 3) + 
+#   scale_colour_manual(values = cols)+
+#   scale_shape_manual(values=1:7)
 
 ggplot() + 
-  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, shape="subspecies"), size = 3) + 
-  scale_shape_manual(values=1:7)
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations"), size = 5) + 
+  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
+ ggsave(paste(WORKING_DIR,pop, "_pca_pop.pdf", sep=""),units="mm",  width=270, height=190)
+
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, shape="subspecies"), size = 3) + 
+#   scale_shape_manual(values=1:7)
+
 ggplot() + 
-  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="subspecies",shape="subspecies"), size = 3)  +
-  scale_shape_manual(values=1:7)
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Subspecies"), size = 5)  +
+  ggtitle(title) + theme_classic()
+  ggsave(paste(WORKING_DIR,pop, "_pca_subspecies.pdf", sep=""),units="mm",  width=270, height=190)
 
-ggsave(paste(WORKING_DIR,pop, "_pca.TEST.eps", sep=""),plot=a, units="mm",  width=270, height=190)
-
-ggsave(paste(WORKING_DIR,pop, "_pca2.TEST.eps", sep=""),plot=b, units="mm",  width=270, height=190)
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="subspecies"), size = 3)  +
+#   scale_shape_manual(values=1:7)
+# 
+# ggsave(paste(WORKING_DIR,pop, "_pca.TEST.eps", sep=""),plot=a, units="mm",  width=270, height=190)
+# 
+# ggsave(paste(WORKING_DIR,pop, "_pca2.TEST.eps", sep=""),plot=b, units="mm",  width=270, height=190)
 ```
 
 
