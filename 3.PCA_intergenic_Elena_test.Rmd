@@ -195,14 +195,14 @@ library(threejs)
 library(RColorBrewer)
 require("knitr")
 
-knitr::opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
-getwd()
-opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
+# knitr::opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
+# getwd()
+# opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
 
 WORKING_DIR="/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena/"
 # samples_info <-read.csv("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena/c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba.ALL.clst")
 # pop= c("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
-pop= c("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-h_ll_ba_n074")
+pop= c("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba_n105")
 
 # 
 ###########################################################################################
@@ -234,6 +234,11 @@ cat(signif(eig$val, digits=3)*100,"\n");
 PC <- as.data.frame(eig$vectors)
 colnames(PC) <- gsub("V", "PC", colnames(PC))
 PC$Pop <- factor(annot$CLUSTER)
+PC$Ind <- factor(annot$IID)
+PC <- PC %>% filter(Ind == "UA")
+
+
+
 PC <- PC %>%  mutate(., 
          Subspecies = ifelse (Pop == "c_ll_po" | Pop == "c_ll_ki" | Pop == "c_ll_la" | Pop == "c_ll_no", "L.l.lynx",        
                           ifelse(Pop == "c_ll_ba" | Pop == "h_ll_ba", "L.l.balcanicus" ,
@@ -254,20 +259,24 @@ PC <- PC %>%  mutate(.,
                           ifelse (Pop == "c_ll_ka", "Khentii-Aimag", 
                           ifelse (Pop == "c_ll_og", "Omnogovi", 
                           ifelse (Pop == "c_ll_vl", "Vladivostok", 
-                          ifelse (Pop == "c_ll_ya", "Yakutia",NA)))))))))))))
+                          ifelse (Pop == "c_ll_ya", "Yakutia",
+                          ifelse (Pop == "c_lp_sm", "Sierra Morena",
+                          ifelse (Pop == "c_lp_do", "Doñana", NA)))))))))))))))
 
-cols <- c("Poland"= brewer.pal(12,"Paired")[4], 
-          "Balkans"= brewer.pal(12,"Paired")[2], 
-          "Carpathians"= brewer.pal(12,"Paired")[1], 
-          "Kirov"= brewer.pal(12,"Paired")[3], 
-          "Latvia"= brewer.pal(12,"Paired")[9], 
-          "Norway"= brewer.pal(12,"Paired")[10], 
-          "Tov"= brewer.pal(12,"Paired")[5], 
-          "Tuva"= brewer.pal(12,"Paired")[6], 
-          "Khentii-Aimag"= brewer.pal(12,"Paired")[7], 
-          "Omnogovi"= brewer.pal(12,"Paired")[8], 
-          "Vladivostok"= brewer.pal(12,"Paired")[11], 
-          "Yakutia"= brewer.pal(12,"Paired")[12]  )
+cols <- c("Poland"=brewer.pal(12,"Paired")[4], 
+          "Balkans"=brewer.pal(12,"Paired")[2], 
+          "Carpathians"=brewer.pal(12,"Paired")[1], 
+          "Kirov"=brewer.pal(12,"Paired")[3], 
+          "Latvia"=brewer.pal(12,"Paired")[9], 
+          "Norway"=brewer.pal(12,"Paired")[10], 
+          "Tov"=brewer.pal(12,"Paired")[5], 
+          "Tuva"=brewer.pal(12,"Paired")[6], 
+          "Khentii-Aimag"=brewer.pal(12,"Paired")[7], 
+          "Omnogovi"=brewer.pal(12,"Paired")[8], 
+          "Vladivostok"=brewer.pal(12,"Paired")[11], 
+          "Yakutia"=brewer.pal(12,"Paired")[12],
+          "Sierra Morena"=brewer.pal(8, "Greys") [5],
+          "Doñana"=brewer.pal(8, "Greys") [8])
 
 title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
 
