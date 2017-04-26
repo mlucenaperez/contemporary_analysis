@@ -228,8 +228,12 @@ Cuando acabo me llevo los archivos generados de GlobalDepth a mi ordenador para 
 
 ```{r, engine=bash, eval=FALSE}
 scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/*.depth* /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/
+  
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/do_depth_european/*.depth* /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/
+  
 scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/*.bamlist /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/
   
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/do_depth_european/*.bamlist /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/
   
 ```
 
@@ -241,6 +245,7 @@ library(dplyr)
 library(plyr)
 library(ggplot2)
 library(gridExtra)
+library(knitr)
 
 ## Functions
 get_mean <- function(dat) { with(dat, sum(as.numeric(freq)*value)/sum(as.numeric(freq))) }
@@ -249,10 +254,18 @@ with (dat, sqrt(sum(as.numeric(freq)*(value-mu)^2)/(sum(as.numeric(freq))-1))) }
 
 #*******************************************************************************************
 
-setwd("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test")
-my_files_depthGlobal = list.files(pattern="*.depthGlobal$") 
-for (i in 1:length(my_files_depthGlobal)) { assign(my_files_depthGlobal[i], (scan(my_files_depthGlobal[i], sep = " ", dec = ".")) %>% .[!is.na(.)])}
+# knitr::opts_chunk$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test"))
+# print(getwd())
+# opts_knit$set(root.dir='/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test')
+# print(getwd())
+# setwd("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test")
+
+my_files_depthGlobal = list.files(path = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test",pattern="*.depthGlobal$") 
+
+for (i in 1:length(my_files_depthGlobal)) { assign(my_files_depthGlobal[i], (scan(paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/",my_files_depthGlobal[i],sep=""), sep = " ", dec = ".")) %>% .[!is.na(.)])}
+
 mean_folds = 2
+
 depth_per_sample <- data.frame()
 
 #Compute globaldepth for all populations found
@@ -260,7 +273,7 @@ depth_per_sample <- data.frame()
   
 for (i in 1:length(my_files_depthGlobal)) 
   {
-DF = read.table(my_files_depthGlobal[i],head=F, stringsAsFactors=F, check.names=FALSE)
+DF = read.table(paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/",my_files_depthGlobal[i],sep=""),head=F, stringsAsFactors=F, check.names=FALSE)
 
 freq_table_DF <- data.frame (value = 1:length (DF), freq = t(DF))
 freq_table_truncated_DF <- filter(freq_table_DF, value < (nrow(freq_table_DF)))
@@ -327,7 +340,7 @@ ggplot(freq_table_truncated_DF, aes(x = value, y = freq)) +
   theme_classic()+ 
   theme(text = element_text(size=10))
 
-plot_name=paste(my_files_depthGlobal[i],"_",mean_folds,".pdf",sep="")
+plot_name=paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/",my_files_depthGlobal[i],"_",mean_folds,".pdf",sep="")
 ggsave(filename = plot_name)
 
 }
