@@ -264,7 +264,7 @@ my_files_depthGlobal = list.files(path = "/Users/marialucenaperez/Dropbox/PhD/co
 
 for (i in 1:length(my_files_depthGlobal)) { assign(my_files_depthGlobal[i], (scan(paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/",my_files_depthGlobal[i],sep=""), sep = " ", dec = ".")) %>% .[!is.na(.)])}
 
-mean_folds = 2
+mean_folds = 0.95
 
 depth_per_sample <- data.frame()
 
@@ -273,6 +273,7 @@ depth_per_sample <- data.frame()
   
 for (i in 1:length(my_files_depthGlobal)) 
   {
+  
 DF = read.table(paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/",my_files_depthGlobal[i],sep=""),head=F, stringsAsFactors=F, check.names=FALSE)
 
 freq_table_DF <- data.frame (value = 1:length (DF), freq = t(DF))
@@ -287,15 +288,11 @@ my_sd_truncated_DF <- get_sd (freq_table_truncated_DF)
 
 # Max and min depth:
 
-# maxDepth_DF = my_mean_DF + (mean_folds * my_sd_DF)
-# minDepth_DF  = my_mean_DF - (mean_folds * my_sd_DF)
-# maxDepth_truncated_DF = my_mean_truncated_DF + (mean_folds * my_sd_truncated_DF)
-# minDepth_truncated_DF  = my_mean_truncated_DF - (mean_folds * my_sd_truncated_DF)
+maxDepth_DF = my_mean_DF + (mean_folds * my_mean_DF)
+minDepth_DF  = my_mean_DF - (mean_folds * my_mean_DF)
+maxDepth_truncated_DF = my_mean_truncated_DF + (mean_folds * my_sd_truncated_DF)
+minDepth_truncated_DF  = my_mean_truncated_DF - (mean_folds * my_sd_truncated_DF)
 
-maxDepth_DF = my_mean_DF * mean_folds
-minDepth_DF  = my_mean_DF / mean_folds
-maxDepth_truncated_DF = my_mean_truncated_DF * mean_folds
-minDepth_truncated_DF  = my_mean_truncated_DF / mean_folds
 
 # Esto funciona para una población
 #Per sample
@@ -345,12 +342,30 @@ ggsave(filename = plot_name)
 
 }
 
-#When finished write the table to sfs folder
-write.csv(x = depth_per_sample,file = paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_",mean_folds,".csv", sep= ""))
-write.table(x = depth_per_sample,file = paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_",mean_folds,"_a.csv", sep= ""),quote=FALSE, col.names = FALSE, row.names = FALSE, sep= " ")
+
+#When finished write the table
+
+write.table(x = depth_per_sample,file = paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_",mean_folds,".csv", sep= ""),quote=FALSE, col.names = FALSE, row.names = FALSE, sep= " ")
 
 ```
-```{r, engine=bash, eval=FALSE}
-scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_2*.csv mlucena@genomics-b.ebd.csic.es:/home/mlucena/do_depth_european/
 
+
+```{r, engine=bash, eval=FALSE}
+
+scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/
+
+  
+# Separate in populations:
+  
+POPS=$(cat /home/mlucena/ANGSD_analysis/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv | awk '{print $1}')
+  
+
+for POP in ${POPS[@]}
+do
+echo $POP
+grep "${POP} " /home/mlucena/ANGSD_analysis/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv   > "$POP"_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+done
+
+  
+  
 ```
