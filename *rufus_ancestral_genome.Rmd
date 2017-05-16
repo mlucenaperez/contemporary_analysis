@@ -1,0 +1,38 @@
+---
+title: "rufus_ancestral_genome"
+output: html_document
+---
+
+```{r, engine=bash, eval=FALSE}
+
+INBAM="lr_zz_0001_recal_round-1.bam"
+screen -S making_ref_genome_$INBAM
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
+INBAM="/home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/c_lr_zz_0001_recal_round-1.bam"
+OUTFASTA="/home/mlucena/grupolince/reference_genomes/lynx_rufus_genome/lr1_ref_new.fa"
+SCAFFOLDS="/home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23"
+MAX_COV=45
+
+rm $OUTFASTA
+while read SCAFFOLD END_ZERO; 
+do
+
+echo "---------------------------------------------------$SCAFFOLD---------------------------------------------------"
+END=$(expr $END_ZERO + 1)
+samtools mpileup -s -q30 -f $REF $INBAM -r $SCAFFOLD | /home/GRUPOS/grupolince/reference_genomes/Chrom-Compare-master/pu2fa -c $SCAFFOLD -s 1 -e $END -C $MAX_COV >> $OUTFASTA
+
+done < $SCAFFOLDS
+
+
+## He quitado samtools mpileup -s -q30 -Q30 porque el parámetro -Q parece que no funciona correctamente en samtools mpileup. 
+
+
+
+
+##################
+
+
+
+
+
+```
