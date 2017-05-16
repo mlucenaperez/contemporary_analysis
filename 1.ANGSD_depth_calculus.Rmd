@@ -27,28 +27,15 @@ c_ll_ya #lynx lynx 		contemporary 	yakutia samples
 
 ```{r, engine=bash, eval=FALSE}
 
-# Hago un .bamlist por poblacion. los salvo en  /home/emarmesat/grupolince/immunocapture/ansgd/qc_test. A saber:
+# Hago un .bamlist por poblacion. 
 # Este script es una maravilla. Coje todas las poblaciones que tu hayas definido y hace los bamlist con su nombre adecuado.  
 
-POPS=("c_ll_cr" "c_ll_ka" "c_ll_ki" "c_ll_la" "c_ll_no" "c_ll_og" "c_ll_po" "c_ll_to" "c_ll_tu" "c_ll_vl" "c_ll_ya" "c_lp_do" "c_lp_sm")
-
-# All European:
-POPS=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-h_ll_ba")
-
-# Populations for the PhD.
-POPS=("c_ll_ki" "c_ll_po" "c_ll_no" "c_ll_vl" "c_ll_ya" "c_lp_sm" "c_lp_do" "c_lp_do-c_lp_sm" "c_ll_ki-c_ll_no-c_ll_po-c_ll_vl-c_ll_ya" "c_ll_ki-c_ll_no-c_ll_po-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm")
-
-# 1pop-both species
-POPS=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
-
-# POPS=("c_ll_tu")
-
-cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test
+POPS=(c_ll_cr c_ll_ka c_ll_ki c_ll_la c_ll_no c_ll_og c_ll_po c_ll_to c_ll_tu c_ll_vl c_ll_ya c_lp_do c_lp_sm *_ll_ba)
 
 for POP in ${POPS[@]}
 do
 echo $POP
-rm "$POP"_n*.bamlist
+rm "$POP".bamlist
 IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
 for POP1 in "${POPS1[@]}"
 do
@@ -70,23 +57,22 @@ Distinguimos entre poblaciones únicas que se corren con todo el genoma, y pobla
 
 ```{r, engine=bash, eval=FALSE}
 
-cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test
+cd /home/mlucena/ANGSD_analysis/qc_test
 #To launch one by one
-POP="c_ll_ka"  # <--CHANGE POP HERE
+POP="x_ll_ba"  # <--CHANGE POP HERE
 screen -S "$POP"_qc_test
-POP="c_ll_ka"  # <--CHANGE POP HERE
+POP="x_ll_ba"  # <--CHANGE POP HERE
 script "$POP"_qc.log
-POP="c_ll_ka"  # <--CHANGE POP HERE
+POP="x_ll_ba"  # <--CHANGE POP HERE
 
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
 THREADS=5                    # no. of computer cores used 20 = OK, >20 = ask people first!
 
-BAMLIST=$(ls "$POP"_n*.bamlist)
+BAMLIST=$(ls /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP"_n*.bamlist)
 NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
 MAXDEPTH=$(expr $NUMBER_IND \* 1000)
 
-/opt/angsd/angsd \
--P $THREADS \
+/opt/angsd/angsd -P $THREADS \
 -b $BAMLIST \
 -ref $REF \
 -out ${BAMLIST/.bamlist/.qc} \
@@ -99,9 +85,11 @@ MAXDEPTH=$(expr $NUMBER_IND \* 1000)
 -doDepth 1 \
 -doCounts 1 \
 -maxDepth $MAXDEPTH  
+
 ```
 
 ---> I have an issue with c_ll_ka and c_ll_og when calculating doDepth: Solved!!
+
 ```{r, engine=bash, eval=FALSE}
 # bgzp read block error -1 after x of x bytes. ABORT
 # This error was reported for a given scaffold position, when I try to open it using igv it reported that the index file is likely to be corrupted: 
