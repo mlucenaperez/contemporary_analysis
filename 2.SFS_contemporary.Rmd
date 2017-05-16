@@ -3,42 +3,30 @@ title: "pipeline_contemporary_sfs"
 output: html_document
 ---
 
-# Generating SAF
+# Generating SAF for intergenic data
 
 ## Defining variables:
 
-```{r}
+Copying depth file:
 
-mkdir /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs 
-cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs
+```{r, engine=bash, eval=FALSE}
+
+RUTA_INPUT=
+RUTA_OUTPUT=/home/mlucena/ANGSD_analysis  
 
 #I'll use the parameters calculated by the (depth_global_to_choose_MaxDepthGlobal.R inside previous pipeline) script:
 
-scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_2*.csv mlucena@genomics-b.ebd.csic.es:/home/GRUPOS/grupolince/analysis_genomes_5x/ANGSD/sfs/
+scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95_a.csv mlucena@genomics-b.ebd.csic.es:$RUTA_OUTPUT
 
-#I checked that all bam files were indexed --> OK
+```  
 
-###############################################################################################################################################################################################################
-###############################################################################################################################################################################################################
-# STILL NEED TO RUN THIS:
+I checked that all bam files were indexed --> OK
+
+General variables:
   
-######################################################################################
-#                              Global diversity checks                               #
-######################################################################################
-#The diversity indexes will be calculated in relation to the features described by F Ablascal in /home/emarmesat/grupolince/copia_fabascal/FEATURES ( I suspect that here only the region with synteny to cat appear $$ --> We may need to change that!)
-# interesting fearures:
-
-cd /home/emarmesat/grupolince/immunocapture/ansgd/sfs
-
-FEATURES=( "cds" "centr" "exons" "genes" "intergenic" "introns" "promoters" "tel10m" "tel2m" )
-HEADERS="pop "
-for feature in "${FEATURES[@]}"
-do
-APPEND=$(echo ""$feature"_watterson_average "$feature"_watterson_sd "$feature"_pairwise_average "$feature"_pairwise_sd "$feature"_tajimasD_average ")
-HEADERS=$HEADERS$APPEND
-done
-# I create a table to store the diversity indexes (tab separated9
-echo $HEADERS | sed 's/ /\t/g'> theta_features_per_pop.tsv
+  
+```{r, engine=bash, eval=FALSE} 
+  
 
 ##############################################################################################################################################################################################################################################################################################################################################################################################################################
 
@@ -79,6 +67,10 @@ FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
 FEATURES=( "cds" "centr" "exons" "genes" "intergenic" "introns" "promoters" "tel10m" "tel2m" )
 
 echo $POP
+
+
+
+
 
 ######################################################################################
 #                              FOLDED SAF and SFS                                    #
@@ -152,7 +144,30 @@ paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borr
 
 
 
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+# STILL NEED TO RUN THIS:
+  
+######################################################################################
+#                              Global diversity checks                               #
+######################################################################################
+#The diversity indexes will be calculated in relation to the features described by F Ablascal in /home/emarmesat/grupolince/copia_fabascal/FEATURES ( I suspect that here only the region with synteny to cat appear $$ --> We may need to change that!)
+# interesting fearures:
 
+cd /home/emarmesat/grupolince/immunocapture/ansgd/sfs
+
+FEATURES=( "cds" "centr" "exons" "genes" "intergenic" "introns" "promoters" "tel10m" "tel2m" )
+HEADERS="pop "
+for feature in "${FEATURES[@]}"
+do
+APPEND=$(echo ""$feature"_watterson_average "$feature"_watterson_sd "$feature"_pairwise_average "$feature"_pairwise_sd "$feature"_tajimasD_average ")
+HEADERS=$HEADERS$APPEND
+done
+# I create a table to store the diversity indexes (tab separated9
+echo $HEADERS | sed 's/ /\t/g'> theta_features_per_pop.tsv
+
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
 
 
 
