@@ -1,0 +1,61 @@
+---
+title: "5.Admixture"
+output: html_document
+---
+
+# Generating Admixture plot
+
+## Converting our data in beagle format:
+
+
+```{r, engine=bash, eval=FALSE}
+
+ANGSD=/opt/angsd
+RUTA=/home/mlucena/ANGSD_analysis 
+POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-h_ll_ba"
+
+
+$ANGSD/angsd -GL 1 -out "$POP".genolike -nThreads 40 -doGlf 2 -doMajorMinor 1 -SNP_pval 1e-6 -doMaf 1  -bam $RUTA/intergenic_analysis/"$POP"_n*.intergenic.bamlist
+
+java -jar /opt/beagle/beagle.21Jan17.6cc.jar like="$POP".genolike.beagle.gz out="$POP".beagleOutput
+
+
+```
+
+
+## Running admixture
+
+
+./NGSadmix
+Arguments:
+	-likes Beagle likelihood filename
+	-K Number of ancestral populations
+Optional:
+	-fname Ancestral population frequencies
+	-qname Admixture proportions
+	-o Prefix for output files
+	-printInfo print ID and mean maf for the SNPs that were analysed
+Setup:
+	-seed Seed for initial guess in EM
+	-P Number of threads
+	-method If 0 no acceleration of EM algorithm
+	-misTol Tolerance for considering site as missing
+Stop chriteria:
+	-tolLike50 Loglikelihood difference in 50 iterations
+	-tol Tolerance for convergence
+	-dymBound Use dymamic boundaries (1: yes (default) 0: no)
+	-maxiter Maximum number of EM iterations
+Filtering
+	-minMaf Minimum minor allele frequency
+	-minLrt Minimum likelihood ratio value for maf>0
+	-minInd Minumum number of informative individuals
+	
+	
+
+```{r, engine=bash, eval=FALSE}
+
+
+/home/mlucena/software/NGSadmix -likes "$POP".beagleOutput.gz -K 1 -P 40 -o "$POP" -minMaf 0.05 -printInfo
+
+  
+  ```
