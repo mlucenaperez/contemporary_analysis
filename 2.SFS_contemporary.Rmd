@@ -3,102 +3,89 @@ title: "pipeline_contemporary_sfs"
 output: html_document
 ---
 
-# Generating SAF for intergenic data
+# Generating SAF 
 
 ## Defining variables:
 
-Copying depth file:
+I checked that all bam files were indexed --> OK
+Ruta a bam files intergenic:
+
+Global variables:
+
 
 ```{r, engine=bash, eval=FALSE}
 
-RUTA_INPUT=
-RUTA_OUTPUT=/home/mlucena/ANGSD_analysis  
+RUTA=/home/mlucena/ANGSD_analysis 
 
-#I'll use the parameters calculated by the (depth_global_to_choose_MaxDepthGlobal.R inside previous pipeline) script:
+cd $RUTA/whole_genome_analysis/sfs
 
-scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95_a.csv mlucena@genomics-b.ebd.csic.es:$RUTA_OUTPUT
+#To launch one by one
 
-```  
+POP="c_lp_sm"  # <--CHANGE POP HERE
 
-I checked that all bam files were indexed --> OK
+screen -S "$POP"_sfs_wg
+# screen -S "$POP"_thetas
 
-General variables:
-  
-  
-```{r, engine=bash, eval=FALSE} 
-  
+POP="c_lp_sm"  # <--CHANGE POP HERE
 
-##############################################################################################################################################################################################################################################################################################################################################################################################################################
+script "$POP"_sfs_wg.log
+# script "$POP"_thetas.log
 
-######################################################################################
-#                              Global variables                                      #
-######################################################################################
+POP="c_lp_sm"  # <--CHANGE POP HERE
+
+THREADS=25                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+RUTA=/home/mlucena/ANGSD_analysis 
+
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < $RUTA/"${POP}"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
 
 
-cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs
-#To launch one by one ( because otherwise it's too slow I'll launch single pops in a and groups in b)
-
-POP="c_ll_po"  # <--CHANGE POP HERE
-
-# screen -S "$POP"_sfs
-screen -S "$POP"_thetas
-
-POP="c_ll_po"  # <--CHANGE POP HERE
-
-# script "$POP"_sfs.log
-script "$POP"_thetas.log
-
-POP="c_ll_po"  # <--CHANGE POP HERE
-
-THREADS=15                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
-awk '{print $1"_"$2"_"$3,$4,$5,$6,$7,$8,$9,$10,$11}' mean_sd_depthGlobal_lynx_per_pop_mean_folds_2_a.csv | grep "${POP} "  > "$POP"_mean_sd_depthGlobal_lynx_per_pop_mean_folds_2_a.csv
-read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < "${POP}"_mean_sd_depthGlobal_lynx_per_pop_sd_folds_2_a.csv
-
-#screen -S allpops_saf_sfs_thetas #Lanzar esto si voy a lanzar todas las poblaciones a la vez
-ANGSD="/opt/angsd"
-NGSTOOLS="/opt/angsd/misc"
-
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
-ANC="/home/mlucena/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
-
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
 FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
 FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+N_IND=$(echo ${POP: -3} )
+MIN_IND=$(expr $N_IND / 2)
 
-FEATURES=( "cds" "centr" "exons" "genes" "intergenic" "introns" "promoters" "tel10m" "tel2m" )
+# Sanity checks:
 
 echo $POP
+echo $N_IND
+echo $MIN_IND
 
 
+```
 
+## Unfolded SAF 
 
-
-######################################################################################
-#                              FOLDED SAF and SFS                                    #
-######################################################################################
+```{r, engine=bash, eval=FALSE}
 
 #The read command will read one line at a time from mean_sd_depthGlobal_lynx_per_pop_sd_folds2.csv
 # put the first field (fields being blank separated, and where backslash can be used to escape the field or line separator) in the variable $discard, the second in $x, the third in $y and the rest of the fields in $discard.
-
-
 #while read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated; 
 #do
 
-N_IND=$(wc -l /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$POP"_n*.bamlist | awk '{print $1}') 
-MIN_IND=$(expr $N_IND / 2)
-echo $MIN_IND
+# Anyway I will do it one by one:
 
 ##########################
-#  SAF (likelihood):     # DONE FOR ALL POP
+#  SAF (likelihood):     
 ##########################
 
-# echo "-------$POP----------SAF (likelihood)-----------------------------------------"
-# 
-# $ANGSD/angsd -P $THREADS -b /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$POP"_n*.bamlist -ref $REF -anc $ANC \
-# -out "$POP".unfolded-lr \
-# $FILTER1 \
-# $FILTER2 \
-# -GL 1 -doSaf 1 -setMaxDepth $maxDepth 
+echo "-------$POP----------SAF (likelihood)-----------------------------------------"
 
+$ANGSD/angsd -P $THREADS -b $RUTA/whole_genome_analysis/"$POP".bamlist -ref $REF -anc $ANC \
+-out "$POP".unfolded-lr \
+$FILTER1 \
+$FILTER2 \
+-GL 1 -doSaf 1  \
+-minInd  $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth
+
+```
+
+## SFS 
+
+```{r, engine=bash, eval=FALSE}
 
 ##########################
 #  SFS                   #(I dont require the -rf file as the saf already only contains the -rf sites
@@ -107,13 +94,16 @@ echo "-------$POP----------SFS--------------------------------------------------
 
 $NGSTOOLS/realSFS "$POP".unfolded-lr.saf.idx  -P $THREADS > "$POP".unfolded-lr.sfs
 
+```
 
-##########################
-#  SAF (postprob)        #
-##########################
+##  SAF (postprob) 
+
+```{r, engine=bash, eval=FALSE}
+
+
 echo "-------$POP----------SAF (postprob)-----------------------------------------"
 
-$ANGSD/angsd -P $THREADS -b /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$POP"_n*.bamlist -ref $REF -anc $ANC \
+$ANGSD/angsd -P $THREADS -b $RUTA/whole_genome_analysis/"$POP".bamlist -ref $REF -anc $ANC \
 -out "$POP".unfolded-lr.postprob \
 $FILTER1 \
 $FILTER2 \
@@ -121,10 +111,12 @@ $FILTER2 \
 -minInd  $MIN_IND -setMaxDepth $maxDepth \
 -doThetas 1 -pest "$POP".unfolded-lr.sfs 
 
+```
 
-##########################
-#  Make bed theta        #
-##########################
+##  Make bed theta        
+
+```{r, engine=bash, eval=FALSE}
+
 echo "-------$POP----------Make bed theta -----------------------------------------"
 
 $NGSTOOLS/thetaStat  make_bed $POP.postprob.thetas.gz
@@ -140,10 +132,11 @@ zcat $POP.unfolded-lr.postprob.thetas.gz | awk 'NR>1 {print  "e("$4")"}'  | bc -
 echo "scaffold position1 position2 watterson pairwise pairwise-watterson" > "$POP".transformedThetas
 paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar | awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4}' >> "$POP".transformedThetas
 
+```
 
 
 
-
+```{r, engine=bash, eval=FALSE}
 ###############################################################################################################################################################################################################
 ###############################################################################################################################################################################################################
 # STILL NEED TO RUN THIS:
