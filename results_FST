@@ -1,0 +1,68 @@
+
+
+
+        -> Assuming .fst.gz file: c_ll_cr_n006.x_ll_ba_n003.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:891031463]:0.185138 Fst.Weight:0.290014
+        -> Assuming idxname:c_ll_ki_n013.c_ll_la_n006.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_ki_n013.c_ll_la_n006.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:876977459]:0.036229 Fst.Weight:0.094797
+        -> Assuming idxname:c_ll_ki_n013.c_ll_no_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_ki_n013.c_ll_no_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:886265235]:0.021280 Fst.Weight:0.186399
+        -> Assuming idxname:c_ll_ki_n013.c_ll_po_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_ki_n013.c_ll_po_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:888994981]:0.022253 Fst.Weight:0.171069
+        -> Assuming idxname:c_ll_ki_n013.c_ll_vl_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_ki_n013.c_ll_vl_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:877600600]:0.036619 Fst.Weight:0.274228
+        -> Assuming idxname:c_ll_ki_n013.c_ll_ya_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_ki_n013.c_ll_ya_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:877061921]:0.033306 Fst.Weight:0.216386
+        -> Assuming idxname:c_ll_ki_n013.x_ll_ba_n003.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_ki_n013.x_ll_ba_n003.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:879172219]:0.518406 Fst.Weight:0.341990
+        -> Assuming idxname:c_ll_la_n006.c_ll_no_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_la_n006.c_ll_no_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:889346199]:0.058250 Fst.Weight:0.237897
+        -> Assuming idxname:c_ll_la_n006.c_ll_po_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_la_n006.c_ll_po_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:900595133]:0.057294 Fst.Weight:0.159933
+        -> Assuming idxname:c_ll_la_n006.c_ll_vl_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_la_n006.c_ll_vl_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:894769907]:0.047460 Fst.Weight:0.291986
+        -> Assuming idxname:c_ll_la_n006.c_ll_ya_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_la_n006.c_ll_ya_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:894387021]:0.047353 Fst.Weight:0.238040
+        -> Assuming idxname:c_ll_la_n006.x_ll_ba_n003.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_la_n006.x_ll_ba_n003.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:883930773]:0.183386 Fst.Weight:0.270283
+        -> Assuming idxname:c_ll_no_n008.c_ll_po_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_no_n008.c_ll_po_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:880896462]:0.047209 Fst.Weight:0.313699
+        -> Assuming idxname:c_ll_no_n008.c_ll_vl_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_no_n008.c_ll_vl_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:869404671]:0.041806 Fst.Weight:0.365275
+        -> Assuming idxname:c_ll_no_n008.c_ll_ya_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_no_n008.c_ll_ya_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:867690464]:0.041000 Fst.Weight:0.317228
+        -> Assuming idxname:c_ll_no_n008.x_ll_ba_n003.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_no_n008.x_ll_ba_n003.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:869195598]:0.231512 Fst.Weight:0.360494
+        -> Assuming idxname:c_ll_po_n008.c_ll_vl_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_po_n008.c_ll_vl_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:880497842]:0.041242 Fst.Weight:0.346494
+        -> Assuming idxname:c_ll_po_n008.c_ll_ya_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_po_n008.c_ll_ya_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:881219296]:0.040659 Fst.Weight:0.299117
+        -> Assuming idxname:c_ll_po_n008.x_ll_ba_n003.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_po_n008.x_ll_ba_n003.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:882835201]:0.428437 Fst.Weight:0.398124
+        -> Assuming idxname:c_ll_vl_n008.c_ll_ya_n008.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_vl_n008.c_ll_ya_n008.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:890454452]:0.035192 Fst.Weight:0.117939
+        -> Assuming idxname:c_ll_vl_n008.x_ll_ba_n003.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_vl_n008.x_ll_ba_n003.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:889811082]:0.230426 Fst.Weight:0.337108
+        -> Assuming idxname:c_ll_ya_n008.x_ll_ba_n003.unfolded-lr.fst.idx
+        -> Assuming .fst.gz file: c_ll_ya_n008.x_ll_ba_n003.unfolded-lr.fst.gz
+        -> FST.Unweight[nObs:890218160]:0.229110 Fst.Weight:0.307367
