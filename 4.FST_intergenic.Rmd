@@ -3,39 +3,32 @@ title: "4.FST_intergenic"
 output: html_document
 ---
 
+
+# Population Genetic Differenciation (Fst)
+
+Our program can estimate fst between populations. 
+And has been generalized to give all pairwise fst estimates if you supply the command with multiple populations.
+if you supply 3 populations, the program will also output the pbs statistic.
+
+NB we have removed the very unusefull unweighted fst estimator in the output, and have included a header. The output example below will be updated at some point.
+
+The procedure is
+
+1 - Use angsd for calculating saf files for each population
+2 - Use realSFS to calculate 2d sfs for each pair
+3 - Use the above calculated 2dsfs as priors jointly with all safs from step1 to calculate fst binary files
+4 - Use realSFS to extract the the fst values from the fst
+
+
+## 1 - Estimate multidimensional SFS: Calculate all pairwise 2dsfs's
+
+An important issue when doing this is to be sure that we are comparing the exactly same corresponding sites between populations. 
+ANGSD does that automatically and considers only a set of overlapping sites. 
+
+First calculate per pop saf for each population. This is already done.
+
+
 ```{r, engine=bash, eval=FALSE}
-
-
-########################################################################################################################################################################
-#
-#      						Population Genetic Differenciation (Fst)
-#
-#											07/03/2017		Elena Marmesat
-#
-########################################################################################################################################################################
-
-
-# Our program can estimate fst between populations. 
-# And has been generalized to give all pairwise fst estimates if you supply the command with multiple populations.
-# if you supply 3 populations, the program will also output the pbs statistic.
-
-# NB we have removed the very unusefull unweighted fst estimator in the output, and have included a header. The output example below will be updated at some point.
-
-# The procedure is
-
-# 1 - Use angsd for calculating saf files for each population
-# 2 - Use realSFS to calculate 2d sfs for each pair
-# 3 - Use the above calculated 2dsfs as priors jointly with all safs from step1 to calculate fst binary files
-# 4 - Use realSFS to extract the the fst values from the fst
-
-
-#### 1 - Estimate multidimensional SFS 
-
-# An important issue when doing this is to be sure that we are comparing the exactly same corresponding sites between populations. 
-# ANGSD does that automatically and considers only a set of overlapping sites. 
-
-# First calculate per pop saf for each population. This is already done in the script ANGSD-3_global.sh. So we will use KIR.saf, NOR.saf, BIA.saf (ML SAF).
-
 
 #SCRIPT TO GENERATE ALL POSSIBLE ITERATIONS
 nano pops_combinations.R
@@ -54,47 +47,15 @@ cat(combination)
 chmod 555 pops_combinations.R
 
 
-######################################################################################
-#                            Specific target region file                             #
-######################################################################################
-#
-declare -A REGIONS=(	["neutral"]="/home/emarmesat/grupolince/immunocapture/capture/neutral/no_genes_Lypa_10000longest_center_final" \
-			["immunome"]="/home/emarmesat/grupolince/immunocapture/capture/functional/target-genes2_antigen-immune_cds_merged_size80" \
-			["rand-cds"]="/home/emarmesat/grupolince/immunocapture/capture/functional/random_exons80_norep_notarget"  )
+screen -S creating_realSFSs_and_Fst_intergenic
+script pairwise_real2DSFSs_and_Fst_intergenic.log
 
-
-#SITES FILES
-#format regions files to the angsd format.
-#If you want to use bed files, you need to convert to the native angsd format.
-#Bedfiles are chr pos1 pos2 value, and are zero indexed. Furthermore pos1 is included, but pos2 is not included. 
-for REGION  in ${!REGIONS[@]}
-do
-echo "--->$REGION"
-
-awk '{print $1"\t"$2+1"\t"$3}' ${REGIONS[$REGION]}.bed | sed 's/lp23s/lp23.s/' > ${REGIONS[$REGION]}.sites
-#then index
-angsd sites index ${REGIONS[$REGION]}.sites
-
-#RF FILES (lp23.s00001:3574877-3575027) --> $$ al final no puedo usar -rf, no soy capax de que corra en combinación con -sites, pero -sites debería ser suficiente
-awk -v OFS='' '{print $1,":",$2+1,"-",$3}' ${REGIONS[$REGION]}.bed > ${REGIONS[$REGION]}.rf
-done
-
-######################################################################################
-#                           Calculate all pairwise 2dsfs's                           #
-######################################################################################
-
-FST_FOLDER=/home/emarmesat/grupolince/immunocapture/ansgd/fst
-mkdir $FST_FOLDER
-screen -S creating_realSFSs_and_Fst
-script pairwise_real2DSFSs_and_Fst.log
-ANGSD="/opt/angsd"
-NGSTOOLS="/opt/angsd/misc"
+RUTA=/home/mlucena/ANGSD_analysis 
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
 THREADS=15
-SFS_FOLDER=/home/emarmesat/grupolince/immunocapture/ansgd/sfs
-FST_FOLDER=/home/emarmesat/grupolince/immunocapture/ansgd/fst
-declare -A REGIONS=(	["neutral"]="/home/emarmesat/grupolince/immunocapture/capture/neutral/no_genes_Lypa_10000longest_center_final" ["immunome"]="/home/emarmesat/grupolince/immunocapture/capture/functional/target-genes2_antigen-immune_cds_merged_size80" ["rand-cds"]="/home/emarmesat/grupolince/immunocapture/capture/functional/random_exons80_norep_notarget"  )
-
-
+SFS_FOLDER=$RUTA/intergenic_analysis/intergenic_sfs
+FST_FOLDER=$RUTA/intergenic_analysis/intergenic_fst
 
 #Get all populations name
 cd $SFS_FOLDER
@@ -103,6 +64,41 @@ cd $FST_FOLDER
 #Get all possible pairwise combinations
 POP_PAIRS=($(echo ${POPS[@]} | Rscript pops_combinations.R))
 
+# I have 28 combinations:
+
+c_ll_cr_n006/c_ll_ki_n013
+c_ll_cr_n006/c_ll_la_n006
+c_ll_cr_n006/c_ll_no_n008
+c_ll_cr_n006/c_ll_po_n008
+c_ll_cr_n006/c_ll_vl_n008
+c_ll_cr_n006/c_ll_ya_n008
+c_ll_cr_n006/x_ll_ba_n003
+c_ll_ki_n013/c_ll_la_n006
+c_ll_ki_n013/c_ll_no_n008
+c_ll_ki_n013/c_ll_po_n008
+c_ll_ki_n013/c_ll_vl_n008
+c_ll_ki_n013/c_ll_ya_n008
+c_ll_ki_n013/x_ll_ba_n003
+c_ll_la_n006/c_ll_no_n008
+c_ll_la_n006/c_ll_po_n008
+c_ll_la_n006/c_ll_vl_n008
+c_ll_la_n006/c_ll_ya_n008
+c_ll_la_n006/x_ll_ba_n003
+c_ll_no_n008/c_ll_po_n008
+c_ll_no_n008/c_ll_vl_n008
+c_ll_no_n008/c_ll_ya_n008
+c_ll_no_n008/x_ll_ba_n003
+c_ll_po_n008/c_ll_vl_n008
+c_ll_po_n008/c_ll_ya_n008
+c_ll_po_n008/x_ll_ba_n003
+c_ll_vl_n008/c_ll_ya_n008
+c_ll_vl_n008/x_ll_ba_n003
+c_ll_ya_n008/x_ll_ba_n003
+
+
+
+
+
 #Iterate over combinations
 for POP_PAIR in  "${POP_PAIRS[@]}"
 do
@@ -110,44 +106,42 @@ POP1=($(echo $POP_PAIR | cut -d "/"  -f 1))
 POP2=($(echo $POP_PAIR | cut -d "/"  -f 2)) 
 echo ">$POP_PAIR"
 #Skip iteration if file exists
-if [ -f  $POP1.$POP2.unfolded-lr.$REGION.saf.idx.ml  ]
+if [ -f  $POP1.$POP2.unfolded-lr.saf.idx.ml  ]
   then
     echo "PAIR: $POP_PAIR exists."
     continue
 fi
-#Compute Fsts for all region types
-for REGION  in ${!REGIONS[@]}
-do
 echo "--->realSFS 2 dimensional $POP1 and $POP2"
-$NGSTOOLS/realSFS -P $THREADS -sites ${REGIONS[$REGION]}.sites $SFS_FOLDER/$POP1.unfolded-lr.saf.idx $SFS_FOLDER/$POP2.unfolded-lr.saf.idx  > $POP1.$POP2.unfolded-lr.$REGION.saf.idx.ml
+$NGSTOOLS/realSFS -P $THREADS $SFS_FOLDER/$POP1.unfolded-lr.saf.idx $SFS_FOLDER/$POP2.unfolded-lr.saf.idx  > $POP1.$POP2.unfolded-lr.saf.idx.ml
 
 # The output file is a flatten matrix, where each value is the count of sites with the corresponding joint frequency ordered as [0,0] [0,1] and so on.
-#less -S KIR.NOR.unfolded.ml.sfs
+# less -S KIR.NOR.unfolded.ml.sfs
 # No need to plot it, as it a ML estimation. 
 
 # Prepare the fst for easy analysis
 echo "-------------------->FST  $POP1 and $POP2"
-$NGSTOOLS/realSFS fst index -P $THREADS  -sites ${REGIONS[$REGION]}.sites $SFS_FOLDER/$POP1.unfolded-lr.saf.idx $SFS_FOLDER/$POP2.unfolded-lr.saf.idx  -sfs $POP1.$POP2.unfolded-lr.$REGION.saf.idx.ml  -fstout $POP1.$POP2.unfolded-lr.$REGION
+$NGSTOOLS/realSFS fst index -P $THREADS $SFS_FOLDER/$POP1.unfolded-lr.saf.idx $SFS_FOLDER/$POP2.unfolded-lr.saf.idx  -sfs $POP1.$POP2.unfolded-lr.saf.idx.ml -fstout $POP1.$POP2.unfolded-lr
 echo "--------------------------------->FST  $POP1 and $POP2 printing"
-$NGSTOOLS/realSFS fst print $POP1.$POP2.unfolded-lr.$REGION.fst.idx > $POP1.$POP2.unfolded-lr.$REGION.fst.print
+$NGSTOOLS/realSFS fst print $POP1.$POP2.unfolded-lr.fst.idx > $POP1.$POP2.unfolded-lr.fst.print
  
 done
-done
+
+```
 
 
+
+```{r, engine=bash, eval=FALSE}
 #Get the global estimate
-for REGION  in ${!REGIONS[@]}
-do
-echo $REGION
-echo "POP1,POP2,FSTunweight,FSTweight" > global.$REGION.fsts.csv
+
+echo "POP1,POP2,FSTunweight,FSTweight" > global.fsts.csv
 for POP_PAIR in  ${POP_PAIRS[@]}
 do
 POP1=($(echo $POP_PAIR | cut -d "/"  -f 1))
 POP2=($(echo $POP_PAIR | cut -d "/"  -f 2)) 
-FST=($( $NGSTOOLS/realSFS fst stats $POP1.$POP2.unfolded-lr.$REGION.fst.idx | tr ' ' ',' ))
-echo "$POP1,$POP2,$FST" >> global.$REGION.fsts.csv
+FST=($( $NGSTOOLS/realSFS fst stats $POP1.$POP2.unfolded-lr.fst.idx | tr ' ' ',' ))
+echo "$POP1,$POP2,$FST" >> global.fsts.csv
 done
-done
+
 
 
 # you can have a look at their values:
@@ -171,3 +165,67 @@ done
 
 
 ```
+
+ # Copying to local
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_fst/*.fsts.csv /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_fst/
+```
+
+
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(ggplot2)
+library(ape)
+
+wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_fst/"
+
+#Look for all global fts table 
+
+fst_table = list.files(path = wd, pattern="*fsts.csv")    
+
+
+# Define function to plot trees
+
+plot_FST_nj_weighted_unrooted_tree <- function(wd,df,filter_pattern,subset_name ){
+first.pop <- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%
+    mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
+    filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
+    select(POP1) %>% slice(c(1))%>% as.character()
+  last.pop<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%
+    mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
+    filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
+    select(POP2) %>% slice(n())%>% as.character()
+ 
+  fst.w_matrix<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%
+    rbind(c(first.pop,first.pop,NA,NA),
+          c(last.pop,last.pop,NA,NA)) %>%
+    mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
+    filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
+    select(POP1,POP2,FSTweight)%>% 
+    spread(POP2,FSTweight)%>%
+    tibble::remove_rownames() %>% tibble::column_to_rownames("POP1")
+  
+  ## plot Neighbouring-Joining Tree
+ 
+    pdf(paste0(wd,subset_name, gsub(".fsts.csv", "_weighted.pdf",df)), paper =  "a4" )
+    plot(nj(as.dist(t(fst.w_matrix))), main=gsub(".csv", "_Fst_w", df),sub="neighbor joining",type="unrooted")
+    dev.off()
+}
+
+
+# Format tables intro matrices and Plot NJtrees
+
+
+for (i in 1:length (fst_table)){
+  #Load table,  keep only the values of single populations 
+  #(I migth be interested in the other comparissons but later)
+  plot_FST_nj_weighted_unrooted_tree(wd,fst_table[i],"_ll_","lynx_lynx_fst_test") 
+}
+
+
+```
+
