@@ -45,7 +45,47 @@ ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the 
 
 # BARCODE MACROGEN:
 # declare -A BARCODEID=(["LC1"]="c_lc_zz_0001" ["LL112"]="c_ll_vl_0112" ["LL146"]="c_ll_ya_0146" ["LL212"]="c_ll_cr_0212" ["LL90"]="c_ll_ki_0090" ["LR1"]="c_lr_zz_0001")
+
+
+# BARCODE LYNX_15_TO_REPEAT:
+# declare -A BARCODEID=( 
+["CA2W6ANXX_1_1nf"]="c_ll_og_0181"  
+["CA2W6ANXX_2_5nf"]="c_ll_ka_0189" 
+["CA3D2ANXX_5_1nf"]="c_ll_og_0181"  
+["CA3D2ANXX_5_5nf"]="c_ll_ka_0189" )
+
+
+
 ```
+
+24/05/2017
+We realize that the mapping went wrong with some samples. So, we copied the raw samples to a new folder and remmaped them. 
+
+```{bash}
+# We realize that the ma
+# I copy those file to a new folder
+
+[mlucena@genomics_b FASTQ]$ ls CA2W6ANXX_1_1nf*
+CA2W6ANXX_1_1nf_1.fastq.gz  CA2W6ANXX_1_1nf_1.fastq.gz.md5  CA2W6ANXX_1_1nf_2.fastq.gz  CA2W6ANXX_1_1nf_2.fastq.gz.md5
+[mlucena@genomics_b FASTQ]$ scp  CA2W6ANXX_1_1nf*gz /home/mlucena/new_mapping/
+[mlucena@genomics_b FASTQ]$ ls  CA2W6ANXX_2_5nf*
+CA2W6ANXX_2_5nf_1.fastq.gz  CA2W6ANXX_2_5nf_1.fastq.gz.md5  CA2W6ANXX_2_5nf_2.fastq.gz  CA2W6ANXX_2_5nf_2.fastq.gz.md5
+[mlucena@genomics_b FASTQ]$ scp  CA2W6ANXX_2_5nf*gz /home/mlucena/new_mapping/
+[mlucena@genomics_b FASTQ]$ ls CA3D2ANXX_5_1nf*
+CA3D2ANXX_5_1nf_1.fastq.gz  CA3D2ANXX_5_1nf_1.fastq.gz.md5  CA3D2ANXX_5_1nf_2.fastq.gz  CA3D2ANXX_5_1nf_2.fastq.gz.md5
+[mlucena@genomics_b FASTQ]$ scp CA3D2ANXX_5_1nf*gz /home/mlucena/new_mapping/
+[mlucena@genomics_b FASTQ]$ ls CA3D2ANXX_5_5nf*
+CA3D2ANXX_5_5nf_1.fastq.gz  CA3D2ANXX_5_5nf_1.fastq.gz.md5  CA3D2ANXX_5_5nf_2.fastq.gz  CA3D2ANXX_5_5nf_2.fastq.gz.md5
+[mlucena@genomics_b FASTQ]$ scp CA3D2ANXX_5_5nf*gz /home/mlucena/new_mapping/
+
+# BARCODE LYNX_15_TO_REPEAT:
+# declare -A BARCODEID=(["CA2W6ANXX_1_1nf"]="c_ll_og_0181" ["CA2W6ANXX_2_5nf"]="c_ll_ka_0189" ["CA3D2ANXX_5_1nf"]="c_ll_og_0181" ["CA3D2ANXX_5_5nf"]="c_ll_ka_0189" )
+
+ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the names of all the samples and we'll loop through it to process all the samples. 
+
+
+```
+
 
 ## 	FastQC: quality summary of raw data 
 
@@ -111,16 +151,33 @@ Checked whether you are using trimmed or untrimmed data.
 
 ```{r, engine=bash, eval=FALSE}
 
-bwa mem $REF ${i}_1.fastq.gz ${i}_2.fastq.gz -t $THREADS  >  ${i}.sam
-samtools view -hbS  ${i}.sam -@ $THREADS | samtools sort -@ $THREADS -o ${i}_sorted.bam
-rm ${i}.sam
-samtools flagstat  ${i}_sorted.bam >  ${i}_raw.stats
+for i in ${ARRAY[@]}
+do
+
+# bwa mem $REF ${i}_1.fastq.gz ${i}_2.fastq.gz -t $THREADS  >  ${i}.sam
+# samtools view -hbS  ${i}.sam -@ $THREADS | samtools sort -@ $THREADS -o ${i}_sorted.bam
+# rm ${i}.sam
+# samtools flagstat  ${i}_sorted.bam >  ${i}_raw.stats
 
 # Para los de LYNX_14: Lanzado!
-# bwa mem $REF ${i}_R1_trimmed.fastq.gz ${i}_R2_trimmed.fastq.gz -t $THREADS  >  ${i}.sam
-# samtools view -hbS  ${i}.sam -@ $THREADS | samtools sort -@ $THREADS -o ${i}_sorted.bam && rm ${i}.sam
+bwa mem $REF ${i}_R1_trimmed.fastq.gz ${i}_R2_trimmed.fastq.gz -t $THREADS  >  ${i}.sam
+samtools view -hbS  ${i}.sam -@ $THREADS | /opt/samtools/samtools sort -@ $THREADS -o ${i}_sorted.bam && rm ${i}.sam
+
+done
+```
+
+
+```{bash}
+
+# Me he cargado esta muestra así que la vuelvo a lanzar
+bwa mem $REF CA2W6ANXX_1_1nf_R1_trimmed.fastq.gz CA2W6ANXX_1_1nf_R2_trimmed.fastq.gz -t 5  >  CA2W6ANXX_1_1nf.sam
 
 ```
+
+
+
+
+hasta aqui!
 
 ## 	Adding read groups
 
