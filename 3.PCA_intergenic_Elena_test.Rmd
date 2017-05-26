@@ -11,10 +11,10 @@ I am doing a test using Elena's intergenic capture on the whole european populat
 
 ```{r, engine=bash, eval=FALSE}
 
-POPS=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-h_ll_ba")
 POPS=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
+POPS=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-h_ll_ba")
 
-cd /home/mlucena/do_depth_european/
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis
 
 for POP in ${POPS[@]}
 do
@@ -53,20 +53,19 @@ POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_l
 
 # Set paths to software and some commom files
 
-grep -P "^${POP}_n\d\d\d" mean_sd_depthGlobal_lynx_per_pop_mean_folds_2_a.csv > "$POP"_mean_sd_depthGlobal_lynx_per_pop_mean_folds_2_a.csv
-read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < "$POP"_mean_sd_depthGlobal_lynx_per_pop_mean_folds_2_a.csv
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < /home/mlucena/ANGSD_analysis/depth_calculus/"$POP"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
 
 
 echo $POP
 
-ANGSD=/opt/angsd
+ANGSD=/opt/angsd/angsd
 NGSTOOLS=/opt/ngsTools_19092016/
 THREADS=60                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
 ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
 FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
 FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
-REGIONFILE="/home/mlucena/do_depth_european/no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+REGIONFILE="/home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
 SFSDIR="/home/mlucena/PCA"
 
 
@@ -90,7 +89,7 @@ MIN_IND=105
 
 ### Calling genotype likelihoods: 
  
-$ANGSD/angsd -P $THREADS -b /home/mlucena/do_depth_european/$POP*.bamlist -ref $REF -out $POP \
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/whole_genome_analysis/$POP*.bamlist -ref $REF -out $POP \
 $FILTER1 $FILTER2 \
 -minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth \
 -rf $REGIONFILE \
@@ -184,6 +183,7 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/do_depth_european/*.covar /User
 
 ```
 
+### R representation 
 
 ```{r "setup", include=FALSE}
 
@@ -391,3 +391,686 @@ scatterplot3js(PC$PC1, PC$PC2, PC$PC3,
 
 
 ```
+
+
+# PCA: both sps --> MinIndDepth 1.
+
+I am doing a test using Elena's intergenic capture on the whole european populations. To see whether it behave as we expect or we have any contamination. 
+
+
+```{r, engine=bash, eval=FALSE}
+
+
+POPS=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
+
+
+# We start the analysis now:
+
+# Create a directory
+
+cd /home/mlucena/ANGSD_analysis/pruebas_PCA
+
+# I want to produce PCAs for iberian and european based on the small intergenic region of Elena's.
+
+POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
+screen -S test_pca_two_sps_elena_intergenic_mindepth1
+POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
+script test_pca_two_sps_elena_intergenic_mindepth1.log
+POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
+
+# Set paths to software and some commom files
+
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < /home/mlucena/ANGSD_analysis/depth_calculus/"$POP"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+
+echo $POP
+
+ANGSD=/opt/angsd/angsd
+NGSTOOLS=/opt/ngsTools_19092016/
+THREADS=60                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+REGIONFILE="/home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+SFSDIR="/home/mlucena/PCA"
+
+
+# I will use Elena intergenic region file as it is a sanity check:
+# This is how it looks. 
+# head no_genes_Lypa_10000longest_center_final_slop20_dot.rf 
+# lp23.s00001:347022-347220
+# lp23.s00001:385836-386034
+
+
+# I will use maxDepth filter
+# read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < "$SFSDIR"/"$POP"_mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv
+
+N_IND=$(wc -l /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP"*.bamlist | awk '{print $1}') 
+
+## custom:
+
+MIN_IND_DEPTH=1
+MIN_IND=105
+
+### Calling genotype likelihoods: 
+ 
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP"*.bamlist -ref $REF -out $POP.MinDepthInd1 \
+$FILTER1 $FILTER2 \
+-minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth \
+-rf $REGIONFILE \
+-GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
+-SNP_pval 1e-3 \
+-doGeno 32 -doPost 1
+
+
+
+### URGENTE ULTIMA ACTUALIZACION!!
+
+# -minInd [int]
+# Only keep sites with at least minIndDepth (default is 1) from at least [int] individuals
+# -minIndDepth [int]
+# Only works with the -minInd filter. Change the minimum depth the individuals must have in order to keep the site. Default is 1.
+
+
+# SNP_pval = #ind*(2allelos/ind) = x alelos ; 1/x = y  # esto sería un filtro aceptable. En mi caso el dataset más pequeño (h_lypa_all) es de 55 indivíduos (1/(2*55)=9e-3) y el más grande (x_lyxx_all) de 189 (1/(2*189)=2.6e-3)
+# Para el PCA vamos a usar 1e-3 porque es un filtro suuuper light.
+
+# Unzip the results (but you cannot open it since it is in binary format)
+
+gunzip $POP.geno.gz
+
+### ngsCovar
+
+# We are going to use ngsCovar, which estimates the covariance matrix between individuals based on genotype probabilities. 
+# Then this matrix will be decomposed into principal components which will be investigated for population structure analyses. 
+# Note that although ngsCovar can account for SNPs uncertanity, we find that it is faster to perform a light SNP filtering first 
+# (as we did using -SNP_pval 1e-3) than using all sites.
+
+# If you type:
+
+# $NGSTOOLS/ngsPopGen/ngsCovar
+
+# you will see a list of possible options. 
+# For instance, we need to define how many sites we have. To retrieve such value, we can inspect the file with allele frequencies:
+
+#less -S $POP.mafs.gz
+N_SITES=`zcat $POP.mafs.gz | tail -n+2 | wc -l`
+echo $N_SITES
+
+# In my case I have 7324 sites (I am using Elena's intergenic region). 
+
+# Now we can perform a PCA by estimating the covariance matrix first:
+# $$$Do we want to add the SFS file??
+
+$NGSTOOLS/ngsPopGen/ngsCovar -probfile $POP.geno -outfile $POP.covar -nind $N_IND  -nsites $N_SITES -call 0 -norm 0 &> /dev/null
+
+# with the options -call 0 meaning that we do not perform genotype calling 
+# and -norm 0 that we are not normalising by allele frequency. 
+# The latter may give more weight to low frequency variants which are harder to estimate.
+
+# Look at the output file:
+
+#less -S $POP.covar
+
+# which represents a matrix of NxN with N individuals giving the covariance. Note that this matrix is symmetric.
+
+# Finally, we perform an eigenvector decomposition and plot the resulting map:
+
+# create a cluster-like file defining the labelling (population) for each sample
+
+#Example: Rscript -e 'write.table(cbind(seq(1,60),rep(1,60),c(rep("LWK",20),rep("TSI",20),rep("PEL",20))), row.names=F, sep=" ", col.names=c("FID","IID","CLUSTER"), file="Results/ALL.clst", quote=F)'
+
+echo "FID" > $POP.ALL1.clst.borrar
+seq $N_IND >> $POP.ALL1.clst.borrar
+echo "IID" > $POP.ALL2.clst.borrar
+# yes "1" | head -n $N_IND >> $POP.ALL2.clst.borrar
+cat $POP*.bamlist | rev | cut -d "/"  -f 1 | cut -d "_" -f 3,4,5,6 | rev  >> $POP.ALL2.clst.borrar
+echo "CLUSTER" > $POP.ALL3.clst.borrar
+cat $POP*.bamlist | rev | cut -d "/"  -f 1 | cut -d "_" -f 4,5,6 | rev  >> $POP.ALL3.clst.borrar
+paste $POP.ALL1.clst.borrar $POP.ALL2.clst.borrar $POP.ALL3.clst.borrar> $POP.ALL.clst
+
+rm $POP.*clst.borrar
+
+
+
+# run and plot
+
+# Rscript $NGSTOOLS/Scripts/plotPCA.R -i Results/ALL.covar -c 1-2 -a Results/ALL.clst -o Results/ALL.pca.pdf
+# Rscript $NGSTOOLS/Scripts/plotPCA.R -i $POP.covar -c 1-2 -a $POP.ALL.clst -o $POP.ALL.pca.pdf #--> No corre porque no puedo instalar librerías así que lo hago en mi propio ordenador
+# evince Results/ALL.pca.pdf
+
+# where the parameter -c 1-2 specifies that we are plotting only the first and second component. On the screen, you will see a series of numbers. These are the percentage of explained variance for each component.
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/do_depth_european/*.ALL.clst /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/do_depth_european/*.covar /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena
+# scp mlucena@genomics-a.ebd.csic.es:/opt/ngsTools_19092016/Scripts/plotPCA.R /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA
+
+
+```
+
+### R representation 
+
+```{r "setup", include=FALSE}
+
+library(methods)
+library(optparse)
+library(ggplot2)
+library(dplyr)
+library(threejs)
+library(RColorBrewer)
+require("knitr")
+
+# knitr::opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
+# getwd()
+# opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
+
+WORKING_DIR="/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena/"
+# samples_info <-read.csv("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena/c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba.ALL.clst")
+# pop= c("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
+pop= c("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba_n105")
+
+# 
+###########################################################################################
+#for (pop in pops) 
+#{
+
+# Annotation file is in plink cluster format
+
+#################################################################################
+
+# Read input file
+covar <- read.table(paste(WORKING_DIR,pop, ".covar", sep=''), stringsAsFact=F);
+
+# Read annot file
+annot <- read.table(paste(WORKING_DIR,pop, ".ALL.clst", sep=""), header=TRUE) 
+
+# Parse components to analyze
+# comp <- as.numeric(strsplit("component1-component2", "-", fixed=TRUE)[[1]])
+# comp <- as.numeric(strsplit(opt$comp, "-", fixed=TRUE)[[1]])
+
+comp <- c(1,2)
+
+# Eigenvalues
+eig <- eigen(covar, symm=TRUE);
+eig$val <- eig$val/sum(eig$val);
+cat(signif(eig$val, digits=3)*100,"\n");
+
+# Plot
+PC <- as.data.frame(eig$vectors)
+colnames(PC) <- gsub("V", "PC", colnames(PC))
+PC$Pop <- factor(annot$CLUSTER)
+PC$Ind <- factor(annot$IID)
+PC <- PC %>% filter(Ind == "UA")
+
+
+
+PC <- PC %>%  mutate(., 
+         Subspecies = ifelse (Pop == "c_ll_po" | Pop == "c_ll_ki" | Pop == "c_ll_la" | Pop == "c_ll_no", "L.l.lynx",        
+                          ifelse(Pop == "c_ll_ba" | Pop == "h_ll_ba", "L.l.balcanicus" ,
+                          ifelse(Pop == "c_ll_cr","L.l.carpathicus",
+                          ifelse(Pop == "c_ll_to" | Pop == "c_ll_tu" | Pop == "c_ll_ka", "L.l.kozlovi", 
+                          ifelse(Pop == "c_ll_og", "L.l.isabellinus", 
+                          ifelse(Pop == "c_ll_vl", "L.l.stroganovi", 
+                          ifelse(Pop == "c_ll_ya", "L.l.wrangeli",     
+                                 NA)))))))) %>% 
+  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Poland",
+                          ifelse (Pop == "c_ll_ki", "Kirov",
+                          ifelse (Pop == "c_ll_la", "Latvia",
+                          ifelse (Pop == "c_ll_no", "Norway",
+                          ifelse (Pop == "c_ll_ba" | Pop == "h_ll_ba", "Balkans" ,
+                          ifelse (Pop == "c_ll_cr","Carpathians",
+                          ifelse (Pop == "c_ll_to", "Tov",
+                          ifelse (Pop == "c_ll_tu", "Tuva",
+                          ifelse (Pop == "c_ll_ka", "Khentii-Aimag", 
+                          ifelse (Pop == "c_ll_og", "Omnogovi", 
+                          ifelse (Pop == "c_ll_vl", "Vladivostok", 
+                          ifelse (Pop == "c_ll_ya", "Yakutia",
+                          ifelse (Pop == "c_lp_sm", "Sierra Morena",
+                          ifelse (Pop == "c_lp_do", "Doñana", NA)))))))))))))))
+
+cols <- c("Poland"=brewer.pal(12,"Paired")[4], 
+          "Balkans"=brewer.pal(12,"Paired")[2], 
+          "Carpathians"=brewer.pal(12,"Paired")[1], 
+          "Kirov"=brewer.pal(12,"Paired")[3], 
+          "Latvia"=brewer.pal(12,"Paired")[9], 
+          "Norway"=brewer.pal(12,"Paired")[10], 
+          "Tov"=brewer.pal(12,"Paired")[5], 
+          "Tuva"=brewer.pal(12,"Paired")[6], 
+          "Khentii-Aimag"=brewer.pal(12,"Paired")[7], 
+          "Omnogovi"=brewer.pal(12,"Paired")[8], 
+          "Vladivostok"=brewer.pal(12,"Paired")[11], 
+          "Yakutia"=brewer.pal(12,"Paired")[12],
+          "Sierra Morena"=brewer.pal(8, "Greys") [5],
+          "Doñana"=brewer.pal(8, "Greys") [8])
+
+title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
+
+x_axis = paste("PC",comp[1],sep="")
+y_axis = paste("PC",comp[2],sep="")
+
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Pop_label", shape="Pop"), size = 3) + 
+#   scale_shape_manual(values=1:15) + ggtitle(title)
+# # ggsave(paste(WORKING_DIR,pop, "_pca.TEST.eps", sep=""),units="mm",  width=270, height=190)
+# # unlink("Rplots.pdf", force=TRUE)
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Pop", shape="Pop"), size = 3) + 
+#     scale_colour_manual(values = cols)+
+#   scale_shape_manual(values=1:15) + ggtitle(title)
+# 
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Pop", shape="subspecies"), size = 3) + 
+#   scale_colour_manual(values = cols)+
+#   scale_shape_manual(values=1:7)
+
+ggplot() + 
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations"), size = 5) + 
+  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
+ ggsave(paste(WORKING_DIR,pop, "_pca_pop.pdf", sep=""),units="mm",  width=270, height=190)
+
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, shape="subspecies"), size = 3) + 
+#   scale_shape_manual(values=1:7)
+
+ggplot() + 
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Subspecies"), size = 5)  +
+  ggtitle(title) + theme_classic()
+  ggsave(paste(WORKING_DIR,pop, "_pca_subspecies.pdf", sep=""),units="mm",  width=270, height=190)
+
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="subspecies"), size = 3)  +
+#   scale_shape_manual(values=1:7)
+# 
+# ggsave(paste(WORKING_DIR,pop, "_pca.TEST.eps", sep=""),plot=a, units="mm",  width=270, height=190)
+# 
+# ggsave(paste(WORKING_DIR,pop, "_pca2.TEST.eps", sep=""),plot=b, units="mm",  width=270, height=190)
+```
+
+
+
+
+
+```{r "setup", include=FALSE}
+# 3D PCA
+
+#################################################################################
+# 
+# PC_col <- PC %>% group_by(.,Pop) %>% 
+#   mutate(., 
+#          color = ifelse (Nivel3 == "Montes_de_Toledo",  brewer.pal(8,"Blues")[6], 
+#                          ifelse(Nivel3 == "E_SM_rest" | Nivel3 == "Andujar-Cardena", brewer.pal(8,"Greens")[6],
+#                          ifelse(Nivel3 == "E_Sierra_Morena_Palomar",brewer.pal(8,"Greys")[6],
+#                          ifelse(Nivel3 == "Donana_hist" | Nivel3 == "Donana_cont", brewer.pal(8,"Purples")[6],
+#                          ifelse(Nivel3 == "malcata", brewer.pal(8,"RdPu")[6], 
+#                          ifelse(Nivel3 == "Algarve-Odemira-Sado", brewer.pal(8,"Reds")[6], NA)))))), 
+#          pop.label = ifelse (Nivel3 == "Montes_de_Toledo", "Montes de Toledo", 
+#                      ifelse(Nivel3 == "E_SM_rest" , "E. Sierra Morena", 
+#                      ifelse( Nivel3 == "Andujar-Cardena" ,"E. Sierra Morena", 
+#                      ifelse(Nivel3 == "E_SM_Palomar","Far-E. Sierra Morena",
+#                      ifelse(Nivel3 == "W_Sierra-Morena","W.Sierra Morena",
+#                      ifelse(Nivel3 == "Donana_hist" , "Doñana",
+#                      ifelse(Nivel3 == "Donana_cont", "Doñana", 
+#                      ifelse(Nivel3 == "malcata", "Central Range", 
+#ifelse(Nivel3 == "Vale_do_Sado", "Vale do Sado", NA))))))))) )
+# 
+# color <- c()
+# for(i in 1:length(Nivel3_all_3DsP_date_col$Nivel3) )
+# {
+#   color[i] <- colorRampPalette(brewer.pal(8, Nivel3_all_3DsP_date_col$palette[i]))(years_n)[match(Nivel3_all_3DsP_date_col$assignedDate[i],years_uniq)]
+# }
+# Nivel3_all_3DsP_date_col$color <- color
+
+
+###########################################################################################
+# 3D plot
+###########################################################################################
+
+setwd ("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena")
+samples_info <-read.csv("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena/c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba.ALL.clst")
+pop= c("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
+
+# 
+###########################################################################################
+# Read input file
+covar <- read.table(paste(pop, ".covar", sep=''), stringsAsFact=F);
+# Read annot file
+annot <- read.table(paste(pop, ".ALL.clst", sep=""), header=TRUE) 
+# Parse components to analyze
+comp <- c(1,2,3)
+
+# Eigenvalues
+eig <- eigen(covar, symm=TRUE);
+eig$val <- eig$val/sum(eig$val);
+cat(signif(eig$val, digits=3)*100,"\n");
+
+# Plot
+PC <- as.data.frame(eig$vectors)
+colnames(PC) <- gsub("V", "PC", colnames(PC))
+PC$Pop <- factor(annot$CLUSTER)
+PC$ID <- factor(annot$IID)
+
+scatterplot3js(PC$PC1, PC$PC2, PC$PC3, 
+                col=PC$POP,  labels=PC$ID,
+               size=0.7, grid=FALSE, renderer = "canvas")
+
+
+
+```
+
+
+
+# PCA: Using just 5x iberian lynx
+
+I am doing a test using Elena's intergenic capture on the whole european populations. To see whether it behave as we expect or we have any contamination. 
+
+
+```{r, engine=bash, eval=FALSE}
+
+POPS=("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis
+
+##### ATENTION!!!
+
+I modify manually the bam file to rm the individuals of wg reseq project!! Those are:
+  
+Ind == "c_lp_do_0153" | 
+Ind == "c_lp_do_0173" | 
+Ind == "c_lp_do_0443" | 
+Ind == "c_lp_sm_0138" | 
+Ind == "c_lp_sm_0140" | 
+Ind == "c_lp_sm_0185" | 
+Ind == "c_lp_sm_0186" | 
+Ind == "c_lp_sm_0298" | 
+Ind == "c_lp_sm_0359" | 
+Ind ==  "c_lp_do_0007", "Genome_resequencing_project", 
+Ind== "c_lp_sm_0221", "Candiles"
+
+# We start the analysis now:
+
+# Create a directory
+
+mkdir -p /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/pca/test_with_intergenic_Elena
+cd /home/mlucena/do_depth_european/
+
+# I want to produce PCAs for iberian and european based on the small intergenic region of Elena's.
+
+POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
+screen -S test_pca_two_sps_elena_intergenic
+POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
+script test_pca_two_sps_elena_intergenic.log
+POP="c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba"  # <--CHANGE POP HERE
+
+# Set paths to software and some commom files
+
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < /home/mlucena/ANGSD_analysis/depth_calculus/"$POP"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+
+
+echo $POP
+
+ANGSD=/opt/angsd/angsd
+NGSTOOLS=/opt/ngsTools_19092016/
+THREADS=60                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+REGIONFILE="/home/mlucena/do_depth_european/no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+SFSDIR="/home/mlucena/PCA"
+
+
+# I will use Elena intergenic region file as it is a sanity check:
+# This is how it looks. 
+# head no_genes_Lypa_10000longest_center_final_slop20_dot.rf 
+# lp23.s00001:347022-347220
+# lp23.s00001:385836-386034
+
+
+# I will use maxDepth filter
+# read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < "$SFSDIR"/"$POP"_mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv
+
+N_IND=$(wc -l /home/mlucena/do_depth_european/"$POP".bamlist | awk '{print $1}') 
+# MIN_IND=$(expr $N_IND / 2)
+
+## custom:
+
+# MIN_IND_DEPTH=3 ---> No se puede porque es de la última versión. 
+MIN_IND=105
+
+### Calling genotype likelihoods: 
+ 
+$ANGSD/angsd -P $THREADS -b /home/mlucena/do_depth_european/$POP*.bamlist -ref $REF -out $POP \
+$FILTER1 $FILTER2 \
+-minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth \
+-rf $REGIONFILE \
+-GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
+-SNP_pval 1e-3 \
+-doGeno 32 -doPost 1
+
+
+
+### URGENTE ULTIMA ACTUALIZACION!!
+
+# -minInd [int]
+# Only keep sites with at least minIndDepth (default is 1) from at least [int] individuals
+# -minIndDepth [int]
+# Only works with the -minInd filter. Change the minimum depth the individuals must have in order to keep the site. Default is 1.
+
+
+# SNP_pval = #ind*(2allelos/ind) = x alelos ; 1/x = y  # esto sería un filtro aceptable. En mi caso el dataset más pequeño (h_lypa_all) es de 55 indivíduos (1/(2*55)=9e-3) y el más grande (x_lyxx_all) de 189 (1/(2*189)=2.6e-3)
+# Para el PCA vamos a usar 1e-3 porque es un filtro suuuper light.
+
+# Unzip the results (but you cannot open it since it is in binary format)
+
+gunzip $POP.geno.gz
+
+### ngsCovar
+
+# We are going to use ngsCovar, which estimates the covariance matrix between individuals based on genotype probabilities. 
+# Then this matrix will be decomposed into principal components which will be investigated for population structure analyses. 
+# Note that although ngsCovar can account for SNPs uncertanity, we find that it is faster to perform a light SNP filtering first 
+# (as we did using -SNP_pval 1e-3) than using all sites.
+
+# If you type:
+
+# $NGSTOOLS/ngsPopGen/ngsCovar
+
+# you will see a list of possible options. 
+# For instance, we need to define how many sites we have. To retrieve such value, we can inspect the file with allele frequencies:
+
+#less -S $POP.mafs.gz
+N_SITES=`zcat $POP.mafs.gz | tail -n+2 | wc -l`
+echo $N_SITES
+
+# In my case I have 7324 sites (I am using Elena's intergenic region). 
+
+# Now we can perform a PCA by estimating the covariance matrix first:
+# $$$Do we want to add the SFS file??
+
+$NGSTOOLS/ngsPopGen/ngsCovar -probfile $POP.geno -outfile $POP.covar -nind $N_IND  -nsites $N_SITES -call 0 -norm 0 &> /dev/null
+
+# with the options -call 0 meaning that we do not perform genotype calling 
+# and -norm 0 that we are not normalising by allele frequency. 
+# The latter may give more weight to low frequency variants which are harder to estimate.
+
+# Look at the output file:
+
+#less -S $POP.covar
+
+# which represents a matrix of NxN with N individuals giving the covariance. Note that this matrix is symmetric.
+
+# Finally, we perform an eigenvector decomposition and plot the resulting map:
+
+# create a cluster-like file defining the labelling (population) for each sample
+
+#Example: Rscript -e 'write.table(cbind(seq(1,60),rep(1,60),c(rep("LWK",20),rep("TSI",20),rep("PEL",20))), row.names=F, sep=" ", col.names=c("FID","IID","CLUSTER"), file="Results/ALL.clst", quote=F)'
+
+echo "FID" > $POP.ALL1.clst.borrar
+seq $N_IND >> $POP.ALL1.clst.borrar
+echo "IID" > $POP.ALL2.clst.borrar
+# yes "1" | head -n $N_IND >> $POP.ALL2.clst.borrar
+cat $POP*.bamlist | rev | cut -d "/"  -f 1 | cut -d "_" -f 3,4,5,6 | rev  >> $POP.ALL2.clst.borrar
+echo "CLUSTER" > $POP.ALL3.clst.borrar
+cat $POP*.bamlist | rev | cut -d "/"  -f 1 | cut -d "_" -f 4,5,6 | rev  >> $POP.ALL3.clst.borrar
+paste $POP.ALL1.clst.borrar $POP.ALL2.clst.borrar $POP.ALL3.clst.borrar> $POP.ALL.clst
+
+rm $POP.*clst.borrar
+
+
+
+# run and plot
+
+# Rscript $NGSTOOLS/Scripts/plotPCA.R -i Results/ALL.covar -c 1-2 -a Results/ALL.clst -o Results/ALL.pca.pdf
+# Rscript $NGSTOOLS/Scripts/plotPCA.R -i $POP.covar -c 1-2 -a $POP.ALL.clst -o $POP.ALL.pca.pdf #--> No corre porque no puedo instalar librerías así que lo hago en mi propio ordenador
+# evince Results/ALL.pca.pdf
+
+# where the parameter -c 1-2 specifies that we are plotting only the first and second component. On the screen, you will see a series of numbers. These are the percentage of explained variance for each component.
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/do_depth_european/*.ALL.clst /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/do_depth_european/*.covar /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena
+# scp mlucena@genomics-a.ebd.csic.es:/opt/ngsTools_19092016/Scripts/plotPCA.R /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA
+
+
+```
+
+### R representation 
+
+```{r "setup", include=FALSE}
+
+library(methods)
+library(optparse)
+library(ggplot2)
+library(dplyr)
+library(threejs)
+library(RColorBrewer)
+require("knitr")
+
+# knitr::opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
+# getwd()
+# opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
+
+WORKING_DIR="/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena/"
+# samples_info <-read.csv("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena/c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba.ALL.clst")
+# pop= c("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba")
+pop= c("c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba_n105")
+
+# 
+###########################################################################################
+#for (pop in pops) 
+#{
+
+# Annotation file is in plink cluster format
+
+#################################################################################
+
+# Read input file
+covar <- read.table(paste(WORKING_DIR,pop, ".covar", sep=''), stringsAsFact=F);
+
+# Read annot file
+annot <- read.table(paste(WORKING_DIR,pop, ".ALL.clst", sep=""), header=TRUE) 
+
+# Parse components to analyze
+# comp <- as.numeric(strsplit("component1-component2", "-", fixed=TRUE)[[1]])
+# comp <- as.numeric(strsplit(opt$comp, "-", fixed=TRUE)[[1]])
+
+comp <- c(1,2)
+
+# Eigenvalues
+eig <- eigen(covar, symm=TRUE);
+eig$val <- eig$val/sum(eig$val);
+cat(signif(eig$val, digits=3)*100,"\n");
+
+# Plot
+PC <- as.data.frame(eig$vectors)
+colnames(PC) <- gsub("V", "PC", colnames(PC))
+PC$Pop <- factor(annot$CLUSTER)
+PC$Ind <- factor(annot$IID)
+PC <- PC %>% filter(Ind == "UA")
+
+
+
+PC <- PC %>%  mutate(., 
+         Subspecies = ifelse (Pop == "c_ll_po" | Pop == "c_ll_ki" | Pop == "c_ll_la" | Pop == "c_ll_no", "L.l.lynx",        
+                          ifelse(Pop == "c_ll_ba" | Pop == "h_ll_ba", "L.l.balcanicus" ,
+                          ifelse(Pop == "c_ll_cr","L.l.carpathicus",
+                          ifelse(Pop == "c_ll_to" | Pop == "c_ll_tu" | Pop == "c_ll_ka", "L.l.kozlovi", 
+                          ifelse(Pop == "c_ll_og", "L.l.isabellinus", 
+                          ifelse(Pop == "c_ll_vl", "L.l.stroganovi", 
+                          ifelse(Pop == "c_ll_ya", "L.l.wrangeli",     
+                                 NA)))))))) %>% 
+  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Poland",
+                          ifelse (Pop == "c_ll_ki", "Kirov",
+                          ifelse (Pop == "c_ll_la", "Latvia",
+                          ifelse (Pop == "c_ll_no", "Norway",
+                          ifelse (Pop == "c_ll_ba" | Pop == "h_ll_ba", "Balkans" ,
+                          ifelse (Pop == "c_ll_cr","Carpathians",
+                          ifelse (Pop == "c_ll_to", "Tov",
+                          ifelse (Pop == "c_ll_tu", "Tuva",
+                          ifelse (Pop == "c_ll_ka", "Khentii-Aimag", 
+                          ifelse (Pop == "c_ll_og", "Omnogovi", 
+                          ifelse (Pop == "c_ll_vl", "Vladivostok", 
+                          ifelse (Pop == "c_ll_ya", "Yakutia",
+                          ifelse (Pop == "c_lp_sm", "Sierra Morena",
+                          ifelse (Pop == "c_lp_do", "Doñana", NA)))))))))))))))
+
+cols <- c("Poland"=brewer.pal(12,"Paired")[4], 
+          "Balkans"=brewer.pal(12,"Paired")[2], 
+          "Carpathians"=brewer.pal(12,"Paired")[1], 
+          "Kirov"=brewer.pal(12,"Paired")[3], 
+          "Latvia"=brewer.pal(12,"Paired")[9], 
+          "Norway"=brewer.pal(12,"Paired")[10], 
+          "Tov"=brewer.pal(12,"Paired")[5], 
+          "Tuva"=brewer.pal(12,"Paired")[6], 
+          "Khentii-Aimag"=brewer.pal(12,"Paired")[7], 
+          "Omnogovi"=brewer.pal(12,"Paired")[8], 
+          "Vladivostok"=brewer.pal(12,"Paired")[11], 
+          "Yakutia"=brewer.pal(12,"Paired")[12],
+          "Sierra Morena"=brewer.pal(8, "Greys") [5],
+          "Doñana"=brewer.pal(8, "Greys") [8])
+
+title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
+
+x_axis = paste("PC",comp[1],sep="")
+y_axis = paste("PC",comp[2],sep="")
+
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Pop_label", shape="Pop"), size = 3) + 
+#   scale_shape_manual(values=1:15) + ggtitle(title)
+# # ggsave(paste(WORKING_DIR,pop, "_pca.TEST.eps", sep=""),units="mm",  width=270, height=190)
+# # unlink("Rplots.pdf", force=TRUE)
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Pop", shape="Pop"), size = 3) + 
+#     scale_colour_manual(values = cols)+
+#   scale_shape_manual(values=1:15) + ggtitle(title)
+# 
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Pop", shape="subspecies"), size = 3) + 
+#   scale_colour_manual(values = cols)+
+#   scale_shape_manual(values=1:7)
+
+ggplot() + 
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations"), size = 5) + 
+  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
+ ggsave(paste(WORKING_DIR,pop, "_pca_pop.pdf", sep=""),units="mm",  width=270, height=190)
+
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, shape="subspecies"), size = 3) + 
+#   scale_shape_manual(values=1:7)
+
+ggplot() + 
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Subspecies"), size = 5)  +
+  ggtitle(title) + theme_classic()
+  ggsave(paste(WORKING_DIR,pop, "_pca_subspecies.pdf", sep=""),units="mm",  width=270, height=190)
+
+# ggplot() + 
+#   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="subspecies"), size = 3)  +
+#   scale_shape_manual(values=1:7)
+# 
+# ggsave(paste(WORKING_DIR,pop, "_pca.TEST.eps", sep=""),plot=a, units="mm",  width=270, height=190)
+# 
+# ggsave(paste(WORKING_DIR,pop, "_pca2.TEST.eps", sep=""),plot=b, units="mm",  width=270, height=190)
+```
+
+
+
+
