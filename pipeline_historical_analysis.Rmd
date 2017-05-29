@@ -116,8 +116,6 @@ for i in ${ARRAY[@]}
 do
 echo $i
 bwa mem $REF ${i}_R1_trimmed.fastq.gz ${i}_R2_trimmed.fastq.gz -t $THREADS  >  ${i}.sam
-samtools view -hbS  ${i}.sam -@ $THREADS | samtools sort  -@ $THREADS -o ${i}_sorted.bam && rm ${i}.sam
-
 samtools view -hbS  ${i}.sam -@ $THREADS | /opt/samtools/samtools sort -@ $THREADS -o ${i}_sorted.bam && rm ${i}.sam
 done
 ```
@@ -160,6 +158,9 @@ CALHGANXX_8_LYNX7-709ii5-4_R2_trimmed.fastq.gz
 
 REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
 bwa mem $REF CALHGANXX_8_LYNX7-709ii5-4_R1_trimmed.fastq.gz CALHGANXX_8_LYNX7-709ii5-4_R2_trimmed.fastq.gz -t 3 >  CALHGANXX_8_LYNX7-709ii5-4.sam
+
+
+ARRAY=($(ls *.fastq.gz |  grep -v "trimmed" | cut -d'_' -f1-3 | uniq))
 
 ```
 
