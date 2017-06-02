@@ -16,7 +16,7 @@ In order to keep samples reasonably sorted and facilitate coding each sample has
 # VARIABLES:
 
 REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
-THREADS=10   # No. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+THREADS=40   # No. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the names of all the samples and we'll loop through it to process all the samples. 
 
 # BARCODE LYNX_06_08:
@@ -46,24 +46,16 @@ ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the 
 # BARCODE MACROGEN:
 # declare -A BARCODEID=(["LC1"]="c_lc_zz_0001" ["LL112"]="c_ll_vl_0112" ["LL146"]="c_ll_ya_0146" ["LL212"]="c_ll_cr_0212" ["LL90"]="c_ll_ki_0090" ["LR1"]="c_lr_zz_0001")
 
-
-# BARCODE LYNX_15_TO_REPEAT:
-# declare -A BARCODEID=( 
-["CA2W6ANXX_1_1nf"]="c_ll_og_0181"  
-["CA2W6ANXX_2_5nf"]="c_ll_ka_0189" 
-["CA3D2ANXX_5_1nf"]="c_ll_og_0181"  
-["CA3D2ANXX_5_5nf"]="c_ll_ka_0189" )
-
-
-
 ```
 
 24/05/2017
 We realize that the mapping went wrong with some samples. So, we copied the raw samples to a new folder and remmaped them. 
 
 ```{bash}
-# We realize that the ma
-# I copy those file to a new folder
+# We realize that the mapping went wrong for some samples (total reads vs fastq reads is below 60%). So I would like to repeat the mapping. 
+
+# I copy those file to a new folder:
+mkdir /home/mlucena/new_mapping/
 
 [mlucena@genomics_b FASTQ]$ ls CA2W6ANXX_1_1nf*
 CA2W6ANXX_1_1nf_1.fastq.gz  CA2W6ANXX_1_1nf_1.fastq.gz.md5  CA2W6ANXX_1_1nf_2.fastq.gz  CA2W6ANXX_1_1nf_2.fastq.gz.md5
@@ -83,6 +75,67 @@ CA3D2ANXX_5_5nf_1.fastq.gz  CA3D2ANXX_5_5nf_1.fastq.gz.md5  CA3D2ANXX_5_5nf_2.fa
 
 ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the names of all the samples and we'll loop through it to process all the samples. 
 
+```
+
+
+1/07/2017
+I completed the new mapping of two samples that seems to have failed. The mapping didn't went well again, as there was an issue with the RG, anyway I was able to get the stats. They proved that those two samples actually failed while mapping the first time, so I would like to keep trying with the other samples that seems to have a lower amount of reads that enter the mapping compared to the reads in the fastq. Besides I will start with these ones again from the very beginning. 
+
+I start with:
+
+c_ll_ka_0188 --> 63,44521703 LYNX_15
+c_ll_la_0048 --> 65,850268   LYNX_15
+h_ll_ba_0214 --> 68,80822511 
+c_ll_ba_0216 --> 74,73082202
+c_ll_tu_0159 --> 79,80165467 LYNX_15
+
+
+Their reads are:
+c_ll_ka_0188 ----> LYNX_15
+CA2W6ANXX_4_6nf c_ll_ka_0188 
+CA3D2ANXX_5_6nf c_ll_ka_0188 
+
+c_ll_la_0048 ----> LYNX_15
+CAABGANXX_5_9nf c_ll_la_0048
+CA3D2ANXX_6_9nf c_ll_la_0048 
+
+c_ll_tu_0159 ----> LYNX_15
+CAABGANXX_5_14nf c_ll_tu_0159 
+C9KH1ANXX_8_14nf c_ll_tu_0159 
+
+h_ll_ba_0214 ----> LYNX_16
+CA2W6ANXX_4_23nf h_ll_ba_0214 
+CA3D2ANXX_6_23nf h_ll_ba_0214 
+
+c_ll_ba_0216 ----> LYNX_16
+CA2W6ANXX_4_25nf c_ll_ba_0216 
+CA3D2ANXX_6_25nf c_ll_ba_0216 
+
+
+$TO DO:
+
+```{bash}
+
+scp	/backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA2W6ANXX_1_1nf*gz 	/home/mlucena/new_mapping/
+scp	/backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA2W6ANXX_2_5nf*gz 	/home/mlucena/new_mapping/
+scp	/backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA3D2ANXX_5_1nf*gz	  /home/mlucena/new_mapping/
+scp	/backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA3D2ANXX_5_5nf*gz	  /home/mlucena/new_mapping/
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA2W6ANXX_4_6nf*gz	  /home/mlucena/new_mapping/
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA3D2ANXX_5_6nf*gz	  /home/mlucena/new_mapping/
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CAABGANXX_5_9nf*gz	  /home/mlucena/new_mapping/
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA3D2ANXX_6_9nf*gz	  /home/mlucena/new_mapping/
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CAABGANXX_5_14nf*gz	/home/mlucena/new_mapping/
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/C9KH1ANXX_8_14nf*gz	 /home/mlucena/new_mapping/
+scp /backup/grupolince/raw_data/LYNX_16/20170206/FASTQ/CA2W6ANXX_4_23nf*gz	 /home/mlucena/new_mapping/
+scp /backup/grupolince/raw_data/LYNX_16/20170206/FASTQ/CA3D2ANXX_6_23nf*gz	 /home/mlucena/new_mapping/
+scp /backup/grupolince/raw_data/LYNX_16/20170206/FASTQ/CA2W6ANXX_4_25nf*gz	 /home/mlucena/new_mapping/
+scp /backup/grupolince/raw_data/LYNX_16/20170206/FASTQ/CA3D2ANXX_6_25nf*gz	 /home/mlucena/new_mapping/
+
+# Array for trimming
+ARRAY=(CA2W6ANXX_4_6nf CA3D2ANXX_5_6nf CAABGANXX_5_9nf CA3D2ANXX_6_9nf CAABGANXX_5_14nf C9KH1ANXX_8_14nf CA2W6ANXX_4_23nf CA3D2ANXX_6_23nf CA2W6ANXX_4_25nf CA3D2ANXX_6_25nf)
+
+# Array for mapping
+ARRAY=($(ls | grep trimmed | cut -d"_" -f 1-3 | sort | uniq ))
 
 ```
 
@@ -176,12 +229,11 @@ bwa mem $REF CA2W6ANXX_1_1nf_R1_trimmed.fastq.gz CA2W6ANXX_1_1nf_R2_trimmed.fast
 
 
 
-
-hasta aqui!
-
 ## 	Adding read groups
 
 ```{r, engine=bash, eval=FALSE}
+for i in ${ARRAY[@]}
+do
 
 run=($(echo $i | cut -d"_" -f 1))  #Sacar el run de i
 
@@ -219,7 +271,7 @@ done
 
 ```
 
-
+hasta aqui$
 ## 	Remove duplicates	
 
 ```{r, engine=bash, eval=FALSE}
