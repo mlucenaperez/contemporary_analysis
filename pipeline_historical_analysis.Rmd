@@ -118,12 +118,13 @@ echo $i
 bwa mem $REF ${i}_R1_trimmed.fastq.gz ${i}_R2_trimmed.fastq.gz -t $THREADS  >  ${i}.sam
 samtools view -hbS  ${i}.sam -@ $THREADS | /opt/samtools/samtools sort -@ $THREADS -o ${i}_sorted.bam && rm ${i}.sam
 done
+
 ```
 
-hasta aqui!
 
 
-Yo estoy corriendo estas de una en una. 
+Estas las corrí de una en una porque tuve que parar el proceso a mitad. 
+
 ```{bash}
 
 CALHGANXX_8_LYNX7-700ii5-4_R1_trimmed.fastq.gz
@@ -164,12 +165,13 @@ ARRAY=($(ls *.fastq.gz |  grep -v "trimmed" | cut -d'_' -f1-3 | uniq))
 
 ```
 
-Tengo que hacer el sort!!!
-
-
 ## 	Adding read groups
 
 ```{r, engine=bash, eval=FALSE}
+
+for i in ${ARRAY[@]}
+do
+echo $i
 
 run=($(echo $i | cut -d"_" -f 1))  #Sacar el run de i
 
@@ -199,14 +201,16 @@ cp `cat "${sample}".bam.list`  "${sample}".bam;
 fi
 if [ "$lines" -gt "1" ]; 
 then echo "more than ONE";
-samtools merge -r  "${sample}".bam `cat "${sample}".bam.list`;
+samtools merge -@ 30 -r  "${sample}".bam `cat "${sample}".bam.list`;
 fi
-samtools flagstat "${sample}".bam >  "${sample}".stats;
-samtools sort -@ 30 "${sample}".bam -o "${sample}"_sorted.bam;
+samtools flagstat "${sample}".bam > "${sample}".stats;
+/opt/samtools/samtools sort -@ 30 "${sample}".bam -o "${sample}"_sorted.bam;
 done
 
 ```
 
+* Error que parece que no tiene mucha importancia:
+[bam_translate] RG tag "c_ll_ka_0189_CA2W6ANXX_2_5nf_sorted_rg" on read "7001450:317:CA2W6ANXX:2:1114:8454:72372" encountered with no corresponding entry in header, tag lost. Unknown tags are only reported once per input file for each tag ID.
 
 ## 	Remove duplicates	
 
@@ -218,13 +222,14 @@ for i in ${ARRAY_MERGED_BAM_SAMPLE_NAME[@]}
 do
 echo "${i}"
 java -jar /opt/picard-tools/picard.jar MarkDuplicates METRICS_FILE=${i}_rmdup.txt I=${i}_sorted.bam O=${i}_sorted_rmdup.bam MAX_FILE_HANDLES_FOR_READ_ENDS_MAP=2000 
-samtools sort ${i}_sorted_rmdup.bam -@ 30 -o ${i}_sorted_rmdup_sorted.bam
+/opt/samtools/samtools sort ${i}_sorted_rmdup.bam -@ 30 -o ${i}_sorted_rmdup_sorted.bam
 samtools index ${i}_sorted_rmdup_sorted.bam
 samtools flagstat ${i}_sorted_rmdup_sorted.bam > ${i}_sorted_rmdup_sorted.stats
 
 done
 
 ```
+
 
 ## 	Realignment with GATK	
 
@@ -246,6 +251,9 @@ java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T RealignerTargetCre
 java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T IndelRealigner -R $REF -targetIntervals ${i}_realignertargetcreator.intervals -I ${i}_sorted_rmdup_sorted.bam -o ${i}_sorted_rmdup_sorted_indelrealigner.bam
 done
 ```
+
+
+hasta aqui
 
 ##  Move all the samples to a common folder	  
 
@@ -372,9 +380,9 @@ for sample in "${SAMPLESLIST[@]}"
 do
 echo "${sample}"
 NAME="${sample}"
-TOTAL_SEQ="$(cat "${sample}"*.rawseq | awk '{sum+=$1}END{print sum}')"
-#TOTAL_MAPPED="$(grep "in total" "${sample}".stats | cut -d "+" -f 1 ')"
-#DUPLICATES="$(grep "duplicates" "${sample}"_sorted_rmdup_sorted.stats | cut -d "+" -f 1 ')"
+# TOTAL_SEQ="$(cat "${sample}"*.rawseq | awk '{sum+=$1}END{print sum}')"
+#TOTAL_MAPPED="$(grep "in total" "${sample}".stats | cut -d "+" -f 1 )"
+#DUPLICATES="$(grep "duplicates" "${sample}"_sorted_rmdup_sorted.stats | cut -d "+" -f 1 )"
 echo "$NAME, $TOTAL_SEQ" >> raw.stats 
 done
 
