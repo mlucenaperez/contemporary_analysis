@@ -112,8 +112,6 @@ CA2W6ANXX_4_25nf c_ll_ba_0216
 CA3D2ANXX_6_25nf c_ll_ba_0216 
 
 
-$TO DO:
-
 ```{bash}
 
 scp	/backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA2W6ANXX_1_1nf*gz 	/home/mlucena/new_mapping/
@@ -137,6 +135,10 @@ ARRAY=(CA2W6ANXX_4_6nf CA3D2ANXX_5_6nf CAABGANXX_5_9nf CA3D2ANXX_6_9nf CAABGANXX
 # Array for mapping
 ARRAY=($(ls | grep trimmed | cut -d"_" -f 1-3 | sort | uniq ))
 
+
+# BARCODE LYNX_15 y LYNX_16:
+
+# declare -A BARCODEID=(["C9KH1ANXX_7_1nf"]="c_ll_to_0191" ["C9KH1ANXX_7_7nf"]="c_ll_la_0053" ["C9KH1ANXX_7_10nf"]="c_ll_la_0054" ["C9KH1ANXX_8_11nf"]="c_ll_la_0044" ["C9KH1ANXX_8_12nf"]="c_ll_tu_0157" ["C9KH1ANXX_8_13nf"]="c_ll_tu_0158" ["C9KH1ANXX_8_14nf"]="c_ll_tu_0159" ["C9KH1ANXX_8_15nf"]="c_ll_tu_0165" ["C9KH1ANXX_8_18nf"]="c_ll_tu_0166" ["C9KH1ANXX_8_19nf"]="c_ll_tu_0153" ["C9KH3ANXX_7_1nf"]="c_ll_to_0191" ["C9KH3ANXX_8_7nf"]="c_ll_la_0053" ["C9KH3ANXX_8_10nf"]="c_ll_la_0054" ["C9KH3ANXX_8_11nf"]="c_ll_la_0044" ["C9KH3ANXX_8_12nf"]="c_ll_tu_0157" ["C9KH3ANXX_8_13nf"]="c_ll_tu_0158" ["CA2W6ANXX_1_1nf"]="c_ll_og_0181" ["CA2W6ANXX_1_2nf"]="c_ll_og_0187" ["CA2W6ANXX_1_3nf"]="c_ll_ka_0184" ["CA2W6ANXX_1_4nf"]="c_ll_ka_0186" ["CA2W6ANXX_2_5nf"]="c_ll_ka_0189" ["CA2W6ANXX_2_7nf"]="c_ll_to_0190" ["CA2W6ANXX_2_8nf"]="c_ll_la_0047" ["CA2W6ANXX_4_6nf"]="c_ll_ka_0188" ["CA3D2ANXX_5_1nf"]="c_ll_og_0181" ["CA3D2ANXX_5_2nf"]="c_ll_og_0187" ["CA3D2ANXX_5_3nf"]="c_ll_ka_0184" ["CA3D2ANXX_5_4nf"]="c_ll_ka_0186" ["CA3D2ANXX_5_5nf"]="c_ll_ka_0189" ["CA3D2ANXX_5_6nf"]="c_ll_ka_0188" ["CA3D2ANXX_6_7nf"]="c_ll_to_0190" ["CA3D2ANXX_6_8nf"]="c_ll_la_0047" ["CA3D2ANXX_6_9nf"]="c_ll_la_0048" ["CA3D2ANXX_6_21nf"]="c_ll_la_0052" ["CAABGANXX_5_14nf"]="c_ll_tu_0159" ["CAABGANXX_5_15nf"]="c_ll_tu_0165" ["CAABGANXX_5_18nf"]="c_ll_tu_0166" ["CAABGANXX_5_19nf"]="c_ll_tu_0153" ["CAABGANXX_5_9nf"]="c_ll_la_0048" ["CAABGANXX_5_21nf"]="c_ll_la_0052" ["CA2W6ANXX_4_23nf"]="h_ll_ba_0214" ["CA2W6ANXX_4_25nf"]="c_ll_ba_0216" ["CA2W6ANXX_4_27nf"]="h_ll_ba_0215" ["CA3D2ANXX_6_23nf"]="h_ll_ba_0214" ["CA3D2ANXX_6_25nf"]="c_ll_ba_0216" ["CA3D2ANXX_6_27nf"]="h_ll_ba_0215") 
 ```
 
 
@@ -228,7 +230,6 @@ bwa mem $REF CA2W6ANXX_1_1nf_R1_trimmed.fastq.gz CA2W6ANXX_1_1nf_R2_trimmed.fast
 ```
 
 
-
 ## 	Adding read groups
 
 ```{r, engine=bash, eval=FALSE}
@@ -237,12 +238,14 @@ do
 
 run=($(echo $i | cut -d"_" -f 1))  #Sacar el run de i
 
-java -jar /opt/picard-tools/picard.jar AddOrReplaceReadGroups I=${i}_sorted.bam O=${BARCODEID["${i}"]}_${i}_sorted_rg.bam RGID=${i} RGLB=${BARCODEID["${i}"]}_lib RGPL=Illumina RGPU=${run} RGSM=${BARCODEID["${i}"]} VALIDATION_STRINGENCY=SILENT \
-&& rm ${i}_sorted.bam
-
+java -jar /opt/picard-tools/picard.jar AddOrReplaceReadGroups I=${i}_sorted.bam O=${BARCODEID["${i}"]}_${i}_sorted_rg.bam RGID=${i} RGLB=${BARCODEID["${i}"]}_lib RGPL=Illumina RGPU=${run} RGSM=${BARCODEID["${i}"]} VALIDATION_STRINGENCY=SILENT # \
+#&& rm ${i}_sorted.bam
 done
 
 ```
+
+
+
 
 ## 	Merge BAM	
 
@@ -263,10 +266,10 @@ cp `cat "${sample}".bam.list`  "${sample}".bam;
 fi
 if [ "$lines" -gt "1" ]; 
 then echo "more than ONE";
-samtools merge -r  "${sample}".bam `cat "${sample}".bam.list`;
+/opt/samtools/samtools  merge  -@ 25 -r "${sample}".bam `cat "${sample}".bam.list`;
 fi
 samtools flagstat "${sample}".bam >  "${sample}".stats;
-samtools sort -@ 30 "${sample}".bam -o "${sample}"_sorted.bam;
+/opt/samtools/samtools sort  -@ 25 "${sample}".bam -o "${sample}"_sorted.bam;
 done
 
 ```
