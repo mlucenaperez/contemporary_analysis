@@ -201,10 +201,10 @@ cp `cat "${sample}".bam.list`  "${sample}".bam;
 fi
 if [ "$lines" -gt "1" ]; 
 then echo "more than ONE";
-samtools merge -@ 30 -r  "${sample}".bam `cat "${sample}".bam.list`;
+/opt/samtools/samtools merge -@ 30 -r  "${sample}".bam `cat "${sample}".bam.list`;
 fi
 samtools flagstat "${sample}".bam > "${sample}".stats;
-/opt/samtools/samtools sort -@ 30 "${sample}".bam -o "${sample}"_sorted.bam;
+/opt/samtools/samtools sort -@ 30 "${sample}".bam -o "${sample}"_sorted.bam && rm "${sample}".bam ;
 done
 
 ```
