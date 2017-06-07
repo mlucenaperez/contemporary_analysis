@@ -287,6 +287,12 @@ done
 
 ## 	Aligment BWA-MEM	
 
+
+
+
+CHECK CA2W6ANXX_2_7nf
+
+
 Checked whether you are using trimmed or untrimmed data.
 
 ```{r, engine=bash, eval=FALSE}
@@ -410,6 +416,8 @@ mv /home/GRUPOS/grupolince/lynx_genomes_5x/raw_data/LYNX_06_08/*stats /home/GRUP
 # Remove also intermediated files. 
 ```
 
+
+
 ## 	Recalibration with GATK	
 
 The base recalibration process involves two key steps: 
@@ -421,7 +429,7 @@ B) then it adjusts the base quality scores in the data based on the model.
 ```{r, engine=bash, eval=FALSE}
 # Define new variables
 
-POP=("cr")
+POP=("tu")
 ROUND=1
 PREVIOUS_ROUND=$(expr $ROUND - 1)
 
@@ -488,6 +496,41 @@ done
 done
 
 ```
+
+
+
+
+
+```{bash}
+
+
+## Where I have to keep the files:
+mkdir /home/mlucena/new_mapping/new_calling/
+mv /backup/grupolince/BAM_files_Lynx/BAM_indelrealigner_before_recal/LYNX_15/* /home/mlucena/new_mapping/new_calling/
+
+#For the new mappings I have these samples:
+
+-rw-rw-r--. 1 mlucena mlucena  9124140668 jun  7 13:28 c_ll_ka_0188_sorted_rmdup_sorted_indelrealigner.bam
+-rw-rw-r--. 1 mlucena mlucena  8948313915 jun  7 14:34 c_ll_ka_0189_sorted_rmdup_sorted_indelrealigner.bam
+-rw-rw-r--. 1 mlucena mlucena 10011795287 jun  7 16:32 c_ll_og_0181_sorted_rmdup_sorted_indelrealigner.bam
+-rw-rw-r--. 1 mlucena mlucena 11168547837 jun  7 17:42 c_ll_tu_0159_sorted_rmdup_sorted_indelrealigner.bam
+
+# I will move them with the other indelrealigner bam files from project LYNX_15 to recalibrate them. 
+
+# First I will rm the old ones:
+rm  c_ll_ka_0188_sorted_rmdup_sorted_indelrealigner.*
+rm  c_ll_ka_0189_sorted_rmdup_sorted_indelrealigner.*
+rm  c_ll_og_0181_sorted_rmdup_sorted_indelrealigner.*
+rm  c_ll_tu_0159_sorted_rmdup_sorted_indelrealigner.*
+
+
+
+
+```
+
+
+
+
 
 ## Fastq & BAM stats
 
@@ -719,9 +762,3 @@ LANG=en_EN  join -1 1 -2 1 -t","  <(head -n 2 raw.stats && tail -n +3 raw.stats 
 
 
 ```
-
-
-## Where I have to keep the files:
-
-mv /home/mlucena/new_mapping/new_calling/* /backup/grupolince/BAM_files_Lynx/BAM_indelrealigner_before_recal/LYNX_15 
-
