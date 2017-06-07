@@ -135,11 +135,96 @@ ARRAY=(CA2W6ANXX_4_6nf CA3D2ANXX_5_6nf CAABGANXX_5_9nf CA3D2ANXX_6_9nf CAABGANXX
 # Array for mapping
 ARRAY=($(ls | grep trimmed | cut -d"_" -f 1-3 | sort | uniq ))
 
-
 # BARCODE LYNX_15 y LYNX_16:
-
 # declare -A BARCODEID=(["C9KH1ANXX_7_1nf"]="c_ll_to_0191" ["C9KH1ANXX_7_7nf"]="c_ll_la_0053" ["C9KH1ANXX_7_10nf"]="c_ll_la_0054" ["C9KH1ANXX_8_11nf"]="c_ll_la_0044" ["C9KH1ANXX_8_12nf"]="c_ll_tu_0157" ["C9KH1ANXX_8_13nf"]="c_ll_tu_0158" ["C9KH1ANXX_8_14nf"]="c_ll_tu_0159" ["C9KH1ANXX_8_15nf"]="c_ll_tu_0165" ["C9KH1ANXX_8_18nf"]="c_ll_tu_0166" ["C9KH1ANXX_8_19nf"]="c_ll_tu_0153" ["C9KH3ANXX_7_1nf"]="c_ll_to_0191" ["C9KH3ANXX_8_7nf"]="c_ll_la_0053" ["C9KH3ANXX_8_10nf"]="c_ll_la_0054" ["C9KH3ANXX_8_11nf"]="c_ll_la_0044" ["C9KH3ANXX_8_12nf"]="c_ll_tu_0157" ["C9KH3ANXX_8_13nf"]="c_ll_tu_0158" ["CA2W6ANXX_1_1nf"]="c_ll_og_0181" ["CA2W6ANXX_1_2nf"]="c_ll_og_0187" ["CA2W6ANXX_1_3nf"]="c_ll_ka_0184" ["CA2W6ANXX_1_4nf"]="c_ll_ka_0186" ["CA2W6ANXX_2_5nf"]="c_ll_ka_0189" ["CA2W6ANXX_2_7nf"]="c_ll_to_0190" ["CA2W6ANXX_2_8nf"]="c_ll_la_0047" ["CA2W6ANXX_4_6nf"]="c_ll_ka_0188" ["CA3D2ANXX_5_1nf"]="c_ll_og_0181" ["CA3D2ANXX_5_2nf"]="c_ll_og_0187" ["CA3D2ANXX_5_3nf"]="c_ll_ka_0184" ["CA3D2ANXX_5_4nf"]="c_ll_ka_0186" ["CA3D2ANXX_5_5nf"]="c_ll_ka_0189" ["CA3D2ANXX_5_6nf"]="c_ll_ka_0188" ["CA3D2ANXX_6_7nf"]="c_ll_to_0190" ["CA3D2ANXX_6_8nf"]="c_ll_la_0047" ["CA3D2ANXX_6_9nf"]="c_ll_la_0048" ["CA3D2ANXX_6_21nf"]="c_ll_la_0052" ["CAABGANXX_5_14nf"]="c_ll_tu_0159" ["CAABGANXX_5_15nf"]="c_ll_tu_0165" ["CAABGANXX_5_18nf"]="c_ll_tu_0166" ["CAABGANXX_5_19nf"]="c_ll_tu_0153" ["CAABGANXX_5_9nf"]="c_ll_la_0048" ["CAABGANXX_5_21nf"]="c_ll_la_0052" ["CA2W6ANXX_4_23nf"]="h_ll_ba_0214" ["CA2W6ANXX_4_25nf"]="c_ll_ba_0216" ["CA2W6ANXX_4_27nf"]="h_ll_ba_0215" ["CA3D2ANXX_6_23nf"]="h_ll_ba_0214" ["CA3D2ANXX_6_25nf"]="c_ll_ba_0216" ["CA3D2ANXX_6_27nf"]="h_ll_ba_0215") 
 ```
+
+07/06/2017:
+
+The result after rmdup and sort is:
+
+sample_name	total_seq	total_reads	percentage_reads_mapped_vs_fastq	new_mapping_total	percentage_new_mapping
+c_ll_ka_0189	144401872	20258074	14,02895525	119152042	82,51419483 <--- BAD :::::::::::: ka
+c_ll_og_0181	153034834	85008954	55,54876088	136432850	89,15149998 <--- BAD :::::::::::: og
+c_ll_ka_0188	140053708	88857379	63,44521703	121032131	86,41836959 <--- BAD :::::::::::: ka
+c_ll_la_0048	160404108	105626535	65,850268	105626533	65,85026675   ok
+h_ll_ba_0214	155496480	106994368	68,80822511	106994365	68,80822318 ok
+c_ll_ba_0216	148431160	110923826	74,73082202	110923829	74,73082404 ok
+c_ll_tu_0159	152606768	121782726	79,80165467	153894758	100,8439927 <----- PUTADA! :::::::::::: tu
+
+the first 3 improve the mapping, the next 3 are the same and the last one also improve it, so I will need to try with all the rest.
+
+So the next ones untill 100% mapped are:
+
+sample_name	total_seq	total_reads	percentage_reads_mapped_vs_fastq
+c_ll_la_0052	172109704	140835339	81,82881948 : below 100%
+c_ll_la_0047	166995702	139257501	83,38987132 : below 100%
+h_ll_ba_0215	152814174	131203988	85,8585199 : below 100%
+c_ll_og_0187	155208878	133278626	85,87049125 : below 100%
+c_ll_to_0190	166328398	147316259	88,56951715 : below 100%
+c_ll_ka_0186	152875132	137803212	90,14102568 : below 100%
+c_ll_ka_0184	150635072	139684512	92,73040478 : below 100%
+
+
+The original reads are:
+
+c_ll_la_0052 
+CA3D2ANXX_6_21nf c_ll_la_0052
+CAABGANXX_5_21nf c_ll_la_0052
+
+c_ll_la_0047
+CA2W6ANXX_2_8nf c_ll_la_0047
+CA3D2ANXX_6_8nf c_ll_la_0047
+
+h_ll_ba_0215
+CA2W6ANXX_4_27nf h_ll_ba_0215
+CA3D2ANXX_6_27nf h_ll_ba_0215
+
+c_ll_og_0187
+CA3D2ANXX_5_2nf c_ll_og_0187
+CA2W6ANXX_1_2nf c_ll_og_0187
+
+c_ll_to_0190
+CA2W6ANXX_2_7nf c_ll_to_0190
+CA3D2ANXX_6_7nf c_ll_to_0190
+
+c_ll_ka_0186
+CA3D2ANXX_5_4nf c_ll_ka_0186
+CA2W6ANXX_1_4nf c_ll_ka_0186
+
+c_ll_ka_0184
+CA2W6ANXX_1_3nf c_ll_ka_0184
+CA3D2ANXX_5_3nf c_ll_ka_0184
+
+
+```{bash}
+
+
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA3D2ANXX_6_21nf*gz /home/mlucena/new_mapping/new_mapping2
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CAABGANXX_5_21nf*gz /home/mlucena/new_mapping/new_mapping2
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA2W6ANXX_2_8nf*gz /home/mlucena/new_mapping/new_mapping2
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA3D2ANXX_6_8nf*gz /home/mlucena/new_mapping/new_mapping2
+scp /backup/grupolince/raw_data/LYNX_16/20170206/FASTQ/CA2W6ANXX_4_27nf*gz /home/mlucena/new_mapping/new_mapping2
+scp /backup/grupolince/raw_data/LYNX_16/20170206/FASTQ/CA3D2ANXX_6_27nf*gz /home/mlucena/new_mapping/new_mapping2
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA3D2ANXX_5_2nf*gz /home/mlucena/new_mapping/new_mapping2
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA2W6ANXX_1_2nf*gz /home/mlucena/new_mapping/new_mapping2
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA2W6ANXX_2_7nf*gz /home/mlucena/new_mapping/new_mapping2
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA3D2ANXX_6_7nf*gz /home/mlucena/new_mapping/new_mapping2
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA3D2ANXX_5_4nf*gz /home/mlucena/new_mapping/new_mapping2
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA2W6ANXX_1_4nf*gz /home/mlucena/new_mapping/new_mapping2
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA2W6ANXX_1_3nf*gz /home/mlucena/new_mapping/new_mapping2
+scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA3D2ANXX_5_3nf*gz /home/mlucena/new_mapping/new_mapping2
+
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+THREADS=20  
+ARRAY=($(ls *.fastq.gz | cut -d"_" -f 1-3 | sort | uniq))
+
+
+
+```
+
+
+
 
 
 ## 	FastQC: quality summary of raw data 
@@ -238,8 +323,7 @@ do
 
 run=($(echo $i | cut -d"_" -f 1))  #Sacar el run de i
 
-java -jar /opt/picard-tools/picard.jar AddOrReplaceReadGroups I=${i}_sorted.bam O=${BARCODEID["${i}"]}_${i}_sorted_rg.bam RGID=${i} RGLB=${BARCODEID["${i}"]}_lib RGPL=Illumina RGPU=${run} RGSM=${BARCODEID["${i}"]} VALIDATION_STRINGENCY=SILENT # \
-#&& rm ${i}_sorted.bam
+java -jar /opt/picard-tools/picard.jar AddOrReplaceReadGroups I=${i}_sorted.bam O=${BARCODEID["${i}"]}_${i}_sorted_rg.bam RGID=${i} RGLB=${BARCODEID["${i}"]}_lib RGPL=Illumina RGPU=${run} RGSM=${BARCODEID["${i}"]} VALIDATION_STRINGENCY=SILENT && rm ${i}_sorted.bam
 done
 
 ```
@@ -266,15 +350,15 @@ cp `cat "${sample}".bam.list`  "${sample}".bam;
 fi
 if [ "$lines" -gt "1" ]; 
 then echo "more than ONE";
-/opt/samtools/samtools  merge  -@ 25 -r "${sample}".bam `cat "${sample}".bam.list`;
+/opt/samtools/samtools merge  -@ 25 -r "${sample}".bam `cat "${sample}".bam.list`;
 fi
 samtools flagstat "${sample}".bam >  "${sample}".stats;
-/opt/samtools/samtools sort  -@ 25 "${sample}".bam -o "${sample}"_sorted.bam;
+/opt/samtools/samtools sort  -@ 25 "${sample}".bam -o "${sample}"_sorted.bam && rm "${sample}".bam;
 done
 
 ```
 
-hasta aqui$
+
 ## 	Remove duplicates	
 
 ```{r, engine=bash, eval=FALSE}
@@ -285,7 +369,7 @@ for i in ${ARRAY_MERGED_BAM_SAMPLE_NAME[@]}
 do
 echo "${i}"
 java -jar /opt/picard-tools/picard.jar MarkDuplicates METRICS_FILE=${i}_rmdup.txt I=${i}_sorted.bam O=${i}_sorted_rmdup.bam MAX_FILE_HANDLES_FOR_READ_ENDS_MAP=2000 
-samtools sort ${i}_sorted_rmdup.bam -@ 30 -o ${i}_sorted_rmdup_sorted.bam
+/opt/samtools/samtools sort ${i}_sorted_rmdup.bam -@ 30 -o ${i}_sorted_rmdup_sorted.bam
 samtools index ${i}_sorted_rmdup_sorted.bam
 samtools flagstat ${i}_sorted_rmdup_sorted.bam > ${i}_sorted_rmdup_sorted.stats
 
@@ -637,4 +721,7 @@ LANG=en_EN  join -1 1 -2 1 -t","  <(head -n 2 raw.stats && tail -n +3 raw.stats 
 ```
 
 
+## Where I have to keep the files:
+
+mv /home/mlucena/new_mapping/new_calling/* /backup/grupolince/BAM_files_Lynx/BAM_indelrealigner_before_recal/LYNX_15 
 
