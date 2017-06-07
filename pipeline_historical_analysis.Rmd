@@ -211,6 +211,8 @@ done
 
 * Error que parece que no tiene mucha importancia:
 [bam_translate] RG tag "c_ll_ka_0189_CA2W6ANXX_2_5nf_sorted_rg" on read "7001450:317:CA2W6ANXX:2:1114:8454:72372" encountered with no corresponding entry in header, tag lost. Unknown tags are only reported once per input file for each tag ID.
+---> se debía a la versión de samtools merge, la he cambiado por /opt/samtools/samtools merge, a ver si así funciona.
+
 
 ## 	Remove duplicates	
 
