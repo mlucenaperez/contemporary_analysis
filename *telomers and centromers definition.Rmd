@@ -40,27 +40,107 @@ wc -l centr_merged.bed
 # First!
 
 # We have 177602 positions covered by contigs. 
-awk '{sum+=($3-$2)} END {print sum }' lp23contigs.bed 
-177602
-?¿?¿?¿?¿?¿?¿?
+awk '{sum+=($3-$2)} END {print sum }' lp23contigs_0based.bed 
+2361206351
 
-bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs.bed -b centr_merged.bed  -wa -wb > contig_centromers 
+bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b centr_merged.bed | \
+join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed | \
+awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig]  }' > intersect_contigs_centr_to_select.txt # | \
+awk  -v OFS='\t' '{if (($6)>0.25) print $0,"YES"; else print $0,"NO"}' 
 
 # Con esto sólo nos quedaríamos con un contig, el lp23.s27575c001 
 
 # Hago lo mismo para telómeros. 
 
-bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs.bed -b tel0-10_merged.bed   -wa -wb > contig_telomers
+bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed -b tel0-10_merged.bed | \
+join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed | \
+awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig] }' > intersect_contigs_tel_to_select.txt # | \
+awk -v OFS='\t' '{if (($6)>0.25) print $0,"YES"; else print $0,"NO"}' > intersect_contigs_tel_to_select.txt
+
+
+awk '{printf "%.3f\n", $6}'  intersect_contigs_centr_to_select.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
+
+awk '{printf "%.3f\n", $6}' intersect_contigs_tel_to_select.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
 
 # Comprobamos cuantos contigs se nos quedarían en cada caso:
 
-awk '{a[$4]+=($7-$6); b[$4]=($3-$2)} END {for(i in a) print i,a[i], b[i]}' contig_telomers | awk '{if (($2/$3)>0.25) print $0,"YES"; else print $0,"NO"}'
+wc -l /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed
+116586 
 
-awk '{a[$4]+=($7-$6); b[$4]=($3-$2)} END {for(i in a) print i,a[i], b[i]}' contig_centromers | awk '{if (($2/$3)>0.25) print $0,"YES"; else print $0,"NO"}'
+grep "YES" intersect_contigs_tel_to_select.txt | wc -l
 
-# Se nos uedan sólo dos contigs de telómeros y uno de centrómeros. Tengo que comprobar si está bien el archivo de contigs. Si es así, quizás no podamos aplicar estos filtros. 
+
+grep "YES" intersect_contigs_centr_to_select.txt | wc -l
 
 ```
+
+
+
+
+```{bash}
+
+# I found a file that might have the synteny to telomers without filtering. 
+
+cat CAT2LYNX_tel2m_sorted.bed |  tr ":" ' '  | awk -v OFS='\t' '{print $6, $7,$7}' | sort -k1,1 -k2,2n | bedtools merge -i - > list_of_scafolds_CAT2LYNX_tel2m_sorted.bed
+
+# Check the "-" symbol:
+awk '{print $2}' list_of_scafolds_CAT2LYNX_tel2m_sorted.bed | grep "-" | sort | uniq -c 
+
+# All of them are -1, therefore I replace them by 0.
+sed 's/-([1])/([0])/g' list_of_scafolds_CAT2LYNX_tel2m_sorted.bed > list_of_scafolds_CAT2LYNX_tel2m_sorted_0based.bed 
+
+# Now I do the intersect. 
+bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b list_of_scafolds_CAT2LYNX_tel2m_sorted_0based.bed  | join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  | awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig]  }' > intersect_contigs_tel_to_selectCAT2LYNX_tel2m.txt
+
+
+awk '{printf "%.3f\n", $6}' intersect_contigs_tel_to_selectCAT2LYNX_tel2m.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
+
+# Comparison
+
+awk '{print $1}' intersect_contigs_tel_to_select.txt | sort -nk1,1 > list_tel
+
+awk '{print $1}' intersect_contigs_tel_to_selectCAT2LYNX_tel2m.txt | sort -nk1,1 > list_tel_CAT2LYNX
+
+```
+
+
+
+```{bash}
+# I found a file that might have the synteny to telomers without filtering. 
+scp /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_centr.bed.gz /home/mlucena/telomers_centromers_definition/
+cd /home/mlucena/telomers_centromers_definition/
+
+zcat CAT2LYNX_centr.bed.gz |  tr ":" ' '  | awk -v OFS='\t' '{print $6, $7,$7}' | sort -k1,1 -k2,2n | bedtools merge -i - > list_of_scafolds_CAT2LYNX_centr_sorted.bed
+
+# Check the "-" symbol:
+awk '{print $2}' list_of_scafolds_CAT2LYNX_centr_sorted.bed | grep "-" | sort | uniq -c 
+
+# All of them are -1, therefore I replace them by 0.
+sed 's/-[0-9][0-9]*/0/' list_of_scafolds_CAT2LYNX_centr_sorted.bed > list_of_scafolds_CAT2LYNX_centr_sorted_0based.bed 
+
+# Now I do the intersect. 
+bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b list_of_scafolds_CAT2LYNX_centr_sorted_0based.bed  | join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  | awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig]  }' > intersect_contigs_centr_to_selectCAT2LYNX_centr.txt
+
+
+awk '{printf "%.3f\n", $6}' intersect_contigs_centr_to_selectCAT2LYNX_centr.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
+
+# Comparison
+
+awk '{print $1}' intersect_contigs_centr_to_select.txt | sort -nk1,1 > list_cent
+awk '{print $1}' intersect_contigs_centr_to_selectCAT2LYNX_centr.txt | sort -nk1,1 > list_centr_CAT2LYNX
+
+# Faltan en el archivo  list_tel_CAT2LYNX los d 2-10M
+
+wc -l list_cent
+10918 list_cent
+
+wc -l list_centr_CAT2LYNX 
+11310 list_centr_CAT2LYNX
+
+ 
+ 
+```
+
 
 
 # Old approach: Scaffolds. 
