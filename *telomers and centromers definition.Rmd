@@ -3,149 +3,11 @@ title: '*telomers and centromers definition'
 output: html_document
 ---
 
-# New approach: Contigs
+# Scaffolds approach
 
-```{bash}
-# We are considering using the contigs instead of the scaffolds to determine whether some regions are or are not telomers-centromers.
+I won't use these script, but as I did all these tests I will keep it. The approach that I finally took is the contig one.  
 
-# Fisrt make a folder:
-
-mkdir /home/mlucena/telomers_centromers_definition
-cd /home/mlucena/telomers_centromers_definition
-
-# We count the lines of the cat file:
-cat /home/fabascal/FEATURES/tel10m.bed  /home/fabascal/FEATURES/tel2m.bed | wc -l
-2640677
-
-# Now create the file with the positions of telo2 plus telo10, as we know that telo2 goes from 0 to 2 and telo10 goes from 2 to 10.
-# We also used bedtools to merge in case that there's some overlapping.
-cat /home/fabascal/FEATURES/tel10m.bed  /home/fabascal/FEATURES/tel2m.bed | sort - -k1,1 -k2,2n | bedtools merge > tel0-10_merged.bed 
-
-# It seems that there was, so we will use this merged file
-wc -l tel0-10_merged.bed 
-2628133 tel0-10_merged.bed 
-
-# We will also merged the centromers file.
-
-cat /home/fabascal/FEATURES/centr.bed  | sort - -k1,1 -k2,2n | bedtools merge > centr_merged.bed
-
-wc -l /home/fabascal/FEATURES/centr.bed 
-2211773 /home/fabascal/FEATURES/centr.bed
-wc -l centr_merged.bed 
-2200105 centr_merged.bed
-
-
-# Check the overlapping with the contigs:
-
-# First!
-
-# We have 177602 positions covered by contigs. 
-awk '{sum+=($3-$2)} END {print sum }' lp23contigs_0based.bed 
-2361206351
-
-bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b centr_merged.bed | \
-join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed | \
-awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig]  }' > intersect_contigs_centr_to_select.txt # | \
-awk  -v OFS='\t' '{if (($6)>0.25) print $0,"YES"; else print $0,"NO"}' 
-
-# Con esto sólo nos quedaríamos con un contig, el lp23.s27575c001 
-
-# Hago lo mismo para telómeros. 
-
-bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed -b tel0-10_merged.bed | \
-join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed | \
-awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig] }' > intersect_contigs_tel_to_select.txt # | \
-awk -v OFS='\t' '{if (($6)>0.25) print $0,"YES"; else print $0,"NO"}' > intersect_contigs_tel_to_select.txt
-
-
-awk '{printf "%.3f\n", $6}'  intersect_contigs_centr_to_select.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
-
-awk '{printf "%.3f\n", $6}' intersect_contigs_tel_to_select.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
-
-# Comprobamos cuantos contigs se nos quedarían en cada caso:
-
-wc -l /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed
-116586 
-
-grep "YES" intersect_contigs_tel_to_select.txt | wc -l
-
-
-grep "YES" intersect_contigs_centr_to_select.txt | wc -l
-
-```
-
-
-
-
-```{bash}
-
-# I found a file that might have the synteny to telomers without filtering. 
-
-cat CAT2LYNX_tel2m_sorted.bed |  tr ":" ' '  | awk -v OFS='\t' '{print $6, $7,$7}' | sort -k1,1 -k2,2n | bedtools merge -i - > list_of_scafolds_CAT2LYNX_tel2m_sorted.bed
-
-# Check the "-" symbol:
-awk '{print $2}' list_of_scafolds_CAT2LYNX_tel2m_sorted.bed | grep "-" | sort | uniq -c 
-
-# All of them are -1, therefore I replace them by 0.
-sed 's/-([1])/([0])/g' list_of_scafolds_CAT2LYNX_tel2m_sorted.bed > list_of_scafolds_CAT2LYNX_tel2m_sorted_0based.bed 
-
-# Now I do the intersect. 
-bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b list_of_scafolds_CAT2LYNX_tel2m_sorted_0based.bed  | join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  | awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig]  }' > intersect_contigs_tel_to_selectCAT2LYNX_tel2m.txt
-
-
-awk '{printf "%.3f\n", $6}' intersect_contigs_tel_to_selectCAT2LYNX_tel2m.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
-
-# Comparison
-
-awk '{print $1}' intersect_contigs_tel_to_select.txt | sort -nk1,1 > list_tel
-
-awk '{print $1}' intersect_contigs_tel_to_selectCAT2LYNX_tel2m.txt | sort -nk1,1 > list_tel_CAT2LYNX
-
-```
-
-
-
-```{bash}
-# I found a file that might have the synteny to telomers without filtering. 
-scp /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_centr.bed.gz /home/mlucena/telomers_centromers_definition/
-cd /home/mlucena/telomers_centromers_definition/
-
-zcat CAT2LYNX_centr.bed.gz |  tr ":" ' '  | awk -v OFS='\t' '{print $6, $7,$7}' | sort -k1,1 -k2,2n | bedtools merge -i - > list_of_scafolds_CAT2LYNX_centr_sorted.bed
-
-# Check the "-" symbol:
-awk '{print $2}' list_of_scafolds_CAT2LYNX_centr_sorted.bed | grep "-" | sort | uniq -c 
-
-# All of them are -1, therefore I replace them by 0.
-sed 's/-[0-9][0-9]*/0/' list_of_scafolds_CAT2LYNX_centr_sorted.bed > list_of_scafolds_CAT2LYNX_centr_sorted_0based.bed 
-
-# Now I do the intersect. 
-bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b list_of_scafolds_CAT2LYNX_centr_sorted_0based.bed  | join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  | awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig]  }' > intersect_contigs_centr_to_selectCAT2LYNX_centr.txt
-
-
-awk '{printf "%.3f\n", $6}' intersect_contigs_centr_to_selectCAT2LYNX_centr.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
-
-# Comparison
-
-awk '{print $1}' intersect_contigs_centr_to_select.txt | sort -nk1,1 > list_cent
-awk '{print $1}' intersect_contigs_centr_to_selectCAT2LYNX_centr.txt | sort -nk1,1 > list_centr_CAT2LYNX
-
-# Faltan en el archivo  list_tel_CAT2LYNX los d 2-10M
-
-wc -l list_cent
-10918 list_cent
-
-wc -l list_centr_CAT2LYNX 
-11310 list_centr_CAT2LYNX
-
- 
- 
-```
-
-
-
-# Old approach: Scaffolds. 
-
-## Telomers.sh
+## OLD: Telomers.sh
 
 ```{bash}
 # I extract a list of the scaffolds that have at least some bases in the subtelomeric region or in the centromere.
@@ -492,7 +354,7 @@ sort -k1,1 -k2,2n /home/mlucena/grupolince/copia_fabascal/FEATURES/centr.bed | b
 
 ```
 
-## subtelomeric-centromeric_filtering.R
+## OLD: subtelomeric-centromeric_filtering.R
 
 ```{r, engine=bash, eval=FALSE}
 library (ggplot2) 
@@ -532,7 +394,7 @@ dev.off()
 ```
 
 
-## subtelomeric_centromeric_histogram_representation
+## OLD: subtelomeric_centromeric_histogram_representation
 
 ```{r}
 library("ggplot2")
@@ -567,4 +429,324 @@ print(a)
 
 
 
+# Contigs approach
 
+## ---> OLD: First attempt but not final using tel2m.bed, tel10m.bed and centr.bed file.
+
+```{bash}
+# We are considering using the contigs instead of the scaffolds to determine whether some regions are or are not telomers-centromers.
+
+# First make a folder:
+
+mkdir /home/mlucena/telomers_centromers_definition
+cd /home/mlucena/telomers_centromers_definition
+
+# We count the lines of the cat file:
+cat /home/fabascal/FEATURES/tel10m.bed  /home/fabascal/FEATURES/tel2m.bed | wc -l
+2640677
+
+# Now create the file with the positions of telo2 plus telo10, as we know that telo2 goes from 0 to 2 and telo10 goes from 2 to 10.
+# We also used bedtools to merge in case that there's some overlapping.
+cat /home/fabascal/FEATURES/tel10m.bed  /home/fabascal/FEATURES/tel2m.bed | sort - -k1,1 -k2,2n | bedtools merge > tel0-10_merged.bed 
+
+# It seems that there was, so we will use this merged file
+wc -l tel0-10_merged.bed 
+2628133 tel0-10_merged.bed 
+
+# We will also merged the centromers file.
+
+cat /home/fabascal/FEATURES/centr.bed  | sort - -k1,1 -k2,2n | bedtools merge > centr_merged.bed
+
+wc -l /home/fabascal/FEATURES/centr.bed 
+2211773 /home/fabascal/FEATURES/centr.bed
+wc -l centr_merged.bed 
+2200105 centr_merged.bed
+
+
+# Check the overlapping with the contigs:
+
+# Sanity check over the contigs file:
+awk '{sum+=($3-$2)} END {print sum }' lp23contigs_0based.bed 
+2361206351
+
+# Intersect of the bed file with the centr file.
+bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b centr_merged.bed | \
+join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed | \
+awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig]  }' > intersect_contigs_centr_to_select.txt # | \
+# awk  -v OFS='\t' '{if (($6)>0.25) print $0,"YES"; else print $0,"NO"}' 
+
+#  Intersect of the bed file with the telomers file.
+bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed -b tel0-10_merged.bed | \
+join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed | \
+awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig] }' > intersect_contigs_tel_to_select.txt # | \
+# awk -v OFS='\t' '{if (($6)>0.25) print $0,"YES"; else print $0,"NO"}' > intersect_contigs_tel_to_select.txt
+
+# Check histograms
+awk '{printf "%.3f\n", $6}'  intersect_contigs_centr_to_select.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e' 
+awk '{printf "%.3f\n", $6}' intersect_contigs_tel_to_select.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
+# Both were not neat and clear of when to cut. Therefore we could take a strategy where we assume that a contig is telomeric or centromeric over an amount of bases. 
+
+```
+
+As we are not taking this approach because it is using a superfiltered file (see notes at the end) I will remove everything. 
+
+## ---> OLD: Second approach:
+
+As we knew that this centr and tel file where super filtered for callable sites and we were not interested in that, I was looking for a file that has the synteny without any other filtered. 
+I found a file that looks like that:
+
+/home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_tel2m.bed
+/home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_tel10m.bed
+/home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_centr.bed.gz
+
+And Fede confirmed that those files where not filtered.
+
+"Te confirmo que esos ficheros están sin filtrar." Email 9/6/2017
+
+Therefore I will proceed with those:
+
+```{bash}
+
+cd/home/mlucena/telomers_centromers_definition
+
+# First as I don't know if tel10m contains tel2m and previous files did not, I will concatenate them and put them in the right format to be merged by bedtools. Besides, I will remove acrocentric chromosomes: F1 and F2.
+
+nano acrocentric_chromsomes.txt 
+chrF1
+chrF2
+
+zcat /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_tel2m.bed.gz /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_tel10m.bed.gz | grep -v -f acrocentric_chromsomes.txt | tr ":" ' '  | awk -v OFS='\t' '{print $6, $7,$7}' |  sort -k1,1 -k2,2n | bedtools merge -i - > tel0-10_unfiltered.bed
+
+# We will also merge the centr file and remove the acrocentric chromosomes. 
+
+zcat /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_centr.bed.gz | grep -v -f acrocentric_chromsomes.txt |  tr ":" ' '  | awk -v OFS='\t' '{print $6, $7,$7}' |  sort -k1,1 -k2,2n | bedtools merge -i - > centr_unfiltered.bed
+
+# Merge add extra bases at each side, so:
+
+awk -v OFS='\t' '{print $1,$2+1,$3-1}' tel0-10_unfiltered.bed | sort -k1,1 -k2,2n | sed 's/ /    /g'> tel0-10_unfiltered1.bed
+mv tel0-10_unfiltered1.bed tel0-10_unfiltered.bed
+
+awk -v OFS='\t' '{print $1,$2+1,$3-1}' centr_unfiltered.bed  | sort -k1,1 -k2,2n | sed 's/ /    /g' > centr_unfiltered1.bed
+mv centr_unfiltered1.bed centr_unfiltered.bed
+
+
+# This hightlight a problem. When there is nothing to merge but there is only one based, it outputs a error with the intersect. Therefore I do an extra filtering.
+
+wc -l tel0-10_unfiltered.bed
+726260 tel0-10_unfiltered.bed
+wc -l centr_unfiltered.bed
+705881 centr_unfiltered.bed
+
+awk -v OFS='\t' '$3-$2>=0 {print $0}' tel0-10_unfiltered.bed  > tel0-10_unfiltered1.bed
+awk -v OFS='\t' '$3-$2>=0 {print $0}' centr_unfiltered.bed  > centr_unfiltered1.bed
+
+# Sí está filtrando (y compruebo con diff que lo está haciendo bien), por tanto:
+
+wc -l tel0-10_unfiltered1.bed 
+707145 tel0-10_unfiltered1.bed
+wc -l centr_unfiltered1.bed
+684885 centr_unfiltered1.bed
+
+mv tel0-10_unfiltered1.bed tel0-10_unfiltered.bed
+mv centr_unfiltered1.bed centr_unfiltered.bed
+
+
+# Now I do the intersect:
+
+# For telomers:lp23.s36859c006
+
+bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b tel0-10_unfiltered.bed | join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  | awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig]  }' > intersect_contigs_unfiletered_tel0-10m.txt
+
+bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b centr_unfiltered.bed  | join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  | awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig]  }' > intersect_contigs_unfiletered_centr.txt
+
+
+# Plot the distribution:
+
+#awk '{printf "%.3f\n", $6}' intersect_contigs_unfiletered_tel0-10m.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
+#awk '{printf "%.3f\n", $6}' intersect_contigs_unfiletered_centr.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
+
+# We decide a absolute threshold to clasify something as centr/tel or not: based on Fede suggestions:
+# "Lo de 100 pb lo veo un poco justo. Yo intentaría ser un poco más estricto (> 1000 por ejemplo)."  Email 9/6/2017 
+# We define a contig as centr or tel if it has more than 1000pb clasify as centr or tel.
+
+awk '$5>1000 {print $1}' intersect_contigs_unfiletered_tel0-10m.txt | sort -k1,1 -k2,2n | join -11 -24 -o 2.1,2.2,2.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed | sed 's/ /    /g' > telomeric_regions_contig_based.txt
+awk '$5>1000 {print $1}' intersect_contigs_unfiletered_centr.txt | sort -k1,1 -k2,2n | join -11 -24 -o 2.1,2.2,2.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed | sed 's/ /  /g' > centromeric_regions_contig_based.txt
+
+wc -l telomeric_regions_contig_based.txt
+13386 telomeric_regions_contig_based.txt
+
+wc -l centromeric_regions_contig_based.txt
+9217 centromeric_regions_contig_based.txt
+
+```
+
+After this sanity check: I will remove everything of this approach! The next approach is a summary of this previous one adding tel2 and tel0-10 separately. The script is collapse with as few commands as possible and less sanity checks. 
+
+### --> OLD: Sanity check
+
+As a sanity check I will check the overlap between those two files: centromeric_regions_contig_based.txt and telomeric_regions_contig_based.txt. As I remove the acrocentric chromsomes, it shouldn't be any overlap. We will check it as two different levels: Contigs and scaffolds. 
+
+```{bash}
+
+# I will check overlapp between:
+
+# 1. Scaffolds:
+
+    awk '{print $1}'  telomeric_regions_contig_based.txt | sort | uniq | wc -l
+    1009
+    # That means that I have 14849 contigs that belong to 1101 scaffolds.
+
+    awk '{print $1}' centromeric_regions_contig_based.txt| sort | uniq | wc -l
+    1100
+    # That means that I have 9217 contigs that belong to 1100 scaffolds.
+
+    awk '{print $1}' centromeric_regions_contig_based.txt | sort | uniq > scaffolds_centromerics.borrar
+    awk '{print $1}' telomeric_regions_contig_based.txt | sort | uniq > scaffolds_telomerics.borrar
+    grep -f scaffolds_centromerics.borrar scaffolds_telomerics.borrar | wc -l
+    44
+
+    # 44 scaffols have both centromeric and telomeric regions. 
+    # This could be normal, if the assembly is not well done. 
+
+
+# 2. Contigs:
+
+    awk '$5>1000 {print $1}' intersect_contigs_unfiletered_centr.txt | sort -k1,1 -k2,2n | uniq > contigs_centromeric.borrar
+    awk '$5>1000 {print $1}' intersect_contigs_unfiletered_tel0-10m.txt | sort -k1,1 -k2,2n | uniq > contigs_telomeric.borrar
+    
+    grep -f contigs_centromeric.borrar contigs_telomeric.borrar | wc -l
+    270
+
+###################################################################################################################
+
+# As we have seen that we have plenty of contigs in common we would like to see to which chr they belong. 
+
+# First I will tried with tel2m and centr. 
+
+LANG=en_EN join  <(zcat /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_tel2m.bed.gz |  awk '{print $1"-"$2}' | LANG=en_EN sort -k1,1 -k2,2n ) <(zcat /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_centr.bed.gz  |  awk '{print $1"-"$2}' | LANG=en_EN sort -k1,1 -k2,2n) > chr.position.centr.tel2m
+
+wc -l chr.position.centr.tel2m
+0 chr.position.centr.tel2m
+
+# Good!! There's nothing in common. 
+
+# So as there's some overlapping they must come from tel10m and centr. 
+
+# Check the two regions that have cent and tel10 in common. 
+
+LANG=en_EN join  <(zcat /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_tel10m.bed.gz |  awk '{print $1"-"$2}' | LANG=en_EN sort -k1,1 -k2,2n ) <(zcat /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_centr.bed.gz  |  awk '{print $1"-"$2}' | LANG=en_EN sort -k1,1 -k2,2n) > chr.position.centr.tel
+
+wc -l chr.position.centr.tel
+3216031 chr.position.centr.tel
+
+# There you have!!!
+
+# Let's try to see where are they in the cat chromosomes. 
+
+awk -v OFS='\t' '{split ($1,a,"-"); print a[1],a[2]}'  chr.position.centr.tel |  awk -v OFS='\t' 'NR==1{first=$2;last=$2;next} $2 == last+1 {last=$2;next} {print $1, first,last;first=$2;last=first} END{print $1,first,last}' | sort -k1,1 -k2,2n | awk -v OFS='\t' '{print $1,$2,$3}'  | bedtools merge -i - > chr.position.centr.tel.collapsed1
+
+awk -v OFS='\t' '{split ($1,a,"-"); print a[1],a[2]}'  chr.position.centr.tel |  awk -v OFS='\t' 'NR==1{first=$2;last=$2;next} $2 == last+1 {last=$2;next} {print $1, first,last;first=$2;last=first} END{print $1,first,last}' | sort -k1,1 -k2,2n | awk -v OFS='\t' '{print $1,$2,$3}'  | bedtools merge -i - -d 1000 > chr.position.centr.tel.collapsed1000
+
+awk -v OFS='\t' '{split ($1,a,"-"); print a[1],a[2]}'  chr.position.centr.tel |  awk -v OFS='\t' 'NR==1{first=$2;last=$2;next} $2 == last+1 {last=$2;next} {print $1, first,last;first=$2;last=first} END{print $1,first,last}' | sort -k1,1 -k2,2n | awk -v OFS='\t' '{print $1,$2,$3}'  | bedtools merge -i - -d 10000 > chr.position.centr.tel.collapsed10000
+
+wc -l chr.position.centr.tel.collapsed1
+14828 chr.position.centr.tel.collapsed1
+
+wc -l chr.position.centr.tel.collapsed1000
+594 chr.position.centr.tel.collapsed1000
+
+wc -l chr.position.centr.tel.collapsed10000
+12 chr.position.centr.tel.collapsed10000
+
+# I had a look and they are coming from 2 particular chr at some given positions. 
+# Dani have plot them in phenogram to check where are they distributed. He used chr.position.centr.tel.collapsed10000 file. The resulting pdf is in this folder as phenogram_tel_cen.pdf. 
+
+# It is obvious that 10m of telomere overlap with the centromere in this two chormosomes (D2, E3) as they are smaller and have the centromere closer to the telomere. 
+# So, great! The synteny is well done, and I also define the regions right. 
+
+```
+
+After seing that I have taken the decision of keeping the two types of telomers and not merging them: tel2m and tel10m. So I repeated everything considering both.
+
+
+## ---> Third approach:
+
+```{bash}
+
+cd/home/mlucena/telomers_centromers_definition
+
+# First we will create a file of acrocentric chromosomes to remove them from my analysis (F1 and F2). Then, we will create from the unfiletered file a list of regions that have sinteny with tel and centr and we will keep track of the chr where they are coming from. 
+
+nano acrocentric_chromsomes.txt 
+chrF1
+chrF2
+
+# We will also keep tel2m, tel0-10m separate to then calculate diversity for those two different files.
+# As you could check in the previous files, I have done a lot of sanity checks, so here I try to collapse everything in as less commands as possible. To further explanations go to second approach.
+# ( Merge add extra bases at each side, so I will remove them with awk; this hightlight a problem: When there is nothing to merge but there is only one based, it outputs a error with the intersect. Therefore I do an extra filtering with awk aswell).
+
+zcat /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_tel2m.bed.gz | grep -v -f acrocentric_chromsomes.txt | tr ":" ' '  | awk -v OFS='\t' '{print $6, $7,$7,$1}' |  sort -k1,1 -k2,2n | bedtools merge -i -  -c  4 -o distinct | awk -v OFS='\t' '{print $1,$2+1,$3-1, $4}' | awk -v OFS='\t' '$3-$2>=0 {print $0}' > tel2m_unfiltered.bed
+
+
+
+
+zcat /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_tel10m.bed.gz /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_tel2m.bed.gz | grep -v -f acrocentric_chromsomes.txt | tr ":" ' '  | awk -v OFS='\t' '{print $6,$7,$7,$1}' |  sort -k1,1 -k2,2n | bedtools merge -i -  -c  4 -o distinct | awk -v OFS='\t' '{print $1,$2+1,$3-1, $4}' | awk -v OFS='\t' '$3-$2>=0 {print $0}' > tel0-10m_unfiltered.bed 
+
+zcat /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_centr.bed.gz | grep -v -f acrocentric_chromsomes.txt |  tr ":" ' '  | awk -v OFS='\t' '{print $6, $7,$7,$1}' |  sort -k1,1 -k2,2n | bedtools merge -i -  -c  4 -o distinct | awk -v OFS='\t' '{print $1,$2+1,$3-1,$4}' | awk -v OFS='\t' '$3-$2>=0 {print $0}' > centr_unfiltered.bed 
+
+
+# Now I do the intersect:
+
+# For telomers:lp23.s36859c006
+
+bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b tel0-10_unfiltered.bed | join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  | awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig]  }' > intersect_contigs_unfiletered_tel0-10m.txt
+
+bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b centr_unfiltered.bed  | join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  | awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig]  }' > intersect_contigs_unfiletered_centr.txt
+
+
+# Plot the distribution:
+
+#awk '{printf "%.3f\n", $6}' intersect_contigs_unfiletered_tel0-10m.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
+#awk '{printf "%.3f\n", $6}' intersect_contigs_unfiletered_centr.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
+
+# We decide a absolute threshold to clasify something as centr/tel or not: based on Fede suggestions:
+# "Lo de 100 pb lo veo un poco justo. Yo intentaría ser un poco más estricto (> 1000 por ejemplo)."  Email 9/6/2017 
+# We define a contig as centr or tel if it has more than 1000pb clasify as centr or tel.
+
+awk '$5>1000 {print $1}' intersect_contigs_unfiletered_tel0-10m.txt | sort -k1,1 -k2,2n | join -11 -24 -o 2.1,2.2,2.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed | sed 's/ /    /g' > telomeric_regions_contig_based.txt
+awk '$5>1000 {print $1}' intersect_contigs_unfiletered_centr.txt | sort -k1,1 -k2,2n | join -11 -24 -o 2.1,2.2,2.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed | sed 's/ /  /g' > centromeric_regions_contig_based.txt
+
+wc -l telomeric_regions_contig_based.txt
+13386 telomeric_regions_contig_based.txt
+
+wc -l centromeric_regions_contig_based.txt
+9217 centromeric_regions_contig_based.txt
+```
+
+
+
+# Otras notas: Filtro fede, cariotipo.
+
+> Filtro para callable que aplicó Fede
+
+En cuanto a las regiones subteloméricas, se aplican varios varios filtros para definir un universo de “callable” sites, exigiendo:
+-Que haya sintenia (que alineen bien lince y gato)
+-Que el quality del calling múltiple de linces ibéricos fuera mayor o igual a 50 para ese sitio (en el calling se genotiparon todos los sitios, no solo los variables).
+-Que la variante estuviera aceptada en otro calling individual de lince (o de lince ibérico y euroasiático, no recuerdo).
+-En este caso no se hizo pero en otros casos también eliminamos zonas con repeats y secuencias de baja complejidad.
+
+--> Yo no voy a usar el archivo tel2m.bed tel10m.bed y cent.bed, precisamente para evitar estos filtros. Sin embargo uso el archivo LYNX2CAT... como explico en el script basado en Contigs. 
+
+> Cat kariotype:
+
+The domestic cat chromosomal complement is 2N = 38 (N = 19) with 18 autosomes and the XY sex chromosomes (XX is female, XY is male). Various cytogenetic techniques, such as R-, RBG-banding and fragile site studies, have also helped distinguish and characterize the cat chromosomes.47-49,52 For example, cats do not have a significant fragile X site on the X chromosome that is found in humans and is associated with mental retardation. Although a sequential numbering of the chromosomes has been suggested (Cho et al., 1997)3. This historical classification of chromosomes into morphologic groups has been retained in the cat.the classical chromosomal nomenclature that represents chromosomes by size and telomeric positions is still widely used to represent the cat karyotype and ideograms. Hence cats have three large metacentric chromosomes (A1 to A3), four large subtelomeric chromosomes (B1 to B4), two medium-size metacentrics (C1 to C2), four small subtelomerics (D1 to D4), three small metacentrics (E1 to E3), and two small acrocentrics (F1 and F2). The X chromosome is midsize and subtelomeric, similar to chromosome B4. All of Felidae have a similar karyotype to the domestic cat and the cat karyotype is highly representative of most carnivores.
+
+
+> Cromosomas telocéntricos email de Fede.
+
+3) Ahora que lo pienso, creo que no hice nada para distinguir cromosomas telocéntricos. Por lo que un centrómero podría solapar con un telómero. Si quieres eliminar los centrómeros telocéntricos puedes hacer por ejemplo: intersectBed -v -a cat_telomeres2-10M.bed -b cat_centromeres-10_10Mok.bed > telomeros_sin_centromeros.bed.
+Aunque ahora que veo el fichero de cat_centromeres-10_10Mok.bed parece que ignoré los centrómeros telocéntricos: F1 y F2
+
+--> Yo tengo que aplicar este filtro. Explicado en Second approach contigs. 
+
+   
