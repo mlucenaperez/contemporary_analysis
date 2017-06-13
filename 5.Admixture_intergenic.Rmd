@@ -33,7 +33,8 @@ done
 # out se deja sin nada pq por defecto pone cosas
 ```
 
-Population format might be a problem as beagle does not admit long names!
+Population format might be a problem as beagle does not admit long names! 
+Check if it is beagle, cause then is not a problem. 
 
 ## Running admixture
 
