@@ -34,7 +34,7 @@ cd /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/
 
 ```{r, engine=bash, eval=FALSE}
 
-cat <(cut -f 2 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/Anotacion_PrincipaIsoforms_Nando/genes2transcript.nr.list | awk '{print $1";"}' ) <(echo -e "EVM_PASA\tgene") | grep -f - /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | sed 's/^\(.\{4\}\)/\1./' > /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 
+cat <(cut -f 2 /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/Anotacion_PrincipaIsoforms_Nando/genes2transcript.nr.list | awk '{print $1";"}' ) <(echo -e "EVM_PASA\tgene") | grep -f - /GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.gff3 | sed 's/^\(.\{4\}\)/\1./' > /GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3 
 
 # Al usar "EVM_PASA\tgene" podemos seleccionar todos los genes y no solo aquellos que están en el file de la isoforma principal. Esto pasaría por ejemplo para genes que sólo tengan una isoforma.
 
@@ -289,6 +289,7 @@ done
 
 ---> Sanity check para comprobar que es seguro usar el bed de Fede.
 
+
 ```{r, engine=bash, eval=FALSE}
 
 # Comprobar que están bien calculados con algún ej a ojo. Tomo para el ejemplo los 10 primeros genes
@@ -321,6 +322,11 @@ done < <(cat genes_in_my_nr_file_and_not_in_introns_bed.list)
 
 ```
 Tras discutir con Fede las dudas que tenías vemos que los intrones están bien, solo tendríamos que corregir que están como 0based y nosotros queremos pasarlo a 1 based para el gff. 
+
+```{bash}
+También comprobamos que sólo están las principales isoformas y así es:
+awk '{split ($4,a, ":"); print a[2] }'  /home/fabascal/FEATURES/introns.bed |  sort | uniq -c
+```
 
 Corregimos a 0 based:
 
