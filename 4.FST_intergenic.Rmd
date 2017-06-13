@@ -123,7 +123,7 @@ echo "-------------------->FST  $POP1 and $POP2"
 $NGSTOOLS/realSFS fst index -P $THREADS $SFS_FOLDER/$POP1.unfolded-lr.saf.idx $SFS_FOLDER/$POP2.unfolded-lr.saf.idx  -sfs $POP1.$POP2.unfolded-lr.saf.idx.ml -fstout $POP1.$POP2.unfolded-lr
 echo "--------------------------------->FST  $POP1 and $POP2 printing"
 $NGSTOOLS/realSFS fst print $POP1.$POP2.unfolded-lr.fst.idx > $POP1.$POP2.unfolded-lr.fst.print
- 
+# Ojo!!! el archivo print ocupa muchísimo!!!!!!
 done
 
 ```
