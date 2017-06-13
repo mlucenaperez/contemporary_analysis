@@ -687,9 +687,6 @@ chrF2
 
 zcat /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_tel2m.bed.gz | grep -v -f acrocentric_chromsomes.txt | tr ":" ' '  | awk -v OFS='\t' '{print $6, $7,$7,$1}' |  sort -k1,1 -k2,2n | bedtools merge -i -  -c  4 -o distinct | awk -v OFS='\t' '{print $1,$2+1,$3-1, $4}' | awk -v OFS='\t' '$3-$2>=0 {print $0}' > tel2m_unfiltered.bed
 
-
-
-
 zcat /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_tel10m.bed.gz /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_tel2m.bed.gz | grep -v -f acrocentric_chromsomes.txt | tr ":" ' '  | awk -v OFS='\t' '{print $6,$7,$7,$1}' |  sort -k1,1 -k2,2n | bedtools merge -i -  -c  4 -o distinct | awk -v OFS='\t' '{print $1,$2+1,$3-1, $4}' | awk -v OFS='\t' '$3-$2>=0 {print $0}' > tel0-10m_unfiltered.bed 
 
 zcat /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_centr.bed.gz | grep -v -f acrocentric_chromsomes.txt |  tr ":" ' '  | awk -v OFS='\t' '{print $6, $7,$7,$1}' |  sort -k1,1 -k2,2n | bedtools merge -i -  -c  4 -o distinct | awk -v OFS='\t' '{print $1,$2+1,$3-1,$4}' | awk -v OFS='\t' '$3-$2>=0 {print $0}' > centr_unfiltered.bed 
@@ -697,32 +694,78 @@ zcat /home/fabascal/TAMBORA/DIVERGENCE_DIVERSITY_NEW/CAT2LYNX_centr.bed.gz | gre
 
 # Now I do the intersect:
 
-# For telomers:lp23.s36859c006
+# Con este script hacemos primero la intersección con la información de contigs, despues la fusión con la información de los cromosomas, y después imprimimos las bases que hay en sintenia por contig. A esto le hacemos el join de la información de donde empieza y acaba cada scaffold. 
 
-bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b tel0-10_unfiltered.bed | join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  | awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig]  }' > intersect_contigs_unfiletered_tel0-10m.txt
+bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b tel2m_unfiltered.bed | awk '{print $1"_"$2"_"$3, $4}'| LANG=en_EN sort -k1,1 | LANG=en_EN join -11 -21 - <(awk '{print $1"_"$2"_"$3, $4}' tel2m_unfiltered.bed | LANG=en_EN sort -k1,1 ) -o 1.1,1.2,2.2 | awk -v OFS='\t' '{split ($1,a,"_"); print a[1],a[2],a[3],$2,$3}'|  awk -v OFS='\t' '{contig_start_intersect[$4]=$2; contig_end_intersect[$4]=$3; contig_bases_intersect[$4]+=($3-$2); cat_chrom[$4]=$5} END {for(each_contig in contig_start_intersect) print each_contig,contig_bases_intersect[each_contig], cat_chrom[each_contig]}' | LANG=en_EN sort -k1,1  | join -11 -24 -o 2.1,2.2,2.3,1.1,1.2,1.3 - <( LANG=en_EN sort -k4,4 /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed) | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$6}' > intersect_contigs_unfiletered_tel2m.txt
 
-bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b centr_unfiltered.bed  | join -14 -24 -o 1.1,2.2,2.3,1.4,2.1,1.2,1.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  | awk -v OFS='\t' '{contig_start[$4]=$2; contig_end[$4]=$3; contig_bases[$4]=($3-$2); bases_intersect[$4]+=($7-$6)} END {for(each_contig in contig_start) print each_contig,contig_start[each_contig], contig_end[each_contig],contig_bases[each_contig],bases_intersect[each_contig],bases_intersect[each_contig]/contig_bases[each_contig]  }' > intersect_contigs_unfiletered_centr.txt
+# head intersect_contigs_unfiletered_tel2m.txt
+# scaffold    start_contig  end_contig      contigs     number_bases_sinteny  cat_chr
+# lp23.s00006 	  0	          2056	    lp23.s00006c001	        1668	          chrA2
+# lp23.s00006 	3744	        5620	    lp23.s00006c002	        217	            chrA2
 
 
-# Plot the distribution:
+bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b tel0-10m_unfiltered.bed | awk '{print $1"_"$2"_"$3, $4}'| LANG=en_EN sort -k1,1 | LANG=en_EN join -11 -21 - <(awk '{print $1"_"$2"_"$3, $4}' tel0-10m_unfiltered.bed | LANG=en_EN sort -k1,1 ) -o 1.1,1.2,2.2 | awk -v OFS='\t' '{split ($1,a,"_"); print a[1],a[2],a[3],$2,$3}'|  awk -v OFS='\t' '{contig_start_intersect[$4]=$2; contig_end_intersect[$4]=$3; contig_bases_intersect[$4]+=($3-$2); cat_chrom[$4]=$5} END {for(each_contig in contig_start_intersect) print each_contig,contig_bases_intersect[each_contig], cat_chrom[each_contig]}' | LANG=en_EN sort -k1,1  | join -11 -24 -o 2.1,2.2,2.3,1.1,1.2,1.3 - <( LANG=en_EN sort -k4,4 /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed) | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$6}' > intersect_contigs_unfiletered_tel0-10m.txt
 
-#awk '{printf "%.3f\n", $6}' intersect_contigs_unfiletered_tel0-10m.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
-#awk '{printf "%.3f\n", $6}' intersect_contigs_unfiletered_centr.txt | sort -g | uniq -c | awk '{print $2, $1}' | perl -pe 's/ (\d+)$/"="x$1/e'
+bedtools intersect -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed  -b centr_unfiltered.bed | awk '{print $1"_"$2"_"$3, $4}'| LANG=en_EN sort -k1,1 | LANG=en_EN join -11 -21 - <(awk '{print $1"_"$2"_"$3, $4}' centr_unfiltered.bed | LANG=en_EN sort -k1,1 ) -o 1.1,1.2,2.2 | awk -v OFS='\t' '{split ($1,a,"_"); print a[1],a[2],a[3],$2,$3}' | awk -v OFS='\t' '{contig_start_intersect[$4]=$2; contig_end_intersect[$4]=$3; contig_bases_intersect[$4]+=($3-$2); cat_chrom[$4]=$5} END {for(each_contig in contig_start_intersect) print each_contig,contig_bases_intersect[each_contig], cat_chrom[each_contig]}' | LANG=en_EN sort -k1,1  | join -11 -24 -o 2.1,2.2,2.3,1.1,1.2,1.3 - <( LANG=en_EN sort -k4,4 /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed) | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$6}' > intersect_contigs_unfiletered_centr.txt
+
+
+wc -l intersect_contigs_unfiletered_tel2m.txt
+4244 intersect_contigs_unfiletered_tel2m.txt
+wc -l intersect_contigs_unfiletered_tel0-10m.txt
+16295 intersect_contigs_unfiletered_tel0-10m.txt
+wc -l intersect_contigs_unfiletered_centr.txt
+11163 intersect_contigs_unfiletered_centr.txt
+
+# Compruebo que sigan las dos regiones comunes al E3 y D2 que antes hicieron saltar las alarmas y que están ploteadas en el pdf de phenogram hecho por Dani:
+
+grep -f intersect_contigs_unfiletered_centr.txt intersect_contigs_unfiletered_tel0-10m.txt | wc -l
+314
+grep -f intersect_contigs_unfiletered_centr.txt intersect_contigs_unfiletered_tel2m.txt  | wc -l
+0
+
+# Efectivamente parece que son las mismas de antes:
+grep -f intersect_contigs_unfiletered_centr.txt intersect_contigs_unfiletered_tel0-10m.txt  | awk '{print $6}' | sort | uniq -c
+    107 chrD2
+    207 chrE3
+
+# Confirmado son esas dos regiones del D2 y E3. Vamos a eliminarlas.
+
+grep -f intersect_contigs_unfiletered_centr.txt intersect_contigs_unfiletered_tel0-10m.txt > regions_in_common_centr_tel_chrD2_chrE3
+
+grep -v -f regions_in_common_centr_tel_chrD2_chrE3 intersect_contigs_unfiletered_centr.txt > intersect_contigs_unfiletered_centr1.txt
+grep -v -f regions_in_common_centr_tel_chrD2_chrE3 intersect_contigs_unfiletered_tel0-10m.txt > intersect_contigs_unfiletered_tel0-10m1.txt 
+grep -f intersect_contigs_unfiletered_centr1.txt intersect_contigs_unfiletered_tel0-10m1.txt # ---> NADA!!! YUHUUU
+
+# Por tanto los muevo al nombre anterior.
+mv intersect_contigs_unfiletered_centr1.txt intersect_contigs_unfiletered_centr.txt
+mv intersect_contigs_unfiletered_tel0-10m1.txt  intersect_contigs_unfiletered_tel0-10m.txt 
 
 # We decide a absolute threshold to clasify something as centr/tel or not: based on Fede suggestions:
 # "Lo de 100 pb lo veo un poco justo. Yo intentaría ser un poco más estricto (> 1000 por ejemplo)."  Email 9/6/2017 
 # We define a contig as centr or tel if it has more than 1000pb clasify as centr or tel.
 
-awk '$5>1000 {print $1}' intersect_contigs_unfiletered_tel0-10m.txt | sort -k1,1 -k2,2n | join -11 -24 -o 2.1,2.2,2.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed | sed 's/ /    /g' > telomeric_regions_contig_based.txt
-awk '$5>1000 {print $1}' intersect_contigs_unfiletered_centr.txt | sort -k1,1 -k2,2n | join -11 -24 -o 2.1,2.2,2.3 - /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23contigs_0based.bed | sed 's/ /  /g' > centromeric_regions_contig_based.txt
+awk -v OFS='\t' '$5>1000 {print $1,$2,$3,$6}' intersect_contigs_unfiletered_tel2m.txt > tel2m_regions_based_on_synteny_1000bp.bed
+awk -v OFS='\t' '$5>1000 {print $1,$2,$3,$6}' intersect_contigs_unfiletered_tel0-10m.txt > tel0-10m_regions_based_on_synteny_1000bp.bed
+awk -v OFS='\t' '$5>1000 {print $1,$2,$3,$6}' intersect_contigs_unfiletered_centr.txt > centr_regions_based_on_synteny_1000bp.bed
 
-wc -l telomeric_regions_contig_based.txt
-13386 telomeric_regions_contig_based.txt
+wc -l tel2m_regions_synteny_1000bp.txt
+3432 tel2m_regions_synteny_1000bp.txt
 
-wc -l centromeric_regions_contig_based.txt
-9217 centromeric_regions_contig_based.txt
+wc -l tel0-10m_regions_synteny_1000bp.txt
+13111 tel0-10m_regions_synteny_1000bp.txt
+
+wc -l centr_regions_synteny_1000bp.txt
+8954 centr_regions_synteny_1000bp.txt
+
+# NOMBRE FINAL DE LOS ARCHIVOS:
+
+tel2m_regions_based_on_synteny_1000bp.bed
+tel0-10m_regions_based_on_synteny_1000bp.bed
+centr_regions_based_on_synteny_1000bp.bed
+
+mv * /GRUPOS/grupolince
+
 ```
-
 
 
 # Otras notas: Filtro fede, cariotipo.
