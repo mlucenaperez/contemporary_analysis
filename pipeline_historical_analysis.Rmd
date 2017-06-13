@@ -16,7 +16,7 @@ In order to keep samples reasonably sorted and facilitate coding each sample has
 # VARIABLES:
 
 REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
-THREADS=30   # No. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+THREADS=10   # No. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the names of all the samples and we'll loop through it to process all the samples. 
 
 cd /backup/grupolince/raw_data/LYNX_17/20170505/FASTQ/
@@ -201,17 +201,17 @@ cp `cat "${sample}".bam.list`  "${sample}".bam;
 fi
 if [ "$lines" -gt "1" ]; 
 then echo "more than ONE";
-/opt/samtools/samtools merge -@ 30 -r  "${sample}".bam `cat "${sample}".bam.list`;
+/opt/samtools/samtools merge -@ 10 -r  "${sample}".bam `cat "${sample}".bam.list`;
 fi
 samtools flagstat "${sample}".bam > "${sample}".stats;
-/opt/samtools/samtools sort -@ 30 "${sample}".bam -o "${sample}"_sorted.bam && rm "${sample}".bam ;
+/opt/samtools/samtools sort -@ 10 "${sample}".bam -o "${sample}"_sorted.bam && rm "${sample}".bam ;
 done
 
 ```
 
-* Error que parece que no tiene mucha importancia:
+* Error:
 [bam_translate] RG tag "c_ll_ka_0189_CA2W6ANXX_2_5nf_sorted_rg" on read "7001450:317:CA2W6ANXX:2:1114:8454:72372" encountered with no corresponding entry in header, tag lost. Unknown tags are only reported once per input file for each tag ID.
----> se debía a la versión de samtools merge, la he cambiado por /opt/samtools/samtools merge, a ver si así funciona.
+---> se debía a la versión de samtools merge, para solucionarlo lo he cambiado por /opt/samtools/samtools merge.
 
 
 ## 	Remove duplicates	
@@ -232,7 +232,6 @@ done
 
 ```
 
-
 ## 	Realignment with GATK	
 
 Requirement:
@@ -247,6 +246,9 @@ B) then realigns the reads in these regions using a consensus model that takes a
 for i in ${ARRAY_MERGED_BAM_SAMPLE_NAME[@]}
 do
 echo "${i}"
+# RealignerTargetCreator
+rm ${i}_sorted.bam
+rm ${i}_sorted_rmdup.bam
 # RealignerTargetCreator
 java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T RealignerTargetCreator -nt 24 -R $REF -I ${i}_sorted_rmdup_sorted.bam -o ${i}_realignertargetcreator.intervals
 # IndelRealigner
