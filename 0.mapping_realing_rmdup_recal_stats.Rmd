@@ -16,7 +16,7 @@ In order to keep samples reasonably sorted and facilitate coding each sample has
 # VARIABLES:
 
 REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
-THREADS=40   # No. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+THREADS=20   # No. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the names of all the samples and we'll loop through it to process all the samples. 
 
 # BARCODE LYNX_06_08:
@@ -426,7 +426,7 @@ B) then it adjusts the base quality scores in the data based on the model.
 ```{r, engine=bash, eval=FALSE}
 # Define new variables
 
-POP=("tu")
+POP=("og")
 ROUND=1
 PREVIOUS_ROUND=$(expr $ROUND - 1)
 
@@ -456,7 +456,7 @@ done
 ```{r, engine=bash, eval=FALSE}
 
 REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa
-POP=("tu")
+POP=("og")
 ROUND=1
 PREVIOUS_ROUND=$(expr $ROUND - 1)
 
@@ -753,9 +753,17 @@ COVERAGE_BASED_DISTRIBUTION=$(tail -n+12 "${sample}"*.picard_length  | awk '($1 
 echo "$NAME,$TOTAL_SEQ,$TOTAL_READS,$DUPLICATES,$MAPPED,$UNIQ_MAPPED,$UNIQ_MAPPED_vs_TOTAL_READS,$DUPLICATES_vs_TOTAL_READS,$COVERAGE_BASED_DISTRIBUTION" | sed 's/ //g' >> raw.stats 
 done
 
-
 LANG=en_EN  join -1 1 -2 1 -t","  <(head -n 2 raw.stats && tail -n +3 raw.stats | LANG=en_EN sort -k 1,1) <(head -n 2 coverage_samtools && tail -n +3 coverage_samtools | LANG=en_EN sort -k 1,1 ) > global_stats_all_samples.csv # de esta manera tiene en cuenta el header. 
-                                                                                                              
+ 
+
+
+SAMPLESLIST=($(ls *_sorted_rmdup_sorted_indelrealigner.bam  | cut -d "_" -f1-4 | sort | uniq| tr ' ' '\n'))                                                                                                            
+for sample in "${SAMPLESLIST[@]}"
+do
+NAME="$(echo "${sample}")"
+TOTAL_READS="$(grep "in total" "${sample}".stats | cut -d "+" -f 1)"
+echo "$NAME,$TOTAL_READS" 
+done
 
 
 ```
