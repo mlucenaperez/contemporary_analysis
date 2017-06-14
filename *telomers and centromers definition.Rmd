@@ -729,6 +729,7 @@ grep -f intersect_contigs_unfiletered_centr.txt intersect_contigs_unfiletered_te
     207 chrE3
 
 # Confirmado son esas dos regiones del D2 y E3. Vamos a eliminarlas.
+# Las elimino del archivo antes de filtrarlo para nada, por si en algun momento quiero cambiar ese filtro!!!!
 
 grep -f intersect_contigs_unfiletered_centr.txt intersect_contigs_unfiletered_tel0-10m.txt > regions_in_common_centr_tel_chrD2_chrE3
 
