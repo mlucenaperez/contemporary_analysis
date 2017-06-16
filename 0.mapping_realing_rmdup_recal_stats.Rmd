@@ -645,7 +645,15 @@ do
 echo $sample
 samtools flagstat $sample  >  /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/${sample}_bam.stats
 done
- 
+
+
+  
+SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
+for sample in "${SAMPLELIST[@]}"
+do
+echo $sample
+samtools flagstat $sample  > ${sample}_bam.stats
+done
 
 # Checks:
 
