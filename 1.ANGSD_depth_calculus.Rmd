@@ -36,7 +36,7 @@ c_ll_ka
 
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/
 
-POPS=(c_ll_tu)
+POPS=(c_ll_ka-c_ll_og)
 
 for POP in ${POPS[@]}
 do
@@ -65,14 +65,14 @@ Distinguimos entre poblaciones únicas que se corren con todo el genoma, y pobla
 
 cd /home/mlucena/ANGSD_analysis/qc_test
 #To launch one by one
-POP="c_ll_og"  # <--CHANGE POP HERE
+POP="c_ll_ka-c_ll_og"  # <--CHANGE POP HERE
 screen -S "$POP"_qc_test
-POP="c_ll_og"  # <--CHANGE POP HERE
+POP="c_ll_ka-c_ll_og"  # <--CHANGE POP HERE
 script "$POP"_qc.log
-POP="c_ll_og"  # <--CHANGE POP HERE
+POP="c_ll_ka-c_ll_og"  # <--CHANGE POP HERE
 
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
-THREADS=5                    # no. of computer cores used 20 = OK, >20 = ask people first!
+THREADS=15                    # no. of computer cores used 20 = OK, >20 = ask people first!
 
 BAMLIST=$(ls /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP"_n*.bamlist)
 NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
