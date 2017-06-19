@@ -737,7 +737,7 @@ cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final
 SAMPLELIST=($(ls *_recal_round-1.bam | cut -d "_" -f1-4 | sort | uniq )) 
 cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
   
-echo "sample_name,total_seq,total_reads,duplicates,mapped,uniq_mapped,uniq_mapped_vs_total_reads,duplicates_vs_total_reads,coverage_based_distribution" > raw.stats 
+echo "sample_name,total_seq,total_reads,duplicates,mapped,uniq_mapped,uniq_mapped_vs_total_reads,duplicates_vs_total_reads,mapped_vs_total_seq,coverage_based_distribution" > raw.stats 
 for sample in "${SAMPLELIST[@]}"
 do
 echo "${sample}"
@@ -749,21 +749,22 @@ MAPPED="$(grep "0 mapped" "${sample}"*.stats | cut -d "+" -f 1)"
 UNIQ_MAPPED="$(echo "$MAPPED - $DUPLICATES" | bc )"
 UNIQ_MAPPED_vs_TOTAL_READS="$(echo "scale=5; $UNIQ_MAPPED *100 / $TOTAL_READS"  | bc -l)"
 DUPLICATES_vs_TOTAL_READS="$(echo "scale=5; $DUPLICATES / $TOTAL_READS" | bc -l )"
+MAPPED_vs_TOTAL_SEQ="$(echo "scale=5; $MAPPED *100  / $TOTAL_SEQ" | bc )"
 COVERAGE_BASED_DISTRIBUTION=$(tail -n+12 "${sample}"*.picard_length  | awk '($1 > 30) {print $1*$2}' | paste -sd+ | bc | awk '{print $1/2413209059}')
-echo "$NAME,$TOTAL_SEQ,$TOTAL_READS,$DUPLICATES,$MAPPED,$UNIQ_MAPPED,$UNIQ_MAPPED_vs_TOTAL_READS,$DUPLICATES_vs_TOTAL_READS,$COVERAGE_BASED_DISTRIBUTION" | sed 's/ //g' >> raw.stats 
+echo "$NAME,$TOTAL_SEQ,$TOTAL_READS,$DUPLICATES,$MAPPED,$UNIQ_MAPPED,$UNIQ_MAPPED_vs_TOTAL_READS,$DUPLICATES_vs_TOTAL_READS,$MAPPED_vs_TOTAL_SEQ,$COVERAGE_BASED_DISTRIBUTION" | sed 's/ //g' >> raw.stats 
 done
 
 LANG=en_EN  join -1 1 -2 1 -t","  <(head -n 2 raw.stats && tail -n +3 raw.stats | LANG=en_EN sort -k 1,1) <(head -n 2 coverage_samtools && tail -n +3 coverage_samtools | LANG=en_EN sort -k 1,1 ) > global_stats_all_samples.csv # de esta manera tiene en cuenta el header. 
  
 
 
-SAMPLESLIST=($(ls *_sorted_rmdup_sorted_indelrealigner.bam  | cut -d "_" -f1-4 | sort | uniq| tr ' ' '\n'))                                                                                                            
-for sample in "${SAMPLESLIST[@]}"
-do
-NAME="$(echo "${sample}")"
-TOTAL_READS="$(grep "in total" "${sample}".stats | cut -d "+" -f 1)"
-echo "$NAME,$TOTAL_READS" 
-done
+#SAMPLESLIST=($(ls *_sorted_rmdup_sorted_indelrealigner.bam  | cut -d "_" -f1-4 | sort | uniq| tr ' ' '\n'))                                                                                                            
+#for sample in "${SAMPLESLIST[@]}"
+#do
+#NAME="$(echo "${sample}")"
+#TOTAL_READS="$(grep "in total" "${sample}".stats | cut -d "+" -f 1)"
+#echo "$NAME,$TOTAL_READS" 
+#done
 
 
 ```
