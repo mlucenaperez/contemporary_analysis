@@ -408,34 +408,22 @@ b=$(cat "${sample}"_R1.rawbases)
 paste ${sample} "${b}"
 done
 
-```
 
-### Report LYNX_17
-
-14/06/2017:
-
-```{bash}
+# LYNX_17:
 
 SAMPLESLIST=($(ls *_sorted_rmdup_sorted_indelrealigner.bam | uniq))
 
-echo "sample_name,total_seq,total_reads,duplicates,mapped,uniq_mapped,uniq_mapped_vs_total_reads,duplicates_vs_total_reads" > hcal_LYNX_14_LYNX_17.stats 
 
 for sample in "${SAMPLESLIST[@]}"
 do
 echo "${sample}"
-# samtools flagstat $sample > "${sample}".stats
-NAME="${sample/_sorted_rmdup_sorted_indelrealigner.bam/}"
-TOTAL_SEQ="$(cat /backup/grupolince/raw_data/LYNX_17/20170505/FASTQ/"${sample/_sorted_rmdup_sorted_indelrealigner.bam/}"*1.rawseq | awk '{sum+=$1}END{print sum}')" ### I added manually the three samples that we did not repeat!
-TOTAL_READS="$(grep "in total" "${sample}".stats | cut -d "+" -f 1 )"
-DUPLICATES="$(grep "duplicates" "${sample}".stats | cut -d "+" -f 1 )"
-MAPPED="$(grep "0 mapped" "${sample}"*.stats | cut -d "+" -f 1)"
-UNIQ_MAPPED="$(echo "$MAPPED - $DUPLICATES" | bc )"
-UNIQ_MAPPED_vs_TOTAL_READS="$(echo "scale=5; $UNIQ_MAPPED *100 / $TOTAL_READS"  | bc -l)"
-DUPLICATES_vs_TOTAL_READS="$(echo "scale=5; $DUPLICATES / $TOTAL_READS" | bc -l )"
-echo "$NAME,$TOTAL_READS,$DUPLICATES,$MAPPED,$UNIQ_MAPPED,$UNIQ_MAPPED_vs_TOTAL_READS,$DUPLICATES_vs_TOTAL_READS" | sed 's/ //g' >> hcal_LYNX_14_LYNX_17.stats 
+samtools flagstat $sample > "${sample}".stats
 done
 
+
+
 ```
+
 
 ## Coverage
 
@@ -451,19 +439,23 @@ REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa
 
 
 SAMPLELIST=($(ls *_sorted_rmdup_sorted_indelrealigner.bam | uniq ))
-echo -e "sample_name\tcoverage_based_samtools\tstdev_based_samtools" > global_coverage_LYNX_17.tsv
+echo -e "sample_name\tcoverage_based_samtools\tstdev_based_samtools" > global_coverage_LYNX17.tsv
 for sample in "${SAMPLELIST[@]}"
 do
 echo $sample
 DEPTH=$(samtools depth $sample | awk '{sum+=$3; sumsq+=$3*$3} END { print sum/2413209059; print sqrt(sumsq/2413209059 - (sum/2413209059)**2)}')
 paste \
-<(echo $sample ) \
+<(echo ${sample/_sorted_rmdup_sorted_indelrealigner.bam/} ) \
 <(echo $DEPTH ) |\
 sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  global_coverage_LYNX17.tsv
 done
 
-```
+# I modify the name so that it has a common field with the previous report:
+cat global_coverage_LYNX17.tsv | sed 's/\t/,/g' > global_coverage_LYNX17.samtools
+rm global_coverage_LYNX17.tsv
 
+
+```
 
 
 ## Read lenght distribution
@@ -533,6 +525,37 @@ done
 
 
   
+```
+
+
+## Summary LYNX_17
+
+```{bash}
+
+SAMPLELIST=($(ls *_sorted_rmdup_sorted_indelrealigner.bam | uniq ))
+
+echo "sample_name,total_seq,total_reads,duplicates,mapped,uniq_mapped,uniq_mapped_vs_total_reads,duplicates_vs_total_reads,coverage_based_distribution" > raw_LYNX_17.stats 
+for sample in "${SAMPLELIST[@]}"
+do
+echo "${sample}"
+NAME="${sample/_sorted_rmdup_sorted_indelrealigner.bam/}"
+TOTAL_SEQ="$(cat /backup/grupolince/raw_data/LYNX_17/20170505/FASTQ/"${sample/_sorted_rmdup_sorted_indelrealigner.bam/}"*1.rawseq | awk '{sum+=$1}END{print sum}')" ### I added manually the three samples that we did not repeat!
+TOTAL_READS="$(grep "in total" "${sample}".stats | cut -d "+" -f 1)"
+DUPLICATES="$(grep "duplicates" "${sample}".stats | cut -d "+" -f 1)"
+MAPPED="$(grep "0 mapped" "${sample}".stats | cut -d "+" -f 1)"
+UNIQ_MAPPED="$(echo "$MAPPED - $DUPLICATES" | bc )"
+UNIQ_MAPPED_vs_TOTAL_READS="$(echo "scale=5; $UNIQ_MAPPED *100 / $TOTAL_READS"  | bc -l)"
+DUPLICATES_vs_TOTAL_READS="$(echo "scale=5; $DUPLICATES / $TOTAL_READS" | bc -l )"
+COVERAGE_BASED_DISTRIBUTION=$(tail -n+12 "${sample/.bam/}"*.picard_length  | awk '($1 > 30) {print $1*$2}' | paste -sd+ | bc | awk '{print $1/2413209059}')
+echo "$NAME,$TOTAL_SEQ,$TOTAL_READS,$DUPLICATES,$MAPPED,$UNIQ_MAPPED,$UNIQ_MAPPED_vs_TOTAL_READS,$DUPLICATES_vs_TOTAL_READS,$COVERAGE_BASED_DISTRIBUTION" | sed 's/ //g' >> raw_LYNX_17.stats 
+done
+
+
+# Join with coverage samtools
+
+LANG=en_EN  join -1 1 -2 1 -t","  <(head -n 2 raw_LYNX_17.stats && tail -n +3 raw_LYNX_17.stats | LANG=en_EN sort -k 1,1) <(head -n 2 global_coverage_LYNX17.samtools && tail -n +3 global_coverage_LYNX17.samtools | LANG=en_EN sort -k 1,1 ) > global_stats_all_samples_LYNX_17.csv # de esta manera tiene en cuenta el header. 
+ 
+
 ```
 
 
@@ -625,6 +648,9 @@ grep -v "#" mt_n012_raw_round-1_filtered_without_lp_1087.vcf | wc -l
 17672985
 
 ```
+
+
+
 
 
 ****************************************************************************************************
