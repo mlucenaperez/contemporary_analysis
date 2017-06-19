@@ -693,6 +693,11 @@ mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*.picard_length /home
 
 mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*.histogram_length /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
 
+for sample in *.histogram_length
+do
+echo "$sample""--->""${sample/.histogram_length/_histogram_length.pdf}"
+mv $sample ${sample/.histogram_length/_histogram_length.pdf}
+done
 
 ```
 
