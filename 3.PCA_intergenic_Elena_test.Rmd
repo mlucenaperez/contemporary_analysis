@@ -8,6 +8,11 @@ output: html_document
 
 I am doing a test using Elena's intergenic capture on the whole european populations. To see whether it behave as we expect or we have any contamination. 
 
+# What I have done:
+
+
+
+
 
 ```{r, engine=bash, eval=FALSE}
 
