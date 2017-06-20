@@ -16,23 +16,7 @@ output: html_document
 # Info from ANGSD page, and github Fumagalli/ngsTools/TUTORIAL.md
 # One solution would be to perform a Principal Component Analysis (PCA) or a Multidimensional Scaling (MDS) or some clustering based on genetic distances among samples. 
 # We are here showing how to perform these analyses using ngsTools/ANGSD in case of low-depth data.
-POPS=(cat /home/mlucena/ANGSD_analysis/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv | awk '{print $1}')
 
-for POP in ${POPS[@]}
-do
-echo $POP
-rm "$POP".intergenic.bamlist
-POP=$(echo $POP | awk -F'_' '{for (i=1; i<NF; i++) printf("%s_", $i)}' | awk '{print substr ($0, 1, length($0)-1)}')
-echo $POP
-IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
-for POP1 in "${POPS1[@]}"
-do
-echo "$POP --> $POP1"
-ls /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/${POP1}*intergenic.bam  >> "$POP".intergenic.bamlist
-done
-NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
-mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
-done
 
 #######################################################################################################################################
 #### Principal Component Analysis 
