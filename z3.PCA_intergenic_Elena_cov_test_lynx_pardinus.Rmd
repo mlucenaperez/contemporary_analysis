@@ -1,0 +1,756 @@
+---
+title: "3.PCA_intergenic_lynx_pardinus_test"
+output: html_document
+---
+
+# Principal Component Analysis: no filtering
+
+I am doing a test using Elena's intergenic capture on the pardinus populations to see whether it behave as we expect or we have any contamination. Besides, we will use it as a proff of concept about the batch effect on lynx pardinus. 
+
+
+```{bash}
+
+POPS=("c_lp_do-c_lp_sm")
+
+#  We start the analysis now:
+
+# Create a directory
+
+cd /home/mlucena/ANGSD_analysis/pruebas_PCA
+
+# I want to produce PCAs for iberian and european based on the small intergenic region of Elena's.
+
+POP="c_lp_do-c_lp_sm"  # <--CHANGE POP HERE
+screen -S test_pca_pardinus_elena_intergenic
+POP="c_lp_do-c_lp_sm"  # <--CHANGE POP HERE
+script test_pca_pardinus_elena_intergenic.log
+POP="c_lp_do-c_lp_sm"  # <--CHANGE POP HERE
+
+# Set paths to software and some commom files
+
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < /home/mlucena/ANGSD_analysis/depth_calculus/"$POP"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+
+ANGSD=/opt/angsd/angsd
+NGSTOOLS=/opt/ngsTools_19092016/
+THREADS=40                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+REGIONFILE="/home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+SFSDIR="/home/mlucena/PCA"
+
+echo $POP
+# I will use Elena intergenic region file as it is a sanity check:
+# This is how it looks. 
+# head no_genes_Lypa_10000longest_center_final_slop20_dot.rf 
+# lp23.s00001:347022-347220
+# lp23.s00001:385836-386034
+
+# I will use no filters at all, to see if I see batch effects.
+
+N_IND=$(wc -l /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP".bamlist | awk '{print $1}') 
+MIN_IND=1
+MIN_IND_DEPTH=1
+
+### Calling genotype likelihoods: 
+cd /home/mlucena/ANGSD_analysis/pruebas_PCA
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/whole_genome_analysis/$POP*.bamlist -ref $REF -out $POP \
+$FILTER1 $FILTER2 \
+-minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth -setMinDepthInd $MIN_IND_DEPTH \
+-rf $REGIONFILE \
+-GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
+-SNP_pval 1e-3 \
+-doGeno 32 -doPost 1
+
+# Unzip the results (but you cannot open it since it is in binary format)
+
+gunzip $POP.geno.gz
+
+#less -S $POP.mafs.gz
+N_SITES=`zcat $POP.mafs.gz | tail -n+2 | wc -l`
+echo $N_SITES
+
+# Now we can perform a PCA by estimating the covariance matrix first:
+
+$NGSTOOLS/ngsPopGen/ngsCovar -probfile $POP.geno -outfile $POP.covar -nind $N_IND  -nsites $N_SITES -call 0 -norm 0 &> /dev/null
+
+echo "FID" > $POP.ALL1.clst.borrar
+seq $N_IND >> $POP.ALL1.clst.borrar
+echo "IID" > $POP.ALL2.clst.borrar
+# yes "1" | head -n $N_IND >> $POP.ALL2.clst.borrar
+cat /home/mlucena/ANGSD_analysis/whole_genome_analysis/$POP*.bamlist | rev | cut -d "/"  -f 1 | cut -d "_" -f 3,4,5,6 | rev  >> $POP.ALL2.clst.borrar
+echo "CLUSTER" > $POP.ALL3.clst.borrar
+cat /home/mlucena/ANGSD_analysis/whole_genome_analysis/$POP*.bamlist  | rev | cut -d "/"  -f 1 | cut -d "_" -f 4,5,6 | rev  >> $POP.ALL3.clst.borrar
+paste $POP.ALL1.clst.borrar $POP.ALL2.clst.borrar $POP.ALL3.clst.borrar> $POP.ALL.clst
+
+rm $POP.*clst.borrar
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/pruebas_PCA/$POP.ALL.clst /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/pruebas_PCA/$POP.covar /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena
+
+```
+
+## R representation.
+
+```{r "setup", include=FALSE}
+
+library(methods)
+library(optparse)
+library(ggplot2)
+library(dplyr)
+library(threejs)
+library(RColorBrewer)
+require("knitr")
+
+# knitr::opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
+# getwd()
+# opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
+
+WORKING_DIR="/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena/"
+pop= c("c_lp_do-c_lp_sm_n031")
+
+# 
+###########################################################################################
+#for (pop in pops) 
+#{
+
+# Annotation file is in plink cluster format
+
+#################################################################################
+
+# Read input file
+covar <- read.table(paste(WORKING_DIR,pop, ".covar", sep=''), stringsAsFact=F);
+
+# Read annot file
+
+annot <- read.table(paste(WORKING_DIR,pop, ".ALL.clst", sep=""), header=TRUE) 
+
+# Parse components to analyze
+# comp <- as.numeric(strsplit("component1-component2", "-", fixed=TRUE)[[1]])
+# comp <- as.numeric(strsplit(opt$comp, "-", fixed=TRUE)[[1]])
+
+comp <- c(1,2)
+
+# Eigenvalues
+eig <- eigen(covar, symm=TRUE);
+eig$val <- eig$val/sum(eig$val);
+cat(signif(eig$val, digits=3)*100,"\n");
+
+# Plot
+PC <- as.data.frame(eig$vectors)
+colnames(PC) <- gsub("V", "PC", colnames(PC))
+PC$Pop <- factor(annot$CLUSTER)
+PC$Ind <- factor(annot$IID)
+
+
+
+PC <- PC %>%  mutate (., Populations =  ifelse (Pop == "c_lp_sm", "Sierra Morena",
+                          ifelse (Pop == "c_lp_do", "Doñana", NA))) %>% 
+  mutate (., sequencing_batch=  ifelse (Ind == "c_lp_do_0153" | Ind == "c_lp_do_0173" | Ind ==  "c_lp_do_0443" | Ind == "c_lp_sm_0138" | Ind == "c_lp_sm_0140" | Ind == "c_lp_sm_0185" | Ind == "c_lp_sm_0186" | Ind ==  "c_lp_sm_0298" | Ind == "c_lp_sm_0359"| Ind ==  "c_lp_do_0007", "Genome_resequencing_project", ifelse (Ind== "c_lp_sm_0221", "Candiles", "5x_reseq"))) %>% 
+  mutate (., threeD =  ifelse (sequencing_batch == "Genome_resequencing_project", brewer.pal(12,"Paired")[4], 
+          ifelse (sequencing_batch ==  "Candiles", brewer.pal(12,"Paired")[6], 
+          ifelse (sequencing_batch == "5x_reseq", brewer.pal(12,"Paired")[10], 
+          NA))))
+
+
+cols <- c("Sierra Morena"=brewer.pal(8, "Greys") [5],
+          "Doñana"=brewer.pal(8, "Greys") [8])
+
+title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
+
+x_axis = paste("PC",comp[1],sep="")
+y_axis = paste("PC",comp[2],sep="")
+
+
+ggplot() + 
+   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations", shape="sequencing_batch"), size = 3) + 
+   scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
+
+  ggsave(paste(WORKING_DIR,pop, "_pca_pardinus.pdf", sep=""),units="mm",  width=270, height=190)
+
+
+###########################################################################################
+# 3D plot
+###########################################################################################
+
+
+scatterplot3js(PC$PC1, PC$PC2, PC$PC3, 
+                col=PC$threeD,  labels=PC$Ind,
+               size=0.7, grid=FALSE, renderer = "canvas")
+  
+
+
+
+```
+
+
+# PCA using a filter of 1 ind min genotyped. 
+
+```{bash}
+
+POPS=("c_lp_do-c_lp_sm")
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis
+
+# I want to produce PCAs for iberian and european based on the small intergenic region of Elena's.
+
+POP="c_lp_do-c_lp_sm"  # <--CHANGE POP HERE
+screen -S test_pca_pardinus_elena_intergenic_min1
+POP="c_lp_do-c_lp_sm"  # <--CHANGE POP HERE
+script test_pca_pardinus_elena_intergenic_min1.log
+POP="c_lp_do-c_lp_sm"  # <--CHANGE POP HERE
+
+# Set paths to software and some commom files
+
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < /home/mlucena/ANGSD_analysis/depth_calculus/"$POP"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+
+ANGSD=/opt/angsd/angsd
+NGSTOOLS=/opt/ngsTools_19092016/
+THREADS=40                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+REGIONFILE="/home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+SFSDIR="/home/mlucena/PCA"
+
+
+# I will use Elena intergenic region file as it is a sanity check:
+# This is how it looks. 
+# head no_genes_Lypa_10000longest_center_final_slop20_dot.rf 
+# lp23.s00001:347022-347220
+# lp23.s00001:385836-386034
+
+# I will use maxDepth filter very strict:
+
+N_IND=$(wc -l /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP".bamlist | awk '{print $1}') 
+MIN_IND=$(expr $N_IND / 1)
+
+## custom:
+MIN_IND_DEPTH=1  
+
+### Calling genotype likelihoods: 
+cd /home/mlucena/ANGSD_analysis/pruebas_PCA
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/whole_genome_analysis/$POP*.bamlist -ref $REF -out $POP.MinDepthInd1 \
+$FILTER1 $FILTER2 \
+-minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth -setMinDepthInd $MIN_IND_DEPTH \
+-rf $REGIONFILE \
+-GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
+-SNP_pval 1e-3 \
+-doGeno 32 -doPost 1
+
+
+
+### URGENTE ULTIMA ACTUALIZACION!!
+
+# -minInd [int]
+# Only keep sites with at least minIndDepth (default is 1) from at least [int] individuals
+# -minIndDepth [int]
+# Only works with the -minInd filter. Change the minimum depth the individuals must have in order to keep the site. Default is 1.
+
+
+# SNP_pval = #ind*(2allelos/ind) = x alelos ; 1/x = y  # esto sería un filtro aceptable. En mi caso el dataset más pequeño (h_lypa_all) es de 55 indivíduos (1/(2*55)=9e-3) y el más grande (x_lyxx_all) de 189 (1/(2*189)=2.6e-3)
+# Para el PCA vamos a usar 1e-3 porque es un filtro suuuper light.
+
+# Unzip the results (but you cannot open it since it is in binary format)
+
+gunzip $POP.MinDepthInd1.geno.gz
+
+### ngsCovar
+
+# We are going to use ngsCovar, which estimates the covariance matrix between individuals based on genotype probabilities. 
+# Then this matrix will be decomposed into principal components which will be investigated for population structure analyses. 
+# Note that although ngsCovar can account for SNPs uncertanity, we find that it is faster to perform a light SNP filtering first 
+# (as we did using -SNP_pval 1e-3) than using all sites.
+
+# If you type:
+
+# $NGSTOOLS/ngsPopGen/ngsCovar
+
+# you will see a list of possible options. 
+# For instance, we need to define how many sites we have. To retrieve such value, we can inspect the file with allele frequencies:
+
+#less -S $POP.mafs.gz
+N_SITES=`zcat $POP.MinDepthInd1.mafs.gz | tail -n+2 | wc -l`
+echo $N_SITES
+
+# In my case I have 1179 sites. 
+
+# Now we can perform a PCA by estimating the covariance matrix first:
+
+
+$NGSTOOLS/ngsPopGen/ngsCovar -probfile $POP.MinDepthInd1.geno -outfile $POP.MinDepthInd1.covar -nind $N_IND  -nsites $N_SITES -call 0 -norm 0 &> /dev/null
+
+# with the options -call 0 meaning that we do not perform genotype calling 
+# and -norm 0 that we are not normalising by allele frequency. 
+# The latter may give more weight to low frequency variants which are harder to estimate.
+
+# Look at the output file:
+
+#less -S $POP.covar
+
+# which represents a matrix of NxN with N individuals giving the covariance. Note that this matrix is symmetric.
+
+# Finally, we perform an eigenvector decomposition and plot the resulting map:
+
+# create a cluster-like file defining the labelling (population) for each sample
+
+#Example: Rscript -e 'write.table(cbind(seq(1,60),rep(1,60),c(rep("LWK",20),rep("TSI",20),rep("PEL",20))), row.names=F, sep=" ", col.names=c("FID","IID","CLUSTER"), file="Results/ALL.clst", quote=F)'
+
+echo "FID" > $POP.MinDepthInd1.ALL1.clst.borrar
+seq $N_IND >> $POP.MinDepthInd1.ALL1.clst.borrar
+echo "IID" > $POP.MinDepthInd1.ALL2.clst.borrar
+# yes "1" | head -n $N_IND >> $POP.ALL2.clst.borrar
+cat /home/mlucena/ANGSD_analysis/whole_genome_analysis/$POP*.bamlist | rev | cut -d "/"  -f 1 | cut -d "_" -f 3,4,5,6 | rev  >> $POP.MinDepthInd1.ALL2.clst.borrar
+echo "CLUSTER" > $POP.MinDepthInd1.ALL3.clst.borrar
+cat /home/mlucena/ANGSD_analysis/whole_genome_analysis/$POP*.bamlist  | rev | cut -d "/"  -f 1 | cut -d "_" -f 4,5,6 | rev  >> $POP.MinDepthInd1.ALL3.clst.borrar
+paste $POP.MinDepthInd1.ALL1.clst.borrar $POP.MinDepthInd1.ALL2.clst.borrar $POP.MinDepthInd1.ALL3.clst.borrar> $POP.MinDepthInd1.ALL.clst
+
+rm $POP.MinDepthInd1.*clst.borrar
+
+
+
+# run and plot
+
+# Rscript $NGSTOOLS/Scripts/plotPCA.R -i Results/ALL.covar -c 1-2 -a Results/ALL.clst -o Results/ALL.pca.pdf
+# Rscript $NGSTOOLS/Scripts/plotPCA.R -i $POP.covar -c 1-2 -a $POP.ALL.clst -o $POP.ALL.pca.pdf #--> No corre porque no puedo instalar librerías así que lo hago en mi propio ordenador
+# evince Results/ALL.pca.pdf
+
+# where the parameter -c 1-2 specifies that we are plotting only the first and second component. On the screen, you will see a series of numbers. These are the percentage of explained variance for each component.
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/pruebas_PCA/*.ALL.clst /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/pruebas_PCA/*.covar /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena
+# scp mlucena@genomics-a.ebd.csic.es:/opt/ngsTools_19092016/Scripts/plotPCA.R /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA
+
+
+```
+
+
+# PCA using a filter of 2 ind min genotyped. 
+
+```{bash}
+
+POPS=("c_lp_do-c_lp_sm")
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis
+
+# I want to produce PCAs for iberian and european based on the small intergenic region of Elena's.
+
+POP="c_lp_do-c_lp_sm"  # <--CHANGE POP HERE
+screen -S test_pca_pardinus_elena_intergenic_min2
+POP="c_lp_do-c_lp_sm"  # <--CHANGE POP HERE
+script test_pca_pardinus_elena_intergenic_min2.log
+POP="c_lp_do-c_lp_sm"  # <--CHANGE POP HERE
+
+# Set paths to software and some commom files
+
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < /home/mlucena/ANGSD_analysis/depth_calculus/"$POP"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+
+ANGSD=/opt/angsd/angsd
+NGSTOOLS=/opt/ngsTools_19092016/
+THREADS=40                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+REGIONFILE="/home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+SFSDIR="/home/mlucena/PCA"
+
+
+# I will use Elena intergenic region file as it is a sanity check:
+# This is how it looks. 
+# head no_genes_Lypa_10000longest_center_final_slop20_dot.rf 
+# lp23.s00001:347022-347220
+# lp23.s00001:385836-386034
+
+# I will use maxDepth filter very strict:
+
+N_IND=$(wc -l /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP".bamlist | awk '{print $1}') 
+MIN_IND=$(expr $N_IND / 1)
+
+## custom:
+MIN_IND_DEPTH=2  
+
+### Calling genotype likelihoods: 
+cd /home/mlucena/ANGSD_analysis/pruebas_PCA
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/whole_genome_analysis/$POP*.bamlist -ref $REF -out $POP.MinDepthInd2 \
+$FILTER1 $FILTER2 \
+-minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth -setMinDepthInd $MIN_IND_DEPTH \
+-rf $REGIONFILE \
+-GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
+-SNP_pval 1e-3 \
+-doGeno 32 -doPost 1
+
+
+
+### URGENTE ULTIMA ACTUALIZACION!!
+
+# -minInd [int]
+# Only keep sites with at least minIndDepth (default is 1) from at least [int] individuals
+# -minIndDepth [int]
+# Only works with the -minInd filter. Change the minimum depth the individuals must have in order to keep the site. Default is 1.
+
+
+# SNP_pval = #ind*(2allelos/ind) = x alelos ; 1/x = y  # esto sería un filtro aceptable. En mi caso el dataset más pequeño (h_lypa_all) es de 55 indivíduos (1/(2*55)=9e-3) y el más grande (x_lyxx_all) de 189 (1/(2*189)=2.6e-3)
+# Para el PCA vamos a usar 1e-3 porque es un filtro suuuper light.
+
+# Unzip the results (but you cannot open it since it is in binary format)
+
+gunzip $POP.MinDepthInd2.geno.gz
+
+### ngsCovar
+
+# We are going to use ngsCovar, which estimates the covariance matrix between individuals based on genotype probabilities. 
+# Then this matrix will be decomposed into principal components which will be investigated for population structure analyses. 
+# Note that although ngsCovar can account for SNPs uncertanity, we find that it is faster to perform a light SNP filtering first 
+# (as we did using -SNP_pval 1e-3) than using all sites.
+
+# If you type:
+
+# $NGSTOOLS/ngsPopGen/ngsCovar
+
+# you will see a list of possible options. 
+# For instance, we need to define how many sites we have. To retrieve such value, we can inspect the file with allele frequencies:
+
+#less -S $POP.mafs.gz
+N_SITES=`zcat $POP.MinDepthInd2.mafs.gz | tail -n+2 | wc -l`
+echo $N_SITES
+
+# In my case I have 633.
+
+# Now we can perform a PCA by estimating the covariance matrix first:
+
+
+$NGSTOOLS/ngsPopGen/ngsCovar -probfile $POP.MinDepthInd2.geno -outfile $POP.MinDepthInd2.covar -nind $N_IND  -nsites $N_SITES -call 0 -norm 0 &> /dev/null
+
+# with the options -call 0 meaning that we do not perform genotype calling 
+# and -norm 0 that we are not normalising by allele frequency. 
+# The latter may give more weight to low frequency variants which are harder to estimate.
+
+# Look at the output file:
+
+#less -S $POP.covar
+
+# which represents a matrix of NxN with N individuals giving the covariance. Note that this matrix is symmetric.
+
+# Finally, we perform an eigenvector decomposition and plot the resulting map:
+
+# create a cluster-like file defining the labelling (population) for each sample
+
+#Example: Rscript -e 'write.table(cbind(seq(1,60),rep(1,60),c(rep("LWK",20),rep("TSI",20),rep("PEL",20))), row.names=F, sep=" ", col.names=c("FID","IID","CLUSTER"), file="Results/ALL.clst", quote=F)'
+
+echo "FID" > $POP.MinDepthInd2.ALL1.clst.borrar
+seq $N_IND >> $POP.MinDepthInd2.ALL1.clst.borrar
+echo "IID" > $POP.MinDepthInd2.ALL2.clst.borrar
+# yes "1" | head -n $N_IND >> $POP.MinDepthInd2.ALL2.clst.borrar
+cat /home/mlucena/ANGSD_analysis/whole_genome_analysis/$POP.bamlist | rev | cut -d "/"  -f 1 | cut -d "_" -f 3,4,5,6 | rev  >> $POP.MinDepthInd2.ALL2.clst.borrar
+echo "CLUSTER" > $POP.MinDepthInd2.ALL3.clst.borrar
+cat /home/mlucena/ANGSD_analysis/whole_genome_analysis/$POP.bamlist  | rev | cut -d "/"  -f 1 | cut -d "_" -f 4,5,6 | rev  >> $POP.MinDepthInd2.ALL3.clst.borrar
+paste $POP.MinDepthInd2.ALL1.clst.borrar $POP.MinDepthInd2.ALL2.clst.borrar $POP.MinDepthInd2.ALL3.clst.borrar> $POP.MinDepthInd2.ALL.clst
+
+rm $POP.MinDepthInd2.*clst.borrar
+
+
+
+# run and plot
+
+# Rscript $NGSTOOLS/Scripts/plotPCA.R -i Results/ALL.covar -c 1-2 -a Results/ALL.clst -o Results/ALL.pca.pdf
+# Rscript $NGSTOOLS/Scripts/plotPCA.R -i $POP.covar -c 1-2 -a $POP.ALL.clst -o $POP.ALL.pca.pdf #--> No corre porque no puedo instalar librerías así que lo hago en mi propio ordenador
+# evince Results/ALL.pca.pdf
+
+# where the parameter -c 1-2 specifies that we are plotting only the first and second component. On the screen, you will see a series of numbers. These are the percentage of explained variance for each component.
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/pruebas_PCA/*.ALL.clst /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/pruebas_PCA/*.covar /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena
+# scp mlucena@genomics-a.ebd.csic.es:/opt/ngsTools_19092016/Scripts/plotPCA.R /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA
+
+
+```
+
+
+# PCA using a filter of 3 ind min genotyped. 
+
+```{bash}
+
+POPS=("c_lp_do-c_lp_sm")
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis
+
+# I want to produce PCAs for iberian and european based on the small intergenic region of Elena's.
+
+POP="c_lp_do-c_lp_sm"  # <--CHANGE POP HERE
+screen -S test_pca_pardinus_elena_intergenic_min2
+POP="c_lp_do-c_lp_sm"  # <--CHANGE POP HERE
+script test_pca_pardinus_elena_intergenic_min2.log
+POP="c_lp_do-c_lp_sm"  # <--CHANGE POP HERE
+
+# Set paths to software and some commom files
+
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < /home/mlucena/ANGSD_analysis/depth_calculus/"$POP"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+
+ANGSD=/opt/angsd/angsd
+NGSTOOLS=/opt/ngsTools_19092016/
+THREADS=40                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+REGIONFILE="/home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+SFSDIR="/home/mlucena/PCA"
+
+
+# I will use Elena intergenic region file as it is a sanity check:
+# This is how it looks. 
+# head no_genes_Lypa_10000longest_center_final_slop20_dot.rf 
+# lp23.s00001:347022-347220
+# lp23.s00001:385836-386034
+
+# I will use maxDepth filter very strict:
+
+N_IND=$(wc -l /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP".bamlist | awk '{print $1}') 
+MIN_IND=$(expr $N_IND / 1)
+
+## custom:
+MIN_IND_DEPTH=2  
+
+### Calling genotype likelihoods: 
+cd /home/mlucena/ANGSD_analysis/pruebas_PCA
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/whole_genome_analysis/$POP*.bamlist -ref $REF -out $POP.MinDepthInd3 \
+$FILTER1 $FILTER2 \
+-minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth -setMinDepthInd $MIN_IND_DEPTH \
+-rf $REGIONFILE \
+-GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
+-SNP_pval 1e-3 \
+-doGeno 32 -doPost 1
+
+
+
+### URGENTE ULTIMA ACTUALIZACION!!
+
+# -minInd [int]
+# Only keep sites with at least minIndDepth (default is 1) from at least [int] individuals
+# -minIndDepth [int]
+# Only works with the -minInd filter. Change the minimum depth the individuals must have in order to keep the site. Default is 1.
+
+
+# SNP_pval = #ind*(2allelos/ind) = x alelos ; 1/x = y  # esto sería un filtro aceptable. En mi caso el dataset más pequeño (h_lypa_all) es de 55 indivíduos (1/(2*55)=9e-3) y el más grande (x_lyxx_all) de 189 (1/(2*189)=2.6e-3)
+# Para el PCA vamos a usar 1e-3 porque es un filtro suuuper light.
+
+# Unzip the results (but you cannot open it since it is in binary format)
+
+gunzip $POP.MinDepthInd3.geno.gz
+
+### ngsCovar
+
+# We are going to use ngsCovar, which estimates the covariance matrix between individuals based on genotype probabilities. 
+# Then this matrix will be decomposed into principal components which will be investigated for population structure analyses. 
+# Note that although ngsCovar can account for SNPs uncertanity, we find that it is faster to perform a light SNP filtering first 
+# (as we did using -SNP_pval 1e-3) than using all sites.
+
+# If you type:
+
+# $NGSTOOLS/ngsPopGen/ngsCovar
+
+# you will see a list of possible options. 
+# For instance, we need to define how many sites we have. To retrieve such value, we can inspect the file with allele frequencies:
+
+#less -S $POP.mafs.gz
+N_SITES=`zcat $POP.MinDepthInd3.mafs.gz | tail -n+2 | wc -l`
+echo $N_SITES
+
+# In my case I have 158 sites.
+
+# Now we can perform a PCA by estimating the covariance matrix first:
+
+
+$NGSTOOLS/ngsPopGen/ngsCovar -probfile $POP.MinDepthInd3.geno -outfile $POP.MinDepthInd3.covar -nind $N_IND  -nsites $N_SITES -call 0 -norm 0 &> /dev/null
+
+# with the options -call 0 meaning that we do not perform genotype calling 
+# and -norm 0 that we are not normalising by allele frequency. 
+# The latter may give more weight to low frequency variants which are harder to estimate.
+
+# Look at the output file:
+
+#less -S $POP.covar
+
+# which represents a matrix of NxN with N individuals giving the covariance. Note that this matrix is symmetric.
+
+# Finally, we perform an eigenvector decomposition and plot the resulting map:
+
+# create a cluster-like file defining the labelling (population) for each sample
+
+#Example: Rscript -e 'write.table(cbind(seq(1,60),rep(1,60),c(rep("LWK",20),rep("TSI",20),rep("PEL",20))), row.names=F, sep=" ", col.names=c("FID","IID","CLUSTER"), file="Results/ALL.clst", quote=F)'
+
+echo "FID" > $POP.MinDepthInd3.ALL1.clst.borrar
+seq $N_IND >> $POP.MinDepthInd3.ALL1.clst.borrar
+echo "IID" > $POP.MinDepthInd3.ALL2.clst.borrar
+# yes "1" | head -n $N_IND >> $POP.MinDepthInd3.ALL2.clst.borrar
+cat /home/mlucena/ANGSD_analysis/whole_genome_analysis/$POP.bamlist | rev | cut -d "/"  -f 1 | cut -d "_" -f 3,4,5,6 | rev  >> $POP.MinDepthInd3.ALL2.clst.borrar
+echo "CLUSTER" > $POP.MinDepthInd3.ALL3.clst.borrar
+cat /home/mlucena/ANGSD_analysis/whole_genome_analysis/$POP.bamlist  | rev | cut -d "/"  -f 1 | cut -d "_" -f 4,5,6 | rev  >> $POP.MinDepthInd3.ALL3.clst.borrar
+paste $POP.MinDepthInd3.ALL1.clst.borrar $POP.MinDepthInd3.ALL2.clst.borrar $POP.MinDepthInd3.ALL3.clst.borrar> $POP.MinDepthInd3.ALL.clst
+
+rm $POP.MinDepthInd3.*clst.borrar
+
+
+
+# run and plot
+
+# Rscript $NGSTOOLS/Scripts/plotPCA.R -i Results/ALL.covar -c 1-2 -a Results/ALL.clst -o Results/ALL.pca.pdf
+# Rscript $NGSTOOLS/Scripts/plotPCA.R -i $POP.covar -c 1-2 -a $POP.ALL.clst -o $POP.ALL.pca.pdf #--> No corre porque no puedo instalar librerías así que lo hago en mi propio ordenador
+# evince Results/ALL.pca.pdf
+
+# where the parameter -c 1-2 specifies that we are plotting only the first and second component. On the screen, you will see a series of numbers. These are the percentage of explained variance for each component.
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/pruebas_PCA/*.ALL.clst /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/pruebas_PCA/*.covar /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena
+# scp mlucena@genomics-a.ebd.csic.es:/opt/ngsTools_19092016/Scripts/plotPCA.R /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA
+
+
+```
+
+## R representation.
+
+```{r "setup", include=FALSE}
+
+library(methods)
+library(optparse)
+library(ggplot2)
+library(dplyr)
+library(threejs)
+library(RColorBrewer)
+require("knitr")
+
+# knitr::opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
+# getwd()
+# opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
+
+WORKING_DIR="/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena/"
+pop= c("c_lp_do-c_lp_sm_n031")
+
+# 
+###########################################################################################
+#for (pop in pops) 
+#{
+
+# Annotation file is in plink cluster format
+
+#################################################################################
+
+
+my_files_covar = list.files(path = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena/",pattern="c_lp_do-c_lp_sm_n031.*.covar$") 
+
+my_files_clst = list.files(path = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena/",pattern="c_lp_do-c_lp_sm_n031.*.ALL.clst$") 
+
+
+for (i in 1:length(my_files_covar)) { assign(my_files_covar[i], (scan(paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena/",my_files_covar[i],sep=""), sep = "\t", dec = ".")) %>% .[!is.na(.)])}
+
+
+
+for (i in 1:length(my_files_covar)) 
+  {
+  
+MinDepth <- unlist(strsplit(my_files_covar[i], "[.]"))
+
+
+# Read annot file
+
+annot <- read.table(paste(WORKING_DIR,pop,".", MinDepth[2],".ALL.clst", sep=""), header=TRUE) 
+
+
+# Read input file
+covar <- read.table(paste(WORKING_DIR,pop,".", MinDepth[2],".covar", sep=''), stringsAsFact=F);
+
+
+# Parse components to analyze
+# comp <- as.numeric(strsplit("component1-component2", "-", fixed=TRUE)[[1]])
+# comp <- as.numeric(strsplit(opt$comp, "-", fixed=TRUE)[[1]])
+
+comp <- c(1,2)
+
+# Eigenvalues
+eig <- eigen(covar, symm=TRUE);
+eig$val <- eig$val/sum(eig$val);
+cat(signif(eig$val, digits=3)*100,"\n");
+
+# Plot
+PC <- as.data.frame(eig$vectors)
+colnames(PC) <- gsub("V", "PC", colnames(PC))
+PC$Pop <- factor(annot$CLUSTER)
+PC$Ind <- factor(annot$IID)
+
+
+
+PC <- PC %>%  mutate (., Populations =  ifelse (Pop == "c_lp_sm", "Sierra Morena",
+                          ifelse (Pop == "c_lp_do", "Doñana", NA))) %>% 
+  mutate (., sequencing_batch=  ifelse (Ind == "c_lp_do_0153" | Ind == "c_lp_do_0173" | Ind ==  "c_lp_do_0443" | Ind == "c_lp_sm_0138" | Ind == "c_lp_sm_0140" | Ind == "c_lp_sm_0185" | Ind == "c_lp_sm_0186" | Ind ==  "c_lp_sm_0298" | Ind == "c_lp_sm_0359"| Ind ==  "c_lp_do_0007", "Genome_resequencing_project", ifelse (Ind== "c_lp_sm_0221", "Candiles", "5x_reseq"))) %>% 
+  mutate (., threeD =  ifelse (sequencing_batch == "Genome_resequencing_project", brewer.pal(12,"Paired")[4], 
+          ifelse (sequencing_batch ==  "Candiles", brewer.pal(12,"Paired")[6], 
+          ifelse (sequencing_batch == "5x_reseq", brewer.pal(12,"Paired")[10], 
+          NA))))
+
+
+cols <- c("Sierra Morena"=brewer.pal(8, "Greys") [5],
+          "Doñana"=brewer.pal(8, "Greys") [8])
+
+title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
+
+x_axis = paste("PC",comp[1],sep="")
+y_axis = paste("PC",comp[2],sep="")
+
+
+ggplot() + 
+   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations", shape="sequencing_batch"), size = 3) + 
+   scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
+
+  ggsave(paste(WORKING_DIR,pop,".", MinDepth[2], "_pca_pardinus.pdf", sep=""),units="mm",  width=270, height=190)
+
+}
+###########################################################################################
+# 3D plot
+###########################################################################################
+
+
+scatterplot3js(PC$PC1, PC$PC2, PC$PC3, 
+                col=PC$threeD,  labels=PC$Ind,
+               size=0.7, grid=FALSE, renderer = "canvas")
+  
+
+
+
+```
+
+## Summary
+
+```{bash}
+
+TOTAL=1674784 bases
+
+
+
+
+
+N_SITES=`zcat $POP.MinDepthInd1.mafs.gz | tail -n+2 | wc -l`
+echo $N_SITES
+# In my case I have 1179 sites. 
+--> 0.07039714 %
+
+
+N_SITES=`zcat $POP.MinDepthInd2.mafs.gz | tail -n+2 | wc -l`
+echo $N_SITES
+# In my case I have 633.
+--> 0.03779592 %
+
+
+N_SITES=`zcat $POP.MinDepthInd3.mafs.gz | tail -n+2 | wc -l`
+echo $N_SITES
+# In my case I have 158 sites.
+--> 0.009434052 %
+
+```
+
