@@ -1,0 +1,579 @@
+---
+title: "ANGSD_depth_calculus"
+output: html_document
+---
+
+##  QC-test: Creating Bamlist (WG & intergenic) & MaxDepth.
+
+### Creating Bamlist for WG analysis
+
+```{r, engine=bash, eval=FALSE}
+
+# My populations are (sorted in the new order 20/07/2017):
+
+# Lynx Pardinux:
+  
+c_lp_do
+c_lp_sm
+
+# h_lp_mt
+
+# Lynx lynx
+
+c_ll_no
+c_ll_ba
+h_ll_ba
+c_ll_cr
+c_ll_po
+c_ll_la
+c_ll_ki
+#c_ll_ur
+c_ll_tu
+c_ll_to
+c_ll_ka
+c_ll_og
+c_ll_ya
+c_ll_vl
+
+
+### Defining Bamlist per pop
+
+```{r, engine=bash, eval=FALSE}
+
+# Hago un .bamlist por poblacion. 
+# Este script es una maravilla. Coje todas las poblaciones que tu hayas definido y hace los bamlist con su nombre adecuado.  
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/
+
+# All individuals pop: --> Done 20/06/2017
+POPS=(ll_ba c_ll_cr c_ll_ka c_ll_ki c_ll_la c_ll_no c_ll_og c_ll_po c_ll_to c_ll_tu c_ll_vl c_ll_ya c_lp_do c_lp_sm)
+# Some pop combinations: --> Done 20/06/2017
+POPS=(c_ll_ka-c_ll_og  ) 
+# Both species: --> Done 20/06/2017
+POPS=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+# Only lynx lynx: --> Done 20/06/2017
+POPS=(c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+# Only pardinus: --> Done 20/06/2017
+POPS=(c_lp_do-c_lp_sm)
+
+
+# To do:
+POPS=(c_ll_ur)
+POPS=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+POPS=(c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+
+
+
+for POP in ${POPS[@]}
+do
+echo $POP
+rm "$POP".bamlist
+IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
+for POP1 in "${POPS1[@]}"
+do
+echo "$POP --> $POP1"
+ls /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/*${POP1}_*_recal_round-1.bam  >> "$POP".bamlist
+done
+NUMBER_IND=$(printf "%03d" `wc -l "$POP".bamlist | cut -f1 -d " "`);
+mv "$POP".bamlist "$POP"_n"$NUMBER_IND".bamlist
+done
+
+
+# OJO!  
+# mv ll_ba_n003.bamlist c_ll_ba_n003.bamlist
+
+# Modifico el archivo que incluye ambas especies para hacer uno que sólo tenga los individuos secuenciados a 5x.  
+
+nano samples_genome_project
+c_lp_do_0153
+c_lp_do_0173
+c_lp_do_0443
+c_lp_sm_0138
+c_lp_sm_0140
+c_lp_sm_0185
+c_lp_sm_0186
+c_lp_sm_0298
+c_lp_sm_0359
+c_lp_do_0007
+c_lp_sm_0221
+
+#  --> Done 20/06/2017
+
+POP=c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl
+grep -v -f samples_genome_project ${POP}_n105.bamlist > ${POP}.bamlist
+NUMBER_IND=$(printf "%03d" `wc -l "$POP".bamlist | cut -f1 -d " "`);
+mv "$POP".bamlist "$POP"_n"$NUMBER_IND".bamlist
+
+#  --> Done 20/06/2017
+
+POP=(c_lp_do-c_lp_sm)
+grep -v -f samples_genome_project ${POP}_n031.bamlist > ${POP}.bamlist
+NUMBER_IND=$(printf "%03d" `wc -l "$POP".bamlist | cut -f1 -d " "`);
+mv "$POP".bamlist "$POP"_n"$NUMBER_IND".bamlist
+```
+
+### MaxDepth --> Done with WG bamlist
+
+Distinguimos entre poblaciones únicas que se corren con todo el genoma, y poblaciones más grandes que por optimización de tiempo vamos a correr usando el intergénico de Elena.
+
+#### For single or small populations:
+
+--> Lynx pardinus
+c_lp_do --> Previously done
+c_lp_sm --> Previously done
+
+h_lp_mt
+
+--> Lynx lynx
+c_ll_no --> Previously done
+c_ll_ba --> Previously done
+h_ll_ba       "
+c_ll_cr --> Previously done
+c_ll_po --> Previously done
+c_ll_la --> Previously done
+c_ll_ki --> Previously done
+c_ll_ur
+c_ll_tu --> Lanzado 20/07/2017
+c_ll_to --> Previously done
+c_ll_ka --> No
+c_ll_og --> No
+c_ll_ya --> Previously done
+c_ll_vl --> Previously done
+c_ll_ka-c_ll_og --> Lanzado 20/07/2017
+
+
+```{r, engine=bash, eval=FALSE}
+
+cd /home/mlucena/ANGSD_analysis/depth_calculus
+#To launch one by one
+POP="c_ll_tu_n006"  # <--CHANGE POP HERE
+screen -S "$POP"_qc_test
+POP="c_ll_tu_n006"  # <--CHANGE POP HERE
+script "$POP"_qc.log
+POP="c_ll_tu_n006"  # <--CHANGE POP HERE
+
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
+THREADS=15                    # no. of computer cores used 20 = OK, >20 = ask people first!
+
+BAMLIST=$(ls /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP".bamlist)
+OUT_NAME="/home/mlucena/ANGSD_analysis/depth_calculus/"$POP".qc"
+NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
+MAXDEPTH=$(expr $NUMBER_IND \* 1000)
+
+# Sanity checks: 
+ls $BAMLIST
+echo $OUT_NAME
+echo $NUMBER_IND
+echo $MAXDEPTH
+
+
+/opt/angsd/angsd/angsd -P $THREADS \
+-b $BAMLIST \
+-ref $REF \
+-out $OUT_NAME \
+-uniqueOnly 1 \
+-remove_bads 1 \
+-only_proper_pairs 1 \
+-baq 1 \
+-C 50 \
+-doQsDist 1 \
+-doDepth 1 \
+-doCounts 1 \
+-maxDepth $MAXDEPTH  
+
+# Antes el nombre de out era: # ${BAMLIST/.bamlist/.qc} \ por lo que me lo escribía en whole_genome_analysis folder. 
+
+```
+
+---> I have an issue with c_ll_ka and c_ll_og when calculating doDepth: Solved!! --> Actualización 20/07/2017: Pensé que lo había solucionado pero más tarde nos dimos cuenta de que no estaban mapeadas correctamente pero se solucionó al mapearlas bien. 
+
+```{r, engine=bash, eval=FALSE}
+# bgzp read block error -1 after x of x bytes. ABORT
+# This error was reported for a given scaffold position, when I try to open it using igv it reported that the index file is likely to be corrupted: 
+"Error encountered querying alignments: java.nio.BufferUnderflowException This is often caused by a corrupt index file."
+
+First, I will try to validate sam
+c_ll_ka_0184_recal_round-1.bam
+c_ll_ka_0186_recal_round-1.bam
+c_ll_ka_0188_recal_round-1.bam
+c_ll_ka_0189_recal_round-1.bam
+
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=c_ll_ka_0184_recal_round-1.bam  MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000
+
+Exception in thread "main" htsjdk.samtools.SAMException: Value was put into PairInfoMap more than once.  0: 7001450:312:CA3D2ANXX:5:1311:7301:38680
+	at htsjdk.samtools.CoordinateSortedPairInfoMap.ensureSequenceLoaded(CoordinateSortedPairInfoMap.java:133)
+	at htsjdk.samtools.CoordinateSortedPairInfoMap.access$300(CoordinateSortedPairInfoMap.java:53)
+	at htsjdk.samtools.CoordinateSortedPairInfoMap$MapIterator.advanceToNextNonEmptyReferenceIndex(CoordinateSortedPairInfoMap.java:227)
+	at htsjdk.samtools.CoordinateSortedPairInfoMap$MapIterator.<init>(CoordinateSortedPairInfoMap.java:221)
+	at htsjdk.samtools.CoordinateSortedPairInfoMap$MapIterator.<init>(CoordinateSortedPairInfoMap.java:211)
+	at htsjdk.samtools.CoordinateSortedPairInfoMap.iterator(CoordinateSortedPairInfoMap.java:208)
+	at htsjdk.samtools.SamFileValidator$CoordinateSortedPairEndInfoMap.iterator(SamFileValidator.java:753)
+	at htsjdk.samtools.SamFileValidator.validateUnmatchedPairs(SamFileValidator.java:233)
+	at htsjdk.samtools.SamFileValidator.validateSamFile(SamFileValidator.java:201)
+	at htsjdk.samtools.SamFileValidator.validateSamFileSummary(SamFileValidator.java:128)
+	at picard.sam.ValidateSamFile.doWork(ValidateSamFile.java:187)
+	at picard.cmdline.CommandLineProgram.instanceMain(CommandLineProgram.java:209)
+	at picard.cmdline.PicardCommandLine.instanceMain(PicardCommandLine.java:95)
+	at picard.cmdline.PicardCommandLine.main(PicardCommandLine.java:105)
+
+Este error también lo da al correr una muestra cualquiera de c_ll_og_0181:
+
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=c_ll_og_0181_recal_round-1.bam  MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000
+
+Vamos a probar una cualquiera porque lo que interpretamos es que son alineamientos secundarios. Ese error también lo daría en una muestra cualquiera:
+
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=c_ll_ya_0143_recal_round-1.bam  MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000
+
+#Vamos a correr el índice para las muestras:
+
+ARRAY=($(c_ll_og*))
+for i in ${ARRAY[@]}
+do
+echo ${i}
+samtools index ${i}
+done
+
+Haciendo el índice nos devuelve error.
+Probamos en el servidor a y tenemos el mismo problema. Por tanto voy a probar a hacer el índice en el archivo inmediatamente interior (indelrealign). 
+
+Con esto no hemos tenido problema, por tanto he leído y parece que la muestra recal-1 no está ordenada. He procedido a ordenar y ya si hemos podido hacer el índice así que voy a ordenar todas las que han dado problemas:
+
+ARRAY=($(ls c_ll_og*bam))
+for i in ${ARRAY[@]}
+do
+echo ${i}
+samtools sort ${i} ${i/.bam/_sort.bam}
+mv ${i/.bam/_sort.bam.bam} ${i}
+samtools index ${i}
+done
+
+ARRAY=($(ls c_ll_ka*bam))
+for i in ${ARRAY[@]}
+do
+echo ${i}
+samtools sort ${i} ${i/.bam/_sort.bam}
+mv ${i/.bam/_sort.bam.bam} ${i}
+samtools index ${i}
+done
+
+
+# Actualización 20/07/2017:
+# No estaban bien mapeadas, finalmente se volvieron a mapear desde el principio y se solucionó el asunto.
+
+```
+
+
+#### For huge populations:
+
+En este caso usamos el intergénico de Elena. 
+
+--> Both species: 
+c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n094  --> Done 20/07/2017
+c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n105 --> Done 20/07/2017
+
+--> Only lynx lynx:  # No lanzado porque no me merece la pena. Espero urales. 
+c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n074
+
+--> Only pardinus: --> Previously done 
+c_lp_do-c_lp_sm
+
+
+
+```{r, engine=bash, eval=FALSE}
+cd /home/mlucena/ANGSD_analysis/depth_calculus
+#To launch one by one
+POP=("c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n105")
+screen -S both_species_all_ind
+POP=("c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n105")
+script c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n105_qc.log
+POP=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n105)
+
+REF="/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
+THREADS=20                    # no. of computer cores used 20 = OK, >20 = ask people first!
+REGIONFILE="no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+
+BAMLIST=$(ls /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP".bamlist)
+OUT_NAME="/home/mlucena/ANGSD_analysis/depth_calculus/"$POP".qc"
+NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
+MAXDEPTH=$(expr $NUMBER_IND \* 1000)
+
+# Sanity checks: 
+ls $BAMLIST
+echo $OUT_NAME
+echo $NUMBER_IND
+echo $MAXDEPTH
+
+/opt/angsd/angsd/angsd \
+-P $THREADS \
+-b $BAMLIST \
+-ref $REF \
+-out $OUT_NAME \
+-uniqueOnly 1 \
+-remove_bads 1 \
+-only_proper_pairs 1 \
+-rf $REGIONFILE \
+-baq 1 \
+-C 50 \
+-doQsDist 1 \
+-doDepth 1 \
+-doCounts 1 \
+-maxDepth $MAXDEPTH  
+
+```
+
+### MaxDepth R 
+  
+Cuando acabo me llevo los archivos generados de GlobalDepth a mi ordenador para aplicarles el script de R y calcular la cobertura mínima y máxima en cada caso.
+
+```{r, engine=bash, eval=FALSE}
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/depth_calculus/*.depth* /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/
+  
+```
+
+RScript:
+
+```{r}
+
+library(dplyr)
+library(plyr)
+library(ggplot2)
+library(gridExtra)
+library(knitr)
+
+## Functions
+get_mean <- function(dat) { with(dat, sum(as.numeric(freq)*value)/sum(as.numeric(freq))) }
+get_sd <- function(dat) { mu <- get_mean (dat) 
+with (dat, sqrt(sum(as.numeric(freq)*(value-mu)^2)/(sum(as.numeric(freq))-1))) } 
+
+#*******************************************************************************************
+
+# knitr::opts_chunk$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test"))
+# print(getwd())
+# opts_knit$set(root.dir='/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test')
+# print(getwd())
+# setwd("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test")
+
+my_files_depthGlobal = list.files(path = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test",pattern="*.depthGlobal$") 
+
+for (i in 1:length(my_files_depthGlobal)) { assign(my_files_depthGlobal[i], (scan(paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/",my_files_depthGlobal[i],sep=""), sep = " ", dec = ".")) %>% .[!is.na(.)])}
+
+mean_folds = 0.95
+
+depth_per_sample <- data.frame()
+
+#Compute globaldepth for all populations found
+#*******************************************************************************************
+  
+for (i in 1:length(my_files_depthGlobal)) 
+  {
+  
+DF = read.table(paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/",my_files_depthGlobal[i],sep=""),head=F, stringsAsFactors=F, check.names=FALSE)
+
+freq_table_DF <- data.frame (value = 1:length (DF), freq = t(DF))
+freq_table_truncated_DF <- filter(freq_table_DF, value < (nrow(freq_table_DF)))
+
+# Mean depth:
+
+my_mean_DF <-  get_mean (freq_table_DF)
+my_mean_truncated_DF <- get_mean (freq_table_truncated_DF)
+my_sd_DF <-  get_sd (freq_table_DF)
+my_sd_truncated_DF <- get_sd (freq_table_truncated_DF)
+
+# Max and min depth:
+
+maxDepth_DF = my_mean_DF + (mean_folds * my_mean_DF)
+minDepth_DF  = my_mean_DF - (mean_folds * my_mean_DF)
+maxDepth_truncated_DF = my_mean_truncated_DF + (mean_folds * my_sd_truncated_DF)
+minDepth_truncated_DF  = my_mean_truncated_DF - (mean_folds * my_sd_truncated_DF)
+
+
+# Esto funciona para una población
+#Per sample
+# epoch=unlist(strsplit(my_files_depthGlobal[i],"_"))[1]
+# specie=unlist(strsplit(my_files_depthGlobal[i],"_"))[2]
+# population2=unlist(strsplit(my_files_depthGlobal[i],"_"))[3]
+# # population=unlist(strsplit(population2,"[.]"))[1]
+# 
+# depth_per_sample <- rbind(depth_per_sample, 
+#   data.frame( epoch=epoch,  sp=specie, pop = population,
+#   mean = my_mean_DF, sd = my_sd_DF, 
+#   mean_truncated =  my_mean_truncated_DF, sd_truncated = my_sd_truncated_DF,
+#   maxDepth = maxDepth_DF, minDepth = minDepth_DF,
+#   maxDepth_truncated = maxDepth_truncated_DF, minDepth_truncated = minDepth_truncated_DF)) 
+
+# Para una o más poblaciones:
+population=unlist(strsplit(my_files_depthGlobal[i],"[.]"))[1]
+
+depth_per_sample <- rbind(depth_per_sample, 
+data.frame( pop = population,
+mean = my_mean_DF, sd = my_sd_DF, 
+mean_truncated =  my_mean_truncated_DF, sd_truncated = my_sd_truncated_DF,
+maxDepth = maxDepth_DF, minDepth = minDepth_DF,
+maxDepth_truncated = maxDepth_truncated_DF, minDepth_truncated = minDepth_truncated_DF)) 
+
+
+# Plotting:
+
+ggplot(freq_table_truncated_DF, aes(x = value, y = freq)) + 
+  geom_bar(stat = "identity", color = "black") +
+  scale_x_continuous(breaks = 0:250*10, limits = c(0, maxDepth_truncated_DF*1.5))+
+  scale_y_continuous(expand=c(0,0))+
+  ggtitle (paste(my_files_depthGlobal[i],"_", mean_folds, "_",maxDepth_truncated_DF, "_",maxDepth_DF) ) +
+  geom_vline(xintercept=maxDepth_DF,
+             linetype="dashed", size=0.5)+ 
+  geom_vline(xintercept=minDepth_DF,
+             linetype="dashed", size=0.5)+ 
+  geom_vline(xintercept=maxDepth_truncated_DF, colour ="grey",
+             linetype="dashed", size=0.5)+ 
+  geom_vline(xintercept=minDepth_truncated_DF,colour ="grey",
+             linetype="dashed", size=0.5)+ 
+  theme_classic()+ 
+  theme(text = element_text(size=10))
+
+plot_name=paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/",my_files_depthGlobal[i],"_",mean_folds,".pdf",sep="")
+ggsave(filename = plot_name)
+
+}
+
+# When finished write the table
+
+write.table(x = depth_per_sample,file = paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_",mean_folds,".csv", sep= ""),quote=FALSE, col.names = FALSE, row.names = FALSE, sep= " ")
+
+```
+
+
+```{r, engine=bash, eval=FALSE}
+
+scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/depth_calculus/
+
+  
+# Separate in populations:
+cd /home/mlucena/ANGSD_analysis/depth_calculus/
+POPS=$(cat /home/mlucena/ANGSD_analysis/depth_calculus/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv | awk '{print $1}')
+  
+
+for POP in ${POPS[@]}
+do
+echo $POP
+grep "${POP} " /home/mlucena/ANGSD_analysis/depth_calculus/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv   > "$POP"_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+done
+
+  
+  
+```
+
+
+
+
+### Creating Bamlist for intergenic analysis 
+
+```{bash}
+
+### Defining Bamlist per pop
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis
+
+# All individuals pop: --> Done 20/06/2017
+POPS=(ll_ba c_ll_cr c_ll_ka c_ll_ki c_ll_la c_ll_no c_ll_og c_ll_po c_ll_to c_ll_tu c_ll_vl c_ll_ya c_lp_do c_lp_sm)
+# Some pop combinations: --> Done 20/06/2017
+POPS=(c_ll_ka-c_ll_og  ) 
+# Both species: --> Done 20/06/2017
+POPS=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+# Only lynx lynx: --> Done 20/06/2017
+POPS=(c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+# Only pardinus: --> Done 20/06/2017
+POPS=(c_lp_do-c_lp_sm)
+
+# To do:
+POPS=(c_ll_ur)
+POPS=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+POPS=(c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+
+
+
+for POP in ${POPS[@]}
+do
+echo $POP
+rm "$POP".intergenic.bamlist
+echo $POP
+IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
+for POP1 in "${POPS1[@]}"
+do
+echo "$POP --> $POP1"
+ls /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/*${POP1}*intergenic.bam  >> "$POP".intergenic.bamlist
+done
+NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
+mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
+done
+
+
+# OJO!  
+# mv ll_ba_n003.intergenic.bamlist c_ll_ba_n003.intergenic.bamlist
+
+# Modifico el archivo que incluye ambas especies para hacer uno que sólo tenga los individuos secuenciados a 5x.  
+
+nano samples_genome_project
+c_lp_do_0153
+c_lp_do_0173
+c_lp_do_0443
+c_lp_sm_0138
+c_lp_sm_0140
+c_lp_sm_0185
+c_lp_sm_0186
+c_lp_sm_0298
+c_lp_sm_0359
+c_lp_do_0007
+c_lp_sm_0221
+
+#  --> Done 20/06/2017
+
+POP=c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl
+grep -v -f samples_genome_project ${POP}_n105.intergenic.bamlist > ${POP}.intergenic.bamlist
+NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
+mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
+
+#  --> Done 20/06/2017
+
+POP=(c_lp_do-c_lp_sm)
+grep -v -f samples_genome_project ${POP}_n031.intergenic.bamlist > ${POP}.intergenic.bamlist
+NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
+mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
+
+
+
+
+
+
+
+
+########################################################################################################################################
+########################################################################################################################################
+
+############################################# OLD--> Lo dejo por si es útil ############################################# 
+##### Este script es el que usaba antes que cogía la información de la tabla de depth:
+# NO es el que voy a usar ahora, si no que voy a definir cada bam list como para WG partiendo de todo. 
+POPS=(cat /home/mlucena/ANGSD_analysis/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv | awk '{print $1}')
+for POP in ${POPS[@]}
+do
+echo $POP
+rm "$POP".intergenic.bamlist
+POP=$(echo $POP | awk -F'_' '{for (i=1; i<NF; i++) printf("%s_", $i)}' | awk '{print substr ($0, 1, length($0)-1)}')
+echo $POP
+IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
+for POP1 in "${POPS1[@]}"
+do
+echo "$POP --> $POP1"
+ls /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/${POP1}*intergenic.bam  >> "$POP".intergenic.bamlist
+done
+NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
+mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
+done
+
+########################################################################################################################################
+########################################################################################################################################
+
+
+```
+
+
