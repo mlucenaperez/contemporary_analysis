@@ -1,0 +1,759 @@
+---
+title: "pipeline"
+output: html_document
+---
+
+# Pipeline for contemporary samples
+
+##  Overview & variable definition
+
+This is the pipeline for Illumina read merging and bwa mapping of modern libraries generated using the double stranded protocol. Merged and unmerged PE reads are mapped.
+
+${i} core name of input file
+In order to keep samples reasonably sorted and facilitate coding each sample has a unique prefix (this should be filename for the file filename.fastq.gz) each step in the pipeline then has a suffix.
+
+```{r, engine=bash, eval=FALSE}
+# VARIABLES:
+
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+THREADS=10   # No. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the names of all the samples and we'll loop through it to process all the samples. 
+
+cd /backup/grupolince/raw_data/LYNX_17/20170505/FASTQ/
+ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq))
+
+# BARCODE LYNX_14:
+# declare -A BARCODEID=(["C9KH6ANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KN6ANXX_7_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_1_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_2_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_3_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_4_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KH6ANXX_5_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KN6ANXX_7_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_1_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_2_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_3_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_4_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_5_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KH6ANXX_5_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KN6ANXX_7_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_1_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_2_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_3_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_4_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_5_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KH6ANXX_5_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KN6ANXX_7_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_1_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_2_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_3_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_4_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_5_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KH6ANXX_5_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KN6ANXX_7_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_1_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_2_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_3_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_4_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_5_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KH6ANXX_5_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KN6ANXX_7_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_1_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_2_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_3_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_4_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_5_LYNX7-706ii5-4"]="h_lp_mt_1025" ["CA3D2ANXX_3_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KH6ANXX_5_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KN6ANXX_7_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_1_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_2_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_3_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_4_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_5_LYNX7-687ii5-4"]="h_lp_mt_1087" ["CA3D2ANXX_3_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KH6ANXX_5_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KN6ANXX_7_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_1_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_2_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_3_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_4_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_5_LYNX7-700ii5-4"]="h_lp_mt_1117" ["CA3D2ANXX_3_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KH6ANXX_5_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KN6ANXX_7_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_1_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_2_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_3_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_4_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_5_LYNX7-693ii5-4"]="h_lp_mt_1141" ["CA3D2ANXX_3_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KH6ANXX_5_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KN6ANXX_7_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_1_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_2_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_3_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_4_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_5_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KH6ANXX_5_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KN6ANXX_7_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_1_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_2_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_3_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_4_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_5_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KH6ANXX_5_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KN6ANXX_7_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_1_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_2_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_3_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_4_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_5_LYNX7-708ii5-4"]="h_lp_mt_1305" ["CA3D2ANXX_3_LYNX7-708ii5-4"]="h_lp_mt_1305")
+
+
+
+# BARCODE LYNX_16:
+# declare -A BARCODEID=(["CA2W6ANXX_4_23nf"]="h_ll_ba_0214" ["CA2W6ANXX_4_25nf"]="c_ll_ba_0216" ["CA2W6ANXX_4_27nf"]="h_ll_ba_0215" ["CA3D2ANXX_6_23nf"]="h_ll_ba_0214" ["CA3D2ANXX_6_25nf"]="c_ll_ba_0216" ["CA3D2ANXX_6_27nf"]="h_ll_ba_0215")
+
+
+# BARCODE LYNX_17:
+# declare -A BARCODEID=(["C9KH6ANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KH6ANXX_5_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KH6ANXX_5_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KH6ANXX_5_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KH6ANXX_5_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KH6ANXX_5_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KH6ANXX_5_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KH6ANXX_5_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KH6ANXX_5_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KN6ANXX_7_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KN6ANXX_7_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KN6ANXX_7_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KN6ANXX_7_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KN6ANXX_7_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KN6ANXX_7_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KN6ANXX_7_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KN6ANXX_7_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KN6ANXX_7_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_1_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_1_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_1_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_1_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_1_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_1_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_1_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_1_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_1_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_2_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_2_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_2_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_2_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_2_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_2_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_2_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_2_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_2_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_3_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_3_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_3_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_3_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_3_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_3_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_3_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_3_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_3_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_4_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_4_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_4_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_4_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_4_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_4_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_4_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_4_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_4_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_5_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_5_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_5_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_5_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_5_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_5_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_5_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_5_LYNX7-708ii5-4"]="h_lp_mt_1305" ["CA3D2ANXX_3_LYNX7-706ii5-4"]="h_lp_mt_1025" ["CA3D2ANXX_3_LYNX7-700ii5-4"]="h_lp_mt_1117" ["CA3D2ANXX_3_LYNX7-693ii5-4"]="h_lp_mt_1141" ["CA3D2ANXX_3_LYNX7-708ii5-4"]="h_lp_mt_1305" ["CALHGANXX_6_LYNX7-702ii5-4"]="h_lp_mt_0884" ["CALHGANXX_6_LYNX7-625ii5-2"]="h_lp_mt_0976" ["CALHGANXX_6_LYNX7-709ii5-4"]="h_lp_mt_0978" ["CALHGANXX_6_LYNX7-604ii5-2"]="h_lp_mt_0979" ["CALHGANXX_6_LYNX7-706ii5-4"]="h_lp_mt_1025" ["CALHGANXX_6_LYNX7-700ii5-4"]="h_lp_mt_1117" ["CALHGANXX_6_LYNX7-693ii5-4"]="h_lp_mt_1141" ["CALHGANXX_6_LYNX7-695ii5-4"]="h_lp_mt_1295" ["CALHGANXX_6_LYNX7-708ii5-4"]="h_lp_mt_1305" ["CALHGANXX_7_LYNX7-702ii5-4"]="h_lp_mt_0884" ["CALHGANXX_7_LYNX7-625ii5-2"]="h_lp_mt_0976" ["CALHGANXX_7_LYNX7-709ii5-4"]="h_lp_mt_0978" ["CALHGANXX_7_LYNX7-604ii5-2"]="h_lp_mt_0979" ["CALHGANXX_7_LYNX7-706ii5-4"]="h_lp_mt_1025" ["CALHGANXX_7_LYNX7-700ii5-4"]="h_lp_mt_1117" ["CALHGANXX_7_LYNX7-693ii5-4"]="h_lp_mt_1141" ["CALHGANXX_7_LYNX7-695ii5-4"]="h_lp_mt_1295" ["CALHGANXX_7_LYNX7-708ii5-4"]="h_lp_mt_1305" ["CALHGANXX_8_LYNX7-702ii5-4"]="h_lp_mt_0884" ["CALHGANXX_8_LYNX7-625ii5-2"]="h_lp_mt_0976" ["CALHGANXX_8_LYNX7-709ii5-4"]="h_lp_mt_0978" ["CALHGANXX_8_LYNX7-604ii5-2"]="h_lp_mt_0979" ["CALHGANXX_8_LYNX7-706ii5-4"]="h_lp_mt_1025" ["CALHGANXX_8_LYNX7-700ii5-4"]="h_lp_mt_1117" ["CALHGANXX_8_LYNX7-693ii5-4"]="h_lp_mt_1141" ["CALHGANXX_8_LYNX7-695ii5-4"]="h_lp_mt_1295" ["CALHGANXX_8_LYNX7-708ii5-4"]="h_lp_mt_1305")
+
+
+```
+
+## 	FastQC: quality summary of raw data 
+
+```{r, engine=bash, eval=FALSE}
+cd /home/mlucena/grupolince/lynx_genomes_5x/hcal_alignments/bamfiles/new_alignment
+cd /backup/grupolince/raw_data/LYNX_17/20170505/FASTQ/
+  
+for i in ${ARRAY[@]}
+do
+echo "${i}"
+fastqc ${i}_1.fastq.gz  
+done
+
+cd /backup/grupolince/raw_data/LYNX_17/20170505/FASTQ/
+  
+for i in ${ARRAY[@]}
+do
+echo "${i}"
+fastqc ${i}_2.fastq.gz  # -a adapters.txt
+done
+
+```
+
+
+## 	Trimming
+
+Trim adapter seqs and merge overlapping R1 and R2. 
+To decide whether to trim or not, check fastQC files. 
+
+Nosotro sólo trimamos para LYNX_14
+
+LYNX_06 y LYNX_08_09 venían trimados. No los hemos trimado. 
+LYNX_13, LYNX_15 y LYNX_16 también venían trimados. 
+Los del proyecto genómca concluimos que no merece la pena trimarlos, porque aunque tienen adaptadores la proporción es muy poca, y el tiempo de computación es mucho. 
+
+```{r, engine=bash, eval=FALSE}
+
+for i in ${ARRAY[@]}
+do
+
+echo "${i}"
+SeqPrep -f "${i}"_1.fastq.gz -r "${i}"_2.fastq.gz -1 "${i}"_R1_trimmed.fastq.gz -2 "${i}"_R2_trimmed.fastq.gz -A AGATCGGAAGAGCACACGTC -B AGATCGGAAGAGCGTCGTGT
+done   
+
+```
+
+
+
+##	FastQC: quality summary of trimmed data 
+
+Only if you have trimmed. 
+
+```{r, engine=bash, eval=FALSE}
+
+for i in ${ARRAY[@]}
+do
+fastqc "${i}"_R1_trimmed.fastq.gz   # -a adapters.txt;
+done
+
+for i in ${ARRAY[@]}
+do
+fastqc "${i}"_R2_trimmed.fastq.gz   # -a adapters.txt;	
+done
+
+```
+
+
+
+
+## 	Aligment BWA-MEM	
+
+Checked whether you are using trimmed or untrimmed data.
+
+```{r, engine=bash, eval=FALSE}
+
+# Para los de LYNX_14: Lanzado!
+for i in ${ARRAY[@]}
+do
+echo $i
+bwa mem $REF ${i}_R1_trimmed.fastq.gz ${i}_R2_trimmed.fastq.gz -t $THREADS  >  ${i}.sam
+samtools view -hbS  ${i}.sam -@ $THREADS | /opt/samtools/samtools sort -@ $THREADS -o ${i}_sorted.bam && rm ${i}.sam
+done
+
+```
+
+
+
+Estas las corrí de una en una porque tuve que parar el proceso a mitad. 
+
+```{bash}
+
+CALHGANXX_8_LYNX7-700ii5-4_R1_trimmed.fastq.gz
+CALHGANXX_8_LYNX7-700ii5-4_R2_trimmed.fastq.gz
+
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+bwa mem $REF CALHGANXX_8_LYNX7-700ii5-4_R1_trimmed.fastq.gz CALHGANXX_8_LYNX7-700ii5-4_R2_trimmed.fastq.gz -t 5 >  CALHGANXX_8_LYNX7-700ii5-4.sam
+
+CALHGANXX_8_LYNX7-702ii5-4_R1_trimmed.fastq.gz
+CALHGANXX_8_LYNX7-702ii5-4_R2_trimmed.fastq.gz
+
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+bwa mem $REF CALHGANXX_8_LYNX7-702ii5-4_R1_trimmed.fastq.gz CALHGANXX_8_LYNX7-702ii5-4_R2_trimmed.fastq.gz -t 3 >  CALHGANXX_8_LYNX7-702ii5-4.sam
+
+
+CALHGANXX_8_LYNX7-706ii5-4_R1_trimmed.fastq.gz
+CALHGANXX_8_LYNX7-706ii5-4_R2_trimmed.fastq.gz
+
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+bwa mem $REF CALHGANXX_8_LYNX7-706ii5-4_R1_trimmed.fastq.gz CALHGANXX_8_LYNX7-706ii5-4_R2_trimmed.fastq.gz -t 3 >  CALHGANXX_8_LYNX7-706ii5-4.sam
+
+
+CALHGANXX_8_LYNX7-708ii5-4_R1_trimmed.fastq.gz
+CALHGANXX_8_LYNX7-708ii5-4_R2_trimmed.fastq.gz
+
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+bwa mem $REF CALHGANXX_8_LYNX7-708ii5-4_R1_trimmed.fastq.gz CALHGANXX_8_LYNX7-708ii5-4_R2_trimmed.fastq.gz -t 3 >  CALHGANXX_8_LYNX7-708ii5-4.sam
+
+
+CALHGANXX_8_LYNX7-709ii5-4_R1_trimmed.fastq.gz
+CALHGANXX_8_LYNX7-709ii5-4_R2_trimmed.fastq.gz
+
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+bwa mem $REF CALHGANXX_8_LYNX7-709ii5-4_R1_trimmed.fastq.gz CALHGANXX_8_LYNX7-709ii5-4_R2_trimmed.fastq.gz -t 3 >  CALHGANXX_8_LYNX7-709ii5-4.sam
+
+
+ARRAY=($(ls *.fastq.gz |  grep -v "trimmed" | cut -d'_' -f1-3 | uniq))
+
+```
+
+## 	Adding read groups
+
+```{r, engine=bash, eval=FALSE}
+
+for i in ${ARRAY[@]}
+do
+echo $i
+
+run=($(echo $i | cut -d"_" -f 1))  #Sacar el run de i
+
+java -jar /opt/picard-tools/picard.jar AddOrReplaceReadGroups I=${i}_sorted.bam O=${BARCODEID["${i}"]}_${i}_sorted_rg.bam RGID=${i} RGLB=${BARCODEID["${i}"]}_lib RGPL=Illumina RGPU=${run} RGSM=${BARCODEID["${i}"]} VALIDATION_STRINGENCY=SILENT \
+&& rm ${i}_sorted.bam
+
+done
+
+```
+
+## 	Merge BAM	
+
+```{r, engine=bash, eval=FALSE}
+
+SAMPLESLIST=($(echo ${BARCODEID[@]} | tr ' ' '\n' | sort | uniq | tr ' ' '\n'))
+
+for sample in "${SAMPLESLIST[@]}"
+do
+echo "${sample}"
+ls ./"${sample}"_*_sorted_rg.bam  > "${sample}".bam.list
+echo;echo
+echo `wc -l "${sample}".bam.list`;
+lines=`wc -l "${sample}".bam.list | cut -f 1 -d " " `
+if [ "$lines" -eq "1" ]; 
+then echo "ONE";
+cp `cat "${sample}".bam.list`  "${sample}".bam;
+fi
+if [ "$lines" -gt "1" ]; 
+then echo "more than ONE";
+/opt/samtools/samtools merge -@ 10 -r  "${sample}".bam `cat "${sample}".bam.list`;
+fi
+samtools flagstat "${sample}".bam > "${sample}".stats;
+/opt/samtools/samtools sort -@ 10 "${sample}".bam -o "${sample}"_sorted.bam && rm "${sample}".bam ;
+done
+
+```
+
+* Error:
+[bam_translate] RG tag "c_ll_ka_0189_CA2W6ANXX_2_5nf_sorted_rg" on read "7001450:317:CA2W6ANXX:2:1114:8454:72372" encountered with no corresponding entry in header, tag lost. Unknown tags are only reported once per input file for each tag ID.
+---> se debía a la versión de samtools merge, para solucionarlo lo he cambiado por /opt/samtools/samtools merge.
+
+
+## 	Remove duplicates	
+
+```{r, engine=bash, eval=FALSE}
+
+ARRAY_MERGED_BAM_SAMPLE_NAME=($(ls *_sorted.bam |  cut -d'_' -f1,2,3,4 | uniq))
+
+for i in ${ARRAY_MERGED_BAM_SAMPLE_NAME[@]}
+do
+echo "${i}"
+java -jar /opt/picard-tools/picard.jar MarkDuplicates METRICS_FILE=${i}_rmdup.txt I=${i}_sorted.bam O=${i}_sorted_rmdup.bam MAX_FILE_HANDLES_FOR_READ_ENDS_MAP=2000 
+/opt/samtools/samtools sort ${i}_sorted_rmdup.bam -@ 30 -o ${i}_sorted_rmdup_sorted.bam
+samtools index ${i}_sorted_rmdup_sorted.bam
+samtools flagstat ${i}_sorted_rmdup_sorted.bam > ${i}_sorted_rmdup_sorted.stats
+
+done
+
+```
+
+## 	Realignment with GATK	
+
+Requirement:
+Coordinate-sorted and indexed BAM alignment data
+This two-step indel realignment process:
+A) first identifies such regions where alignments may potentially be improved 
+B) then realigns the reads in these regions using a consensus model that takes all reads in the alignment context together.
+
+
+```{r, engine=bash, eval=FALSE}
+
+for i in ${ARRAY_MERGED_BAM_SAMPLE_NAME[@]}
+do
+echo "${i}"
+# RealignerTargetCreator
+rm ${i}_sorted.bam
+rm ${i}_sorted_rmdup.bam
+# RealignerTargetCreator
+java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T RealignerTargetCreator -nt 24 -R $REF -I ${i}_sorted_rmdup_sorted.bam -o ${i}_realignertargetcreator.intervals
+# IndelRealigner
+java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T IndelRealigner -R $REF -targetIntervals ${i}_realignertargetcreator.intervals -I ${i}_sorted_rmdup_sorted.bam -o ${i}_sorted_rmdup_sorted_indelrealigner.bam
+done
+```
+
+
+hasta aqui
+
+##  Move all the samples to a common folder	  
+
+```{r, engine=bash, eval=FALSE}
+
+mv /home/GRUPOS/grupolince/lynx_genomes_5x/raw_data/LYNX_09/*bam /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files
+mv /home/GRUPOS/grupolince/lynx_genomes_5x/raw_data/LYNX_09/*stas /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files
+mv /home/GRUPOS/grupolince/lynx_genomes_5x/raw_data/LYNX_06_08/*bam /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files
+mv /home/GRUPOS/grupolince/lynx_genomes_5x/raw_data/LYNX_06_08/*stats /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files
+
+# Remove also intermediated files. 
+```
+
+I haven't done the recalibration as it is not trustful until we solve the contamination issue. 
+
+<!-- ## 	Recalibration with GATK	 -->
+
+<!-- The base recalibration process involves two key steps:  -->
+<!-- A) first the program builds a model of covariation based on the data and a set of known variants (which you can bootstrap if there is none available for your organism)  -->
+<!-- B) then it adjusts the base quality scores in the data based on the model.  -->
+
+<!-- ### SNP calling -->
+
+<!-- ```{r, engine=bash, eval=FALSE} -->
+<!-- # Define new variables -->
+
+<!-- POP=("cr") -->
+<!-- ROUND=1 -->
+<!-- PREVIOUS_ROUND=$(expr $ROUND - 1) -->
+
+<!-- for pop in ${POP[@]} -->
+<!-- do -->
+<!-- echo "${pop}" -->
+<!-- if [ "$ROUND" -eq "1" ]; -->
+<!-- then -->
+<!-- ls *_${pop}_*.bam | grep -v "recal" | cut -d' ' -f9 >  "${pop}"_round-"$ROUND".bam.list; -->
+<!-- fi -->
+<!-- if [ "$ROUND" -gt "1" ]; -->
+<!-- then -->
+<!-- ls *_${pop}*recal_round-"$PREVIOUS_ROUND".bam | cut -d' ' -f9 > "${pop}"_round-"$ROUND".bam.list; -->
+<!-- fi -->
+<!-- number_id=$(printf "%03d" `wc -l  "${pop}"_round-"$ROUND".bam.list | tr -s ' ' | cut -d ' ' -f1`); # He cambiado el -f2 por -f1 porque si no los de macrogen no corrian, comprobar que siguen biuen -->
+<!-- echo "${number_id}"; -->
+<!-- mv  "${pop}"_round-"$ROUND".bam.list  "${pop}"_round-"$ROUND"_n"$number_id".bam.list; -->
+<!-- INPUT_BAMS_FOR_CALLING="${pop}"_round-"$ROUND"_n"$number_id".bam.list; -->
+<!-- java  -XX:MaxMetaspaceSize=1g -XX:+UseG1GC  -XX:+UseStringDeduplication -Xms64g  -Xmx64g -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T HaplotypeCaller -nct 8 -R $REF -I $INPUT_BAMS_FOR_CALLING --genotyping_mode DISCOVERY -stand_emit_conf 10 -stand_call_conf 30 -o "${pop}"_n"$number_id"_raw_round-"$ROUND".vcf -->
+<!-- /opt/vcflib/bin/vcffilter -f "QD > 2 & MQ > 40 & FS < 100 " "${pop}"_n"$number_id"_raw_round-"$ROUND".vcf > "${pop}"_n"$number_id"_raw_round-"$ROUND"_filtered.vcf -->
+<!-- done -->
+
+<!-- ``` -->
+
+<!-- ### Recalibration  -->
+
+<!-- ```{r, engine=bash, eval=FALSE} -->
+
+<!-- REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa -->
+<!-- POP=("mt") -->
+<!-- ROUND=1 -->
+<!-- PREVIOUS_ROUND=$(expr $ROUND - 1) -->
+
+<!-- for pop in ${POP[@]} -->
+<!-- do -->
+<!-- echo "${pop}" -->
+<!-- # esto de number_id si corro todo junto está repetido: -->
+<!-- number_id=$(printf "%03d" `wc -l  "${pop}"_round-"$ROUND"*.bam.list | tr -s ' ' | cut -d ' ' -f1`); # He cambiado el -f2 por -f1 porque si no los de macrogen no corrian, comprobar que siguen biuen -->
+<!-- INPUT_BAMS_FOR_RECALIBRATING=($(cat "${pop}"_round-1_n*.bam.list))  # He cambiado el nombre del archivo porque corriendo los de macrogen me he dado cuenta de que estaban mal -->
+<!-- echo $number_id -->
+<!-- for id in ${INPUT_BAMS_FOR_RECALIBRATING[@]} -->
+<!-- do -->
+<!-- echo $id -->
+<!-- java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC  -XX:+UseStringDeduplication -Xms10g  -Xmx64g -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar   -T BaseRecalibrator -R $REF -I ${id} -knownSites "${pop}"_n"$number_id"_raw_round-"$ROUND"_filtered.vcf -o ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-"$ROUND".table} -->
+<!-- java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T PrintReads -R $REF -I ${id} -BQSR ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-"$ROUND".table} -o ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_round-"$ROUND".bam} -->
+
+<!-- # Be sure that you have install and running in R the following packages: -->
+<!-- # R: library("ggplot2"), library("gplots"), library("reshape"), library("grid"), library("tools"), library("gsalib") -->
+
+<!-- if [ "$ROUND" -eq "1" ];  -->
+<!-- then -->
+<!-- echo "AnalyzeCovariates  round ""$ROUND" " sample ""${id}" -->
+<!-- java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T AnalyzeCovariates -R $REF -BQSR ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-1.table} -plots ${id/_sorted_rmdup_sorted_indelrealigner.bam/_BQSR_round-1.pdf} -->
+<!-- fi -->
+<!-- if [ "$ROUND" -eq "2" ];  -->
+<!-- then -->
+<!-- java -jar GenomeAnalysisTK.jar -T AnalyzeCovariates -R $REF -before ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-1.table} -after ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-2.table} -csv ${id/_sorted_rmdup_sorted_indelrealigner.bam/BQSR_round-2.csv} -plots ${id/_sorted_rmdup_sorted_indelrealigner.bam/BQSR_round-2.pdf} -->
+<!-- fi    -->
+<!-- if [ "$ROUND" -eq "3" ];  -->
+<!-- then -->
+<!-- java -jar GenomeAnalysisTK.jar -T AnalyzeCovariates -R $REF -ignoreLMT -BQSR ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-1.table} -before ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-2.table} -after ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-3.table} -plots BQSR_round-3.pdf -->
+<!-- fi -->
+<!-- done -->
+<!-- done -->
+<!-- ``` -->
+
+## Report
+
+```{r, engine=bash, eval=FALSE}
+
+# Check ARRAY, SAMPLELIST AND BARCODEID
+
+ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq))                     
+SAMPLESLIST=($(echo ${BARCODEID[@]} | tr ' ' '\n' | sort | uniq | tr ' ' '\n'))
+
+
+# This part calculates how many reads do I have in the fastq file and name with the sample name so that latter we can added if they are coming from the same library.
+# In case they are different libraries, you should use it, cause you have to calculate your statistics per library not per sample. 
+
+for i in ${ARRAY[@]}
+do
+echo $i
+echo ${BARCODEID["${i}"]}_${i}
+zcat ${i}_1.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar1.rawseq
+zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar2.rawseq
+done
+
+rm stats_LYNX_14.csv
+rm raw.R2 
+
+for sample in "${SAMPLESLIST[@]}"
+do
+cat "${sample}"*.borrar1.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R1.rawseq
+cat "${sample}"*.borrar2.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R2.rawseq
+done
+
+for sample in "${SAMPLESLIST[@]}"
+do
+echo "${sample}"
+NAME="${sample}"
+# TOTAL_SEQ="$(cat "${sample}"*.rawseq | awk '{sum+=$1}END{print sum}')"
+#TOTAL_MAPPED="$(grep "in total" "${sample}".stats | cut -d "+" -f 1 )"
+#DUPLICATES="$(grep "duplicates" "${sample}"_sorted_rmdup_sorted.stats | cut -d "+" -f 1 )"
+echo "$NAME, $TOTAL_SEQ" >> raw.stats 
+done
+
+for i in ${ARRAY[@]}
+do
+echo ${i}_1.fastq.gz
+zcat ${i}_1.fastq.gz | paste - - - - | cut -f2 | wc -c > ${BARCODEID["${i}"]}_${i}.borrar.rawbases
+done
+
+for sample in "${SAMPLESLIST[@]}"
+do
+cat "${sample}"_*.borrar.rawbases | awk '{sum+=$1}END{print sum*2}' > "${sample}"_R1.rawbases
+done
+
+for sample in "${SAMPLESLIST[@]}"
+do
+b=$(cat "${sample}"_R1.rawbases)
+paste ${sample} "${b}"
+done
+
+
+# LYNX_17:
+
+SAMPLESLIST=($(ls *_sorted_rmdup_sorted_indelrealigner.bam | uniq))
+
+
+for sample in "${SAMPLESLIST[@]}"
+do
+echo "${sample}"
+samtools flagstat $sample > "${sample}".stats
+done
+
+
+
+```
+
+
+## Coverage
+
+```{r, engine=bash, eval=FALSE}
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+
+# Esto es más lento.
+# SAMPLELIST=($(ls *bam | uniq ))
+# for sample in "${SAMPLELIST[@]}"
+# do
+# java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC  -XX:+UseStringDeduplication -Xms10g  -Xmx64g -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -I ${sample} -o ${sample/.bam/.coverage} -T DepthOfCoverage -R $REF
+# done
+
+
+SAMPLELIST=($(ls *_sorted_rmdup_sorted_indelrealigner.bam | uniq ))
+echo -e "sample_name\tcoverage_based_samtools\tstdev_based_samtools" > global_coverage_LYNX17.tsv
+for sample in "${SAMPLELIST[@]}"
+do
+echo $sample
+DEPTH=$(samtools depth $sample | awk '{sum+=$3; sumsq+=$3*$3} END { print sum/2413209059; print sqrt(sumsq/2413209059 - (sum/2413209059)**2)}')
+paste \
+<(echo ${sample/_sorted_rmdup_sorted_indelrealigner.bam/} ) \
+<(echo $DEPTH ) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  global_coverage_LYNX17.tsv
+done
+
+# I modify the name so that it has a common field with the previous report:
+cat global_coverage_LYNX17.tsv | sed 's/\t/,/g' > global_coverage_LYNX17.samtools
+rm global_coverage_LYNX17.tsv
+
+
+```
+
+
+## Read lenght distribution
+
+```{r, engine=bash, eval=FALSE}
+
+for sample in *_sorted_rmdup_sorted_indelrealigner.bam # If you want it to run faster add: samtools view $sample | head -n 1000000 |
+do
+samtools view $sample | cut -f 10 | perl -ne 'chomp;print length($_) . "\n"' | sort | uniq -c > ${sample/.bam/.lengthdistribution}
+done
+
+# Now I would like to plot the results, so I download them:
+
+
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/grupolince/lynx_genomes_5x/hcal_alignments/*lengthdistribution /Users/marialucenaperez/Dropbox/PhD/ancient_historical/diario/historico/20170407_length_distribution_insert_size
+
+
+```
+
+Now I plot them:
+
+```{r}
+library(dplyr)
+library(plyr)
+library(ggplot2)
+library(gridExtra)
+
+
+setwd("/Users/marialucenaperez/Dropbox/PhD/ancient_historical/diario/historico/20170407_length_distribution_insert_size")
+my_files_lengthdistribution = list.files(pattern="*lengthdistribution$") 
+datalist = list()
+
+for (i in 1:length(my_files_lengthdistribution)){
+dat <- read.table(my_files_lengthdistribution[i],head=F, stringsAsFactors=F)
+# dat$i <- i  # maybe you want to keep track of which iteration produced it?
+names(dat)[names(dat) == "V1"] <- my_files_lengthdistribution[i] # replacing name of the first column by name of the dataframe so that latter I could join and keep track of the sample 
+datalist[[i]]<- dat # add it to your list
+}
+
+# big_data = do.call(rbind, datalist) -> If you want to join all the column. 
+
+length_distribution_all <- join_all(datalist, by=names(datalist[[2]][2])) %>% arrange (., V2) %>% 
+  mutate (., groups = if_else (V2 < 126, "A", if_else(V2==126, "B", "C")))
+
+collapsed <- data.frame(rbind(colSums(filter(length_distribution_all, groups=="A")%>%select(-groups, -V2)), colSums(filter(length_distribution_all, groups=="B")%>%select(-groups, -V2)))) 
+final <- as.data.frame(t(collapsed))
+colnames(final) <- c("less_126","equal_126") 
+final_ratio <- final %>% mutate (final, ratio_less_divided_equal = less_126/equal_126)
+
+```
+
+## Insert size distribution
+
+```{r, engine=bash, eval=FALSE}
+
+# I run picard tool with the option H, that output an histogram. 
+for sample in *_sorted_rmdup_sorted_indelrealigner.bam
+do
+java  -jar /home/tmp/Software/Picard/picard-tools-1.66/CollectInsertSizeMetrics.jar I=$sample H=${sample/.bam/.histogram_length} O=${sample/.bam/.picard_length}
+done
+
+for picard_file in *.picard_length 
+do
+echo $picard_file
+tail -n+12 $picard_file | awk '($1 > 30) {print $1*$2}' | paste -sd+ | bc | awk '{print $1/2413209059}'
+done
+
+
+  
+```
+
+
+## Summary LYNX_17
+
+```{bash}
+
+SAMPLELIST=($(ls *_sorted_rmdup_sorted_indelrealigner.bam | uniq ))
+
+echo "sample_name,total_seq,total_reads,duplicates,mapped,uniq_mapped,uniq_mapped_vs_total_reads,duplicates_vs_total_reads,coverage_based_distribution" > raw_LYNX_17.stats 
+for sample in "${SAMPLELIST[@]}"
+do
+echo "${sample}"
+NAME="${sample/_sorted_rmdup_sorted_indelrealigner.bam/}"
+TOTAL_SEQ="$(cat /backup/grupolince/raw_data/LYNX_17/20170505/FASTQ/"${sample/_sorted_rmdup_sorted_indelrealigner.bam/}"*1.rawseq | awk '{sum+=$1}END{print sum}')" ### I added manually the three samples that we did not repeat!
+TOTAL_READS="$(grep "in total" "${sample}".stats | cut -d "+" -f 1)"
+DUPLICATES="$(grep "duplicates" "${sample}".stats | cut -d "+" -f 1)"
+MAPPED="$(grep "0 mapped" "${sample}".stats | cut -d "+" -f 1)"
+UNIQ_MAPPED="$(echo "$MAPPED - $DUPLICATES" | bc )"
+UNIQ_MAPPED_vs_TOTAL_READS="$(echo "scale=5; $UNIQ_MAPPED *100 / $TOTAL_READS"  | bc -l)"
+DUPLICATES_vs_TOTAL_READS="$(echo "scale=5; $DUPLICATES / $TOTAL_READS" | bc -l )"
+COVERAGE_BASED_DISTRIBUTION=$(tail -n+12 "${sample/.bam/}"*.picard_length  | awk '($1 > 30) {print $1*$2}' | paste -sd+ | bc | awk '{print $1/2413209059}')
+echo "$NAME,$TOTAL_SEQ,$TOTAL_READS,$DUPLICATES,$MAPPED,$UNIQ_MAPPED,$UNIQ_MAPPED_vs_TOTAL_READS,$DUPLICATES_vs_TOTAL_READS,$COVERAGE_BASED_DISTRIBUTION" | sed 's/ //g' >> raw_LYNX_17.stats 
+done
+
+
+# Join with coverage samtools
+
+LANG=en_EN  join -1 1 -2 1 -t","  <(head -n 2 raw_LYNX_17.stats && tail -n +3 raw_LYNX_17.stats | LANG=en_EN sort -k 1,1) <(head -n 2 global_coverage_LYNX17.samtools && tail -n +3 global_coverage_LYNX17.samtools | LANG=en_EN sort -k 1,1 ) > global_stats_all_samples_LYNX_17.csv # de esta manera tiene en cuenta el header. 
+ 
+
+```
+
+
+## Transitions vs transversion
+
+I have run the following command for several populations:
+
+```{r, engine=bash, eval=FALSE}
+
+/opt/vcftools_0.1.13/bin/vcftools --vcf mt_n012_raw_round-1_filtered.vcf --TsTv-summary
+
+```
+
+For mt:
+After filtering, kept 12 out of 12 Individuals
+Outputting Ts/Tv summary
+Ts/Tv ratio: 2.151
+After filtering, kept 20178063 out of a possible 20178063 Sites
+
+For yakutia
+fter filtering, kept 8 out of 8 Individuals
+utputting Ts/Tv summary
+s/Tv ratio: 2.195
+fter filtering, kept 10899647 out of a possible 10899647 Sites
+
+For kirov:
+After filtering, kept 13 out of 13 Individuals
+Outputting Ts/Tv summary
+Ts/Tv ratio: 2.176
+After filtering, kept 10561306 out of a possible 10561306 Sites
+
+For sm:
+After filtering, kept 19 out of 19 Individuals
+Outputting Ts/Tv summary
+Ts/Tv ratio: 1.813
+After filtering, kept 3846063 out of a possible 3846063 Sites
+
+For do:
+After filtering, kept 12 out of 12 Individuals
+Outputting Ts/Tv summary
+Ts/Tv ratio: 1.746
+After filtering, kept 2816348 out of a possible 2816348 Sites
+
+*In general it looks like there's no a big bias in the results, however we will do it by sample. 
+
+
+```{r, engine=bash, eval=FALSE}
+
+MY_VCF="mt_n012_raw_round-1_filtered.vcf"
+ARRAY=($(vcfsamplenames $MY_VCF))
+for i in  ${ARRAY[@]};
+do
+echo $i
+vcfkeepsamples $MY_VCF ${i} | vcffixup - | vcffilter -f "AC > 0"  > ${i}.vcf
+/opt/vcftools_0.1.13/bin/vcftools --vcf ${i}.vcf --out ${i} --TsTv-summary
+done
+
+# Report per sample.
+grep "Ts/Tv ratio: " *.log | sed -e 's/.log:Ts\/Tv ratio: /\t/' | sort -k2 -n > per_sample_Ts-Tv.tsv
+```
+
+The result per sample is:
+
+cat per_sample_Ts-Tv.tsv
+
+h_lp_mt_1141	1.88
+h_lp_mt_1305	1.481
+h_lp_mt_1295	1.777
+h_lp_mt_0976	1.851
+h_lp_mt_0979	1.853
+h_lp_mt_0978	1.863
+h_lp_mt_0885	2.039
+h_lp_mt_0884	2.082
+h_lp_mt_1272	2.103
+h_lp_mt_1025	2.199
+h_lp_mt_1117	2.233
+h_lp_mt_1087	5.946 ***
+
+This sample seems to have way more transitions than transversions. 
+I have checked map damage and it didn't seems to be at the end of the read. 
+
+I will try to see if most SNPs come from this sample:
+
+```{r, engine=bash, eval=FALSE}
+
+vcfremovesamples mt_n012_raw_round-1_filtered.vcf h_lp_mt_1087 | vcffixup - | vcffilter -f "AC > 0"  > mt_n012_raw_round-1_filtered_without_lp_1087.vcf
+
+
+grep -v "#" mt_n012_raw_round-1_filtered_without_lp_1087.vcf | wc -l
+17672985
+
+```
+
+
+
+
+
+****************************************************************************************************
+
+##  QC-test: MaxDepth. Creating BAMlist.
+
+My populations are:
+
+Lynx Pardinux
+c_lp_do.bamlist #lynx pardinus 	contemporary donana samples
+c_lp_sm.bamlist #lynx pardinus 	contemporary Esmo samples
+h_lp_mt #lynx pardinus 	historical 	Montes de Toledo samples
+
+Lynx lynx
+c_ll_ki #lynx lynx 		contemporary 	kirov samples
+c_ll_po #lynx lynx 		contemporary 	poland samples
+c_ll_no #lynx lynx 		contemporary 	norway samples		
+c_ll_vl #lynx lynx 		contemporary 	vladivostok samples
+c_ll_ya #lynx lynx 		contemporary 	yakutia samples
+
+### Defining Bamlist per pop
+
+```{r, engine=bash, eval=FALSE}
+
+# Hago un .bamlist por poblacion. los salvo en  /home/emarmesat/grupolince/immunocapture/ansgd/qc_test. A saber:
+# Este script es una maravilla. Coje todas las poblaciones que tu hayas definido y hace los bamlist con su nombre adecuado.  
+POPS=("h_lp_mt")
+
+
+# POPS=("c_ll_tu")
+
+cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD
+
+for POP in ${POPS[@]}
+do
+echo $POP
+rm "$POP"_n*.bamlist
+IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
+for POP1 in "${POPS1[@]}"
+do
+echo "$POP --> $POP1"
+ls /home/mlucena/grupolince/lynx_genomes_5x/hcal$$$$$$$$$$$$$$$$$$$$$$$/${POP1}_*_recal_round-1.bam  >> "$POP".bamlist
+done
+NUMBER_IND=$(printf "%03d" `wc -l "$POP".bamlist | cut -f1 -d " "`);
+mv "$POP".bamlist "$POP"_n"$NUMBER_IND".bamlist
+done
+
+```
+
+### MaxDepth
+
+```{r, engine=bash, eval=FALSE}
+
+cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test
+#To launch one by one
+POP="c_ll_la"  # <--CHANGE POP HERE
+screen -S "$POP"_qc_test
+POP="c_ll_la"  # <--CHANGE POP HERE
+script "$POP"_qc.log
+POP="c_ll_la"  # <--CHANGE POP HERE
+
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
+THREADS=5                    # no. of computer cores used 20 = OK, >20 = ask people first!
+
+BAMLIST=$(ls ../"$POP"_n*.bamlist)
+NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
+MAXDEPTH=$(expr $NUMBER_IND \* 1000)
+
+/opt/angsd/angsd \
+-P $THREADS \
+-b $BAMLIST \
+-ref $REF \
+-out ${BAMLIST/.bamlist/.qc} \
+-uniqueOnly 1 \
+-remove_bads 1 \
+-only_proper_pairs 1 \
+-baq 1 \
+-C 50 \
+-doQsDist 1 \
+-doDepth 1 \
+-doCounts 1 \
+-maxDepth $MAXDEPTH  
+
+
+```
+### MaxDepth R 
+  
+Cuando acabo me llevo los archivos generados de GlobalDepth a mi ordenador para aplicarles el script de R (ANGDS-2-b_depth_global_to_choose_MaxDepthGlobal.R) y calcular la cobertura mínima y máxima en cada caso.
+scp emarmesat@genomics-a.ebd.csic.es:/home/emarmesat/grupolince/immunocapture/ansgd/qc_test/*.depth* /Users/elena/Dropbox/immunocapture/analysis/ANSGD/qc_test/
+scp emarmesat@genomics-a.ebd.csic.es:/home/emarmesat/grupolince/immunocapture/ansgd/qc_test/*.bamlist /Users/elena/Dropbox/immunocapture/analysis/ANSGD/qc_test/
+
+
+AN
+
+/home/mlucena/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa
+
+
+
+## Nota LYNX_14 y LYNX_17:
+
+El CNAG mandó junto con las nuevas secuenciaciones de LYNX_17 las mismas muestras de LYNX_14. No mandaron el proyecto completo, sino sólo mandaron toda la información de las muestras que les pedimos que resecuenciaran más. Por tanto, para hlp_0885 (qque ya tiene la cobertura suficiente) y para h_lp_mt_1272 y h_lp_mt_1087 (que no tienen cobertura suficiente pero que no podemos pagar más), los datos brutos están en LYNX14, mientras que para el resto hay una parte de los datos duplicados en ambos proyectos. 
+
+La hoja de estadísticos mía de LYNX_17 sin embargo, contempla todas las muestras. 
+
+
+
