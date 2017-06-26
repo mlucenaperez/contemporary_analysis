@@ -1,0 +1,98 @@
+---
+title: "Untitled"
+output: html_document
+---
+---
+title: "pipeline_contemporary_sfs"
+output: html_document
+---
+
+Vamos a intentar solucionar el problema de la cobertura de sierra moreana y doñana. 
+
+Defino dos poblaciones en Sierra Morena y Doñana:
+
+c_lp_do_genome_project.bamlist
+c_lp_do_reseq.bamlist
+c_lp_sm_genome_project.bamlist
+c_lp_sm_reseq.bamlist
+
+
+# Generating SAF 
+
+## Defining variables:
+
+Global variables:
+
+
+```{r, engine=bash, eval=FALSE}
+
+RUTA=/home/mlucena/ANGSD_analysis 
+cd $RUTA/coverage_problem
+
+#To launch one by one
+
+POP="c_lp_sm_reseq"  # <--CHANGE POP HERE
+screen -S "$POP"_sfs_wg
+# screen -S "$POP"_thetas
+
+POP="c_lp_sm_reseq"  # <--CHANGE POP HERE
+script "$POP"_sfs_wg.log
+# script "$POP"_thetas.log
+
+POP="c_lp_sm_reseq"  # <--CHANGE POP HERE
+
+THREADS=15                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+RUTA=/home/mlucena/ANGSD_analysis/coverage_problem
+
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+
+# Sanity checks:
+echo $POP
+
+
+```
+
+## Unfolded SAF 
+
+```{r, engine=bash, eval=FALSE}
+
+#The read command will read one line at a time from mean_sd_depthGlobal_lynx_per_pop_sd_folds2.csv
+# put the first field (fields being blank separated, and where backslash can be used to escape the field or line separator) in the variable $discard, the second in $x, the third in $y and the rest of the fields in $discard.
+#while read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated; 
+#do
+
+# Anyway I will do it one by one:
+
+##########################
+#  SAF (likelihood):     
+##########################
+
+echo "-------$POP----------SAF (likelihood)-----------------------------------------"
+
+$ANGSD/angsd -P $THREADS -b $RUTA/"$POP".bamlist -ref $REF -anc $ANC \
+-out "$POP".unfolded-lr \
+$FILTER1 \
+$FILTER2 \
+-GL 1 -doSaf 1  
+
+```
+
+## SFS 
+
+```{r, engine=bash, eval=FALSE}
+
+##########################
+#  SFS                   #(I dont require the -rf file as the saf already only contains the -rf sites
+##########################
+echo "-------$POP----------SFS------------------------------------------------------"
+
+$NGSTOOLS/realSFS "$POP".unfolded-lr.saf.idx  -P $THREADS > "$POP".unfolded-lr.sfs
+
+```
+
+
