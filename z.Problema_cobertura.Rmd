@@ -1,0 +1,57 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+# 
+
+Hemos detectado en el PCA de ambas especies que Lynx pardinus se separa por batch en lugar de por poblaciones.
+Este efecto sólo se ve cuando se compara con lynx lynx, de forma que aquellos individuos de resecuenciación 5x están mas cerca de lynx lynx que aquellos que vienen del proyecto genoma. 
+
+Por otro lado, también hemos calculado la cobertura usando samtools vs cobertura usando la distribución de longitud de lecturas. Haciendo una correlación entre ambas (tablas lince - global stats all samples)  
+
+_______________________
+
+From http://seqanswers.com/forums/showthread.php?t=17438:
+'samtools depth' uses all reads including anomalous pairs to calculate the depth, whereas 'samtools mpileup' filters out some reads including anomalous pairs. Using 'samtools mpileup -A' makes it include the anomalous pairs. 
+
+From http://biostar.stackexchange.com/que...-all-the-reads:
+'SAMtools pileup discards unmapped reads, secondary alignments and duplicates. It uses non-unique reads.' (assuming this also applies to mpileup)
+
+From the manual:
+samtools depth [options] [in1.sam|in1.bam|in1.cram [in2.sam|in2.bam|in2.cram] [...]]
+Computes the depth at each position or region.
+
+https://www.biostars.org/p/107273/
+_______________________
+
+
+
+
+Para comprobar que está causando este efecto y sus posibles soluciones hemos realizado distintas pruebas:
+
+Estas pruebas están en:
+
+z3.PCA_intergenic_Elena_cov_test_lynx_lynx_lynx_pardinus.Rmd
+z3.PCA_intergenic_Elena_cov_test_lynx_pardinus.Rmd
+z2.SFS_coverage_problem.Rmd
+z4.FST_coverage_problem.Rmd
+
+Distintas pruebas.
+
+
+
+
+
+
+rm c_lp_SNPS_vcf.csv
+for i in *vcf.gz
+do
+echo $i
+NAME=$i
+SNPS=$(zcat $i | grep -v "#" | wc -l) 
+echo $NAME, $SNPS >> c_lp_SNPS_vcf.csv
+done
+
+
+
