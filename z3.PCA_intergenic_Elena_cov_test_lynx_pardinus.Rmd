@@ -87,101 +87,8 @@ paste $POP.ALL1.clst.borrar $POP.ALL2.clst.borrar $POP.ALL3.clst.borrar> $POP.AL
 
 rm $POP.*clst.borrar
 
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/pruebas_PCA/$POP.ALL.clst /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/pruebas_PCA/$POP.covar /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena
-
-```
-
-## R representation.
-
-```{r "setup", include=FALSE}
-
-library(methods)
-library(optparse)
-library(ggplot2)
-library(dplyr)
-library(threejs)
-library(RColorBrewer)
-require("knitr")
-
-# knitr::opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
-# getwd()
-# opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
-
-WORKING_DIR="/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena/"
-pop= c("c_lp_do-c_lp_sm_n031")
-
-# 
-###########################################################################################
-#for (pop in pops) 
-#{
-
-# Annotation file is in plink cluster format
-
-#################################################################################
-
-# Read input file
-covar <- read.table(paste(WORKING_DIR,pop, ".covar", sep=''), stringsAsFact=F);
-
-# Read annot file
-
-annot <- read.table(paste(WORKING_DIR,pop, ".ALL.clst", sep=""), header=TRUE) 
-
-# Parse components to analyze
-# comp <- as.numeric(strsplit("component1-component2", "-", fixed=TRUE)[[1]])
-# comp <- as.numeric(strsplit(opt$comp, "-", fixed=TRUE)[[1]])
-
-comp <- c(1,2)
-
-# Eigenvalues
-eig <- eigen(covar, symm=TRUE);
-eig$val <- eig$val/sum(eig$val);
-cat(signif(eig$val, digits=3)*100,"\n");
-
-# Plot
-PC <- as.data.frame(eig$vectors)
-colnames(PC) <- gsub("V", "PC", colnames(PC))
-PC$Pop <- factor(annot$CLUSTER)
-PC$Ind <- factor(annot$IID)
-
-
-
-PC <- PC %>%  mutate (., Populations =  ifelse (Pop == "c_lp_sm", "Sierra Morena",
-                          ifelse (Pop == "c_lp_do", "Doñana", NA))) %>% 
-  mutate (., sequencing_batch=  ifelse (Ind == "c_lp_do_0153" | Ind == "c_lp_do_0173" | Ind ==  "c_lp_do_0443" | Ind == "c_lp_sm_0138" | Ind == "c_lp_sm_0140" | Ind == "c_lp_sm_0185" | Ind == "c_lp_sm_0186" | Ind ==  "c_lp_sm_0298" | Ind == "c_lp_sm_0359"| Ind ==  "c_lp_do_0007", "Genome_resequencing_project", ifelse (Ind== "c_lp_sm_0221", "Candiles", "5x_reseq"))) %>% 
-  mutate (., threeD =  ifelse (sequencing_batch == "Genome_resequencing_project", brewer.pal(12,"Paired")[4], 
-          ifelse (sequencing_batch ==  "Candiles", brewer.pal(12,"Paired")[6], 
-          ifelse (sequencing_batch == "5x_reseq", brewer.pal(12,"Paired")[10], 
-          NA))))
-
-
-cols <- c("Sierra Morena"=brewer.pal(8, "Greys") [5],
-          "Doñana"=brewer.pal(8, "Greys") [8])
-
-title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
-
-x_axis = paste("PC",comp[1],sep="")
-y_axis = paste("PC",comp[2],sep="")
-
-
-ggplot() + 
-   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations", shape="sequencing_batch"), size = 3) + 
-   scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
-
-  ggsave(paste(WORKING_DIR,pop, "_pca_pardinus.pdf", sep=""),units="mm",  width=270, height=190)
-
-
-###########################################################################################
-# 3D plot
-###########################################################################################
-
-
-scatterplot3js(PC$PC1, PC$PC2, PC$PC3, 
-                col=PC$threeD,  labels=PC$Ind,
-               size=0.7, grid=FALSE, renderer = "canvas")
-  
-
-
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/pruebas_PCA/$POP.ALL.clst  /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_coverage/
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/pruebas_PCA/$POP.covar  /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_coverage/
 
 ```
 
@@ -625,12 +532,10 @@ library(dplyr)
 library(threejs)
 library(RColorBrewer)
 require("knitr")
+library("htmlwidgets")
 
-# knitr::opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
-# getwd()
-# opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
 
-WORKING_DIR="/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena/"
+WORKING_DIR="/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_coverage/"
 pop= c("c_lp_do-c_lp_sm_n031")
 
 # 
@@ -643,12 +548,12 @@ pop= c("c_lp_do-c_lp_sm_n031")
 #################################################################################
 
 
-my_files_covar = list.files(path = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena/",pattern="c_lp_do-c_lp_sm_n031.*.covar$") 
+my_files_covar = list.files(path = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_coverage/",pattern="c_lp_do-c_lp_sm_n031.*.covar$") 
 
-my_files_clst = list.files(path = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena/",pattern="c_lp_do-c_lp_sm_n031.*.ALL.clst$") 
+my_files_clst = list.files(path = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_coverage/",pattern="c_lp_do-c_lp_sm_n031.*.ALL.clst$") 
 
 
-for (i in 1:length(my_files_covar)) { assign(my_files_covar[i], (scan(paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_pardinus_intergenic_elena/",my_files_covar[i],sep=""), sep = "\t", dec = ".")) %>% .[!is.na(.)])}
+for (i in 1:length(my_files_covar)) { assign(my_files_covar[i], (scan(paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_coverage/",my_files_covar[i],sep=""), sep = "\t", dec = ".")) %>% .[!is.na(.)])}
 
 
 
@@ -708,20 +613,22 @@ ggplot() +
    geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations", shape="sequencing_batch"), size = 3) + 
    scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
 
-  ggsave(paste(WORKING_DIR,pop,".", MinDepth[2], "_pca_pardinus.pdf", sep=""),units="mm",  width=270, height=190)
+  ggsave(paste(WORKING_DIR,pop,".", MinDepth[2], "_comp1-2.pdf", sep=""),units="mm",  width=270, height=190)
 
-}
+
 ###########################################################################################
 # 3D plot
 ###########################################################################################
 
 
-scatterplot3js(PC$PC1, PC$PC2, PC$PC3, 
-                col=PC$threeD,  labels=PC$Ind,
-               size=0.7, grid=FALSE, renderer = "canvas")
+# scatterplot3js(PC$PC1, PC$PC2, PC$PC3, col=PC$threeD, labels=PC$Ind, size=0.7, grid=FALSE, renderer = "canvas")
   
 
+saveWidget(scatterplot3js(PC$PC1, PC$PC2, PC$PC3, 
+                col=PC$threeD,  labels=PC$Ind,
+               size=0.7, grid=FALSE, renderer = "canvas"), file=(paste(WORKING_DIR,pop,".", MinDepth[2],"_3D.html", sep="")))
 
+}
 
 ```
 
@@ -731,9 +638,10 @@ scatterplot3js(PC$PC1, PC$PC2, PC$PC3,
 
 TOTAL=1674784 bases
 
-
-
-
+#MinDepthInd=1, MinInd=1.
+N_SITES=`zcat $POP.mafs.gz | tail -n+2 | wc -l`
+echo $N_SITES
+1536
 
 N_SITES=`zcat $POP.MinDepthInd1.mafs.gz | tail -n+2 | wc -l`
 echo $N_SITES
