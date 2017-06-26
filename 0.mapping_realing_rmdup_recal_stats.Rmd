@@ -728,7 +728,7 @@ do
 echo $sample
 DEPTH=$(samtools depth $sample | awk '{sum+=$3; sumsq+=$3*$3} END { print sum/2413209059; print sqrt(sumsq/2413209059 - (sum/2413209059)**2)}')
 paste \
-<(echo $sample ) a
+<(echo $sample ) \
 <(echo $DEPTH ) |\
 sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  global_coverage.tsv
 done
@@ -737,23 +737,35 @@ done
 cat global_coverage.tsv | sed 's/_recal_round-1.bam//g' | sed 's/\t/,/g' > coverage_samtools
 rm global_coverage.tsv
 
-#######
 
-SAMPLELIST=(c_ll_tu_0153_recal_round-1.bam c_ll_tu_0157_recal_round-1.bam c_ll_tu_0158_recal_round-1.bam c_ll_tu_0159_recal_round-1.bam c_ll_tu_0165_recal_round-1.bam c_ll_tu_0166_recal_round-1.bam c_ll_og_0181_recal_round-1.bam c_ll_og_0187_recal_round-1.bam c_ll_ka_0184_recal_round-1.bam c_ll_ka_0186_recal_round-1.bam c_ll_ka_0188_recal_round-1.bam c_ll_ka_0189_recal_round-1.bam)
 
-echo -e "sample_name\tcoverage_based_samtools\tstdev_based_samtools" > global_coverage.tsv
-for sample in "${SAMPLELIST[@]}"
-do
-echo $sample
-DEPTH=$(samtools depth $sample | awk '{sum+=$3; sumsq+=$3*$3} END { print sum/2413209059; print sqrt(sumsq/2413209059 - (sum/2413209059)**2)}')
-paste \
-<(echo $sample ) \
-<(echo $DEPTH ) |\
-sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  global_coverage.tsv
-done
+
 
 ```
 
+<!-- ## Count primary alignment: -->
+
+<!-- samtools view -c -f 0x40 -F 0x904 --> This will exclude unmapped (0x4), secondary (0x100), and supplementary (0x800) alignments. -->
+
+
+<!-- ```{bash} -->
+<!-- screen -S primary_aligments -->
+
+<!-- cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final -->
+<!-- SAMPLELIST=($(ls *_recal_round-1.bam | sort | uniq ))   -->
+<!-- rm primary_alignments.csv -->
+<!-- echo -e "sample_name\tprimary_alignments" > primary_alignments.csv -->
+<!-- for sample in "${SAMPLELIST[@]}" -->
+<!-- do -->
+<!-- echo $sample -->
+<!-- PRIMARY_ALIGNMENT=$(samtools view -c -f 0x40 -F 0x904 $sample | cut -f1 | sort | uniq | wc -l) -->
+<!-- paste \ -->
+<!-- <(echo $sample ) \ -->
+<!-- <(echo $PRIMARY_ALIGNMENT ) |\ -->
+<!-- sed 's/ /,/g' | sed 's/_recal_round-1.bam//g' >>  primary_alignments.csv -->
+<!-- done -->
+
+<!-- ``` -->
 
 ## Summary report
 
@@ -764,34 +776,54 @@ cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final
 SAMPLELIST=($(ls *_recal_round-1.bam | cut -d "_" -f1-4 | sort | uniq )) 
 cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
   
-echo "sample_name,total_seq,total_reads,duplicates,mapped,uniq_mapped,uniq_mapped_vs_total_reads,duplicates_vs_total_reads,mapped_vs_total_seq,coverage_based_distribution" > raw.stats 
+echo "sample_name,total_seq,total_reads,duplicates,mapped,properly_pair,with_mat_to_another_chr,uniq_mapped,uniq_mapped_vs_total_reads,duplicates_vs_total_reads,mapped_vs_total_seq,properly_pair_vs_total_seq,with_mat_to_another_chr_vs_total_seq,coverage_based_distribution" > raw.stats 
 for sample in "${SAMPLELIST[@]}"
 do
 echo "${sample}"
 NAME="${sample}"
 TOTAL_SEQ="$(cat /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/"${sample}"*.rawseq | awk '{sum+=$1}END{print sum}')"
 TOTAL_READS="$(grep "in total" "${sample}"*.stats | cut -d "+" -f 1)"
+
 DUPLICATES="$(grep "duplicates" "${sample}"*.stats | cut -d "+" -f 1)"
+
 MAPPED="$(grep "0 mapped" "${sample}"*.stats | cut -d "+" -f 1)"
+
+PROPERLY_PAIR="$(grep "properly paired" "${sample}"*.stats | cut -d "+" -f 1)"
+
+WITH_MATE_TO_ANOTHER_CHR="$(grep "with mate mapped to a different chr$" "${sample}"*.stats | cut -d "+" -f 1)"
+
 UNIQ_MAPPED="$(echo "$MAPPED - $DUPLICATES" | bc )"
 UNIQ_MAPPED_vs_TOTAL_READS="$(echo "scale=5; $UNIQ_MAPPED *100 / $TOTAL_READS"  | bc -l)"
 DUPLICATES_vs_TOTAL_READS="$(echo "scale=5; $DUPLICATES / $TOTAL_READS" | bc -l )"
 MAPPED_vs_TOTAL_SEQ="$(echo "scale=5; $MAPPED *100  / $TOTAL_SEQ" | bc )"
+PROPERLY_PAIR_vs_TOTAL_SEQ="$(echo "scale=5; $PROPERLY_PAIR *100 / $TOTAL_SEQ" | bc )"
+WITH_MATE_TO_ANOTHER_CHR_vs_TOTAL_SEQ="$(echo "scale=5; $WITH_MATE_TO_ANOTHER_CHR *100 / $TOTAL_SEQ" | bc )"
 COVERAGE_BASED_DISTRIBUTION=$(tail -n+12 "${sample}"*.picard_length  | awk '($1 > 30) {print $1*$2}' | paste -sd+ | bc | awk '{print $1/2413209059}')
-echo "$NAME,$TOTAL_SEQ,$TOTAL_READS,$DUPLICATES,$MAPPED,$UNIQ_MAPPED,$UNIQ_MAPPED_vs_TOTAL_READS,$DUPLICATES_vs_TOTAL_READS,$MAPPED_vs_TOTAL_SEQ,$COVERAGE_BASED_DISTRIBUTION" | sed 's/ //g' >> raw.stats 
+
+echo "$NAME,$TOTAL_SEQ,$TOTAL_READS,$DUPLICATES,$MAPPED,$PROPERLY_PAIR,$WITH_MATE_TO_ANOTHER_CHR,$UNIQ_MAPPED,$UNIQ_MAPPED_vs_TOTAL_READS,$DUPLICATES_vs_TOTAL_READS,$MAPPED_vs_TOTAL_SEQ,$PROPERLY_PAIR_vs_TOTAL_SEQ,$WITH_MATE_TO_ANOTHER_CHR_vs_TOTAL_SEQ,$COVERAGE_BASED_DISTRIBUTION" | sed 's/ //g' >> raw.stats 
 done
 
-LANG=en_EN  join -1 1 -2 1 -t","  <(head -n 2 raw.stats && tail -n +3 raw.stats | LANG=en_EN sort -k 1,1) <(head -n 2 coverage_samtools && tail -n +3 coverage_samtools | LANG=en_EN sort -k 1,1 ) > global_stats_all_samples.csv # de esta manera tiene en cuenta el header. 
+LANG=en_EN  join -1 1 -2 1 -t","  <(head -n 2 raw.stats && tail -n +3 raw.stats | LANG=en_EN sort -k 1,1) <(head -n 2 coverage_samtools && tail -n +3 coverage_samtools | LANG=en_EN sort -k 1,1 ) | sed 's/,/;/g' | sed 's/\./,/g' > global_stats_all_samples.csv # de esta manera tiene en cuenta el header. 
  
+# 138732275 + 0 in total (QC-passed reads + QC-failed reads)
+# 301702 + 0 duplicates
+# 135997388 + 0 mapped (98.03%:-nan%)
+# 138732275 + 0 paired in sequencing
+# 69315360 + 0 read1
+# 69416915 + 0 read2
+# 132686988 + 0 properly paired (95.64%:-nan%)
+# 135464480 + 0 with itself and mate mapped
+# 532908 + 0 singletons (0.38%:-nan%)
+# 2667465 + 0 with mate mapped to a different chr
+# 1511516 + 0 with mate mapped to a different chr (mapQ>=5)
 
+```
 
-#SAMPLESLIST=($(ls *_sorted_rmdup_sorted_indelrealigner.bam  | cut -d "_" -f1-4 | sort | uniq| tr ' ' '\n'))                                                                                                            
-#for sample in "${SAMPLESLIST[@]}"
-#do
-#NAME="$(echo "${sample}")"
-#TOTAL_READS="$(grep "in total" "${sample}".stats | cut -d "+" -f 1)"
-#echo "$NAME,$TOTAL_READS" 
-#done
+## Download report. 
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/global_stats_all_samples.csv ./Desktop
 
 
 ```
+
