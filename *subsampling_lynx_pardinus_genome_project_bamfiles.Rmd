@@ -1,0 +1,20 @@
+---
+title: '*subsampling_lynx_pardinus_genome_project_bamfiles'
+output: html_document
+---
+
+
+cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final
+mkdir subsampling_lynx_pardinus
+
+
+screen -S subsampling_genome_project_samples
+
+cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final
+SAMPLESLIST=($(cat samples_genome_project | uniq ))
+
+for sample in "${SAMPLESLIST[@]}"
+do
+echo $sample
+samtools view -s 0.26 -b "${sample}"_recal_round-1.bam  > subsampling_lynx_pardinus/"${sample}"_recal_round-1_subsampled.bam
+done
