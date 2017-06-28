@@ -3,15 +3,42 @@ title: "Untitled"
 output: html_document
 ---
 
-# 
+# Detección y descripción del problema 
 
 Hemos detectado en el PCA de ambas especies que Lynx pardinus se separa por batch en lugar de por poblaciones.
 Este efecto sólo se ve cuando se compara con lynx lynx, de forma que aquellos individuos de resecuenciación 5x están mas cerca de lynx lynx que aquellos que vienen del proyecto genoma. 
 
-Por otro lado, también hemos calculado la cobertura usando samtools vs cobertura usando la distribución de longitud de lecturas. Haciendo una correlación entre ambas (tablas lince - global stats all samples)  
+Por otro lado, también hemos calculado la cobertura usando samtools vs cobertura usando la distribución de longitud de lecturas (OJO! parece que cuenta desde R1 + hueco enmedio +R2). Haciendo una correlación entre ambas (tablas lince - global stats all samples)  vemos que la cobertura usando samtools es mayor de los esperado según nuestra recta paa lynx pardninus reseq proyecto WG, que la calculada par el resto de muestras de lynx pardinus, lynx lynx, lynx rufus y lynx canadensis. Esto puede deberse a:
+
+1. El tamaño de lectura de las muestras del proyecto genoma es mayor --> Efectivamente aunque el tamaño de las muestras del proyecto genoma es mayor, no puede deberse a esto, puesto que las muestras secuenciadas con Macrogen a alta cobertura también presentan un tamaño grande (~450 pb) igual al de las muestras proyecto genoma. 
+
+2. El solape entre las lecturas de las muestras del proyecto genoma sea menor que el del resto de muestras --> Como hemos comprobado al calcular la cobertura usando la distribución de tamaños estamos obviando el hecho de que las lecturas solapan parcialmente. Esto lo podemos observar en la tabla puesto que la cobertura calculada así es mayor que la calculada usando samtools, algo que no tiene sentido puesto que samtools incluye alineamientos secundarios (ver abajo*). 
+
+NOOOOO PORQUE NO CUENTA ESTO SI NO DE PRINCIPIO A FIN!!!
+
+PREGUNTA A GODOY: ¿SOLAPAN LAS LECTURAS? ¿Como se construyeron las librerías?
+
+Esto seguiría sin explicarme el efecto de batch. 
+
+3. Las muetras del proyecto genoma tienen muchos menos alineamientos secundarios que las otras. ¿Por qué? Se nos ocurre que pueda deberse a algún bias específico que compartan con la referencia y que las demás no tengan, lo que provocaría más alineamientos secundarios en las 5x. --> Creo que no es por la prueba de los SNPs porque si tienes más alineamientos secundarios esperarías más SNPs en las muestras 5x que en las del genoma y no es así: PhD/contemporary/diario/terminal/c_lp_SNPs.csv
+
+
+
+
+                  Macrogen      Genoma          5x  
+______________________________________________________
+Librería            
+______________________________________________________
+Kit sequenc          151          115           126
+______________________________________________________
+Insert size          450          450           250
+______________________________________________________
+
+
+
 
 _______________________
-
+*
 From http://seqanswers.com/forums/showthread.php?t=17438:
 'samtools depth' uses all reads including anomalous pairs to calculate the depth, whereas 'samtools mpileup' filters out some reads including anomalous pairs. Using 'samtools mpileup -A' makes it include the anomalous pairs. 
 
@@ -26,7 +53,7 @@ https://www.biostars.org/p/107273/
 _______________________
 
 
-
+# Diagnostico y soluciones
 
 Para comprobar que está causando este efecto y sus posibles soluciones hemos realizado distintas pruebas:
 
@@ -37,12 +64,52 @@ z3.PCA_intergenic_Elena_cov_test_lynx_pardinus.Rmd
 z2.SFS_coverage_problem.Rmd
 z4.FST_coverage_problem.Rmd
 
-Distintas pruebas.
+# Pruebas PCA:
+ 
+En primer lugar, hemos comprobado si este efecto sigue siendo patente cuando exigimos un mínimo de cobertura. 
+
+z3.PCA_intergenic_Elena_cov_test_lynx_pardinus.Rmd
+* En todas las pruebas realizadas con pardinus (minimo de cobertura para todos los individuos de 1, 2 y 3) no hemos visto nunca este efecto. 
+
+z3.PCA_intergenic_Elena_cov_test_lynx_lynx_lynx_pardinus.Rmd
+He probado a correr el PCA usando:
+
+1.- Sóla las muestras de proyecto genoma reseq (5x)
+2.- Todas las muestras (all ind) usando filtro de cobertura 1
+3.- Todas las muestras (all ind) usando filtro de cobertura 2
+4.- Todas las muestras (all ind) usando filtro de cobertura 3
+5.- Todas las muestras (all ind) remuestreando las del proyecto genoma hasta aprox. 5x (scritp subsampling lynx pardinus)
+
+La comparación del PCA 1 y 2, nos da idea de cuantos sitios perderíamos usando todas las muestras a esa cobertura. 
+La comparación del PCA 2, 3 y 4 nos da idea de si es un problema causado por la cobertura.
+El PCA 5 nos aclara si un submuestreo solucionaría este asunto.
+
+RESULTADOS:
+
+Nº sitios:
+
+1.- Sóla las muestras de proyecto genoma reseq (5x) --------------> N_SITES=1784 ----> No hay batch porque no están las muestras reseq.
+2.- Todas las muestras (all ind) usando filtro de cobertura 1 ----> N_SITES=1770 ----> Batch evidente
+3.- Todas las muestras (all ind) usando filtro de cobertura 2 ----> N_SITES=261 -----> No hay batch
+4.- Todas las muestras (all ind) usando filtro de cobertura 3 ----> N_SITES=11 ------> No hay poder
+5.- Todas las muestras (all ind) remuestreando las del proyecto genoma hasta aprox. 5x (scritp subsampling lynx pardinus) ----> N_SITES=1590 -----> No hay batch
+
+Por tanto, parece que se soluciona con un filtro de cobertura de 2 pero con una perdida de hasta ~86% de los sitios del genoma. 
+Y además, también se soluciona con un remuestreo de estas muestras hasta 5x!!!!! 
 
 
+Una opción para ver si era causa de efectos locales era hacer el SFS y despues el FST por ventanas y ver entre la población "artifical" de Don_reseq_5x y Don_reseq_project_genome qué ventanas tenían un FST alto. Idealmente para encontrar unas pocas ventanas que se escapan. 
+
+Finalmente no he desarrollado el script pero si he lanzado el SFS por si alguna vez lo necesitamos. 
+
+z2.SFS_coverage_problem.Rmd --> Lo he lanzado y dejo los archivos por si lo necesito alguna vez. 
+
+El script de FST no está hecho. 
 
 
+# Prueba número de SNPs:
 
+Otra pruebecilla que he hecho ha sido pedir a Dani que lanzara los gVCF con los individuos 5x. 
 
 rm c_lp_SNPS_vcf.csv
 for i in *vcf.gz
@@ -53,5 +120,156 @@ SNPS=$(zcat $i | grep -v "#" | wc -l)
 echo $NAME, $SNPS >> c_lp_SNPS_vcf.csv
 done
 
+DONE!
 
+
+# Solución final:
+
+Finalmente gracias a la prueba del PCA con los subsampled parece que la solución estaría en submuestrear a 5x estos individuos. Por tanto, a partir de ahora usaré estos archivos remuestreados alos que he cambiado el nombre y he copiado en la carpeta principal. 
+
+
+Incluyo un README en la carpeta BAM_files_final:
+
+IMPORTANT!!!!!!!! 
+
+The samples coming from the genome project included in this folder are subsampled to ~6.6x.
+The complete BAM file are in the folder: genome_project_samples_28x.
+
+Now I explain why I did that and which samples are those:
+
+samples_genome_project
+c_lp_do_0007
+c_lp_do_0153
+c_lp_do_0173
+c_lp_do_0443
+c_lp_sm_0138
+c_lp_sm_0140
+c_lp_sm_0185
+c_lp_sm_0186
+c_lp_sm_0221
+c_lp_sm_0298
+c_lp_sm_0359
+
+These samples are coming from the genome project. 
+We mapped them following exactly the same protocol than those samples from 5x project. 
+However, after doing a PCA (if you want to see it talk to María), we have realized that there was a batch effect that keep them together and separate of the newly sequenced lynx pardinus 5x. 
+
+This effect disappeared when we subsampled these old genome project samples to ~6.6x with the following script:
+
+SAMPLESLIST=($(cat samples_genome_project | uniq ))
+for sample in "${SAMPLESLIST[@]}"
+do
+echo $sample
+samtools view -s 0.26 -b "${sample}"_recal_round-1.bam  > subsampling_lynx_pardinus/"${sample}"_recal_round-1_subsampled.bam
+done 
+
+This script means that I keep a random 26% of the BAM file. That gave a coverage of approximately the same value as the new samples.
+
+The predicted new coverage would be:
+
+c_lp_sm_0221	8,194446
+c_lp_sm_0359	6,745986
+c_lp_sm_0186	5,989126
+c_lp_sm_0138	5,817786
+c_lp_do_0173	8,052278
+c_lp_sm_0298	6,922266
+c_lp_do_0153	6,208176
+c_lp_sm_0140	6,327126
+c_lp_sm_0185	5,722678
+c_lp_do_0443	7,563244
+c_lp_do_0007	6,011538
+
+I preferred this strategy instead of subsampling all to a certain coverage (e.g. 6x).
+I used 0.26 as it is the average of the percentage to sample everything to 6,61784075 (which is the average coverage of the new samples).
+
+percentage_to_sample	sample
+0,209976195				c_lp_sm_0221
+0,255061098				c_lp_sm_0359
+0,287293771				c_lp_sm_0186
+0,295754879				c_lp_sm_0138
+0,213683456				c_lp_do_0173
+0,248565801				c_lp_sm_0298
+0,277156865				c_lp_do_0153
+0,271946314				c_lp_sm_0140
+0,300670175				c_lp_sm_0185
+0,227500077				c_lp_do_0443
+0,286222693				c_lp_do_0007
+0,261257393	<---- AVERAGE
+
+
+So, I changed the name and the location of 25x samples. 
+
+mkdir genome_project_samples_25x
+
+# Change location:
+
+SAMPLESLIST=($(cat samples_genome_project | uniq ))
+for sample in "${SAMPLESLIST[@]}"
+do 
+mv $sample* ./genome_project_samples_25x/
+done
+
+# Change name:
+
+for sample in c_lp*bam
+do
+echo $sample
+echo  ${sample/_recal_round-1.bam/_recal_round-1_25x.bam}
+mv $sample ${sample/_recal_round-1.bam/_recal_round-1_25x.bam} # 25x is their average. 
+done
+
+for sample in c_lp*bam.bai
+do
+echo $sample
+echo ${sample/_recal_round-1.bam.bai/_recal_round-1_25x.bam.bai}
+mv $sample ${sample/_recal_round-1.bam.bai/_recal_round-1_25x.bam.bai}
+done
+
+I also move the stats file
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/stats_information
+
+SAMPLESLIST=($(cat samples_genome_project | uniq ))
+for sample in "${SAMPLESLIST[@]}"
+do 
+mv $sample* ../genome_project_samples_25x
+done
+
+
+I also change the name and the location of the subsample Bam file to include them in the main folder:
+
+cd subsampling_lynx_pardinus
+
+for sample in c_lp*bam
+do
+echo $sample
+echo ${sample/recal_round-1_subsampled.bam/recal_round-1.bam}
+mv $sample ${sample/recal_round-1_subsampled.bam/recal_round-1.bam}
+done
+
+
+for sample in c_lp*bam.bai
+do
+echo $sample
+echo ${sample/recal_round-1_subsampled.bam.bai/recal_round-1.bam.bai}
+mv $sample ${sample/recal_round-1_subsampled.bam.bai/recal_round-1.bam.bai}
+done
+
+
+mv *.bam ..
+mv *.bai ..
+
+I do the new stats of this samples: 
+
+SAMPLESLIST=($(cat samples_genome_project | uniq ))
+for sample in "${SAMPLESLIST[@]}"
+do
+i=$sample"_recal_round-1.bam"
+echo $i
+samtools flagstat $i > ${i/_recal_round-1.bam/_recal_round-1.bam_bam.stats}
+mv ${i/_recal_round-1.bam/_recal_round-1.bam_bam.stats} /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
+done
+
+I also recalculate coverage to have all the new stats. 
+I will add them to a new global stats adding also a REAME that explains these changes.
 
