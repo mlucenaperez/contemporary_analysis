@@ -119,8 +119,11 @@ Distinguimos entre poblaciones únicas que se corren con todo el genoma, y pobla
 #### For single or small populations:
 
 --> Lynx pardinus
-c_lp_do --> Previously done
-c_lp_sm --> Previously done
+c_lp_do (including 25x samples) --> Previously done
+c_lp_sm (including 25x samples)  --> Previously done
+
+c_lp_do (including subsampled genome project) --> Lanzado (28/06/2017)
+c_lp_sm (including subsampled genome project) --> Lanzado (28/06/2017)
 
 h_lp_mt
 
@@ -133,14 +136,14 @@ c_ll_po --> Previously done
 c_ll_la --> Previously done
 c_ll_ki --> Previously done
 c_ll_ur
-c_ll_tu --> Lanzado 20/07/2017
+c_ll_tu --> Done
 c_ll_to --> Previously done
 c_ll_ka --> No
 c_ll_og --> No
 c_ll_ya --> Previously done
 c_ll_vl --> Previously done
-c_ll_ka-c_ll_og --> Lanzado 20/07/2017
-c_ll_to-c_ll_ka-c_ll_og
+c_ll_ka-c_ll_og --> Done
+c_ll_to-c_ll_ka-c_ll_og --> Done
 
 
 
@@ -148,16 +151,16 @@ c_ll_to-c_ll_ka-c_ll_og
 
 cd /home/mlucena/ANGSD_analysis/depth_calculus
 #To launch one by one
-POP="c_ll_to-c_ll_ka-c_ll_og"  # <--CHANGE POP HERE
+POP="c_lp_sm"  # <--CHANGE POP HERE
 screen -S "$POP"_qc_test
-POP="c_ll_to-c_ll_ka-c_ll_og"  # <--CHANGE POP HERE
+POP="c_lp_sm"  # <--CHANGE POP HERE
 script "$POP"_qc.log
-POP="c_ll_to-c_ll_ka-c_ll_og"  # <--CHANGE POP HERE
+POP="c_lp_sm"  # <--CHANGE POP HERE
 
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
 THREADS=15                    # no. of computer cores used 20 = OK, >20 = ask people first!
 
-BAMLIST=$(ls /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP"*.bamlist)
+BAMLIST=$(ls /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP"_n*.bamlist)
 OUT_NAME="/home/mlucena/ANGSD_analysis/depth_calculus/"$POP".qc"
 NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
 MAXDEPTH=$(expr $NUMBER_IND \* 1000)
