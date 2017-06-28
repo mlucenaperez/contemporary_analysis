@@ -114,8 +114,6 @@ N_SITES=`zcat $POP.intergenic.mafs.gz | tail -n+2 | wc -l`
 echo $N_SITES
 
 # In my case I have 272064 sites. 
-
-
 # Using my intergenic region, and minind=74, I have 114097 sites. 
 
 # Now we can perform a PCA by estimating the covariance matrix first:
