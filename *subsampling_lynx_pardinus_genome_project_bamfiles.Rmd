@@ -3,7 +3,11 @@ title: '*subsampling_lynx_pardinus_genome_project_bamfiles'
 output: html_document
 ---
 
+# Lynx pardinus
 
+Check README problema con la cobertura.
+
+```{bash}
 cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final
 mkdir subsampling_lynx_pardinus
 
@@ -18,3 +22,67 @@ do
 echo $sample
 samtools view -s 0.26 -b "${sample}"_recal_round-1.bam  > subsampling_lynx_pardinus/"${sample}"_recal_round-1_subsampled.bam
 done
+
+# 0.26 lo he calculado como:
+
+# Cobertura media de lynx_padrinus_5x --> 6.6 
+# Submuestreo para llevar todas las muestras a 6.6
+# Media de ese submuestreo --> 0.26
+
+```
+
+
+
+# Lynx lynx
+
+En este caso, sí voy a calcular la media de cobertura por población y aplicar un submuestreo para que esa muestra se quede en la media de cobertura para esa población.
+
+Por tanto, me quedaría:
+
+percentage_to_sample	sample
+0,425624318	          c_ll_cr_0212
+0,306508877	          c_ll_ki_0090
+0,260424215         	c_ll_vl_0112
+0,260017162	          c_ll_ya_0146
+
+
+
+```{bash}
+
+
+mv c_ll_cr_0212_recal_round-1.bam* MACROGEN_samples_25x/
+mv c_ll_ki_0090_recal_round-1.bam* MACROGEN_samples_25x/
+mv c_ll_vl_0112_recal_round-1.bam* MACROGEN_samples_25x/
+mv c_ll_ya_0146_recal_round-1.bam* MACROGEN_samples_25x/
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/MACROGEN_samples_25x
+
+for sample in *bam
+do
+echo $sample
+echo ${sample/_recal_round-1.bam/_recal_round-1_25x.bam}
+mv $sample ${sample/_recal_round-1.bam/_recal_round-1_25x.bam}
+done
+
+for sample in *bai
+do
+echo $sample
+echo ${sample/_recal_round-1.bam.bai/_recal_round-1_25x.bam.bai}
+mv $sample ${sample/_recal_round-1.bam.bai/_recal_round-1_25x.bam.bai}
+done
+
+samtools view -s 0.42 -b c_ll_cr_0212_recal_round-1_25x.bam  > /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/c_ll_cr_0212_recal_round-1.bam
+samtools view -s 0.30 -b c_ll_ki_0090_recal_round-1_25x.bam > /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/c_ll_ki_0090_recal_round-1.bam
+samtools view -s 0.26 -b c_ll_vl_0112_recal_round-1_25x.bam  > /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/c_ll_vl_0112_recal_round-1.bam
+samtools view -s 0.26 -b c_ll_ya_0146_recal_round-1_25x.bam  > /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/c_ll_ya_0146_recal_round-1.bam
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final
+
+samtools index c_ll_ki_0090_recal_round-1.bam
+samtools index c_ll_cr_0212_recal_round-1.bam
+samtools index c_ll_vl_0112_recal_round-1.bam
+samtools index c_ll_ya_0146_recal_round-1.bam
+
+```
+
+
