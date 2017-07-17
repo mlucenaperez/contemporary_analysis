@@ -5,12 +5,23 @@ output: html_document
 
 # Generating SAF 
 
-## Defining variables:
+## Introduction and populations:
+
+I am going to run SAF in my target populations.
+
+Populations:
+
+c_ll_no -->
+c_ll_po -->
+c_ll_ki -->
+
+c_lp_do -->
+c_lp_sm -->
 
 I checked that all bam files were indexed --> OK
-Ruta a bam files intergenic:
 
-Global variables:
+
+## Global variables:
 
 
 ```{r, engine=bash, eval=FALSE}
@@ -21,23 +32,23 @@ cd $RUTA/whole_genome_analysis/sfs
 
 #To launch one by one
 
-POP="c_lp_sm"  # <--CHANGE POP HERE
+POP="c_lp_do_n012"  # <--CHANGE POP HERE
 
 screen -S "$POP"_sfs_wg
 # screen -S "$POP"_thetas
 
-POP="c_lp_sm"  # <--CHANGE POP HERE
+POP="c_lp_do_n012"  # <--CHANGE POP HERE
 
 script "$POP"_sfs_wg.log
 # script "$POP"_thetas.log
 
-POP="c_lp_sm"  # <--CHANGE POP HERE
+POP="c_lp_do_n012"  # <--CHANGE POP HERE
 
-THREADS=25                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
-RUTA=/home/mlucena/ANGSD_analysis 
+THREADS=15                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 
-read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < $RUTA/"${POP}"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+RUTA=/home/mlucena/ANGSD_analysis/depth_calculus 
 
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < $RUTA/"${POP}"_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
 
 ANGSD="/opt/angsd/angsd"
 NGSTOOLS="/opt/angsd/angsd/misc"
@@ -47,12 +58,18 @@ FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
 FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
 N_IND=$(echo ${POP: -3} )
 MIN_IND=$(expr $N_IND / 2)
+RUTA=/home/mlucena/ANGSD_analysis 
+
 
 # Sanity checks:
 
 echo $POP
 echo $N_IND
 echo $MIN_IND
+echo $maxDepth_truncated
+echo $minDepth_truncated
+
+POPS=( c_lp_do_n012 )   # <--CHANGE POP HERE
 
 
 ```
@@ -61,12 +78,8 @@ echo $MIN_IND
 
 ```{r, engine=bash, eval=FALSE}
 
-#The read command will read one line at a time from mean_sd_depthGlobal_lynx_per_pop_sd_folds2.csv
-# put the first field (fields being blank separated, and where backslash can be used to escape the field or line separator) in the variable $discard, the second in $x, the third in $y and the rest of the fields in $discard.
-#while read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated; 
-#do
-
-# Anyway I will do it one by one:
+for POP in  ${POPS[@]}
+do
 
 ##########################
 #  SAF (likelihood):     
@@ -79,7 +92,8 @@ $ANGSD/angsd -P $THREADS -b $RUTA/whole_genome_analysis/"$POP".bamlist -ref $REF
 $FILTER1 \
 $FILTER2 \
 -GL 1 -doSaf 1  \
--minInd  $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth
+-minInd  $MIN_IND -setMaxDepth $maxDepth_truncated -setMinDepth $minDepth_truncated
+
 
 ```
 
@@ -93,6 +107,7 @@ $FILTER2 \
 echo "-------$POP----------SFS------------------------------------------------------"
 
 $NGSTOOLS/realSFS "$POP".unfolded-lr.saf.idx  -P $THREADS > "$POP".unfolded-lr.sfs
+
 
 ```
 
@@ -108,7 +123,7 @@ $ANGSD/angsd -P $THREADS -b $RUTA/whole_genome_analysis/"$POP".bamlist -ref $REF
 $FILTER1 \
 $FILTER2 \
 -GL 1 -doSaf 1  \
--minInd  $MIN_IND -setMaxDepth $maxDepth \
+-minInd  $MIN_IND -setMaxDepth $maxDepth_truncated -setMinDepth $minDepth_truncated \
 -doThetas 1 -pest "$POP".unfolded-lr.sfs 
 
 ```
@@ -119,213 +134,461 @@ $FILTER2 \
 
 echo "-------$POP----------Make bed theta -----------------------------------------"
 
-$NGSTOOLS/thetaStat  make_bed $POP.postprob.thetas.gz
-
+$NGSTOOLS/thetaStat print $POP.unfolded-lr.postprob.thetas.idx > $POP.printed.stats
 
 # Transform the coordinates to use 0Based bedtools
-zcat $POP.unfolded-lr.postprob.thetas.gz | awk 'NR>1 {print  $1" "$2-1" "$2}' > $POP.0basedcoordinates.borrar
+
+awk 'NR>1 {print  $1" "$2-1" "$2}' $POP.printed.stats > $POP.0basedcoordinates.borrar # --> 1, 2, 3
 # log transformation of watterson and pairwise:
-zcat $POP.unfolded-lr.postprob.thetas.gz | awk 'NR>1 {print  "e("$3")"}'  | bc -l > "$POP".watterson.borrar
-zcat $POP.unfolded-lr.postprob.thetas.gz | awk 'NR>1 {print  "e("$4")"}'  | bc -l > "$POP".pairwise.borrar 
+awk 'NR>1 {print  "e("$3")"}' $POP.printed.stats | bc -l > "$POP".watterson.borrar # --> 4
+awk 'NR>1 {print  "e("$4")"}' $POP.printed.stats | bc -l > "$POP".pairwise.borrar # --> 5
+                                                                                  # --> PAIRWISE - WATTERSON
+awk 'NR>1 {print  "e("$5")"}' $POP.printed.stats | bc -l > "$POP".thetaFL.borrar # --> 6
+awk 'NR>1 {print  "e("$6")"}' $POP.printed.stats | bc -l > "$POP".thetaH.borrar # --> 7
+awk 'NR>1 {print  "e("$7")"}' $POP.printed.stats | bc -l > "$POP".thetaL.borrar # --> 8
 
 # Create a header for the "$POP".transformedThetas file
-echo "scaffold position1 position2 watterson pairwise pairwise-watterson" > "$POP".transformedThetas
-paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar | awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4}' >> "$POP".transformedThetas
+
+echo "scaffold position1 position2 watterson pairwise pairwise-watterson thetaFL thetaH thetaL" > "$POP".transformedThetas
+
+paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar "$POP".thetaFL.borrar "$POP".thetaH.borrar "$POP".thetaL.borrar | \
+awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP".transformedThetas
+
+rm "$POP".*.borrar
+mv $POP.printed.stats /backup/mlucena/intermediate_files_ANGSD/
+
+done
 
 ```
 
 
+## Window analysis
 
-```{r, engine=bash, eval=FALSE}
-###############################################################################################################################################################################################################
-###############################################################################################################################################################################################################
-# STILL NEED TO RUN THIS:
-  
-######################################################################################
-#                              Global diversity checks                               #
-######################################################################################
-#The diversity indexes will be calculated in relation to the features described by F Ablascal in /home/emarmesat/grupolince/copia_fabascal/FEATURES ( I suspect that here only the region with synteny to cat appear $$ --> We may need to change that!)
-# interesting fearures:
 
-cd /home/emarmesat/grupolince/immunocapture/ansgd/sfs
+```{bash}
 
-FEATURES=( "cds" "centr" "exons" "genes" "intergenic" "introns" "promoters" "tel10m" "tel2m" )
-HEADERS="pop "
-for feature in "${FEATURES[@]}"
+RUTA=/home/mlucena/ANGSD_analysis 
+cd $RUTA/whole_genome_analysis/sfs/window_analysis
+
+#To launch one by one
+POP="c_lp_sm_n019"  # <--CHANGE POP HERE
+screen -S "$POP"_sfs_window
+POP="c_lp_sm_n019"  # <--CHANGE POP HERE
+script "$POP"_sfs_window.log
+POP="c_lp_sm_n019"  # <--CHANGE POP HERE
+
+THREADS=10                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+
+NGSTOOLS="/opt/angsd/angsd/misc"
+
+WINDOWSIZE=50000
+WINDOWSTEP=10000 
+
+RUTA=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+
+echo "-------$POP---------- Window analysis -----------------------------------------"
+
+$NGSTOOLS/thetaStat do_stat $RUTA/$POP.unfolded-lr.postprob.thetas.idx -win $WINDOWSIZE -step $WINDOWSTEP  -outnames $POP.unfolded-lr.postprob.thetasWindow_$WINDOWSIZE.$WINDOWSTEP.gz
+
+```
+
+
+## Global diversity per feature
+
+I made a gff3 file with all the characteristics that we want to evaluate. 
+Now that I have the file to run over the calculus per unit. To do it in a efficient way I will split this file into as many files as scaffolds. I will do the same with my thetas file. 
+That way I will just have to search over the file that contains the scaffold, and bedtools will be faster.  
+
+ESTE ES EL ARCHIVO: 
+
+/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
+
+### First I separate transformedThetas per scaffold. 
+
+```{bash}
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit
+
+NEW_FOLDER=("c_ll_ki_separated_by_scaffold" "c_ll_po_separated_by_scaffold" "c_ll_no_separated_by_scaffold" "c_lp_do_separated_by_scaffold" "c_lp_sm_separated_by_scaffold")
+
+for FOLDER in "${NEW_FOLDER[@]}"
 do
-APPEND=$(echo ""$feature"_watterson_average "$feature"_watterson_sd "$feature"_pairwise_average "$feature"_pairwise_sd "$feature"_tajimasD_average ")
-HEADERS=$HEADERS$APPEND
+echo "---------------------------------------------------$FOLDER---------------------------------------------------"
+mkdir $FOLDER;
 done
-# I create a table to store the diversity indexes (tab separated9
-echo $HEADERS | sed 's/ /\t/g'> theta_features_per_pop.tsv
+ 
+POPS=("c_ll_ki" "c_ll_no" "c_ll_po"  "c_lp_do")
 
-###############################################################################################################################################################################################################
-###############################################################################################################################################################################################################
+#### Falta este!! ###
+"c_lp_sm"
+########################
 
 
+for POP in "${POPS[@]}"
+do
+echo $POP
+mv "$POP"_n*.transformedThetas "$POP"_separated_by_scaffold/
+cd  /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/"$POP"_separated_by_scaffold
+# Create multiple files base on one column: transformedThetas:
+awk '{print >> $1; close($1)}' "$POP"_n*.transformedThetas
+# rm scaffold ### no se pq esto?
+# Rename the files: transformedThetas
+for file in lp23*
+do
+echo $file
+mv $file ${file/lp23/"$POP".transformedThetas_lp23}
+done
+done
+
+```
 
 
+### Diversity per feature.
+
+Populations:
+
+c_ll_ki
+c_ll_no
+c_ll_po
+
+c_lp_sm
+c_lp_do
+
+
+```{bash}
+
+### Change location!
+
+
+POP=c_ll_ki_n... # check if I need to include n_013 <--- Change pop here!
+screen -S "$POP"_scaffold_per_unit
+
+POP=c_ll_ki_n... # check if I need to include n_013 <--- Change pop here!
+script log_screen_"$POP"_scaffold_per_unit.log
+
+POP=c_ll_ki_n... # check if I need to include n_013 <--- Change pop here!
+
+
+## WG variables
+
+SCAFFOLDS_FOLDER=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3.PerScaffold/
+cd $SCAFFOLDS_FOLDER
+SCAFFOLDS=($(ls LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.* | cut -d'_' -f2 | uniq))
+DIVERSITY_PER_UNIT_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+SFS_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
+
+#for POP in "${POPS[@]}"
+#do
 
 echo "---------------------------------------------------$POP---------------------------------------------------"
-echo $POP > "$POP".averages.borrar
-# Make diversity calculations per each feature
-for feature in "${FEATURES[@]}"
+
+# Create headers for the outfile
+echo -e "scaffold\tstart\tend\tlength\tNAs\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
+
+for SCAFFOLD in "${SCAFFOLDS[@]}"
 do
-echo "Calculating   $feature"
-	
-#Intersect bed of the feature (first remove header)
-tail -n +2 "$POP".transformedThetas | bedtools intersect -a stdin -b /home/GRUPOS/grupolince/copia_fabascal/FEATURES/"$feature".bed > "$POP"."$feature".transformedThetas.borrar
+echo "---------------------$SCAFFOLD---------------------"
+
+#For each unit
+
+cd "$SFS_FOLDER""$POP"_separated_by_scaffold
+
+while read LOCATION METHOD FEATURE START_ONEBASED END POINT STRANDNESS FRAME IDRAW;
+
+do
+
+echo "--------$SCAFFOLD:$FEATURE--------"
+
+LENGTH=$(expr $END - $START_ONEBASED) 
+
+if [ "$METHOD" = "PipeR" ]; then
+	ID_GENE=$(echo $IDRAW | awk -F "_" '{ split ($0, a, "ID="); split (a[2],b,"_"); print b[1]"_"b[2] }')
+	else
+	ID_GENE=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); split(b[1],c,"T"); print c[1] }') 
+fi
+
+if [ "$FEATURE" = "CDS" ]; then
+	ID=$(echo $IDRAW | awk -F "_" '{split ($0,a,"Target="); split(a[2],b,";"); print b[1]}' |  awk '{print $1"_"$2"_"$3}' )
+	else
+	ID=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); print b[1] }')
+fi
+
+#Intersect bed of the unit (first remove header)¿¿??
+
+START_CEROBASED=($(echo $START_ONEBASED-1 | bc))
+
+cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_CEROBASED\t$END") > "$POP".iter.transformedThetas.borrar
+
+WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP".iter.transformedThetas.borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_AVERAGE_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+
+NR=$(wc -l "$POP".iter.transformedThetas.borrar | cut -d" " -f1)
+
+NAs=$(expr $LENGTH - $NR)
 
 # Calculate averages, and standatd deviations and paste them
-paste <(cut -f 4 "$POP"."$feature".transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf "%f %f \n", sum[i]/NR, sqrt((sumsq[i]-sum[i]^2/NR)/NR)}}') \
-<(cut -f 5 "$POP"."$feature".transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf "%f %f \n", sum[i]/NR, sqrt((sumsq[i]-sum[i]^2/NR)/NR)}}') \
-<(awk -v OFS='\t' '{x+=$6;y+=$6^2}END{print sqrt(y/NR-(x/NR)^2)}' "$POP"."$feature".transformedThetas.borrar) \
->> "$POP".averages.borrar
+
+paste \
+<(echo $LOCATION ) \
+<(echo $START_ONEBASED ) \
+<(echo $END ) \
+<(echo $LENGTH ) \
+<(echo $NAs) \
+<(echo $FEATURE ) \
+<(echo $STRANDNESS ) \
+<(echo $FRAME ) \
+<(echo $ID_GENE ) \
+<(echo $ID) \
+<(echo $WATTERSON_AVERAGE_PER_UNIT) \
+<(echo $WATTERSON_SD_PER_UNIT) \
+<(echo $PAIRWISE_AVERAGE_PER_UNIT) \
+<(echo $PAIRWISE_SD_PER_UNIT) \
+<(echo $TAJIMAS_D_PER_UNIT) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
+
+done < <(cat "$SCAFFOLDS_FOLDER""$SCAFFOLD")
 done
-sed ':a;N;$!ba;s/\n/\t/g' "$POP".averages.borrar | sed 's/ /\t/g' | tr -s "\t" >> theta_features_per_pop.tsv
-touch finished_sfs_thetas."$POP" #Just to quickly check what has finished
-rm "$POP"*borrar
 
-#done < "$POP"_mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv #mean_sd_depthGlobal_lynx_per_pop_sd_folds2_a.csv 
-
-
-rm *borrar
-
-scp emarmesat@genomics-a.ebd.csic.es:/home/emarmesat/grupolince/immunocapture/ansgd/sfs/theta_features_per_pop.tsv /home/elena/Dropbox/immunocapture/analysis/ANSGD/sfs/
-
-
-
-
-
-
-
-
+rm "$POP".iter.transformedThetas.borrar
 
 
 ```
 
 
 
-```{r, engine=bash, eval=FALSE}
-
-####### CAREFUL BAM FILES MUST BE INDEXED!!!!!
-####### MODIFY ALL THE MAXDEPTH.CSV NAME FILES TO BE ABLE TO GET INTO THE LOOP!
-
-# The newest version of the programs:
-
-ANGSD=/opt/angsd 
-NGSTOOLS=/opt/ngsTools_19092016
-
-REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa
-ANC=/home/mlucena/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa
-
-FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
-FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
 
 
-# I'll use the parameters calculated by the end of the script pipeline_contemporary_analysis / mapping:
+### Diversity per region.
 
-scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_sd_folds_2*.csv mlucena@genomics-b.ebd.csic.es:/home/GRUPOS/grupolince/analysis_genomes_5x/ANGSD/sfs/
+Populations:
 
+c_ll_ki
+c_ll_no
+c_ll_po
 
-#The read command will read one line at a time from mean_sd_depthGlobal_lynx_per_pop_sd_folds2.csv
-# put the first field (fields being blank separated, and where backslash can be used to escape the field or line separator) in the variable $discard, the second in $x, the third in $y and the rest of the fields in $discard.
-
-### Copiar los bamlist a algún sitio de interes en el servidor de interes (A o B):
-
-# Usually it will be enougth starting with while if you want to run everything in a loop. As I don't want that, I will separate the file to start. 
-cd /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/sfs/
-
-EPOCA="c"
-ESPECIE="ll"
-POBLACION="po"
+c_lp_sm
+c_lp_do
 
 
-while read epoch sp pop mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated; 
+```{bash}
+
+mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region
+
+POP=c_ll_ki # check if I need to include n_013 <--- Change pop here!
+screen -S "$POP"_scaffold_per_region
+
+POP=c_ll_ki # check if I need to include n_013 <--- Change pop here!
+script log_screen_"$POP"_scaffold_per_region.log
+
+POP=c_ll_ki # check if I need to include n_013 <--- Change pop here!
+
+## WG variables
+
+RUTA=/GRUPOS/grupolince/telomers_centromers_definition/
+
+cd $RUTA
+
+REGIONS_PerScaffold=($(ls | grep "PerScaffold" | uniq))
+
+for REGION_PerScaffold in "${REGIONS_PerScaffold[@]}"
+
 do
 
-MYPOP=$epoch"_"$sp"_"$pop
-N_IND=$(wc -l /home/mlucena/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$MYPOP"_n*.bamlist | cut -f 1 -d " ") ####### Modificar ruta!!
-MIN_IND=$(expr $N_IND / 2)
+echo $REGION_PerScaffold
+cd $RUTA$REGION_PerScaffold
 
-# echo $MYPOP
-# echo $N_IND
-# echo $MIN_IND
+REGION=$(echo $REGION_PerScaffold | cut -d"." -f 1 )
+SCAFFOLDS=($(ls * | cut -d'_' -f7 | uniq))
 
-# ANGSD analysis: Theta per site.
+# mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/$REGION/  # --> Ya están creadas.
 
-# SAF (likelihood):
-                      
-$ANGSD/angsd -P 8 -b /home/GRUPOS/grupolince/analysis_genomes_5x/ANGSD/qc_test/"$MYPOP"_n*.bamlist -ref "$REF" -anc "$ANC" -out "$MYPOP" "$FILTER1" -minMapQ 30 -minQ 20 -MIN_IND "$MIN_IND"  -doCounts 1 -GL 1 -doSaf 1 -fold 1 -setMaxDepth $maxDepth 
+DIVERSITY_PER_REGION_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/$REGION/
+echo $REGION
 
-done < <(grep $EPOCA mean_sd_depthGlobal_lynx_per_pop_sd_folds_2_a.csv | grep $ESPECIE | grep $POBLACION)
+echo "---------------------------------------------------$POP---------------------------------------------------"
 
+cd $DIVERSITY_PER_REGION_FOLDER
 
-# SFS:(I dont require the -rf file as the saf already only contains the -rf sites)
+# Create headers for the outfile
+echo -e "scaffold\tstart\tend\tlength\tNAs\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > "$POP"."$REGION".averages.tsv
 
-$NGSTOOLS/realSFS $MYPOP.saf.idx  -P 10 > $MYPOP.sfs
-
-
-# SAF (postprob) + theta:
-
-$ANGSD/angsd -P 8 -b home/GRUPOS/grupolince/analysis_genomes_5x/ANGSD/qc_test/$MYPOP.bamlist -ref $REF -anc $ANC \
--out $MYPOP.postprob \
-$FILTER1 \
-$FILTER2 \
--GL 1 -doSaf 1 -fold 1 \
--MIN_IND $MIN_IND -setMaxDepth $maxDepth \
--doThetas 1 -pest $MYPOP.sfs 
-
-
-# Make bed theta:
-
-
-$NGSTOOLS/thetaStat  make_bed $MYPOP.postprob.thetas.gz
-
-
-
-# Transform the coordinates to use 0Based bedtools
-zcat $MYPOP.postprob.thetas.gz | awk 'NR>1 {print  $1" "$2-1" "$2}' > $MYPOP.0basedcoordinates.borrar
-# log transformation of watterson and pairwise:
-zcat $MYPOP.postprob.thetas.gz | awk 'NR>1 {print  "e("$3")"}'  | bc -l > "$MYPOP".watterson.borrar
-zcat $MYPOP.postprob.thetas.gz | awk 'NR>1 {print  "e("$4")"}'  | bc -l > "$MYPOP".pairwise.borrar 
-
-# Create a header for the "$MYPOP".transformedThetas file
-echo "scaffold position1 position2 watterson pairwise pairwise-watterson" > "$MYPOP".transformedThetas
-paste $MYPOP.0basedcoordinates.borrar "$MYPOP".watterson.borrar "$MYPOP".pairwise.borrar | awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4}' >> "$MYPOP".transformedThetas
-
-echo
-echo
-echo "---------------------------------------------------$MYPOP---------------------------------------------------"
-echo $MYPOP > "$MYPOP".averages.borrar
-# Make diversity calculations per each feature
-for feature in "${FEATURES[@]}"
+for SCAFFOLD in "${SCAFFOLDS[@]}"
 do
-echo "Calculating   $feature"
-	
-#Intersect bed of the feature (first remove header)
-tail -n +2 "$MYPOP".transformedThetas | bedtools intersect -a stdin -b /home/GRUPOS/grupolince/copia_fabascal/FEATURES/"$feature".bed > "$MYPOP"."$feature".transformedThetas.borrar
+echo "---------------------$SCAFFOLD---------------------"
+
+while read LOCATION START_CEROBASED END CAT_CHR;
+
+do
+
+START_ONEBASED=($(echo $START_CEROBASED+1 | bc))
+LENGTH=$(expr $END - $START_ONEBASED) 
+
+#Intersect bed of the unit (first remove header)¿¿??
+
+START_CEROBASED=($(echo $START_ONEBASED-1 | bc))
+
+
+
+cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_CEROBASED\t$END") > "$POP"."$REGION".iter.transformedThetas.borrar
+
+WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP"."$REGION".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP"."$REGION".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5 "$POP"."$REGION".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$POP"."$REGION".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP"."$REGION".iter.transformedThetas.borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_AVERAGE_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+
+NR=$(wc -l "$POP"."$REGION".iter.transformedThetas.borrar | cut -d" " -f1)
+
+NAs=$(expr $LENGTH - $NR)
 
 # Calculate averages, and standatd deviations and paste them
-paste <(cut -f 4 "$MYPOP"."$feature".transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf "%f %f \n", sum[i]/NR, sqrt((sumsq[i]-sum[i]^2/NR)/NR)}}') \
-<(cut -f 5 "$MYPOP"."$feature".transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf "%f %f \n", sum[i]/NR, sqrt((sumsq[i]-sum[i]^2/NR)/NR)}}') \
-<(awk -v OFS='\t' '{x+=$6;y+=$6^2}END{print sqrt(y/NR-(x/NR)^2)}' "$MYPOP"."$feature".transformedThetas.borrar)\
->> "$MYPOP".averages.borrar
 
-rm "$MYPOP"."$feature".transformedThetas.borrar
+paste \
+<(echo $LOCATION ) \
+<(echo $START_ONEBASED ) \
+<(echo $END ) \
+<(echo $LENGTH ) \
+<(echo $NAs) \
+<(echo $WATTERSON_AVERAGE_PER_UNIT) \
+<(echo $WATTERSON_SD_PER_UNIT) \
+<(echo $PAIRWISE_AVERAGE_PER_UNIT) \
+<(echo $PAIRWISE_SD_PER_UNIT) \
+<(echo $TAJIMAS_D_PER_UNIT) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  "$POP"."$REGION".averages.tsv
 
+done < <(cat "$SCAFFOLDS_FOLDER""$SCAFFOLD")
 done
 
-sed ':a;N;$!ba;s/\n/\t/g' "$MYPOP".averages.borrar | sed 's/ /\t/g' | tr -s "\t" >> theta_features_per_pop.tsv
-
-done
-
-done < mean_sd_depthGlobal_lynx_per_pop_sd_folds_2.csv
-
-
-# CHECK!
-
-rm *borrar
+rm "$POP"*iter.transformedThetas.borrar
 
 
 ```
+
+
+
+## SFS graphical representation
+
+
+First we copy the SFS files to our local folder.
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/*sfs /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs
+
+# I need to change name as R does not like "-lr.sfs"
+
+cd /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/
+for i in *sfs
+do 
+#echo $i
+echo $i "--->" ${i/-lr.sfs/_lr.sfs}
+mv $i ${i/-lr.sfs/_lr.sfs}
+done
+
+
+```
+
+Now we run the script. 
+
+```{r}
+library(dplyr)
+library(magrittr)
+
+wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/"
+
+my_files_unfolded = list.files(path = wd, pattern="*sfs$")    
+for (i in 1:length(my_files_unfolded)) 
+{ assign(my_files_unfolded[i], (scan(paste(wd,my_files_unfolded[i], sep = ""), sep = " ", dec = ".")) %>% .[!is.na(.)])}
+
+norm <- function(x) x/sum(x)
+
+for (i in 1:length (my_files_unfolded))
+{
+  temp1=(eval(parse(text=my_files_unfolded[i])))
+  temp2=norm(temp1[-1])
+  temp3=norm(temp2[-c(length(temp2))])
+  barplot(temp3,xlab="Chromosomes",
+          names=1:length(temp3),ylab="Proportions",main=my_files_unfolded[i],col='grey')
+  dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/",my_files_unfolded[i],".eps"), onefile=FALSE, horizontal=FALSE)
+  dev.off()
+  rm(temp1)
+  rm(temp2)
+  rm(temp3)
+}
+
+
+```
+
+## Window R representation
+
+
+Download data:
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*PG /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/window_analysis/
+```
+
+
+```{r}
+
+# Representación de las ventanas en manhattan plots. 
+
+library(dplyr)
+library(qqman)
+library(ggplot2)
+library ("GGally")
+
+# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/window_analysis/" 
+wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/"
+
+finsThetas = list.files(path = wd, pattern="*.pestPG$")
+
+for (i in 1:length(finsThetas))
+{
+  datThetas <- read.csv (paste(wd,finsThetas[i],sep=""), header = T, sep = '\t')  
+  name_thetas <- unlist(strsplit(finsThetas[i], "[.]"))
+  datThetas$CHR <- as.numeric(gsub('^.{6}', '', datThetas$Chr))
+  datThetas$Nsites <- as.numeric(datThetas$nSites)
+  datThetas$SNPS_window = paste(datThetas$Chr, datThetas$WinCenter, sep='_')
+  datThetas[,-c(1,2)][datThetas[, -c(1,2)] < 0] <- 0
+  # Manhattan plot Theta Waterson
+  max_thetas <- max (datThetas$tW)
+  min_thetas <- min(datThetas$tW)
+  setEPS()
+  postscript(file=paste(wd,name_thetas[1], '_watterson_manhattan.eps', sep=''))
+  manhattan(datThetas, chr = "CHR", bp = "WinCenter", p = "tW", snp = "SNPS_window", ylim = c(0 , max_thetas+10), ylab = "tW", xlab = "Scaffold", logp=F, genomewideline = F, suggestiveline = F, main = paste ("Manhattan plot of tW ",name_thetas[1], sep =''))
+  dev.off() 
+  # Correlation between diversity indixes
+  setEPS()
+  postscript(file=paste(wd,name_thetas[1], '_diversity_correlation.eps', sep=''), horizontal = FALSE, onefile = FALSE, paper = "special")
+  print(ggpairs(datThetas, columns=4:8, title=paste("Theta correlations ", name_thetas[1], sep='')))
+  dev.off()
+  # Correlation between neutrality indixes
+  setEPS()
+  postscript(file=paste(wd,name_thetas[1], '_neutrality_correlation.eps', sep=''), horizontal = FALSE, onefile = FALSE, paper = "special")
+  print(ggpairs(datThetas, columns=9:13, title=paste("Neutrality indexes correlations ", name_thetas[1], sep='')))
+  dev.off()
+}
+
+
+```
+
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*eps /Users/marialucenaperez/Desktop
+
+```
+
+
+```
+
