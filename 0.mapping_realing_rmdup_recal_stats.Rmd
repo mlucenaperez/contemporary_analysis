@@ -461,14 +461,19 @@ ROUND=1
 PREVIOUS_ROUND=$(expr $ROUND - 1)
 
 for pop in ${POP[@]}
+
 do
+
 echo "${pop}"
 # esto de number_id si corro todo junto está repetido:
 number_id=$(printf "%03d" `wc -l  "${pop}"_round-"$ROUND"*.bam.list | tr -s ' ' | cut -d ' ' -f1`); # He cambiado el -f2 por -f1 porque si no los de macrogen no corrian, comprobar que siguen biuen
 INPUT_BAMS_FOR_RECALIBRATING=($(cat "${pop}"_round-1_n*.bam.list))  # He cambiado el nombre del archivo porque corriendo los de macrogen me he dado cuenta de que estaban mal
 echo $number_id
+
 for id in ${INPUT_BAMS_FOR_RECALIBRATING[@]}
+
 do
+
 echo $id
 java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC  -XX:+UseStringDeduplication -Xms10g  -Xmx50g -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar   -T BaseRecalibrator -R $REF -I ${id} -knownSites "${pop}"_n"$number_id"_raw_round-"$ROUND"_filtered.vcf -o ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-"$ROUND".table}
 java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T PrintReads -R $REF -I ${id} -BQSR ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-"$ROUND".table} -o ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_round-"$ROUND".bam}
@@ -489,7 +494,9 @@ if [ "$ROUND" -eq "3" ];
 then
 java -jar GenomeAnalysisTK.jar -T AnalyzeCovariates -R $REF -ignoreLMT -BQSR ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-1.table} -before ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-2.table} -after ${id/_sorted_rmdup_sorted_indelrealigner.bam/_recal_data_round-3.table} -plots BQSR_round-3.pdf
 fi
+
 done
+
 done
 
 ```
@@ -690,7 +697,6 @@ java  -Xms10g  -Xmx40g -jar /home/tmp/Software/Picard/picard-tools-1.66/CollectI
 done
 
 mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*.picard_length /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
-
 mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*.histogram_length /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
 
 for sample in *.histogram_length
@@ -822,8 +828,8 @@ LANG=en_EN  join -1 1 -2 1 -t","  <(head -n 2 raw.stats && tail -n +3 raw.stats 
 ## Download report. 
 
 ```{bash}
-scp mlucena@genomics-b.ebd.csic.es:/home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/global_stats_all_samples.csv ./Desktop
 
+scp mlucena@genomics-b.ebd.csic.es:/home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/global_stats_all_samples.csv ./Desktop
 
 ```
 
