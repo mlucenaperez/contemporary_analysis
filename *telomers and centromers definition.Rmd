@@ -768,6 +768,63 @@ mv * /GRUPOS/grupolince
 
 ```
 
+#### Creating a folder per scaffold to speed up the process when calculating diversity per region.
+
+```{bash}
+
+cd /GRUPOS/grupolince/telomers_centromers_definition
+
+#############################################################################
+### Telomers 0-10m 
+
+mkdir telomers0-10m.PerScaffold
+
+cd telomers0-10m.PerScaffold
+awk '{print >> $1; close($1)}' ../tel0-10m_regions_based_on_synteny_1000bp.bed
+
+# Rename gff3.
+for file in lp23*
+do
+echo $file
+mv $file ${file/lp23/tel0-10m_regions_based_on_synteny_1000bp_lp23}
+done
+
+#############################################################################
+### Telomers 2m
+
+mkdir telomers2m.PerScaffold
+
+cd telomers2m.PerScaffold
+awk '{print >> $1; close($1)}' ../tel2m_regions_based_on_synteny_1000bp.bed
+
+# Rename gff3.
+for file in lp23*
+do
+echo $file
+mv $file ${file/lp23/tel2m_regions_based_on_synteny_1000bp_lp23}
+done
+
+#############################################################################
+### Centromers
+
+mkdir centromers.PerScaffold
+
+cd centromers.PerScaffold
+awk '{print >> $1; close($1)}' ../centr_regions_based_on_synteny_1000bp.bed
+
+# Rename gff3.
+for file in lp23*
+do
+echo $file
+mv $file ${file/lp23/centr_regions_based_on_synteny_1000bp_lp23}
+done
+
+#############################################################################
+
+```
+
+
+
 
 # Otras notas: Filtro fede, cariotipo.
 
