@@ -131,17 +131,21 @@ h_lp_mt
 c_ll_no --> Previously done
 c_ll_ba --> Previously done
 h_ll_ba       "
-c_ll_cr --> Previously done
+c_ll_cr (including 25x MACROGEN sample) --> Previously done
+c_ll_cr (including subsampled MACROGEN sample) -->  To do
 c_ll_po --> Previously done
 c_ll_la --> Previously done
-c_ll_ki --> Previously done
+c_ll_ki (including 25x MACROGEN sample) -->  Previously done
+c_ll_ki (including subsampled MACROGEN sample) -->  To do
 c_ll_ur
 c_ll_tu --> Done
 c_ll_to --> Previously done
 c_ll_ka --> No
 c_ll_og --> No
-c_ll_ya --> Previously done
-c_ll_vl --> Previously done
+c_ll_ya (including 25x MACROGEN sample) --> Previously done
+c_ll_ya (including subsampled MACROGEN sample) -->  To do
+c_ll_vl (including 25x MACROGEN sample) --> Previously done
+c_ll_vl (including subsampled MACROGEN sample) -->  To do
 c_ll_ka-c_ll_og --> Done
 c_ll_to-c_ll_ka-c_ll_og --> Done
 
@@ -151,16 +155,16 @@ c_ll_to-c_ll_ka-c_ll_og --> Done
 
 cd /home/mlucena/ANGSD_analysis/depth_calculus
 #To launch one by one
-POP="c_lp_sm"  # <--CHANGE POP HERE
+POP="c_ll_ki_n0"  # <--CHANGE POP HERE
 screen -S "$POP"_qc_test
-POP="c_lp_sm"  # <--CHANGE POP HERE
+POP="c_ll_ki_n0"  # <--CHANGE POP HERE
 script "$POP"_qc.log
-POP="c_lp_sm"  # <--CHANGE POP HERE
+POP="c_ll_ki_n0"  # <--CHANGE POP HERE
 
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
 THREADS=15                    # no. of computer cores used 20 = OK, >20 = ask people first!
 
-BAMLIST=$(ls /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP"_n*.bamlist)
+BAMLIST=$(ls /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP".bamlist)
 OUT_NAME="/home/mlucena/ANGSD_analysis/depth_calculus/"$POP".qc"
 NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
 MAXDEPTH=$(expr $NUMBER_IND \* 1000)
@@ -170,7 +174,6 @@ ls $BAMLIST
 echo $OUT_NAME
 echo $NUMBER_IND
 echo $MAXDEPTH
-
 
 /opt/angsd/angsd/angsd -P $THREADS \
 -b $BAMLIST \
@@ -378,7 +381,7 @@ Cuando acabo me llevo los archivos generados de GlobalDepth a mi ordenador para 
 
 ```{r, engine=bash, eval=FALSE}
 
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/depth_calculus/*.depth* /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/depth_calculus/*.depth* /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/depth_calculus/
   
 ```
 
@@ -399,15 +402,9 @@ with (dat, sqrt(sum(as.numeric(freq)*(value-mu)^2)/(sum(as.numeric(freq))-1))) }
 
 #*******************************************************************************************
 
-# knitr::opts_chunk$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test"))
-# print(getwd())
-# opts_knit$set(root.dir='/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test')
-# print(getwd())
-# setwd("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test")
+my_files_depthGlobal = list.files(path = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/depth_calculus",pattern="*.depthGlobal$") 
 
-my_files_depthGlobal = list.files(path = "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test",pattern="*.depthGlobal$") 
-
-for (i in 1:length(my_files_depthGlobal)) { assign(my_files_depthGlobal[i], (scan(paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/",my_files_depthGlobal[i],sep=""), sep = " ", dec = ".")) %>% .[!is.na(.)])}
+for (i in 1:length(my_files_depthGlobal)) { assign(my_files_depthGlobal[i], (scan(paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/depth_calculus/",my_files_depthGlobal[i],sep=""), sep = " ", dec = ".")) %>% .[!is.na(.)])}
 
 mean_folds = 0.95
 
@@ -419,7 +416,7 @@ depth_per_sample <- data.frame()
 for (i in 1:length(my_files_depthGlobal)) 
   {
   
-DF = read.table(paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/",my_files_depthGlobal[i],sep=""),head=F, stringsAsFactors=F, check.names=FALSE)
+DF = read.table(paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/depth_calculus/",my_files_depthGlobal[i],sep=""),head=F, stringsAsFactors=F, check.names=FALSE)
 
 freq_table_DF <- data.frame (value = 1:length (DF), freq = t(DF))
 freq_table_truncated_DF <- filter(freq_table_DF, value < (nrow(freq_table_DF)))
@@ -482,21 +479,21 @@ ggplot(freq_table_truncated_DF, aes(x = value, y = freq)) +
   theme_classic()+ 
   theme(text = element_text(size=10))
 
-plot_name=paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/",my_files_depthGlobal[i],"_",mean_folds,".pdf",sep="")
+plot_name=paste0("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/depth_calculus/",my_files_depthGlobal[i],"_",mean_folds,".pdf",sep="")
 ggsave(filename = plot_name)
 
 }
 
 # When finished write the table
 
-write.table(x = depth_per_sample,file = paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_",mean_folds,".csv", sep= ""),quote=FALSE, col.names = FALSE, row.names = FALSE, sep= " ")
+write.table(x = depth_per_sample,file = paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/depth_calculus/mean_sd_depthGlobal_lynx_per_pop_mean_folds_",mean_folds,".csv", sep= ""),quote=FALSE, col.names = FALSE, row.names = FALSE, sep= " ")
 
 ```
 
 
 ```{r, engine=bash, eval=FALSE}
 
-scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/qc_test/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/depth_calculus/
+scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/depth_calculus/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/depth_calculus/
 
   
 # Separate in populations:
