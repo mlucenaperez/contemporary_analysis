@@ -1,0 +1,327 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+
+# Generating Dxy 
+
+## Introduction and populations:
+
+I am going to run MAF & Dxy in my target populations.
+
+Populations:
+
+c_ll_no -->
+c_ll_po -->
+c_ll_ki -->
+
+c_lp_do --> lanzado 
+c_lp_sm --> lanzado
+
+
+## Global variables:
+
+```{r, engine=bash, eval=FALSE}
+
+RUTA=/home/mlucena/ANGSD_analysis 
+cd $RUTA/whole_genome_analysis/dxy
+
+#To launch one by one
+
+POP="c_lp_sm_n019"  # <--CHANGE POP HERE
+
+screen -S "$POP"_Dxy
+# screen -S "$POP"_thetas
+
+POP="c_lp_sm_n019"  # <--CHANGE POP HERE
+
+script "$POP"_Dxy.log
+# script "$POP"_thetas.log
+
+POP="c_lp_sm_n019"  # <--CHANGE POP HERE
+
+THREADS=15                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+
+RUTA=/home/mlucena/ANGSD_analysis/depth_calculus 
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < $RUTA/"${POP}"_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+N_IND=$(echo ${POP: -3} )
+MIN_IND=$(expr $N_IND / 2)
+RUTA=/home/mlucena/ANGSD_analysis 
+SNP_PVAL=$(echo 1/$N_IND |  bc -l | sed 's/./0./') 
+
+
+# Sanity checks:
+
+echo $POP
+echo $N_IND
+echo $MIN_IND
+echo $maxDepth_truncated
+echo $minDepth_truncated
+
+```
+
+## Calculating MAF
+
+```{bash}
+
+
+$ANGSD/angsd -nThreads $THREADS -bam $RUTA/whole_genome_analysis/"$POP".bamlist -ref $REF -anc $ANC \
+-out "$POP".genolike \
+$FILTER1 \
+$FILTER2 \
+-GL 1 -doMajorMinor 1 -doMaf 2  \
+-minInd  $MIN_IND -setMaxDepth $maxDepth_truncated -setMinDepth $minDepth_truncated \
+-SNP_pval $SNP_PVAL -skipTriallelic 1
+
+
+# -doMaf 2 Esto te saca el known y el unknown: http://www.popgen.dk/angsd/index.php/Allele_Frequencies
+
+
+```
+
+
+We can now calculate some summary statistics, namely number of segregating sites, expected heterozygosity, number of fixed differences and dxy. Please note that the latter 2 statistics have not been properly tested and they are shown to be For instance, dxy been shown to be over-estimated and should be used only for inspecting the distribution and not to make inferences based on its absolute values. In case you want to estimate dxy, you can find in ngsTools/ngsPopGen/scripts folder a perl script written by Nagarjun Vijay and a R script written by [Joshua Penalba][https://joshuapenalba.com/] which calculate Dxy from ANGSD allele frequency files. Please see that script for additional help.
+
+--> We are using Nagarjun Vijay script. 
+
+```{bash}
+
+
+
+chromo  position        major   minor   ref     anc     unknownEM       pu-EM   nInd
+
+zcat c_lp_do_n012.genolike.mafs.gz | awk -v OFS='\t' '{printf ("%s\t%s\t%s\t%s\t%s\t%f\t%s\t%s\n", $1, $2, $3, $4, $5, (1-$7), $7, $9)}'  > prueba_1
+zcat c_lp_sm_n019.genolike.mafs.gz | awk -v OFS='\t' '{printf ("%s\t%s\t%s\t%s\t%s\t%f\t%s\t%s\n", $1, $2, $3, $4, $5, (1-$7), $7, $9)}'  > prueba_2
+
+# Tendría que filtrarlo para pu-EM
+
+printf ("%.8f\n",n1-n2)}
+
+POP1=c_lp_do_n012.genolike.mafs.gz
+POP2=c_lp_sm_n019.genolike.mafs.gz
+
+./getDxy.pl --pop1maf $POP1 --pop2maf $POP2 --nInd 31
+
+./getDxy.pl --pop1maf prueba_1 --pop2maf prueba_2 --minInd 6
+
+
+```
+
+## getDxy.pl --> Nagarjun Vijay
+
+```{perl}
+#!/usr/bin/perl
+
+#use strict;
+use warnings;
+use Getopt::Long;
+
+my $pop1maf;
+my $pop2maf;
+my $minInd;
+
+&GetOptions( 'pop1maf=s' => \$pop1maf,
+             'pop2maf=s' => \$pop2maf,
+             'minInd=i' => \$minInd,
+			 );
+
+my $usage = <<_EOUSAGE_;
+#########################################################################################
+# getDxy.pl --pop1maf <FILE> --pop2maf <FILE> --nInd <Integer>
+# Required:
+#  --pop1maf        a text maf file output from ANGSD with apporpriate filtering for Population 1
+#  --pop2maf        a text maf file output from ANGSD with apporpriate filtering for Population 2
+#  --minInd         minimum number of individuals required per population
+#
+#This script assumes equal and corresponding lines in the two maf files. User needs to filter for variable sites using the SNP pval before running this script.
+#
+#
+#Following columns need to be present:
+#
+#chromo	position	major	minor	ref	knownEM	unknownEM	nInd
+#
+#
+#Dxy is reported only for the sites included in the MAF file. While calculating the value per window, the correct number of sites has to be used.
+#
+#Example command to run the script
+#perl getDxy.pl --pop1maf pop1.pop1_pop2.genotypes.mafs.txt --pop2maf pop2.pop1_pop2.genotypes.mafs.txt --minInd 5
+###########################################################################################
+_EOUSAGE_
+
+	;
+ 
+if (! defined $pop1maf) {print $usage;exit;}
+if (! defined $pop2maf) {print $usage;exit;}
+if (! defined $minInd) {print $usage;exit;}
+
+open POP1MAF, $pop1maf or die $!;
+open POP2MAF, $pop2maf or die $!;
+
+my $line1;
+my $line2;
+
+my $dxy=0;
+#read in the header and do nothing
+my $header1=<POP1MAF>;my $header2=<POP2MAF>;
+
+print "chromo\tposition\tDxy\n";
+
+while($line1=<POP1MAF>){
+        #read in maf from pop1
+        chomp $line1;my @parts=split('\t',$line1);
+        
+        #read in maf from pop2
+        $line2=<POP2MAF>;chomp $line2;my @parts2=split('\t',$line2);
+        
+if(($parts[6]>=$minInd)&&($parts2[6]>=$minInd)){#use only sites that are covered by atleast $minInd individuals in each population
+
+        #if($parts3[4]>0.99999999){#use only sites with pvar >0.99999999, same as criteria used for fst
+
+                if(($parts[2]=~/$parts2[2]/)&&($parts[3]=~/$parts2[3]/)){#check if the major and minor allele are matching
+
+                $dxy=$parts[4]*(1-$parts2[4])+($parts2[4]*(1-$parts[4]));
+
+                print "$parts[0]\t$parts[1]\t$dxy\n"; # print scaffold, position and per site dxy
+
+                }
+
+                if(($parts[2]=~/$parts2[3]/)&&($parts[3]=~/$parts2[2]/)){#check if the major and minor allele are NOT matching
+
+                $dxy=($parts[4]*$parts2[4])+((1-$parts2[4])*(1-$parts[4]));
+
+                print "$parts[0]\t$parts[1]\t$dxy\n";# print scaffold, position and per site dxy
+
+                }
+}}
+close POP1MAF;
+close POP2MAF;
+```
+
+
+## Dxy from mafs files --> Joshua Penalba
+
+```{r}
+#########################################
+#                                       #
+#   Calculates Dxy from mafs files      #
+#                                       #
+#   Author: Joshua Penalba              #
+#   Date: 22 Oct 2016                   #
+#                                       #
+#########################################
+
+
+# NOTES
+# * Prior to calculating Dxy the following steps are recommended:
+#   1. Run ANGSD with all populations with a -SNP_pval and -skipTriallelic flags.
+#   2. Rerun ANGSD per population 
+#       Use the -sites flag with a file corresponding to the recovered SNPs.
+#       This will guarantee that sites with an allele fixed in one population is still included.
+#       Remove the -SNP_pval flag.
+#       IMPORTANT: Include an outgroup reference to polarize alleles.
+#   3. Gunzip the resulting mafs files.
+# 
+# * Make sure the totLen only includes the chromosomes being analyzed.
+# * minInd flag not added, assuming already considered in the ANGSD run.
+# * Test for matching major and minor alleles not included as it would filter out sequencing errors. 
+#   This has been accounted for in the allele frequency calculations.
+#   This filter may give an underestimate of dxy.
+# * Per site Dxy of ~0 could be common if the alternate alleles are present in a population other than the two being included in the calculation.
+
+
+### Creating an argument parser
+library("optparse")
+
+option_list = list(
+  make_option(c("-p","--popA"), type="character",default=NULL,help="path to unzipped mafs file for pop 1",metavar="character"),
+  make_option(c("-q","--popB"), type="character",default=NULL,help="path to unzipped mafs file for pop 2",metavar="character"),
+  make_option(c("-t","--totLen"), type="numeric",default=NULL,help="total sequence length for global per site Dxy estimate [optional]",metavar="numeric")
+)
+opt_parser = OptionParser(option_list=option_list)
+opt = parse_args(opt_parser)
+
+### Troubleshooting input
+if(is.null(opt$popA) | is.null(opt$popB)){
+  print_help(opt_parser)
+  stop("One or more of the mafs paths are missing", call.=FALSE)
+}
+
+if(grepl('.gz$',opt$popA) | grepl('.gz$',opt$popB)){
+  print_help(opt_parser)
+  stop("One or more of the mafs is gzipped.", call.=FALSE)
+}
+
+if(is.null(opt$totLen)){
+  print("Total length not supplied. The output will not be a per site estimate.")
+}
+
+
+
+
+
+
+### Reading data in
+allfreqA <- read.table("prueba_1",sep='\t',row.names=NULL, header=T)
+allfreqB <- read.table("prueba_2",sep='\t',row.names=NULL, header=T)
+
+
+
+
+
+### Manipulating the table and print dxy table
+allfreq <- merge(allfreqA, allfreqB, by=c("chromo","position"))
+allfreq <- allfreq[order(allfreq$chromo, allfreq$position),]
+# -> Actual dxy calculation
+allfreq <- transform(allfreq, dxy=(knownEM.x*(1-knownEM.y))+(knownEM.y*(1-knownEM.x)))
+write.table(allfreq[,c("chromo","position","dxy")], file="Dxy_persite.txt",quote=FALSE, row.names=FALSE, sep='\t')
+print('Created Dxy_persite.txt')
+
+
+### Print global dxy
+print(paste0('Global dxy is: ',sum(allfreq$dxy)))
+if(!is.null(opt$totLen)){
+  print(paste0('Global per site Dxy is: ',sum(allfreq$dxy)/opt$totLen))
+}
+
+
+print(paste0('Global per site Dxy is: ',sum(allfreq$dxy)/407194))
+
+```
+
+
+
+
+
+
+
+ "Global dxy is: 155416.991753343"
+> len(allfreq)
+Error in len(allfreq) : no se pudo encontrar la función "len"
+> lenght(allfreq)
+Error in lenght(allfreq) : no se pudo encontrar la función "lenght"
+> length(allfreq)
+[1] 15
+> print allfreq
+Error: unexpected symbol in "print allfreq"
+> print (allfreq)
+^C
+> nrow(all)
+all                    all.equal.environment  all.equal.language     all.equal.raw          allfreqA               
+all.equal              all.equal.envRefClass  all.equal.list         all.names              allfreqB               
+all.equal.character    all.equal.factor       all.equal.numeric      all.vars               allGenerics            
+all.equal.default      all.equal.formula      all.equal.POSIXt       allfreq                allNames               
+> nrow(allfreq)
+[1] 407194
+> print(paste0('Global per site Dxy is: ',sum(allfreq$dxy)/407194))
+[1] "Global per site Dxy is: 0.38167800054358"
+
+
+
