@@ -640,7 +640,7 @@ done
 
 
 
-## 4. Merging functional part of the genome (merging)
+## 4. Merging functional part of the genome 
 
 
 ```{r, engine=bash, eval=FALSE}
@@ -800,570 +800,58 @@ awk -v OFS='\t' '{if ($5<0) {$5="1"} else {$5=$5}; print}' | awk -v OFS='\t' '{i
 # Este script además te imprime solo las columnas de las coordenadas en formato 0-based. 
 # Si quisieras eliminar una columna, por ejemplo la 6: awk -v OFS='\t' '{if ($5<0) {$5="1"; $6=""} else {$5=$5; $6=""}; print}'
 
-
 # Define strict intergenic region 1-based!!
 
 bedtools subtract -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome.bed -b LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.bed > LYPA23C.intergenic.PLUS1000.bed
 
+# I need to create also a gff3 file with the intergenic, even thought it can be contraintuitive to have so (as gff3 have only functional features), but I need it to do all the numbers. I will used LYPA23C.intergenic.PLUS1000.bed to be sure of using intergenic regions (therefore there should be 1000pb between any functional category and the intergenic region for each individual feature).
+
+awk -v OFS='\t' '{print $1,"manual","intergenic",$2+1,$3,".", "-", ".", "ID=intergenic_region_" }' LYPA23C.intergenic.PLUS1000.bed | awk -v OFS='\t' '{if ($3==prev) counter++; else counter=1; print ($1,$2,$3,$4,$5,$6,$7,$8,$9counter); prev=$3}'  > LYPA23C.intergenic.PLUS1000.gff3
+
+# Nota! solo para que no nos sorprenda, en el tail de este archivo me he dado cuenta que hay un montón de scaffolds que no tienen ninguna anotación y por tanto son completamente intergénicos:
+# lp23.s41697	manual	intergenic	1	200	.	-	.	ID=intergenic_region_65792
+# lp23.s41698	manual	intergenic	1	200	.	-	.	ID=intergenic_region_65793
+# lp23.s41699	manual	intergenic	1	200	.	-	.	ID=intergenic_region_65794
+# lp23.s41700	manual	intergenic	1	200	.	-	.	ID=intergenic_region_65795
+
+
 ```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## 6. Merging all categories.
-
+## 6. Merging functional categories with intergenic gff3.
 
 
 ```{r, engine=bash, eval=FALSE}
 
-################################
 
-## Therefore I created the definitive file with all the features; i.e., 
+# Now I merge it with the gff3 file.
 
-# ALL FEATURES FILE:
-# Name: LYPA23C.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.intergenic.nr.gff3 
-# Files included:
-# 	ORIGINAL FILE (CDS/EXON/GENE/mRNA)
-# 	promoters
-# 	introns
-# 	5'UTR and 3'UTR (UTR es la región no traducida del gen por tanto nos quedamos con: LYPA23C.UTRs_gene-cds.nr.gff3)
-# 	lncRNA
-# 	ncRNA
-# 	intergenic gff3 file
-
-#Modify intergenic_sorted_nr_fixed.gff3 to change - by dots and pass it to one based
-
-cat intergenic_sorted_nr_fixed.gff3 | tr '-' '.' | awk -v OFS='\t' '{ print $1,$2,$3,$4+1,$5,$6,$7,$8,$9;}' > intergenic_sorted_nr_fixed2.gff3
-
-cat LYPA23C.all.fix.nr.extra.genes.gff3 LYPA23C.promoters_full_length_genes.nr.gff3 LYPA23C.introns.nr.gff3 LYPA23C.UTRs_gene-cds.nr.positions.fixed.gff3 lncRNAs_fixed_sorted.gff3 infernal_1e6_fixed.gff3 intergenic_sorted_nr_fixed2.gff3 | LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n > LYPA23C.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.gff3 
-
-# I remove exons (=CDS) and mRNA (=gene) cause I don't need them:
-
-cat LYPA23C.CDS.EXON.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.gff3 | awk '{if ($3!="exon") print $0}' | awk '{if ($3!="mRNA") print $0}' > LYPA23C.CDS.GENE.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.gff3
-
-# I had a look and it seems very good! 
-
-
-
-
-
-# ¢ AÑADIR TELOMERO Y CENTRÓMERO Y PREGUNTAR A FEDE LO DE LOS GENES TAN GRANDES!
-######################################################################################################################################################################################################################
-######################################################################################################################################################################################################################
-######################################################################################################################################################################################################################
-
-######################################################################################################################################################################################################################
-#
-# MARIA's project
-#
-######################################################################################################################################################################################################################
-# Now that I have the file to run over the calculus per unit. To do it in a efficient way I will split this file into as many files as scaffolds. I will do the same with my thetas file. 
-# That way I will just have to search over the file that contains the scaffold, and bedtools will be faster.  
-
-
-##### Thetas files:
-
-cd /home/GRUPOS/grupolince/analysis_genomes_5x/diversity_per_unit
-
-POPS=("KIR_separated_by_scaffold" "DON_separated_by_scaffold" "SMO_separated_by_scaffold" "BIA_separated_by_scaffold" "NOR_separated_by_scaffold")
-for MYPOP in "${POPS[@]}"
-do
-echo "---------------------------------------------------$MYPOP---------------------------------------------------"
-mkdir $MYPOP;
-done
- 
-
-mv BIA.transformedThetas BIA_separated_by_scaffold/
-mv DON.transformedThetas DON_separated_by_scaffold/
-mv NOR.transformedThetas NOR_separated_by_scaffold/
-mv SMO.transformedThetas SMO_separated_by_scaffold/
-mv KIR.transformedThetas KIR_separated_by_scaffold/
-
-
-POPS=("KIR" "DON" "SMO" "BIA" "NOR")
-for POP in "${POPS[@]}"
-do
-echo $POP
-cd  /home/GRUPOS/grupolince/analysis_genomes_5x/diversity_per_unit/"$POP"_separated_by_scaffold
-# Create multiple files base on one column: transformedThetas:
-awk '{print >> $1; close($1)}' "$POP".transformedThetas
-rm scaffold 
-done
-
-# Rename the files: transformedThetas:
-for POP in "${POPS[@]}"
-do
-cd /home/GRUPOS/grupolince/analysis_genomes_5x/diversity_per_unit/"$POP"_separated_by_scaffold
-for file in lp23*
-do
-echo $file
-mv $file ${file/lp23/"$POP".transformedThetas_lp23}
-done
-done
-
-
-
-##### Gff3 files:
-cd /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final
-mkdir LYPA23C.CDS.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.gff3.PerScaffold
-cd LYPA23C.CDS.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.gff3.PerScaffold
-# Create multiple files base on one column: gff3:
-awk '{print >> $1; close($1)}' ../LYPA23C.CDS.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.gff3
-# Rename gff3.
-for file in lp23*
-do
-echo $file
-mv $file ${file/lp23/LYPA23C.CDS.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr_lp23}
-done
-
-
-
-###
-LANZADO PARA:
-BIA: # running
-KIR: # running
-NOR: # running
-DON: # running
-SMO: # running
-
-
-POPS=("SMO")
-
-POP=c_ll_ki_n020
-screen -S "$POP"_scaffold_per_unit
-script log_screen_"$POP"_scaffold_per_unit
-
-##WG variables
-#SCAFFOLDS_FOLDER=/home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/
-#SCAFFOLDS_PATH=/home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.gff3.PerScaffold/#LYPA23C.CDS.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr
-#cd $SCAFFOLDS_FOLDER
-#SCAFFOLDS=($(ls LYPA23C.CDS.GENE.mRNA.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr* | cut -d'_' -f2 | uniq))
-#DIVERSITY_PER_UNIT_FOLDER=/home/GRUPOS/grupolince/analysis_genomes_5x/diversity_per_unit/
-
-#immunome variables
-POP=h_lp_al-h_lp_cr-h_lp_do-h_lp_mt-h_lp_pa_n056
-
-screen -S perunit_$POP
-POP=h_lp_al-h_lp_cr-h_lp_do-h_lp_mt-h_lp_pa_n056
-
-
-script perunit_$POP.log
-POP=h_lp_al-h_lp_cr-h_lp_do-h_lp_mt-h_lp_pa_n056
-
-
-SCAFFOLDS_FOLDER=/home/emarmesat/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/immunocapture.PerScaffold/per_scaffold/
-SCAFFOLDS_PATH=/home/emarmesat/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/immunocapture.PerScaffold/per_scaffold/LYPA23C.CDS.GENE.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.immuno-intersect_
-cd $SCAFFOLDS_FOLDER
-SCAFFOLDS=($(ls LYPA23C.CDS.GENE.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.immuno-intersect_* | cut -d'_' -f2 | uniq))
-DIVERSITY_PER_UNIT_FOLDER=/home/emarmesat/grupolince/immunocapture/ansgd/diversity_per_unit/
-
-#for POP in "${POPS[@]}"
-#do
-
-echo "---------------------------------------------------$POP---------------------------------------------------"
-
-cd "$DIVERSITY_PER_UNIT_FOLDER""$POP"_separated_by_scaffold
-
-# Create headers for the outfile
-echo -e "scaffold\tstart\tend\tlength\tNAs\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > "$POP".per.unit.averages.tsv
-
-
-for SCAFFOLD in "${SCAFFOLDS[@]}"
-do
-echo "---------------------$SCAFFOLD---------------------"
-
-
-#For each unit
-while read LOCATION METHOD FEATURE START_ONEBASED END POINT STRANDNESS FRAME IDRAW;
-do
-echo "--------$SCAFFOLD:$FEATURE--------"
-LENGTH=$(expr $END - $START_ONEBASED) 
-if [ "$METHOD" = "PipeR" ]; then
-	ID_GENE=$(echo $IDRAW | awk -F "_" '{ split ($0, a, "ID="); split (a[2],b,"_"); print b[1]"_"b[2] }')
-	else
-	ID_GENE=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); split(b[1],c,"T"); print c[1] }') 
-fi
-
-if [ "$FEATURE" = "CDS" ]; then
-	ID=$(echo $IDRAW | awk -F "_" '{split ($0,a,"Target="); split(a[2],b,";"); print b[1]}' |  awk '{print $1"_"$2"_"$3}' )
-	else
-	ID=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); print b[1] }')
-fi
-
-#Intersect bed of the unit (first remove header)
-cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_ONEBASED\t$END") > "$POP".iter.transformedThetas.borrar
-
-WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
-WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
-
-
-PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-
-
-DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP".iter.transformedThetas.borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_SD_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
-
-NR=$(wc -l "$POP".iter.transformedThetas.borrar | cut -d" " -f1)
-NAs=$(expr $LENGTH - $NR)
-
-# Calculate averages, and standatd deviations and paste them
-paste \
-<(echo $LOCATION ) \
-<(echo $START_ONEBASED ) \
-<(echo $END ) \
-<(echo $LENGTH ) \
-<(echo $NAs) \
-<(echo $FEATURE ) \
-<(echo $STRANDNESS ) \
-<(echo $FRAME ) \
-<(echo $ID_GENE ) \
-<(echo $ID) \
-<(echo $WATTERSON_AVERAGE_PER_UNIT) \
-<(echo $WATTERSON_SD_PER_UNIT) \
-<(echo $PAIRWISE_AVERAGE_PER_UNIT) \
-<(echo $PAIRWISE_SD_PER_UNIT) \
-<(echo $TAJIMAS_D_PER_UNIT) |\
-sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  "$POP".per.unit.averages.tsv
-done < <(cat "$SCAFFOLDS_PATH""$SCAFFOLD")
-done
-# sed 's/ \* /\t/g' "$POP".per.unit.averages.tsv > borrar
-rm "$POP".iter.transformedThetas.borrar
-
-
-#done 
-
-
-
-
-
-
-
-
-
-#########ESTOS SON PROBLEMÁTICOS!!!######### no me calcula watterson etc. check pq?
-
-lp23.s00001     5963447 5963590 143     143     CDS     -       2       LYPA23C013812   LYPA23C013812P1_442_490 
-lp23.s00001     5963800 5963912 112     0       CDS     -       1       LYPA23C013812   LYPA23C013812P1_404_442 5.0754623776*10^-06     9.5479321550*10^-06     3.6431904233*10^-06     8.2915919056*10^-06     -4.4002365131*10^00
-lp23.s00001     5964104 5964116 12      12      CDS     -       2       LYPA23C013812   LYPA23C013812P1_400_404 
-
-
-
-
-# Para hacer una pruebina cojo los 5 primeros scaffolds:
-
-
-
-grep -nr lp23.s00005 SMO.per.unit.averages.tsv | tail
-
-8825:lp23.s00005	4609089	4673100	64011	30278	intergenic	x	x	none	none	6.3901712366*10^-05	3.8870657122*10^-03	4.1396801326*10^-05	2.7664932224*10^-03	-2.1810913415*10^00
-
-awk '{if (NR < 8825) print $0}' SMO.per.unit.averages.tsv > SMO.per.unit.averages_lp23.s00001-s00005.tsv
-awk '{if (NR < 8825) print $0}' DON.per.unit.averages.tsv > DON.per.unit.averages_lp23.s00001-s00005.tsv
-
-
-######################################################################################################################################################################################################################
-######################################################################################################################################################################################################################
-######################################################################################################################################################################################################################
-
-##### ALL THIS PART IS IMPLEMENTED TO RUN OVER THE ENTIRE FILE. I WILL NOT USE THIS AS IT IS VERY TIME CONSUMING. I WILL BE USING THE SCRIPT BEFORE THIS AS IT SPLIT THE FILES AS IT IS WAY MORE FAST.
-## I HAVEN'T CHECK IT LATELY --> DON'T KNOW IF IT WORKS ## 
-
-# Compute the Thetas per unit defined in the input bedfile
-# Infile product of running ANGSD-sfs...= "$MYPOP".transformedThetas
-
-# cd /home/emarmesat/grupolince/immunocapture/ansgd/sfs
-# ruta primera prueba maria: /home/GRUPOS/grupolince/analysis_genomes_5x/diversity_per_unit
-# screen -S per_unint_diversity_run1
-# script per_unint_diversity_run1.log
-
-# Lanzado1 ( voy lanzando los que van estando listos
-# POPS=(KIR DON SMO BIA NOR)
-
-for MYPOP in "${POPS[@]}"
-do
-echo "---------------------------------------------------$MYPOP---------------------------------------------------"
-# Create headers for the outfile
-echo -e "scaffold\tstart\tend\tlength\tNAs\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > "$POP".per.unit.averages.tsv
-#For each unit
-while read SCAFFOLD METHOD FEATURE START_ONEBASED END POINT STRANDNESS FRAME IDRAW;
-do
-LENGTH=$(expr $END - $START_ONEBASED) 
-if [ "$METHOD" = "PipeR" ]; then
-	ID_GENE=$(echo $IDRAW | awk -F "_" '{ split ($0, a, "ID="); split (a[2],b,"_"); print b[1]"_"b[2] }')
-	else
-	ID_GENE=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); split(b[1],c,"T"); print c[1] }') 
-fi
-if [ "$FEATURE" = "CDS" ]; then
-	ID=$(echo $IDRAW | awk -F "_" '{split ($0,a,"Target="); split(a[2],b,";"); print b[1]}' |  awk '{print $1"_"$2"_"$3}' )
-	else
-	ID=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); print b[1] }')
-fi
-#Intersect bed of the unit (first remove header)
-tail -n +2 "$MYPOP".transformedThetas | bedtools intersect -a stdin -b <(echo -e "$SCAFFOLD\t$START_ONEBASED\t$END") > "$MYPOP".iter.transformedThetas.borrar
-WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$MYPOP".iter.transformedThetas.borrar  | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
-WATTERSON_SD_PER_UNIT=$(cut -f 4 "$MYPOP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
-PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5  "$MYPOP".iter.transformedThetas.borrar |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$MYPOP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$MYPOP".iter.transformedThetas.borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_SD_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
-NR=$(wc -l "$MYPOP".iter.transformedThetas.borrar | cut -d" " -f1)
-NAs=$(expr $LENGTH - $NR)
-# Calculate averages, and standatd deviations and paste them
-paste \
-<(echo $LOCATION ) \
-<(echo $START_ONEBASED ) \
-<(echo $END ) \
-<(echo $LENGTH ) \
-<(echo $NAs) \
-<(echo $FEATURE ) \
-<(echo $STRANDNESS ) \
-<(echo $FRAME ) \
-<(echo $ID_GENE ) \
-<(echo $ID) \
-<(echo $WATTERSON_AVERAGE_PER_UNIT) \
-<(echo $WATTERSON_SD_PER_UNIT) \
-<(echo $PAIRWISE_AVERAGE_PER_UNIT) \
-<(echo $PAIRWISE_SD_PER_UNIT) \
-<(echo $TAJIMAS_D_PER_UNIT) | \
-sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  "$MYPOP".per.unit.averages.tsv
-done < /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.features.nr.gff3
-# sed 's/ \* /\t/g' "$MYPOP".per.unit.averages.tsv > borrar
-rm "$MYPOP".iter.transformedThetas.borrar
-done 
-
-######################################################################################################################################################################################################################
-######################################################################################################################################################################################################################
-######################################################################################################################################################################################################################
-####################################################################################################################################################################################################################
-#
-# ELENA's IMMUNOCAPTURE project
-#
-######################################################################################################################################################################################################################
-# Now that I have the file to run over the calculus per unit. To do it in a efficient way I will split this file into as many files as scaffolds. I will do the same with my thetas file. 
-# That way I will just have to search over the file that contains the scaffold, and bedtools will be faster.  
-
-
-######################################################################################
-#                       IMMUNOCAPTURE      Gff3 REFERENCE files                      #
-######################################################################################
-#I'll work with a working version of the annotation where cds and intergenic is properly designes (which are the only features I'm interested in)
-#I'll rename it so I'm sure that it's never erased
-
-mv ../LYPA23C.CDS.GENE.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.gff3 LYPA23C.CDS.GENE.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.immunocapture20170303.gff3 
-
-
-#I'll intersect the per scaffolds files with my capture so that I have even smaller files!
-
-#I'll rename it so I'm sure that it's never erased
-
-ANNOTATION_GFF3="LYPA23C.CDS.GENE.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.immunocapture20170303.gff3"
-TARGET="/home/emarmesat/grupolince/immunocapture/capture/nimblegene_final_design/140723_IMMUNOCAP_EMB_EZ_sorted.bed"
-#Intersect the current file with the bed file so it only contaings regions of the capture
-bedtools intersect -a $ANNOTATION_GFF3 -b $TARGET > ${ANNOTATION_GFF3/immunocapture20170303/immuno-intersect}
-
-mkdir per_scaffold
-cd per_scaffold
-# Create multiple files base on one column: gff3:
-awk '{print >> $1; close($1)}' ../LYPA23C.CDS.GENE.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.immuno-intersect.gff3
-# Rename gff3.
-for file in lp23*
-do
-echo $file
-mv $file ${file/lp23/LYPA23C.CDS.GENE.PROMOTERS.INTRONS.UTR.lncRNA.ncRNA.INTERGENIC.nr.immuno-intersect_lp23}
-done
-
-
-
-
-
+cat LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3 LYPA23C.intergenic.PLUS1000.gff3 | LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 
 
 ```
 
+  
+## 7. Creating a folder per scaffold to speed up the process when calculating diversity per unit. 
+
+```{bash}
 
 
+mkdir LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3.PerScaffold
 
+cd LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3.PerScaffold
 
-
-
-
-
-# Modification over per unit script: modif_per_unit_script:
-
-
-```{r, engine=bash, eval=FALSE}
-cat LYPA23C.all.features.nr.gff3 | grep -v "exon" > LYPA23C.all.features.nr.without_exons.gff3
-
-
-##### Thetas files:
-
-cd /home/mlucena/grupolince/analysis_genomes_5x/diversity_per_unit
-
-POPS=("KIR_separated_by_scaffold" "DON_separated_by_scaffold" "SMO_separated_by_scaffold" "BIA_separated_by_scaffold" "NOR_separated_by_scaffold")
-for MYPOP in "${POPS[@]}"
-do
-echo "---------------------------------------------------$MYPOP---------------------------------------------------"
-mkdir $MYPOP;
-done
- 
-
-mv BIA.transformedThetas BIA_separated_by_scaffold/
-mv DON.transformedThetas DON_separated_by_scaffold/
-mv NOR.transformedThetas NOR_separated_by_scaffold/
-mv SMO.transformedThetas SMO_separated_by_scaffold/
-mv KIR.transformedThetas KIR_separated_by_scaffold/
-
-
-POPS=("KIR" "DON" "SMO" "BIA" "NOR")
-for POP in "${POPS[@]}"
-do
-echo $POP
-cd  /home/mlucena/grupolince/analysis_genomes_5x/diversity_per_unit/"$POP"_separated_by_scaffold
-# Create multiple files base on one column: transformedThetas:
-awk '{print >> $1; close($1)}' "$POP".transformedThetas
-rm scaffold 
-done
-
-# Rename the files: transformedThetas:
-for POP in "${POPS[@]}"
-do
-cd /home/mlucena/grupolince/analysis_genomes_5x/diversity_per_unit/"$POP"_separated_by_scaffold
-for file in lp23*
-do
-echo $file
-mv $file ${file/lp23/"$POP".transformedThetas_lp23}
-done
-done
-
-
-
-##### Gff3 files:
-cd /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final
-mkdir LYPA.perScaffold
-cd LYPA.perScaffold
 # Create multiple files base on one column: gff3:
-awk '{print >> $1; close($1)}' LYPA23C.all.features.nr.without_exons.gff3
+awk '{print >> $1; close($1)}' ../LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
+
+
 # Rename gff3.
 for file in lp23*
 do
 echo $file
-mv $file ${file/lp23/LYPA23C.all.features.nr.without_exons_lp23}
+mv $file ${file/lp23/LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3_lp23}
 done
 
-
-
-###
-LANZADO PARA:
-BIA: # --> RUNNING!
-KIR: # --> RUNNING!
-NOR: # --> RUNNING!
-DON: # --> RUNNING!
-SMO: # --> RUNNING!
-
-
-
-screen -S SMO_scaffold_per_unit
-script log_screen_SMO_scaffold_per_unit
-POPS=("SMO")
-SCAFFOLDS=($(ls /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA.perScaffold/LYPA23C.all.features.nr.without_exons_* | cut -d'_' -f7 | uniq))
-
-
-for MYPOP in "${POPS[@]}"
-do
-
-echo "---------------------------------------------------$MYPOP---------------------------------------------------"
-
-cd /home/mlucena/grupolince/analysis_genomes_5x/diversity_per_unit/"$MYPOP"_separated_by_scaffold
-
-# Create headers for the outfile
-echo -e "scaffold\tstart\tend\tlength\tNAs\tfeature\tstrandness\tframe\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\tpairwise-watterson" > "$MYPOP".per.unit.averages.tsv
-
-
-for SCAFFOLD in "${SCAFFOLDS[@]}"
-do
-echo "---------------------$SCAFFOLD---------------------"
-
-
-#For each unit
-while read LOCATION METHOD FEATURE START_ONEBASED END POINT STRANDNESS FRAME IDRAW;
-
-do
-echo "--------$SCAFFOLD:$FEATURE--------"
-LENGTH=$(expr $END - $START_ONEBASED) 
-ID_GENE=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); split(b[1],c,"T"); print c[1] }') 
-if [ "$FEATURE" = "CDS" ]; then
-	ID=$(echo $IDRAW | awk -F "_" '{split ($0,a,"Target="); split(a[2],b,";"); print b[1]}' |  awk '{print $1"_"$2"_"$3}' )
-	else
-	ID=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); print b[1] }')
-fi
-
-#Intersect bed of the unit (first remove header)
-cat "$MYPOP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_ONEBASED\t$END") > "$MYPOP".iter.transformedThetas.borrar
-
-WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$MYPOP".iter.transformedThetas.borrar  | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
-WATTERSON_SD_PER_UNIT=$(cut -f 4 "$MYPOP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
-
-
-PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5  "$MYPOP".iter.transformedThetas.borrar |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$MYPOP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-
-
-DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$MYPOP".iter.transformedThetas.borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_SD_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
-
-NR=$(wc -l "$MYPOP".iter.transformedThetas.borrar | cut -d" " -f1)
-NAs=$(expr $LENGTH - $NR)
-
-# Calculate averages, and standatd deviations and paste them
-paste \
-<(echo $LOCATION ) \
-<(echo $START_ONEBASED ) \
-<(echo $END ) \
-<(echo $LENGTH ) \
-<(echo $NAs) \
-<(echo $FEATURE ) \
-<(echo $STRANDNESS ) \
-<(echo $FRAME ) \
-<(echo $ID_GENE ) \
-<(echo $ID) \
-<(echo $WATTERSON_AVERAGE_PER_UNIT) \
-<(echo $WATTERSON_SD_PER_UNIT) \
-<(echo $PAIRWISE_AVERAGE_PER_UNIT) \
-<(echo $PAIRWISE_SD_PER_UNIT) \
-<(echo $TAJIMAS_D_PER_UNIT) |\
-sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  "$MYPOP".per.unit.averages.tsv
-
-done < <( cat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA.perScaffold/LYPA23C.all.features.nr.without_exons_$SCAFFOLD)
-done
-# sed 's/ \* /\t/g' "$MYPOP".per.unit.averages.tsv > borrar
-rm "$MYPOP".iter.transformedThetas.borrar
-done 
-
-
-## I stopped it after a while and rename files:
-POPS=("KIR" "DON" "SMO" "BIA" "NOR")
-for MYPOP in "${POPS[@]}"
-do
-
-echo "---------------------------------------------------$MYPOP---------------------------------------------------"
-
-cd /home/mlucena/grupolince/analysis_genomes_5x/diversity_per_unit/"$MYPOP"_separated_by_scaffold
-mv "$MYPOP".per.unit.averages.tsv "$MYPOP".per.unit.averages.test.tsv
-done
 
 ```
-
 
 
