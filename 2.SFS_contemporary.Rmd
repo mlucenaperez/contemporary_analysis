@@ -69,7 +69,7 @@ echo $MIN_IND
 echo $maxDepth_truncated
 echo $minDepth_truncated
 
-POPS=( c_lp_do_n012 )   # <--CHANGE POP HERE
+POPS=(c_lp_sm_n019 )   # <--CHANGE POP HERE
 
 
 ```
@@ -134,7 +134,7 @@ $FILTER2 \
 
 echo "-------$POP----------Make bed theta -----------------------------------------"
 
-$NGSTOOLS/thetaStat print $POP.unfolded-lr.postprob.thetas.idx > $POP.printed.stats
+# $NGSTOOLS/thetaStat print $POP.unfolded-lr.postprob.thetas.idx > $POP.printed.stats
 
 # Transform the coordinates to use 0Based bedtools
 
@@ -201,7 +201,7 @@ That way I will just have to search over the file that contains the scaffold, an
 
 ESTE ES EL ARCHIVO: 
 
-/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
+/home/mlucena/grupolince/notation/LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
 
 ### First I separate transformedThetas per scaffold. 
 
@@ -217,22 +217,27 @@ echo "---------------------------------------------------$FOLDER----------------
 mkdir $FOLDER;
 done
  
-POPS=("c_ll_ki" "c_ll_no" "c_ll_po"  "c_lp_do")
+ 
+POPS=("c_ll_no_n008" "c_ll_po_n008"  "c_lp_do_n012")
 
+
+"c_ll_ki" 
 #### Falta este!! ###
-"c_lp_sm"
+"c_lp_sm_n019"
 ########################
 
 
 for POP in "${POPS[@]}"
 do
 echo $POP
-mv "$POP"_n*.transformedThetas "$POP"_separated_by_scaffold/
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
+mv "$POP".transformedThetas "$POP"_separated_by_scaffold/
 cd  /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/"$POP"_separated_by_scaffold
 # Create multiple files base on one column: transformedThetas:
-awk '{print >> $1; close($1)}' "$POP"_n*.transformedThetas
+awk '{print >> $1; close($1)}' "$POP".transformedThetas
 # rm scaffold ### no se pq esto?
 # Rename the files: transformedThetas
+
 for file in lp23*
 do
 echo $file
@@ -242,12 +247,30 @@ done
 
 ```
 
+### Change folder name: Esta es una corrección ya aplicada que no tendría que aplicarse puesto que el script de arriba está bien. 
+
+Prefiero añadir un nombre con el número de individuos (que aunque estaba así arriba porque lo he corregido para sm no lo había hecho así), así que lo cambio.
+
+```{bash}
+
+mv c_lp_sm_separated_by_scaffold c_lp_sm_n019_separated_by_scaffold
+cd c_lp_do_n012_separated_by_scaffold
+
+for file in c_lp_do.*
+do
+echo $file 
+mv $file ${file/c_lp_do/c_lp_do_n012}
+done
+
+```
+
+
 
 ### Diversity per feature.
 
 Populations:
 
-c_ll_ki
+c_ll_ki_n013
 c_ll_no
 c_ll_po
 
@@ -259,26 +282,29 @@ c_lp_do
 
 ### Change location!
 
-
-POP=c_ll_ki_n... # check if I need to include n_013 <--- Change pop here!
-screen -S "$POP"_scaffold_per_unit
-
-POP=c_ll_ki_n... # check if I need to include n_013 <--- Change pop here!
-script log_screen_"$POP"_scaffold_per_unit.log
-
-POP=c_ll_ki_n... # check if I need to include n_013 <--- Change pop here!
-
+# POP=c_ll_ki_n013 # check if I need to include n_013 <--- Change pop here!
+# screen -S "$POP"_scaffold_per_unit
+# POP=c_ll_ki_n013 # check if I need to include n_013 <--- Change pop here!
+# script log_screen_"$POP"_scaffold_per_unit.log
+# POP=c_ll_ki_n013 # check if I need to include n_013 <--- Change pop here!
 
 ## WG variables
 
-SCAFFOLDS_FOLDER=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3.PerScaffold/
+screen -S Scaffold_per_unit
+script log_screen_Scaffold_per_unit
+
+POPS=("c_ll_ki_n013" "c_ll_no_n008" "c_ll_po_n008" "c_lp_do_n012")
+
+
+SCAFFOLDS_FOLDER=/home/mlucena/grupolince/notation/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3.PerScaffold/
 cd $SCAFFOLDS_FOLDER
-SCAFFOLDS=($(ls LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.* | cut -d'_' -f2 | uniq))
+SCAFFOLDS=($(find /home/mlucena/grupolince/notation/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3.PerScaffold/ -name "LYPA23C*" -exec ls {} \; | awk '{ print substr( $0, length($0) - 10, length($0) ) }'  | LANG=en_EN sort | uniq ))
 DIVERSITY_PER_UNIT_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
 SFS_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
 
-#for POP in "${POPS[@]}"
-#do
+
+for POP in "${POPS[@]}"
+do
 
 echo "---------------------------------------------------$POP---------------------------------------------------"
 
@@ -301,19 +327,21 @@ echo "--------$SCAFFOLD:$FEATURE--------"
 
 LENGTH=$(expr $END - $START_ONEBASED) 
 
-if [ "$METHOD" = "PipeR" ]; then
-	ID_GENE=$(echo $IDRAW | awk -F "_" '{ split ($0, a, "ID="); split (a[2],b,"_"); print b[1]"_"b[2] }')
-	else
-	ID_GENE=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); split(b[1],c,"T"); print c[1] }') 
+if [ "$METHOD" = "PipeR" ] 
+then
+ID_GENE=$(echo $IDRAW | awk -F "_" '{ split ($0, a, "ID="); split (a[2],b,"_"); print b[1]"_"b[2] }')
+else
+ID_GENE=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); split(b[1],c,"T"); print c[1] }') 
 fi
 
-if [ "$FEATURE" = "CDS" ]; then
-	ID=$(echo $IDRAW | awk -F "_" '{split ($0,a,"Target="); split(a[2],b,";"); print b[1]}' |  awk '{print $1"_"$2"_"$3}' )
-	else
-	ID=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); print b[1] }')
+if [ "$FEATURE" = "CDS" ]
+then
+ID=$(echo $IDRAW | awk -F "_" '{split ($0,a,"Target="); split(a[2],b,";"); print b[1]}' |  awk '{print $1"_"$2"_"$3}' )
+else
+ID=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); print b[1] }')
 fi
 
-#Intersect bed of the unit (first remove header)¿¿??
+# Intersect bed of the unit (first remove header)¿¿??
 
 START_CEROBASED=($(echo $START_ONEBASED-1 | bc))
 
@@ -353,16 +381,25 @@ paste \
 <(echo $TAJIMAS_D_PER_UNIT) |\
 sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
 
-done < <(cat "$SCAFFOLDS_FOLDER""$SCAFFOLD")
+done < <(cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3_"$SCAFFOLD") 
+
+done &
 done
 
-rm "$POP".iter.transformedThetas.borrar
 
+rm "$POP".iter.transformedThetas.borrar
 
 ```
 
 
-
+---------------------------------------------------c_ll_ki_n013---------------------------------------------------
+[1] 49668
+---------------------------------------------------c_ll_no_n008---------------------------------------------------
+[2] 49669
+---------------------------------------------------c_ll_po_n008---------------------------------------------------
+[3] 49670
+---------------------------------------------------c_lp_do_n012---------------------------------------------------
+[4] 49671
 
 
 ### Diversity per region.
@@ -378,6 +415,11 @@ c_lp_do
 
 
 ```{bash}
+
+
+
+
+#### CHANGE PATH!!!!
 
 mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region
 
@@ -408,7 +450,6 @@ REGION=$(echo $REGION_PerScaffold | cut -d"." -f 1 )
 SCAFFOLDS=($(ls * | cut -d'_' -f7 | uniq))
 
 # mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/$REGION/  # --> Ya están creadas.
-
 DIVERSITY_PER_REGION_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/$REGION/
 echo $REGION
 
@@ -467,7 +508,8 @@ paste \
 <(echo $TAJIMAS_D_PER_UNIT) |\
 sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  "$POP"."$REGION".averages.tsv
 
-done < <(cat "$SCAFFOLDS_FOLDER""$SCAFFOLD")
+done < <(cat "$SCAFFOLDS_FOLDER""$SCAFFOLD") 
+done &
 done
 
 rm "$POP"*iter.transformedThetas.borrar
@@ -592,3 +634,19 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_ana
 
 ```
 
+tar -cvf files.tar my_directory && rm -R my_directory
+
+
+tar -cvzf raw_data.tar.gz raw_data && rm -R raw_data
+
+
+cvzf EVA_scripts.tar.gz EVA_scripts
+
+
+
+Sent:
+
+tar -cvzf Lyp_annotation_Apr14_final.tar.gz Lyp_annotation_Apr14_final
+
+
+tar -cvzf lynx_ancient_genomes.tar.gz lynx_ancient_genomes && rm -R lynx_ancient_genomes
