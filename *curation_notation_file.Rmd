@@ -22,12 +22,11 @@ Asumimos ( mirando el archivo ) que es uno based.We are in server a.
 
 ```{r, engine=bash, eval=FALSE}
 
-cd /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/
+cd /GRUPOS/grupolince/Lyp_annotation_Apr14_final
 
-  
 # I create a folder and store there everything that is older as we want to run this script again:
 # mkdir /home/mlucena/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/maria_curation
-
+# Now it is finally removed!
 ```
 
 ## 1. Get a non-redundant (i.e., just the main isoform- and its CDS and exons- per gene) gff3.
@@ -831,25 +830,36 @@ cat LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_i
 ```
 
   
-## 7. Creating a folder per scaffold to speed up the process when calculating diversity per unit. 
+## 7. Creating the DATASET for diversity and folder per scaffold to speed up the process when calculating diversity per unit. 
 
 ```{bash}
 
+# First I create the dataset to do diversity calculus. I remove Gene and mRNA.
 
-mkdir LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3.PerScaffold
+wc -l LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
+534136 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
 
-cd LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3.PerScaffold
+grep -v "EVM_PASA      gene" LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 | grep -v "EVM_PASA       mRNA" | wc -l
+491636
+
+# I will compute way less sites, so I will use this file with no genes or mRNA. 
+grep -v "EVM_PASA      gene" LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 | grep -v "EVM_PASA  mRNA" > LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
+
+# Now I will separate it by scaffolds. 
+mkdir LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3.PerScaffold
+cd LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3.PerScaffold
 
 # Create multiple files base on one column: gff3:
-awk '{print >> $1; close($1)}' ../LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
+awk '{print >> $1; close($1)}' ../LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
 
 
 # Rename gff3.
 for file in lp23*
 do
 echo $file
-mv $file ${file/lp23/LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3_lp23}
+mv $file ${file/lp23/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3_lp23}
 done
+
 
 
 ```
