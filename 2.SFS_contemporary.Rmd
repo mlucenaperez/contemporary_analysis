@@ -128,6 +128,61 @@ $FILTER2 \
 
 ```
 
+
+
+## SFS graphical representation
+
+
+First we copy the SFS files to our local folder.
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/*sfs /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs
+
+# I need to change name as R does not like "-lr.sfs"
+
+cd /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/
+for i in *sfs
+do 
+#echo $i
+echo $i "--->" ${i/-lr.sfs/_lr.sfs}
+mv $i ${i/-lr.sfs/_lr.sfs}
+done
+
+
+```
+
+Now we run the script. 
+
+```{r}
+library(dplyr)
+library(magrittr)
+
+wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/"
+
+my_files_unfolded = list.files(path = wd, pattern="*sfs$")    
+for (i in 1:length(my_files_unfolded)) 
+{ assign(my_files_unfolded[i], (scan(paste(wd,my_files_unfolded[i], sep = ""), sep = " ", dec = ".")) %>% .[!is.na(.)])}
+
+norm <- function(x) x/sum(x)
+
+for (i in 1:length (my_files_unfolded))
+{
+  temp1=(eval(parse(text=my_files_unfolded[i])))
+  temp2=norm(temp1[-1])
+  temp3=norm(temp2[-c(length(temp2))])
+  barplot(temp3,xlab="Chromosomes",
+          names=1:length(temp3),ylab="Proportions",main=my_files_unfolded[i],col='grey')
+  dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/",my_files_unfolded[i],".eps"), onefile=FALSE, horizontal=FALSE)
+  dev.off()
+  rm(temp1)
+  rm(temp2)
+  rm(temp3)
+}
+
+
+```
+
+
 ##  Make bed theta        
 
 ```{r, engine=bash, eval=FALSE}
@@ -191,6 +246,69 @@ echo "-------$POP---------- Window analysis ------------------------------------
 $NGSTOOLS/thetaStat do_stat $RUTA/$POP.unfolded-lr.postprob.thetas.idx -win $WINDOWSIZE -step $WINDOWSTEP  -outnames $POP.unfolded-lr.postprob.thetasWindow_$WINDOWSIZE.$WINDOWSTEP.gz
 
 ```
+
+
+
+## Window R representation
+
+
+Download data:
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*PG /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/window_analysis/
+```
+
+
+```{r}
+
+# Representación de las ventanas en manhattan plots. 
+
+library(dplyr)
+library(qqman)
+library(ggplot2)
+library ("GGally")
+
+# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/window_analysis/" 
+wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/"
+
+finsThetas = list.files(path = wd, pattern="*.pestPG$")
+
+for (i in 1:length(finsThetas))
+{
+  datThetas <- read.csv (paste(wd,finsThetas[i],sep=""), header = T, sep = '\t')  
+  name_thetas <- unlist(strsplit(finsThetas[i], "[.]"))
+  datThetas$CHR <- as.numeric(gsub('^.{6}', '', datThetas$Chr))
+  datThetas$Nsites <- as.numeric(datThetas$nSites)
+  datThetas$SNPS_window = paste(datThetas$Chr, datThetas$WinCenter, sep='_')
+  datThetas[,-c(1,2)][datThetas[, -c(1,2)] < 0] <- 0
+  # Manhattan plot Theta Waterson
+  max_thetas <- max (datThetas$tW)
+  min_thetas <- min(datThetas$tW)
+  setEPS()
+  postscript(file=paste(wd,name_thetas[1], '_watterson_manhattan.eps', sep=''))
+  manhattan(datThetas, chr = "CHR", bp = "WinCenter", p = "tW", snp = "SNPS_window", ylim = c(0 , max_thetas+10), ylab = "tW", xlab = "Scaffold", logp=F, genomewideline = F, suggestiveline = F, main = paste ("Manhattan plot of tW ",name_thetas[1], sep =''))
+  dev.off() 
+  # Correlation between diversity indixes
+  setEPS()
+  postscript(file=paste(wd,name_thetas[1], '_diversity_correlation.eps', sep=''), horizontal = FALSE, onefile = FALSE, paper = "special")
+  print(ggpairs(datThetas, columns=4:8, title=paste("Theta correlations ", name_thetas[1], sep='')))
+  dev.off()
+  # Correlation between neutrality indixes
+  setEPS()
+  postscript(file=paste(wd,name_thetas[1], '_neutrality_correlation.eps', sep=''), horizontal = FALSE, onefile = FALSE, paper = "special")
+  print(ggpairs(datThetas, columns=9:13, title=paste("Neutrality indexes correlations ", name_thetas[1], sep='')))
+  dev.off()
+}
+
+
+```
+
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*eps /Users/marialucenaperez/Desktop
+
+```
+
 
 
 ## Global diversity per feature
@@ -386,20 +504,490 @@ done < <(cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncR
 done &
 done
 
-
 rm "$POP".iter.transformedThetas.borrar
+
+# Calculo el número de sitios informativos, para todos los archivos:
+
+FILES_DIVERSITY=("c_ll_ki_n013.per.unit.averages.tsv" "c_ll_po_n008.per.unit.averages.tsv" "c_lp_sm_n019.per.unit.averages.tsv" "c_ll_no_n008.per.unit.averages.tsv" "c_lp_do_n012.per.unit.averages.tsv")
+
+# Añado una columna con el número de sitios informativos. 
+for i in "${FILES_DIVERSITY[@]}"
+do
+echo $i
+echo ${i/.tsv/_informative_sites.tsv}
+cat <(awk -v OFS='\t' '(NR==1) {print $0,"informative_sites"}' $i ) <(awk -v OFS='\t' 'NR >= 2 {print $0,$4-$5}' $i) > ${i/.tsv/_informative_sites.tsv}
+mv ${i/.tsv/_informative_sites.tsv} $i
+done
+
+# Añado una columna con la poblacion
+for i in "${FILES_DIVERSITY[@]}"
+do
+echo $i
+POP=$(echo ${i/.per.unit.averages.tsv/} )
+awk -v OFS='\t' -v POP="$POP" '{print $0, POP}' $i > ${i/.per.unit.averages/_withPOP.per.unit.averages}
+mv ${i/.per.unit.averages/_withPOP.per.unit.averages} $i
+done
+
+# Se me ha olvidado añadir el cabecero asi que lo modifico aparte. 
+for i in "${FILES_DIVERSITY[@]}"
+do
+echo $i
+cat <(awk -v OFS='\t' '(NR==1) {$17="pop"; print}' $i) <(awk -v OFS='\t' 'NR >= 2 {print $0}' $i) > ${i/.tsv/_corrected.tsv}
+mv ${i/.tsv/_corrected.tsv} $i
+done
+
+
+# Create a unique file with all the information
+
+awk '
+    FNR==1 && NR!=1 { while (/^<header>/) getline; }
+    1 {print}' c_lp*.per.unit.averages.tsv > c_lp_do_n012-c_lp_sm_n019.per.unit.averages.tsv
+
+awk '
+    FNR==1 && NR!=1 { while (/^<header>/) getline; }
+    1 {print}' c_ll*.per.unit.averages.tsv > c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.tsv
+
+
+
+mv c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.tsv c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv 
+
+
+mv c_lp_do_n012-c_lp_sm_n019.per.unit.averages.tsv c_lp_do_n012-c_lp_sm_n019.per.unit.averages.per_specie.tsv
+
+
+FILES_DIVERSITY=("c_ll_ki_n013.per.unit.averages.tsv" "c_ll_po_n008.per.unit.averages.tsv" "c_lp_sm_n019.per.unit.averages.tsv" "c_ll_no_n008.per.unit.averages.tsv" "c_lp_do_n012.per.unit.averages.tsv" "c_lp_do_n012-c_lp_sm_n019.per.unit.averages.per_specie.tsv" "c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv")
+
+# Añado una columna con la specie
+for i in "${FILES_DIVERSITY[@]}"
+do
+echo $i
+POP=$(echo ${i/.per.unit.averages.tsv/} )
+SPECIE=$(echo $POP | cut -d"_" -f 1-2)
+echo $SPECIE
+cat <(awk -v OFS='\t' '(NR==1) {$18="specie"; print}' $i) <(awk -v OFS='\t' -v SPECIE="$SPECIE" 'NR >= 2 {print $0, SPECIE}' $i) > ${i/.tsv/_corrected.tsv}
+mv ${i/.tsv/_corrected.tsv} $i
+done
+
 
 ```
 
 
----------------------------------------------------c_ll_ki_n013---------------------------------------------------
-[1] 49668
----------------------------------------------------c_ll_no_n008---------------------------------------------------
-[2] 49669
----------------------------------------------------c_ll_po_n008---------------------------------------------------
-[3] 49670
----------------------------------------------------c_lp_do_n012---------------------------------------------------
-[4] 49671
+
+#### Representation per pop
+
+Este script nos devuelve una gráfica por cada población. Hay un segundo script que devuelve una gráfica para lynx lynx y otra para lynx pardinus. 
+
+```{r}
+
+library ("ggplot2")
+library ("plyr")
+library ("RColorBrewer")
+library ("scales")
+library ("magrittr")
+
+# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
+wd <- "/Users/marialucenaperez/Desktop/Diversity_per_unit"
+
+finsdiversity = list.files(path = wd,pattern="*per.unit.averages.tsv$")
+
+for (i in 1:length(finsdiversity))
+{
+  infile <- finsdiversity[i]
+  name_diversity <- unlist(strsplit(finsdiversity[i], "[.]"))
+
+#### Para que almacene varias dataframe con el nombre correcto
+#  dataframename <- paste("data_diversity", name_diversity[1], sep ='_')
+#  assign(dataframename, read.csv (paste(wd,infile, sep="/"), header = T, sep = '\t',stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".", colClasses=c("watterson_ave"="character")))
+
+dataframe <- read.csv (paste(wd,infile, sep="/"), header = T, sep = '\t',stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".")
+
+dataframe = dataframe[-1,]
+dataframe$watterson_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$watterson_ave))
+dataframe$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$pairwise_ave))
+dataframe$tajimaD <- as.numeric(gsub("\\*10\\^","e",dataframe$tajimaD))
+#dataframe  <- dataframe[complete.cases(dataframe),] ## --> No se que pasa que la columna de specie sale NA
+
+########################################################
+# Filtering
+dataframe <- dataframe %>% 
+  mutate(percentage_covered=ifelse(NAs>0, (as.numeric(length)-as.numeric(NAs))/as.numeric(length), 1)) %>% dplyr::filter(percentage_covered>0.5) %>% dplyr::filter(informative_sites>10)
+name_diversity[1] <- paste(name_diversity[1],".percentagecovered05_mininformativesites10", sep="")
+########################################################
+
+ddply(dataframe, "feature", summarise, rating.mean=mean(pairwise_ave))
+df.pm <- ddply(dataframe, "feature", summarise, rating.mean=weighted.mean(pairwise_ave, informative_sites))
+write.csv(df.pm, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""))
+
+
+ddply(dataframe, "feature", summarise, rating.mean=mean(watterson_ave))
+df.wm <- ddply(dataframe, "feature", summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
+write.csv(df.wm, paste(wd,"/", name_diversity[1], ".watterson_mean.csv", sep = ""))
+
+
+# pdf(file = paste(wd,"/Diversity_by_feature_pairwise",name_diversity[1],".pdf", sep = ""))
+ggplot(data = dataframe, aes(x=feature, y = pairwise_ave)) + 
+  geom_boxplot()+
+  geom_point(data=df.pm,aes(x=feature, y = rating.mean),shape = 23, 
+             size = 3, inherit.aes=FALSE) +
+  # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic feature") +
+  xlab(label = "Genomic feature") + #x title
+  ylab(label = "Pairwise average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  # scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity by feature",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
+ggsave (file = paste(wd,"/",name_diversity[1],".diversity_feature_pairwise.pdf", sep = ""), device = "pdf")
+# dev.off()
+
+
+
+# pdf(file = paste(wd,"/Diversity_by_feature_watterson",name_diversity[1],".pdf", sep = ""))
+
+ggplot(data = dataframe, aes(x=feature, y = watterson_ave)) + 
+  geom_boxplot()+
+  geom_point(data=df.wm,aes(x=feature, y = rating.mean),shape = 23, 
+             size = 3, inherit.aes=FALSE) +
+  # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic feature") +
+  xlab(label = "Genomic feature") + #x title
+  ylab(label = "Watterson average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  # scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity by feature",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
+
+ggsave(filename = paste(wd,"/", name_diversity[1], ".diversity_feature_watterson.pdf", sep = ""), device = "pdf")
+
+
+ggplot(data = dataframe, aes(x=feature, y = tajimaD)) + 
+  geom_boxplot()+
+  # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
+  facet_grid(.~feature, scales="free") +
+  #  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic feature") +
+  xlab(label = "Genomic feature") + #x title
+  ylab(label = "Watterson average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  # scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity by feature",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
+ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_feature_tajimaD.pdf", sep = ""), device = "pdf")
+
+
+# Exploratory plots
+
+jpeg(paste(wd,"/",name_diversity[1],".plot1.jpg", sep=""))
+plot (dataframe$informative_sites, dataframe$tajimaD)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],".plot2.jpg", sep=""))
+plot (dataframe$pairwise_ave, dataframe$watterson_ave)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],".plot3.jpg", sep=""))
+plot (dataframe$pairwise_ave, dataframe$tajimaD)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],"plot4.jpg", sep=""))
+plot (dataframe$watterson_ave, dataframe$tajimaD)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],"plot5.jpg", sep=""))
+plot (dataframe$informative_sites, dataframe$pairwise_ave)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],"plot6.jpg", sep=""))
+plot (dataframe$informative_sites, dataframe$watterson_ave)
+dev.off()
+
+
+}
+
+
+# Cosas útiles outliers.shape=NA.
+
+```
+
+#### Representation per specie
+
+Esta gráfica representa por especie.
+
+```{r}
+
+library ("ggplot2")
+library ("plyr")
+library ("RColorBrewer")
+library ("scales")
+library ("magrittr")
+library("tidyr")
+
+# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/Users/marialucenaperez/Desktop/Diversity_per_unit"
+
+finsdiversity = list.files(path = wd,pattern="*per_specie.tsv$")
+
+
+for (i in 1:length(finsdiversity))
+{
+  infile <- finsdiversity[i]
+  name_diversity <- unlist(strsplit(finsdiversity[i], "[.]"))
+  dataframe <- read.csv (paste(wd,infile, sep="/"), header = T, sep = '\t',stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".")
+  dataframe = dataframe[-1,]
+  dataframe$watterson_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$watterson_ave))
+  dataframe$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$pairwise_ave))
+  dataframe$tajimaD <- as.numeric(gsub("\\*10\\^","e",dataframe$tajimaD))
+  dataframe  <- dataframe[complete.cases(dataframe),]
+  dataframe$pop <- as.factor(dataframe$pop)
+  dataframe$pop <- factor(dataframe$pop, levels=c("c_ll_ki_n013", "c_ll_po_n008", "c_ll_no_n008", "c_lp_sm_n019", "c_lp_do_n012"))
+  #### Para que almacene varias dataframe con el nombre correcto
+  dataframename <- paste("data_diversity", name_diversity[1], sep ='_')
+  assign(dataframename, dataframe)
+}
+
+
+```
+
+##### Lynx pardinus
+
+```{r}
+
+dataframe <- `data_diversity_c_lp_do_n012-c_lp_sm_n019`
+name_diversity[1] <- "c_lp_do_n012-c_lp_sm_n019"
+
+
+# Calculo weighted mean y lo guardo en un df.
+
+df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(pairwise_ave, informative_sites))
+
+df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
+
+
+# LYNX PARDINUS
+# Hago spread para calcular el porcentage que representa do respecto a sm
+df.pm_lost <-tidyr::spread(df.pm, pop, rating.mean) %>%
+ mutate(., percentage_do_sm=(c_lp_do_n012 *100)/c_lp_sm_n019)
+# Hago gathered para poder plotearlo.
+df.pm.gathered <- tidyr::gather(df.pm_lost, "pop", "rating.mean", -specie, -feature, -percentage_do_sm)
+# Hago spread para calcular el porcentage de perdida
+df.wm_lost <-tidyr::spread(df.wm, pop, rating.mean) %>% mutate(., percentage_do_sm=(c_lp_do_n012 *100)/c_lp_sm_n019)
+# Hago gathered para poder plotearlo.
+df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "rating.mean", -specie, -feature, -percentage_do_sm)
+
+
+# Guardo el porcentage de perdida. 
+write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""))
+write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""))
+
+
+ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
+  geom_boxplot(outlier.shape=NA)+
+  geom_point(data=df.pm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic feature") +
+  xlab(label = "Genomic feature") + #x title
+  ylab(label = "Pairwise average") + # y title
+  theme_bw() +  #theme selection for background and lines
+ # scale_x_continuous(expand = c(0, 1)) +# + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity feature",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())+
+  geom_text(data = df.pm.gathered, aes(feature, percentage_do_sm, label=(percentage_do_sm %>% round(2))),angle = 45, size=2)
+ggsave (file = paste(wd,"/",name_diversity[1],".diversity_feature_pairwise.eps", sep = ""), device = "eps")
+# dev.off()
+
+
+ggplot(data = dataframe, aes(x=feature, y = watterson_ave, fill =pop)) + 
+  geom_boxplot(outlier.shape=NA)+
+  geom_point(data=df.wm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+  # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic feature") +
+  xlab(label = "Genomic feature") + #x title
+  ylab(label = "Watterson average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  # scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity by feature",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank()) +
+  geom_text(data = df.wm.gathered, aes(feature, percentage_do_sm, label=(percentage_do_sm %>% round(2))),angle = 45, size=2)
+ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_feature_watterson.eps", sep = ""), device="eps")
+
+
+
+
+
+
+# Cosas útiles 
+
+# geom_box(outliers.shape=NA)
+
+# Si quiero plotear todos los indices a la vez:
+#index = c("watterson_ave", "pairwise_ave")
+#for (i in 1:length(index))
+#{
+#  ggplot(data = dataframe, aes_string(x='feature', y = index[1], fill='pop'))+
+  
+```
+
+##### Lynx lynx
+
+
+```{r}
+
+
+dataframe <- `data_diversity_c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008`
+name_diversity[1] <- "c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008"
+
+# Calculo weighted mean y lo guardo en un df.
+
+df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(pairwise_ave, informative_sites))
+
+df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
+
+df.pm_lost <-tidyr::spread(df.pm, pop, rating.mean) %>% 
+  mutate(., percentage_po_ki=(c_ll_po_n008 *100)/c_ll_ki_n013) %>% 
+  mutate(., percentage_no_ki=(c_ll_no_n008*100)/c_ll_ki_n013)
+df.pm.gathered <- tidyr::gather(df.pm_lost, "pop", "rating.mean", -specie, -feature,  -percentage_po_ki, -percentage_no_ki)
+
+df.wm_lost <-tidyr::spread(df.wm, pop, rating.mean) %>% 
+  mutate(., percentage_po_ki=(c_ll_po_n008 *100)/c_ll_ki_n013) %>% 
+  mutate(., percentage_no_ki=(c_ll_no_n008*100)/c_ll_ki_n013)
+df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "rating.mean", -specie, -feature,  -percentage_po_ki, -percentage_no_ki) 
+
+
+
+# Guardo el porcentage de perdida. 
+write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""))
+write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""))
+
+ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
+  geom_boxplot(outlier.shape=NA)+
+  geom_point(data=df.pm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+  # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic feature") +
+  xlab(label = "Genomic feature") + #x title
+  ylab(label = "Pairwise average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  #scale_x_continuous(expand = c(0, 1)) +# + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity feature",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())+
+  geom_text(data = df.pm.gathered, aes(feature, percentage_po_ki, label=paste((percentage_po_ki %>% round(2)),(percentage_no_ki%>% round(2)), sep='\n')), angle = 45, size=2, vjust="inward",hjust="inward")
+
+ggsave (file = paste(wd,"/",name_diversity[1],".diversity_feature_pairwise.eps", sep = ""), device = "eps")
+# dev.off()
+
+
+
+ggplot(data = dataframe, aes(x=feature, y = watterson_ave, fill =pop)) + 
+  geom_boxplot(outlier.shape=NA, position=position_dodge(width=1.5))+
+  geom_point(data=df.wm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=1.5), size = 3, inherit.aes=FALSE) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic feature") +
+  xlab(label = "Genomic feature") + #x title
+  ylab(label = "Watterson average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  # scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity by feature",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank()) +
+        geom_text(data = df.wm.gathered, aes(feature, percentage_po_ki, label=paste((percentage_po_ki %>% round(2)),(percentage_no_ki%>% round(2)), sep='\n')), angle = 45, size=2, vjust="inward",hjust="inward")
+
+
+
+ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_feature_watterson.eps", sep =""), device="eps")
+
+
+# Cosas útiles outliers.shape=NA.
+
+
+
+```
 
 
 ### Diversity per region.
@@ -415,9 +1003,6 @@ c_lp_do
 
 
 ```{bash}
-
-
-
 
 #### CHANGE PATH!!!!
 
@@ -515,138 +1100,549 @@ done
 rm "$POP"*iter.transformedThetas.borrar
 
 
-```
+#############################
 
 
 
-## SFS graphical representation
 
 
-First we copy the SFS files to our local folder.
+# Muevo todos los archivos a la carpeta madre
 
-```{bash}
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/*sfs /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs
+mv /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/*tsv /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region
 
-# I need to change name as R does not like "-lr.sfs"
+# Elimino las carpetas donde estaban que ahora están vacías
+ 
+rm -r telomers2m/
+rm -r telomers0-10m/
+rm -r centromers/
 
-cd /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/
-for i in *sfs
-do 
-#echo $i
-echo $i "--->" ${i/-lr.sfs/_lr.sfs}
-mv $i ${i/-lr.sfs/_lr.sfs}
+
+FILES_DIVERSITY=("c_lp_do_n012.centromers.averages.tsv" "c_ll_ki_n013.centromers.averages.tsv" "c_ll_po_n008.centromers.averages.tsv" "c_ll_no_n008.centromers.averages.tsv" "c_lp_sm_n019.centromers.averages.tsv" "c_lp_do_n012.telomers0-10m.averages.tsv" "c_ll_po_n008.telomers0-10m.averages.tsv" "c_ll_no_n008.telomers0-10m.averages.tsv" "c_ll_ki_n013.telomers0-10m.averages.tsv" "c_lp_sm_n019.telomers0-10m.averages.tsv" "c_lp_do_n012.telomers2m.averages.tsv" "c_ll_po_n008.telomers2m.averages.tsv" "c_ll_ki_n013.telomers2m.averages.tsv" "c_ll_no_n008.telomers2m.averages.tsv" "c_lp_sm_n019.telomers2m.averages.tsv")
+
+
+
+# Añado varias columnas simulando el archivo de per unit por si alguna vez queremos juntarlo en uno, con esto estoy añadiendo numero de sitios informativos, feature (que en este caso es tel, centr), pop, specie, y dejo en blanco pero también añado otras columnas como frame, id_gene. 
+
+for i in "${FILES_DIVERSITY[@]}"
+do
+echo $i
+POP=$(echo ${i} | cut -d "." -f 1 )
+SPECIE=$(echo $POP | cut -d"_" -f 1-2)
+FEATURE=$(echo ${i} | cut -d "." -f 2 )
+cat <(awk -v OFS='\t' '(NR==1) {print $1, $2, $3, $4, $5,"feature","strandness","frame","id_gene","id", $6,$7,$8,$9,$10,"informative_sites","pop","specie"}' $i) <( awk -v OFS='\t' -v POP="$POP" -v SPECIE="$SPECIE" -v FEATURE="$FEATURE" 'NR >= 2 {print $1, $2, $3, $4, $5, FEATURE, "na","na","na","na",$6,$7,$8,$9,$10,$4-$5, POP, SPECIE}' $i) > ${i/.tsv/_corrected.tsv}
+mv ${i/.tsv/_corrected.tsv} $i
 done
 
 
+# Create a unique file with all the information per specie
+# ojo que para per feature he usado otro script, que no se porque no me funcionaba aquí.
+
+awk 'FNR==1 && NR!=1{next;}{print}' c_lp*averages.tsv > c_lp_do_n012-c_lp_sm_n019.per.region.averages.per_specie.tsv
+
+awk 'FNR==1 && NR!=1{next;}{print}' c_ll*averages.tsv > c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.region.averages.per_specie.tsv
+
+# Each pop
+
+awk 'FNR==1 && NR!=1{next;}{print}' c_ll_ki_n013*averages.tsv > c_ll_ki_n013.per.region.averages.tsv
+
+awk 'FNR==1 && NR!=1{next;}{print}' c_ll_no_n008*averages.tsv > c_ll_no_n008.per.region.averages.tsv
+
+awk 'FNR==1 && NR!=1{next;}{print}' c_ll_po_n008*averages.tsv > c_ll_po_n008.per.region.averages.tsv
+
+awk 'FNR==1 && NR!=1{next;}{print}' c_lp_do_n012*averages.tsv > c_lp_do_n012.per.region.averages.tsv
+
+awk 'FNR==1 && NR!=1{next;}{print}' c_lp_sm_n019*averages.tsv > c_lp_sm_n019.per.region.averages.tsv
+
+
+
 ```
 
-Now we run the script. 
+
+
+#### Representation per pop
+
+Este script nos devuelve una gráfica por cada población. Hay un segundo script que devuelve una gráfica para lynx lynx y otra para lynx pardinus. 
+
+
 
 ```{r}
-library(dplyr)
-library(magrittr)
 
-wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/"
+library ("ggplot2")
+library ("plyr")
+library ("RColorBrewer")
+library ("scales")
+library ("magrittr")
 
-my_files_unfolded = list.files(path = wd, pattern="*sfs$")    
-for (i in 1:length(my_files_unfolded)) 
-{ assign(my_files_unfolded[i], (scan(paste(wd,my_files_unfolded[i], sep = ""), sep = " ", dec = ".")) %>% .[!is.na(.)])}
+# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region"
+# wd <- "/Users/marialucenaperez/Desktop/Diversity_per_region"
 
-norm <- function(x) x/sum(x)
+finsdiversity = list.files(path = wd,pattern="*.per.region.averages.tsv$")
 
-for (i in 1:length (my_files_unfolded))
+for (i in 1:length(finsdiversity))
 {
-  temp1=(eval(parse(text=my_files_unfolded[i])))
-  temp2=norm(temp1[-1])
-  temp3=norm(temp2[-c(length(temp2))])
-  barplot(temp3,xlab="Chromosomes",
-          names=1:length(temp3),ylab="Proportions",main=my_files_unfolded[i],col='grey')
-  dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/",my_files_unfolded[i],".eps"), onefile=FALSE, horizontal=FALSE)
-  dev.off()
-  rm(temp1)
-  rm(temp2)
-  rm(temp3)
+  infile <- finsdiversity[i]
+  name_diversity <- unlist(strsplit(finsdiversity[i], "[.]"))
+
+#### Para que almacene varias dataframe con el nombre correcto
+#  dataframename <- paste("data_diversity", name_diversity[1], sep ='_')
+#  assign(dataframename, read.csv (paste(wd,infile, sep="/"), header = T, sep = '\t',stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".", colClasses=c("watterson_ave"="character")))
+
+dataframe <- read.csv (paste(wd,infile, sep="/"), header = T, sep = '\t',stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".")
+
+dataframe = dataframe[-1,]
+dataframe$watterson_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$watterson_ave))
+dataframe$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$pairwise_ave))
+dataframe$tajimaD <- as.numeric(gsub("\\*10\\^","e",dataframe$tajimaD))
+#dataframe  <- dataframe[complete.cases(dataframe),] ## --> No se que pasa que la columna de specie sale NA
+
+########################################################
+# Filtering
+dataframe <- dataframe %>% 
+  mutate(percentage_covered=ifelse(NAs>0, (as.numeric(length)-as.numeric(NAs))/as.numeric(length), 1)) %>% dplyr::filter(percentage_covered>0.5) %>% dplyr::filter(informative_sites>10)
+name_diversity[1] <- paste(name_diversity[1],".percentagecovered05_mininformativesites10", sep="")
+########################################################
+
+ddply(dataframe, "feature", summarise, rating.mean=mean(pairwise_ave))
+df.pm <- ddply(dataframe, "feature", summarise, rating.mean=weighted.mean(pairwise_ave, informative_sites))
+write.csv(df.pm, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""))
+
+
+ddply(dataframe, "feature", summarise, rating.mean=mean(watterson_ave))
+df.wm <- ddply(dataframe, "feature", summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
+write.csv(df.wm, paste(wd,"/", name_diversity[1], ".watterson_mean.csv", sep = ""))
+
+
+# pdf(file = paste(wd,"/Diversity_by_region_pairwise",name_diversity[1],".pdf", sep = ""))
+ggplot(data = dataframe, aes(x=feature, y = pairwise_ave)) + 
+  geom_boxplot()+
+  geom_point(data=df.pm,aes(x=feature, y = rating.mean),shape = 23, 
+             size = 3, inherit.aes=FALSE) +
+  # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic region") +
+  xlab(label = "Genomic region") + #x title
+  ylab(label = "Pairwise average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  # scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity by region",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
+ggsave (file = paste(wd,"/",name_diversity[1],".diversity_region_pairwise.pdf", sep = ""), device = "pdf")
+# dev.off()
+
+
+
+# pdf(file = paste(wd,"/Diversity_by_region_watterson",name_diversity[1],".pdf", sep = ""))
+
+ggplot(data = dataframe, aes(x=feature, y = watterson_ave)) + 
+  geom_boxplot()+
+  geom_point(data=df.wm,aes(x=feature, y = rating.mean),shape = 23, 
+             size = 3, inherit.aes=FALSE) +
+  # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic region") +
+  xlab(label = "Genomic region") + #x title
+  ylab(label = "Watterson average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  # scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity by region",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
+
+ggsave(filename = paste(wd,"/", name_diversity[1], ".diversity_region_watterson.pdf", sep = ""), device = "pdf")
+
+
+ggplot(data = dataframe, aes(x=feature, y = tajimaD)) + 
+  geom_boxplot()+
+  # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
+  facet_grid(.~feature, scales="free") +
+  #  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic region") +
+  xlab(label = "Genomic region") + #x title
+  ylab(label = "Watterson average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  # scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity by region",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
+ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_region_tajimaD.pdf", sep = ""), device = "pdf")
+
+
+# Exploratory plots
+
+jpeg(paste(wd,"/",name_diversity[1],".plot1.jpg", sep=""))
+plot (dataframe$informative_sites, dataframe$tajimaD)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],".plot2.jpg", sep=""))
+plot (dataframe$pairwise_ave, dataframe$watterson_ave)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],".plot3.jpg", sep=""))
+plot (dataframe$pairwise_ave, dataframe$tajimaD)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],"plot4.jpg", sep=""))
+plot (dataframe$watterson_ave, dataframe$tajimaD)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],"plot5.jpg", sep=""))
+plot (dataframe$informative_sites, dataframe$pairwise_ave)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],"plot6.jpg", sep=""))
+plot (dataframe$informative_sites, dataframe$watterson_ave)
+dev.off()
+
+
+}
+
+
+# Cosas útiles outliers.shape=NA.
+
+```
+
+#### Representation per specie
+
+Esta gráfica representa por especie.
+
+```{r}
+
+library ("ggplot2")
+library ("plyr")
+library ("RColorBrewer")
+library ("scales")
+library ("magrittr")
+library("tidyr")
+
+# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region"
+# wd <- "/Users/marialucenaperez/Desktop/Diversity_per_unit"
+
+finsdiversity = list.files(path = wd,pattern="*per_specie.tsv$")
+
+
+for (i in 1:length(finsdiversity))
+{
+  infile <- finsdiversity[i]
+  name_diversity <- unlist(strsplit(finsdiversity[i], "[.]"))
+  dataframe <- read.csv (paste(wd,infile, sep="/"), header = T, sep = '\t',stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".")
+  dataframe = dataframe[-1,]
+  dataframe$watterson_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$watterson_ave))
+  dataframe$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$pairwise_ave))
+  dataframe$tajimaD <- as.numeric(gsub("\\*10\\^","e",dataframe$tajimaD))
+  dataframe  <- dataframe[complete.cases(dataframe),]
+  dataframe$pop <- as.factor(dataframe$pop)
+  dataframe$pop <- factor(dataframe$pop, levels=c("c_ll_ki_n013", "c_ll_po_n008", "c_ll_no_n008", "c_lp_sm_n019", "c_lp_do_n012"))
+  #### Para que almacene varias dataframe con el nombre correcto
+  dataframename <- paste("data_diversity", name_diversity[1], sep ='_')
+  assign(dataframename, dataframe)
 }
 
 
 ```
 
-## Window R representation
+##### Lynx pardinus
+
+```{r}
+
+dataframe <- `data_diversity_c_lp_do_n012-c_lp_sm_n019`
+name_diversity[1] <- "c_lp_do_n012-c_lp_sm_n019"
 
 
-Download data:
+# Calculo weighted mean y lo guardo en un df.
 
-```{bash}
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*PG /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/window_analysis/
+df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(pairwise_ave, informative_sites))
+
+df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
+
+
+# LYNX PARDINUS
+# Hago spread para calcular el porcentage que representa do respecto a sm
+df.pm_lost <-tidyr::spread(df.pm, pop, rating.mean) %>%
+ mutate(., percentage_do_sm=(c_lp_do_n012 *100)/c_lp_sm_n019)
+# Hago gathered para poder plotearlo.
+df.pm.gathered <- tidyr::gather(df.pm_lost, "pop", "rating.mean", -specie, -feature, -percentage_do_sm)
+# Hago spread para calcular el porcentage de perdida
+df.wm_lost <-tidyr::spread(df.wm, pop, rating.mean) %>% mutate(., percentage_do_sm=(c_lp_do_n012 *100)/c_lp_sm_n019)
+# Hago gathered para poder plotearlo.
+df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "rating.mean", -specie, -feature, -percentage_do_sm)
+
+
+# Guardo el porcentage de perdida. 
+write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""))
+write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""))
+
+
+ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
+  geom_boxplot(outlier.shape=NA)+
+  geom_point(data=df.pm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic region") +
+  xlab(label = "Genomic region") + #x title
+  ylab(label = "Pairwise average") + # y title
+  theme_bw() +  #theme selection for background and lines
+ # scale_x_continuous(expand = c(0, 1)) +# + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity region",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())+
+  geom_text(data = df.pm.gathered, aes(feature, percentage_do_sm, label=(percentage_do_sm %>% round(2))),angle = 45, size=2)
+ggsave (file = paste(wd,"/",name_diversity[1],".diversity_region_pairwise.eps", sep = ""), device = "eps")
+# dev.off()
+
+
+ggplot(data = dataframe, aes(x=feature, y = watterson_ave, fill =pop)) + 
+  geom_boxplot(outlier.shape=NA)+
+  geom_point(data=df.wm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+  # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic region") +
+  xlab(label = "Genomic region") + #x title
+  ylab(label = "Watterson average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  # scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity by region",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank()) +
+  geom_text(data = df.wm.gathered, aes(feature, percentage_do_sm, label=(percentage_do_sm %>% round(2))),angle = 45, size=2)
+ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_region_watterson.eps", sep = ""), device="eps")
+
+
+
+
+
+
+# Cosas útiles 
+
+# geom_box(outliers.shape=NA)
+
+# Si quiero plotear todos los indices a la vez:
+#index = c("watterson_ave", "pairwise_ave")
+#for (i in 1:length(index))
+#{
+#  ggplot(data = dataframe, aes_string(x='feature', y = index[1], fill='pop'))+
+  
 ```
+
+##### Lynx lynx
 
 
 ```{r}
 
-# Representación de las ventanas en manhattan plots. 
 
-library(dplyr)
-library(qqman)
-library(ggplot2)
-library ("GGally")
+dataframe <- `data_diversity_c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008`
+name_diversity[1] <- "c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008"
 
-# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/window_analysis/" 
-wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/"
+# Calculo weighted mean y lo guardo en un df.
 
-finsThetas = list.files(path = wd, pattern="*.pestPG$")
+df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(pairwise_ave, informative_sites))
 
-for (i in 1:length(finsThetas))
-{
-  datThetas <- read.csv (paste(wd,finsThetas[i],sep=""), header = T, sep = '\t')  
-  name_thetas <- unlist(strsplit(finsThetas[i], "[.]"))
-  datThetas$CHR <- as.numeric(gsub('^.{6}', '', datThetas$Chr))
-  datThetas$Nsites <- as.numeric(datThetas$nSites)
-  datThetas$SNPS_window = paste(datThetas$Chr, datThetas$WinCenter, sep='_')
-  datThetas[,-c(1,2)][datThetas[, -c(1,2)] < 0] <- 0
-  # Manhattan plot Theta Waterson
-  max_thetas <- max (datThetas$tW)
-  min_thetas <- min(datThetas$tW)
-  setEPS()
-  postscript(file=paste(wd,name_thetas[1], '_watterson_manhattan.eps', sep=''))
-  manhattan(datThetas, chr = "CHR", bp = "WinCenter", p = "tW", snp = "SNPS_window", ylim = c(0 , max_thetas+10), ylab = "tW", xlab = "Scaffold", logp=F, genomewideline = F, suggestiveline = F, main = paste ("Manhattan plot of tW ",name_thetas[1], sep =''))
-  dev.off() 
-  # Correlation between diversity indixes
-  setEPS()
-  postscript(file=paste(wd,name_thetas[1], '_diversity_correlation.eps', sep=''), horizontal = FALSE, onefile = FALSE, paper = "special")
-  print(ggpairs(datThetas, columns=4:8, title=paste("Theta correlations ", name_thetas[1], sep='')))
-  dev.off()
-  # Correlation between neutrality indixes
-  setEPS()
-  postscript(file=paste(wd,name_thetas[1], '_neutrality_correlation.eps', sep=''), horizontal = FALSE, onefile = FALSE, paper = "special")
-  print(ggpairs(datThetas, columns=9:13, title=paste("Neutrality indexes correlations ", name_thetas[1], sep='')))
-  dev.off()
-}
+df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
+
+df.pm_lost <-tidyr::spread(df.pm, pop, rating.mean) %>% 
+  mutate(., percentage_po_ki=(c_ll_po_n008 *100)/c_ll_ki_n013) %>% 
+  mutate(., percentage_no_ki=(c_ll_no_n008*100)/c_ll_ki_n013)
+df.pm.gathered <- tidyr::gather(df.pm_lost, "pop", "rating.mean", -specie, -feature,  -percentage_po_ki, -percentage_no_ki)
+
+df.wm_lost <-tidyr::spread(df.wm, pop, rating.mean) %>% 
+  mutate(., percentage_po_ki=(c_ll_po_n008 *100)/c_ll_ki_n013) %>% 
+  mutate(., percentage_no_ki=(c_ll_no_n008*100)/c_ll_ki_n013)
+df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "rating.mean", -specie, -feature,  -percentage_po_ki, -percentage_no_ki) 
+
+
+
+# Guardo el porcentage de perdida. 
+write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""))
+write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""))
+
+ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
+  geom_boxplot(outlier.shape=NA)+
+  geom_point(data=df.pm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+  # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic region") +
+  xlab(label = "Genomic region") + #x title
+  ylab(label = "Pairwise average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  #scale_x_continuous(expand = c(0, 1)) +# + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity region",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())+
+  geom_text(data = df.pm.gathered, aes(feature, percentage_po_ki, label=paste((percentage_po_ki %>% round(2)),(percentage_no_ki%>% round(2)), sep='\n')), angle = 45, size=2, vjust="inward",hjust="inward")
+
+ggsave (file = paste(wd,"/",name_diversity[1],".diversity_region_pairwise.eps", sep = ""), device = "eps")
+# dev.off()
+
+
+
+ggplot(data = dataframe, aes(x=feature, y = watterson_ave, fill =pop)) + 
+  geom_boxplot(outlier.shape=NA, position=position_dodge(width=1.5))+
+  geom_point(data=df.wm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=1.5), size = 3, inherit.aes=FALSE) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic region") +
+  xlab(label = "Genomic region") + #x title
+  ylab(label = "Watterson average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  # scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity by region",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank()) +
+        geom_text(data = df.wm.gathered, aes(feature, percentage_po_ki, label=paste((percentage_po_ki %>% round(2)),(percentage_no_ki%>% round(2)), sep='\n')), angle = 45, size=2, vjust="inward",hjust="inward")
+
+
+ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_region_watterson.eps", sep = ""), device="eps")
+
+
+# Cosas útiles outliers.shape=NA.
+
 
 
 ```
+
+#### Diversity per region: Cat Coordinates
+
+He probado con el script de Fede de perl:
+
+```{bash}
+
+# Primero le quito el cabecero porque si no, no puede usarse bedintersect:
+# sed '1d' c_ll_ki_n013.per.region.averages.tsv  > c_ll_ki_n013.per.region.averages.NOHEADER.tsv 
+# Ahora lo corro tal y como indica el propio script:
+# perl lynx2cat.pl c_ll_ki_n013.per.region.averages.NOHEADER.tsv > c_ll_ki_n013.per.region.averages.CatCoordinates.tsv
+# Este script me ha dado el siguiente error:
+#Use of uninitialized value $s in concatenation (.) or string at lynx2cat.pl line 14, <I> line 156394492.
+#Use of uninitialized value $e in concatenation (.) or string at lynx2cat.pl line 14, <I> line 156394492.
+# Además me he dado cuenta que solo reporta las coordenadas de uno y otro, y yo quiero toda la información. 
+
+```
+
+Por tanto pruebo con el básico:
+
+```{bash}
+
+intersectBed -sorted -wo -a c_ll_ki_n013.per.region.averages.NOHEADER.tsv -b lynx2cat_wTiger.bed > c_ll_ki_n013.per.region.averages.CatCoordinates.tsv
+
+# Me da el error:
+
+# ERROR: chromomsome sort ordering for file c_ll_ki_n013.per.region.averages.NOHEADER.tsv is inconsistent with other files. Record was:
+# lp23.s00015     2903992 3006783 102791  101509  telomers0-10m   na      na      na      na      6.5495647224*10^-06     1.4900294206*10^-05        2.5287837844*10^-06     5.8944110986*10^-06     -4.4603274016*10^-01    1282    c_ll_ki_n013    c_ll
+
+```
+
+
+Así que ordeno antes:
+
+```{bash}
+
+ bedtools sort c_ll_ki_n013.per.region.averages.NOHEADER.tsv > c_ll_ki_n013.per.region.averages.NOHEADER.SORTED.tsv
+
+```
+
+
+
+
+# Copy
+
+```{bash}
+
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*eps /Users/marialucenaperez/ownCloud/publico/WG_diversity/diversity_plots/diversity_per_unit 
+
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/*eps /Users/marialucenaperez/ownCloud/publico/WG_diversity/diversity_plots/diversity_per_region/
+
+
+
+```
+
+
+
+
+### Diversity per region & feature
 
 
 ```{bash}
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*eps /Users/marialucenaperez/Desktop
+
+
+
 
 ```
 
 
-```
 
-tar -cvf files.tar my_directory && rm -R my_directory
-
-
-tar -cvzf raw_data.tar.gz raw_data && rm -R raw_data
-
-
-cvzf EVA_scripts.tar.gz EVA_scripts
-
-
-
-Sent:
-
-tar -cvzf Lyp_annotation_Apr14_final.tar.gz Lyp_annotation_Apr14_final
-
-
-tar -cvzf lynx_ancient_genomes.tar.gz lynx_ancient_genomes && rm -R lynx_ancient_genomes
