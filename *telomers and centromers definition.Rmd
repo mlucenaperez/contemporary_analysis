@@ -789,6 +789,13 @@ echo $file
 mv $file ${file/lp23/tel0-10m_regions_based_on_synteny_1000bp_lp23}
 done
 
+
+for file in tel0-10*
+do
+echo $file
+mv $file ${file/tel0-10/telomers0-10}
+done
+
 #############################################################################
 ### Telomers 2m
 
@@ -804,6 +811,13 @@ echo $file
 mv $file ${file/lp23/tel2m_regions_based_on_synteny_1000bp_lp23}
 done
 
+for file in tel2*
+do
+echo $file
+mv $file ${file/tel2/telomers2}
+done
+
+
 #############################################################################
 ### Centromers
 
@@ -817,6 +831,13 @@ for file in lp23*
 do
 echo $file
 mv $file ${file/lp23/centr_regions_based_on_synteny_1000bp_lp23}
+done
+
+
+for file in centr*
+do
+echo $file
+mv $file ${file/centr/centromers}
 done
 
 #############################################################################
