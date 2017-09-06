@@ -221,9 +221,7 @@ done
 POPS=("c_ll_no_n008" "c_ll_po_n008"  "c_lp_do_n012")
 
 
-"c_ll_ki" 
-#### Falta este!! ###
-"c_lp_sm_n019"
+
 ########################
 
 
@@ -416,57 +414,41 @@ c_lp_do
 
 ```{bash}
 
-
-
-
-#### CHANGE PATH!!!!
-
 mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region
-
-POP=c_ll_ki # check if I need to include n_013 <--- Change pop here!
-screen -S "$POP"_scaffold_per_region
-
-POP=c_ll_ki # check if I need to include n_013 <--- Change pop here!
-script log_screen_"$POP"_scaffold_per_region.log
-
-POP=c_ll_ki # check if I need to include n_013 <--- Change pop here!
 
 ## WG variables
 
-RUTA=/GRUPOS/grupolince/telomers_centromers_definition/
+POPS=("c_ll_ki_n013" "c_ll_no_n008" "c_ll_po_n008" "c_lp_do_n012" "c_lp_sm_n019")
+SFS_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
+SCAFFOLD_FOLDER=/GRUPOS/grupolince/telomers_centromers_definition/
+cd $SCAFFOLD_FOLDER
+REGIONS_PerScaffold=($(ls | grep PerScaffold | grep -v centromers | uniq))
 
-cd $RUTA
-
-REGIONS_PerScaffold=($(ls | grep "PerScaffold" | uniq))
-
-for REGION_PerScaffold in "${REGIONS_PerScaffold[@]}"
-
+for POP in "${POPS[@]}"
 do
-
-echo $REGION_PerScaffold
-cd $RUTA$REGION_PerScaffold
-
-REGION=$(echo $REGION_PerScaffold | cut -d"." -f 1 )
-SCAFFOLDS=($(ls * | cut -d'_' -f7 | uniq))
-
-# mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/$REGION/  # --> Ya están creadas.
-DIVERSITY_PER_REGION_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/$REGION/
-echo $REGION
-
 echo "---------------------------------------------------$POP---------------------------------------------------"
 
-cd $DIVERSITY_PER_REGION_FOLDER
+for REGION_PerScaffold in ${REGIONS_PerScaffold[@]}
+do
+cd $SCAFFOLD_FOLDER$REGION_PerScaffold
+SCAFFOLDS=($(ls * | cut -d'_' -f7 | uniq))
+DIVERSITY_PER_REGION_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/${REGION_PerScaffold/.PerScaffold/}/
+
+echo "-------------${REGION_PerScaffold/.PerScaffold/}-------------"
 
 # Create headers for the outfile
-echo -e "scaffold\tstart\tend\tlength\tNAs\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > "$POP"."$REGION".averages.tsv
+echo -e "scaffold\tstart\tend\tlength\tNAs\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > "$DIVERSITY_PER_REGION_FOLDER""$POP"."${REGION_PerScaffold/.PerScaffold/}".averages.tsv
 
 for SCAFFOLD in "${SCAFFOLDS[@]}"
 do
+
 echo "---------------------$SCAFFOLD---------------------"
 
 while read LOCATION START_CEROBASED END CAT_CHR;
 
 do
+
+cd "$SFS_FOLDER""$POP"_separated_by_scaffold
 
 START_ONEBASED=($(echo $START_CEROBASED+1 | bc))
 LENGTH=$(expr $END - $START_ONEBASED) 
@@ -475,21 +457,19 @@ LENGTH=$(expr $END - $START_ONEBASED)
 
 START_CEROBASED=($(echo $START_ONEBASED-1 | bc))
 
+cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_CEROBASED\t$END") > "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar
 
+WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
 
-cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_CEROBASED\t$END") > "$POP"."$REGION".iter.transformedThetas.borrar
+PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5 "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
 
-WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP"."$REGION".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
-WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP"."$REGION".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
-
-PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5 "$POP"."$REGION".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$POP"."$REGION".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-
-DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP"."$REGION".iter.transformedThetas.borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
 
 TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_AVERAGE_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
 
-NR=$(wc -l "$POP"."$REGION".iter.transformedThetas.borrar | cut -d" " -f1)
+NR=$(wc -l "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar | cut -d" " -f1)
 
 NAs=$(expr $LENGTH - $NR)
 
@@ -506,11 +486,12 @@ paste \
 <(echo $PAIRWISE_AVERAGE_PER_UNIT) \
 <(echo $PAIRWISE_SD_PER_UNIT) \
 <(echo $TAJIMAS_D_PER_UNIT) |\
-sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  "$POP"."$REGION".averages.tsv
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  "$DIVERSITY_PER_REGION_FOLDER""$POP"."${REGION_PerScaffold/.PerScaffold/}".averages.tsv
 
-done < <(cat "$SCAFFOLDS_FOLDER""$SCAFFOLD") 
-done &
+done < <(cat /GRUPOS/grupolince/telomers_centromers_definition/$REGION_PerScaffold/"${REGION_PerScaffold/.PerScaffold/}"_regions_based_on_synteny_1000bp_"$SCAFFOLD") 
 done
+done &
+done 
 
 rm "$POP"*iter.transformedThetas.borrar
 
