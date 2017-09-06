@@ -46,6 +46,10 @@ ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the 
 # BARCODE MACROGEN:
 # declare -A BARCODEID=(["LC1"]="c_lc_zz_0001" ["LL112"]="c_ll_vl_0112" ["LL146"]="c_ll_ya_0146" ["LL212"]="c_ll_cr_0212" ["LL90"]="c_ll_ki_0090" ["LR1"]="c_lr_zz_0001")
 
+
+# BARCODE LYNX_18:
+# declare -A BARCODEID=(["CB84PANXX_7_152nfDI"]="c_ll_ur_0194" ["CB84PANXX_7_164nfDI"]="c_ll_ur_0195" ["CBCA6ANXX_7_176nfDI"]="c_ll_ur_0200" ["CBCA6ANXX_7_188nfDI"]="c_ll_ur_0196" ["CBCA6ANXX_8_105nfDI"]="c_ll_ur_0203" ["CBCA6ANXX_8_117nfDI"]="c_ll_ur_0199")
+
 ```
 
 24/05/2017
@@ -216,7 +220,7 @@ scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA2W6ANXX_1_3nf*gz /home/
 scp /backup/grupolince/raw_data/LYNX_15/20170206/FASTQ/CA3D2ANXX_5_3nf*gz /home/mlucena/new_mapping/new_mapping2
 
 REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
-THREADS=20  
+THREADS=25  
 ARRAY=($(ls *.fastq.gz | cut -d"_" -f 1-3 | sort | uniq))
 
 
@@ -253,12 +257,12 @@ Nosotro sólo trimamos para LYNX_14
 LYNX_06 y LYNX_08_09 venían trimados. No los hemos trimado. 
 LYNX_13, LYNX_15 y LYNX_16 también venían trimados. 
 Los del proyecto genómca concluimos que no merece la pena trimarlos, porque aunque tienen adaptadores la proporción es muy poca, y el tiempo de computación es mucho. 
+LYNX_18 tiene un 0.1% de adaptadores, así que tampoco lo trimo. 
 
 ```{r, engine=bash, eval=FALSE}
 
 for i in ${ARRAY[@]}
 do
-
 echo "${i}"
 SeqPrep -f "${i}"_1.fastq.gz -r "${i}"_2.fastq.gz -1 "${i}"_R1_trimmed.fastq.gz -2 "${i}"_R2_trimmed.fastq.gz -A AGATCGGAAGAGCACACGTC -B AGATCGGAAGAGCGTCGTGT
 done   
@@ -285,7 +289,7 @@ done
 
 **CHECK CA2W6ANXX_2_7nf
 
-## 	Aligment BWA-MEM	
+## 	Mapping BWA-MEM	
 
 Checked whether you are using trimmed or untrimmed data.
 
@@ -295,23 +299,21 @@ for i in ${ARRAY[@]}
 do
 echo $i
 
-# bwa mem $REF ${i}_1.fastq.gz ${i}_2.fastq.gz -t $THREADS  >  ${i}.sam
-# samtools view -hbS  ${i}.sam -@ $THREADS | samtools sort -@ $THREADS -o ${i}_sorted.bam
-# rm ${i}.sam
-# samtools flagstat  ${i}_sorted.bam >  ${i}_raw.stats
-
-# Para los de LYNX_14: Lanzado!
-bwa mem $REF ${i}_R1_trimmed.fastq.gz ${i}_R2_trimmed.fastq.gz -t $THREADS  >  ${i}.sam
+bwa mem $REF ${i}_1.fastq.gz ${i}_2.fastq.gz -t $THREADS  >  ${i}.sam
 samtools view -hbS  ${i}.sam -@ $THREADS | /opt/samtools/samtools sort -@ $THREADS -o ${i}_sorted.bam && rm ${i}.sam
 
-done
+# Para los de LYNX_14: Lanzado!
+# bwa mem $REF ${i}_R1_trimmed.fastq.gz ${i}_R2_trimmed.fastq.gz -t $THREADS  >  ${i}.sam
+# samtools view -hbS  ${i}.sam -@ $THREADS | /opt/samtools/samtools sort -@ $THREADS -o ${i}_sorted.bam && rm ${i}.sam
+
+# done
 ```
 
 
 ```{bash}
 
 # Me he cargado esta muestra así que la vuelvo a lanzar
-bwa mem $REF CA2W6ANXX_1_1nf_R1_trimmed.fastq.gz CA2W6ANXX_1_1nf_R2_trimmed.fastq.gz -t 5  >  CA2W6ANXX_1_1nf.sam
+# bwa mem $REF CA2W6ANXX_1_1nf_R1_trimmed.fastq.gz CA2W6ANXX_1_1nf_R2_trimmed.fastq.gz -t 5  >  # CA2W6ANXX_1_1nf.sam
 
 ```
 
