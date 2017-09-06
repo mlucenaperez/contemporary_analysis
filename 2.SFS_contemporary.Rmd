@@ -1565,6 +1565,112 @@ ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_region_watterson.ep
 
 ```
 
+#### Pairwise diversity
+
+```{r}
+
+
+library ("ggplot2")
+library ("plyr")
+library ("dplyr")
+library ("RColorBrewer")
+library ("scales")
+library ("magrittr")
+library("tidyr")
+install.packages("viridis")
+library(viridis)
+
+
+# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region"
+wd <- "/Users/marialucenaperez/Desktop/"
+
+
+# finsdiversity = list.files(path = wd,pattern="*per_specie.tsv$")
+infile <- "contatenat_do_sm"
+
+INFORMATIVE_SITES=200
+
+
+# for (i in 1:length(finsdiversity))
+#{
+#  infile <- finsdiversity[i]
+  
+  dataframe <- read.csv (paste (wd,infile, sep="/"), header = T, sep = '\t', stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".")
+  dataframe = dataframe[-1,]
+  dataframe$watterson_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$watterson_ave))
+  dataframe$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$pairwise_ave))
+  dataframe$tajimaD <- as.numeric(gsub("\\*10\\^","e",dataframe$tajimaD))
+  dataframe$pop <- as.factor(dataframe$pop)
+  dataframe$pop <- factor(dataframe$pop, levels=c("c_ll_ki_n013", "c_ll_po_n008", "c_ll_no_n008", "c_lp_sm_n019", "c_lp_do_n012"))
+
+
+
+# scaffold_start_end_id, length NAs feature strandness frame id_gene watterson_ave watterson_sd pairwise_ave pairwise_sdtajimaD informative_sites pop specie length NAs
+distinct_pop <- dataframe %>% distinct(pop)
+distinct_vector_pop = distinct_pop$pop
+
+# distinct_vector_pop=c("don","smo","po","cat","bia")
+
+combinations <- t(combn(distinct_vector_pop, 2)) # %>% mutate (combination=paste(V1,V2,sep="/")) %>% select(combination)
+
+for(i in 1:nrow(combinations)) {
+    row <- NULL
+    row <- combinations[i,]
+    # do stuff with row
+    POP1 <- NULL
+    POP2 <- NULL
+    POP1 <- row[1]
+    POP2 <- row[2]
+    
+    df_POP1 <- filter (dataframe, pop == POP1) %>%  unite (., scaffold, start, end, id, col="scaffold_start_end_id") %>% filter (., informative_sites > INFORMATIVE_SITES)
+    
+    df_POP2 <- filter (dataframe, pop == POP2) %>%  unite (., scaffold, start, end, id, col="scaffold_start_end_id") %>% filter (., informative_sites > INFORMATIVE_SITES)
+    
+    # Todos deben ser únicos, pero así me aseguro que efectivamente es así. Porque me ha pasado que gracias a esto me he dado cuenta que hay posiciones iguales que son intron 1 para un gen A e intron 3 par un gen B. 
+    vector_positions_POP1 <- unique(df_POP1$scaffold_start_end) %>% sort(.)
+    vector_positions_POP2 <- unique(df_POP2$scaffold_start_end) %>% sort(.)
+    
+    vector_common_positions <- intersect(vector_positions_POP1, vector_positions_POP2)
+    
+    df_POP1_filtered <- df_POP1 %>% filter(scaffold_start_end_id  %in% vector_common_positions) %>% arrange(., scaffold_start_end_id) %>% select (., scaffold_start_end_id, feature, id_gene, pairwise_ave, informative_sites, length, NAs, pop )
+    
+    df_POP2_filtered <- df_POP2 %>% filter(scaffold_start_end_id  %in% vector_common_positions) %>% arrange(., scaffold_start_end_id) %>% select (., scaffold_start_end_id, feature, id_gene, pairwise_ave, informative_sites, length, NAs, pop )
+
+if (identical(df_POP1_filtered$scaffold_start_end_id, df_POP2_filtered$scaffold_start_end_id))
+{ df_pairwise <- cbind (
+  setNames(data.frame(df_POP1_filtered), c("scaffold_start_end_id", "feature", "id_gene", "pairwise_ave1","informative_sites1", "length1", "NAs1", "pop1")),
+  setNames(data.frame(df_POP2_filtered), c("scaffold_start_end_id2", "feature2", "id_gene2", "pairwise_ave2","informative_sites2", "length2", "NAs2", "pop2"))) %>% select_ (., "scaffold_start_end_id", "feature", "id_gene", "pairwise_ave1","informative_sites1", "length1", "NAs1", "pop1","pairwise_ave2","informative_sites2", "length2", "NAs2", "pop2")
+           } else {print("First column not matching") }
+
+    
+ggplot(df_pairwise, aes(informative_sites1, informative_sites2)) +
+  geom_point()
+
+ggplot(df_pairwise, aes(pairwise_ave1, pairwise_ave2,  color = informative_sites1)) +
+  geom_point() +
+  facet_wrap(~feature) +
+  # scale_color_gradient(low="red", high="blue") +
+  #scale_color_gradientn(colours = rainbow(5)) +
+  # scale_colour_gradient(limits = c(0, quantile(df_pairwise$informative_sites1, 0.5))) +
+  # scale_colour_gradientn(colours = myPalette(100), values=nrm.vals) +
+  labs(colour = paste("Informative sites", POP1, sep =" ")) +
+  labs(x=paste("Pi diversity", POP1, sep =" "),y=paste("Pi diversity", POP2, sep =" ")) +
+  scale_color_viridis(option="magma",limits = c(0, quantile(df_pairwise$informative_sites1, 0.75)))
+
+ggplot(df_pairwise, aes(informative_sites1, informative_sites2)) +
+  geom_point()
+
+  
+}
+
+# https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html
+
+```
+
+
+
+
 #### Diversity per region: Cat Coordinates
 
 He probado con el script de Fede de perl:
