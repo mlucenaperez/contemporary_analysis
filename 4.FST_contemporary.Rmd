@@ -20,7 +20,7 @@ The procedure is
 4 - Use realSFS to extract the the fst values from the fst
 
 
-## 1 - Estimate multidimensional SFS: Calculate all pairwise 2dsfs's
+## Estimate multidimensional SFS: Calculate all pairwise 2dsfs's
 
 An important issue when doing this is to be sure that we are comparing the exactly same corresponding sites between populations. 
 ANGSD does that automatically and considers only a set of overlapping sites. 
@@ -103,40 +103,16 @@ echo "--------------------------------->FST  $POP1 and $POP2 printing"
 #$NGSTOOLS/realSFS fst print $POP1.$POP2.unfolded-lr.fst.idx > $POP1.$POP2.unfolded-lr.fst.print
 # Ojo!!! el archivo print ocupa muchísimo!!!!!!
 done
-
-
-
-
-# Esto lo he hecho para todas las poblaciones, pero dos archivos se me han escupido en blanco:
-# po & sm y do & smo.
-# He probado a lanzarlos a mano, y me ha dado fallo justo cuando estaba a punto de acabar. Voy a esperar a que el servidor esté un poco más vacío y probar a lanzarlos. 
-
-
-
-
-
 ```
 
-        -> Chromosome: 'lp23.s41127' does not exists in population: /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/c_lp_sm_n019.unfolded-lr.saf.idx will skip it
-        -> Is in multi sfs, will now read data from chr:lp23.s41442
-        -> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect
-        -> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
-        -> Sites to keep[lp23.s41442] from pop0:        64
-        -> Sites to keep[lp23.s41442] from pop1:        64
-        -> [readdata] lastread:64 posi:1821
-        -> Comparing positions: 1 with 0 has:1357351491
-        -> Only read nSites: 1357351491 will therefore prepare next chromosome (or exit)
-        -> Done reading data from chromosome will prepare next chromosome
-        -> Will run optimization on nSites: 1357351491
-------------
-startlik=-7755301634.578545
-lik[2]=-108763989.191305 diff=7.646538e+09 alpha:1.000000 sr2:7.853066e-01
-lik[5]=-97354465.459561 diff=1.140952e+07 alpha:1.119322 sr2:1.156970e-04
-lik[8]=-97342213.444774 diff=1.225201e+04 alpha:1.732177 sr2:4.024172e-10
-Terminado (killed)
+Esto lo he hecho para todas las poblaciones, pero dos archivos se me han escupido en blanco:
+po & sm y do & smo.
+He probado a lanzarlos a mano, y me ha dado fallo justo cuando estaba a punto de acabar. Voy a esperar a que el servidor esté un poco más vacío y probar a lanzarlos. 
+Lanzados y aparentemente bien. 
+
+## Get the global estimate
 
 ```{r, engine=bash, eval=FALSE}
-#Get the global estimate
 
 echo "POP1,POP2,FSTunweight,FSTweight" > global.fsts.csv
 for POP_PAIR in  ${POP_PAIRS[@]}
@@ -146,7 +122,6 @@ POP2=($(echo $POP_PAIR | cut -d "/"  -f 2))
 FST=($( $NGSTOOLS/realSFS fst stats $POP1.$POP2.unfolded-lr.fst.idx | tr ' ' ',' ))
 echo "$POP1,$POP2,$FST" >> global.fsts.csv
 done
-
 
 
 # you can have a look at their values:
@@ -171,12 +146,15 @@ done
 
 ```
 
- # Copying to local
+
+
+###  Copying to local global estimate
+
 ```{bash}
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_fst/*.fsts.csv /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_fst/
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/fst/*.fsts.csv /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/fst/
 ```
 
-
+###  R Neighbour joining tree
 
 
 ```{r}
@@ -186,16 +164,19 @@ library(magrittr)
 library(ggplot2)
 library(ape)
 
-wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_fst/"
+wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/fst/"
 
 #Look for all global fts table 
 
 fst_table = list.files(path = wd, pattern="*fsts.csv")    
 
 
+df="global.fsts.csv"
+
 # Define function to plot trees
 
-plot_FST_nj_weighted_unrooted_tree <- function(wd,df,filter_pattern,subset_name ){
+plot_FST_nj_weighted_unrooted_tree <- function(wd,df,filter_pattern,subset_name )
+  {
 first.pop <- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%
     mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
     filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
@@ -224,24 +205,125 @@ first.pop <- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) 
 
 # Format tables intro matrices and Plot NJtrees
 
+# Considering the function you can modify the pattern to filter and the name that you gave it. 
+
+# function(wd,df,filter_pattern,subset_name )
+
+# El nombre es "subset_name" que yo escoja, más global.weighted.pdf
+  
 
 for (i in 1:length (fst_table)){
   #Load table,  keep only the values of single populations 
   #(I migth be interested in the other comparissons but later)
-  plot_FST_nj_weighted_unrooted_tree(wd,fst_table[i],"_ll_","lynx_lynx_fst_test") 
+  plot_FST_nj_weighted_unrooted_tree(wd,fst_table[i],"c_","") 
+}
+
+
+
+```
+
+## Window analysis
+
+
+```{bash}
+
+RUTA=/home/mlucena/ANGSD_analysis 
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
+THREADS=15
+SFS_FOLDER=$RUTA/whole_genome_analysis/sfs
+FST_FOLDER=$RUTA/whole_genome_analysis/fst
+
+#Get all populations name
+cd $SFS_FOLDER
+POPS=($(ls *.unfolded-lr.postprob.thetas.gz | sed -e 's/.unfolded-lr.postprob.thetas.gz//g'  | sort | uniq))
+cd $FST_FOLDER
+#Get all possible pairwise combinations
+POP_PAIRS=($(echo ${POPS[@]} | Rscript pops_combinations.R))
+
+
+WINDOWSIZE=50000
+WINDOWSTEP=10000 
+
+for POP_PAIR in  ${POP_PAIRS[@]}
+do
+POP1=($(echo $POP_PAIR | cut -d "/"  -f 1))
+POP2=($(echo $POP_PAIR | cut -d "/"  -f 2)) 
+echo $POP1" & "$POP2" ------> Window analysis"
+$NGSTOOLS/realSFS fst stats2 $POP1.$POP2.unfolded-lr.fst.idx -win $WINDOWSIZE -step $WINDOWSTEP  > $POP1.$POP2.unfolded-lr.fst_$WINDOWSIZE.$WINDOWSTEP
+done
+
+
+# Me he dado cuenta que las ventanas no tienen FST en el título, por tanto, tengo que añadirlo. 
+
+FILES_FST=($(ls *10000 | sort | uniq))
+
+
+for i in "${FILES_FST[@]}"
+do
+echo $i
+cat <(awk -v OFS='\t' '(NR==1) {print $0,"fst"}' $i) <( awk -v OFS='\t' 'NR >= 2 {print $0}' $i) > ${i/.10000/_1000.tsv}
+done
+
+# Le dejo el nombre nuevo porque no me gustaba el viejo. 
+rm *.10000
+
+```
+
+<!-- ### Copying to local window analysis. -->
+<!-- ```{bash} -->
+<!-- scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/fst/fst_window_analysis/*10000 /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/fst/ -->
+<!-- ``` -->
+
+### R window analysis representation
+
+```{r}
+
+
+library(dplyr)
+library(qqman)
+library(ggplot2)
+library ("GGally")
+
+wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/fst/fst_window_analysis/"
+
+finsFST = list.files(path = wd, pattern="*fst_50000_1000.tsv$")
+
+for (i in 1:length(finsFST ))
+{
+  datFST <- read.csv (paste(wd,finsFST [i],sep=""), header = T, sep = '\t')  
+  name_FST <- unlist(strsplit(finsFST [i], "[.]"))
+  datFST$CHR <- as.numeric(gsub('^.{6}', '', datFST$chr))
+  datFST$Nsites <- as.numeric(datFST$Nsites)
+  datFST$SNPS_window = paste(datFST$chr, datFST$midPos, sep='_')
+  datFST[,-c(1,2)][datFST[, -c(1,2)] < 0] <- 0
+  # Manhattan plot FST 
+  max_FST <- max (datFST$fst)
+  min_FST <- min(datFST$fst)
+  setEPS()
+  postscript(file=paste(wd,name_FST[1],"-",name_FST[2], '_FST_manhattan.eps', sep=''))
+  manhattan(datFST, chr = "CHR", bp = "midPos", p = "fst", snp = "SNPS_window", ylim = c(0 , max_FST+10), ylab = "FST", xlab = "Scaffold", logp=F, genomewideline = F, suggestiveline = F, main = paste ("Manhattan plot of FST-scores ",  name_FST[1],"-",  name_FST[2], sep=''))
+  dev.off() 
 }
 
 
 ```
 
 
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*eps /Users/marialucenaperez/Desktop
 
-#below is not tested that much, but seems to work
-../misc/realSFS fst stats2 here.fst.idx -win 50000 -step 10000 >slidingwindow
+```
 
 
 
-# To check --> Old FST representation
+
+
+
+
+
+
+# FST+Theta representation
 
 ```{r}
 
