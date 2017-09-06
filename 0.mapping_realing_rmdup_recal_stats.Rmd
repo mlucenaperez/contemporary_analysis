@@ -426,7 +426,7 @@ B) then it adjusts the base quality scores in the data based on the model.
 ```{r, engine=bash, eval=FALSE}
 # Define new variables
 
-POP=("og")
+POP=("ur")
 ROUND=1
 PREVIOUS_ROUND=$(expr $ROUND - 1)
 
@@ -456,7 +456,7 @@ done
 ```{r, engine=bash, eval=FALSE}
 
 REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa
-POP=("ka")
+POP=("ur")
 ROUND=1
 PREVIOUS_ROUND=$(expr $ROUND - 1)
 
