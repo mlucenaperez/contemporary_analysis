@@ -649,20 +649,15 @@ dataframe <- dataframe %>%
 name_diversity[1] <- paste(name_diversity[1],".percentagecovered",PERCENTAGE_COVERED,"_mininformativesites",INFORMATIVE_SITES, sep="")
 ########################################################
 
-ddply(dataframe, "feature", summarise, rating.mean=mean(pairwise_ave))
-df.pm <- ddply(dataframe, "feature", summarise, rating.mean=weighted.mean(pairwise_ave, informative_sites))
-write.csv(df.pm, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""))
+df.pm <- ddply(dataframe, "feature", summarise, weightedmean=weighted.mean(pairwise_ave, informative_sites))
 
-
-ddply(dataframe, "feature", summarise, rating.mean=mean(watterson_ave))
-df.wm <- ddply(dataframe, "feature", summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
-write.csv(df.wm, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""))
+df.wm <- ddply(dataframe, "feature", summarise, weightedmean=weighted.mean(watterson_ave, informative_sites))
 
 
 # pdf(file = paste(wd,"/Diversity_by_feature_pairwise",name_diversity[1],".pdf", sep = ""))
 ggplot(data = dataframe, aes(x=feature, y = pairwise_ave)) + 
   geom_boxplot()+
-  geom_point(data=df.pm,aes(x=feature, y = rating.mean),shape = 23, 
+  geom_point(data=df.pm,aes(x=feature, y = weightedmean),shape = 23, 
              size = 3, inherit.aes=FALSE) +
   # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
   facet_grid(.~feature, scales="free") +
@@ -694,7 +689,7 @@ ggsave (file = paste(wd,"/",name_diversity[1],".diversity_feature_pairwise.pdf",
 
 ggplot(data = dataframe, aes(x=feature, y = watterson_ave)) + 
   geom_boxplot()+
-  geom_point(data=df.wm,aes(x=feature, y = rating.mean),shape = 23, 
+  geom_point(data=df.wm,aes(x=feature, y = weightedmean),shape = 23, 
              size = 3, inherit.aes=FALSE) +
   # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
   facet_grid(.~feature, scales="free") +
@@ -787,13 +782,16 @@ Esta gráfica representa por especie.
 
 ```{r}
 
+
+# stat_summary(fun.y=mean,
+
 library ("ggplot2")
 library ("plyr")
 library ("RColorBrewer")
 library ("scales")
 library ("magrittr")
 library("tidyr")
-
+library ("dplyr")
 # wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
 wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
 # wd <- "/Users/marialucenaperez/Desktop/Diversity_per_unit"
@@ -825,8 +823,6 @@ for (i in 1:length(finsdiversity))
   dataframe <- dataframe %>% 
   mutate(percentage_covered=ifelse(NAs>0, (as.numeric(length)-as.numeric(NAs))/as.numeric(length), 1)) %>% dplyr::filter(percentage_covered>PERCENTAGE_COVERED) %>% dplyr::filter(informative_sites>INFORMATIVE_SITES)
   
-  
-########################################################
 }
 
 
@@ -840,30 +836,30 @@ name_diversity[1] <- paste(name_diversity[1],".percentagecovered",PERCENTAGE_COV
 
 # Calculo weighted mean y lo guardo en un df.
 
-df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(pairwise_ave, informative_sites))
-df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
+df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, weightedmean=weighted.mean(pairwise_ave, informative_sites), mean=mean(pairwise_ave))
+df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, weightedmean=weighted.mean(watterson_ave, informative_sites), mean=mean(watterson_ave))
 
 
 # LYNX PARDINUS
 # Hago spread para calcular el porcentage que representa do respecto a sm
-df.pm_lost <-tidyr::spread(df.pm, pop, rating.mean) %>%
+df.pm_lost <- df.pm %>% select(.,-mean) %>% tidyr::spread(., pop, weightedmean) %>%
  mutate(., percentage_do_sm=(c_lp_do_n012 *100)/c_lp_sm_n019)
 # Hago gathered para poder plotearlo.
-df.pm.gathered <- tidyr::gather(df.pm_lost, "pop", "rating.mean", -specie, -feature, -percentage_do_sm)
+df.pm.gathered <- tidyr::gather(df.pm_lost, "pop", "weightedmean", -specie, -feature, -percentage_do_sm)
 # Hago spread para calcular el porcentage de perdida
-df.wm_lost <-tidyr::spread(df.wm, pop, rating.mean) %>% mutate(., percentage_do_sm=(c_lp_do_n012 *100)/c_lp_sm_n019)
+df.wm_lost <-df.wm %>% select(.,-mean) %>% tidyr::spread(., pop, weightedmean) %>% mutate(., percentage_do_sm=(c_lp_do_n012 *100)/c_lp_sm_n019)
 # Hago gathered para poder plotearlo.
-df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "rating.mean", -specie, -feature, -percentage_do_sm)
+df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "weightedmean", -specie, -feature, -percentage_do_sm)
 
 
 # Guardo el porcentage de perdida. 
-write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""))
-write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""))
+write.csv(df.pm, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""), row.names = F)
+write.csv(df.wm, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""), row.names = F)
 
 
 ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
   geom_boxplot(outlier.shape=NA) +
-  geom_point(data=df.pm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+  geom_point(data=df.pm,aes(x=feature, y = weightedmean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
   facet_grid(.~feature, scales="free") +
   scale_y_continuous(trans = 'log10') +
   scale_x_discrete("Genomic feature") +
@@ -883,7 +879,8 @@ ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
         panel.border = element_blank(),
         panel.background = element_blank(),
         strip.background = element_blank(),
-        strip.text.x = element_blank())+
+        strip.text.x = element_blank())+ 
+        stat_summary(fun.y=mean, colour="darkred", geom="point", shape=18, size=3,show_guide = FALSE) + 
   geom_text(data = df.pm.gathered, aes(feature, percentage_do_sm, label=(percentage_do_sm %>% round(2))),angle = 45, size=2)
 
 ggsave (file = paste(wd,"/",name_diversity[1],".diversity_feature_pairwise.eps", sep = ""), device = "eps")
@@ -892,7 +889,7 @@ ggsave (file = paste(wd,"/",name_diversity[1],".diversity_feature_pairwise.eps",
 
 ggplot(data = dataframe, aes(x=feature, y = watterson_ave, fill =pop)) + 
   geom_boxplot(outlier.shape=NA)+
-  geom_point(data=df.wm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+  geom_point(data=df.wm,aes(x=feature, y = weightedmean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
   # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
   facet_grid(.~feature, scales="free") +
   scale_y_continuous(trans = 'log10') +
@@ -913,7 +910,8 @@ ggplot(data = dataframe, aes(x=feature, y = watterson_ave, fill =pop)) +
         panel.border = element_blank(),
         panel.background = element_blank(),
         strip.background = element_blank(),
-        strip.text.x = element_blank()) +
+        strip.text.x = element_blank()) + 
+        stat_summary(fun.y=mean, colour="darkred", geom="point", shape=18, size=3,show_guide = FALSE) + 
   geom_text(data = df.wm.gathered, aes(feature, percentage_do_sm, label=(percentage_do_sm %>% round(2))),angle = 45, size=2)
 ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_feature_watterson.eps", sep = ""), device="eps")
 
@@ -927,29 +925,28 @@ name_diversity[1] <- paste(name_diversity[1],".percentagecovered",PERCENTAGE_COV
 
 # Calculo weighted mean y lo guardo en un df.
 
-df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(pairwise_ave, informative_sites))
+df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, weightedmean=weighted.mean(pairwise_ave, informative_sites), mean=mean(pairwise_ave))
+df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, weightedmean=weighted.mean(watterson_ave, informative_sites), mean=mean(watterson_ave))
 
-df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
-
-df.pm_lost <-tidyr::spread(df.pm, pop, rating.mean) %>% 
+df.pm_lost <- df.pm %>% select(.,-mean) %>% tidyr::spread(., pop, weightedmean) %>% 
   mutate(., percentage_po_ki=(c_ll_po_n008 *100)/c_ll_ki_n013) %>% 
   mutate(., percentage_no_ki=(c_ll_no_n008*100)/c_ll_ki_n013)
-df.pm.gathered <- tidyr::gather(df.pm_lost, "pop", "rating.mean", -specie, -feature,  -percentage_po_ki, -percentage_no_ki)
+df.pm.gathered <- tidyr::gather(df.pm_lost, "pop", "weightedmean", -specie, -feature,  -percentage_po_ki, -percentage_no_ki)
 
-df.wm_lost <-tidyr::spread(df.wm, pop, rating.mean) %>% 
+df.wm_lost <- df.wm %>% select(.,-mean) %>% tidyr::spread(., pop, weightedmean) %>% 
   mutate(., percentage_po_ki=(c_ll_po_n008 *100)/c_ll_ki_n013) %>% 
   mutate(., percentage_no_ki=(c_ll_no_n008*100)/c_ll_ki_n013)
-df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "rating.mean", -specie, -feature,  -percentage_po_ki, -percentage_no_ki) 
-
-
+df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "weightedmean", -specie, -feature,  -percentage_po_ki, -percentage_no_ki) 
 
 # Guardo el porcentage de perdida. 
-write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""))
-write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""))
+write.csv(df.pm, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""))
+write.csv(df.wm, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""))
+
+
 
 ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
   geom_boxplot(outlier.shape=NA)+
-  geom_point(data=df.pm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+  geom_point(data=df.pm,aes(x=feature, y = weightedmean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
   # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
   facet_grid(.~feature, scales="free") +
   scale_y_continuous(trans = 'log10') +
@@ -970,9 +967,9 @@ ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
         panel.border = element_blank(),
         panel.background = element_blank(),
         strip.background = element_blank(),
-        strip.text.x = element_blank())+
+        strip.text.x = element_blank())+ 
+        stat_summary(fun.y=mean, colour="darkred", geom="point", shape=18, size=3,show_guide = FALSE) + 
   geom_text(data = df.pm.gathered, aes(feature, percentage_po_ki, label=paste((percentage_po_ki %>% round(2)),(percentage_no_ki%>% round(2)), sep='\n')), angle = 45, size=2, vjust="inward",hjust="inward")
-
 ggsave (file = paste(wd,"/",name_diversity[1],".diversity_feature_pairwise.eps", sep = ""), device = "eps")
 # dev.off()
 
@@ -980,7 +977,7 @@ ggsave (file = paste(wd,"/",name_diversity[1],".diversity_feature_pairwise.eps",
 
 ggplot(data = dataframe, aes(x=feature, y = watterson_ave, fill =pop)) + 
   geom_boxplot(outlier.shape=NA, position=position_dodge(width=1.5))+
-  geom_point(data=df.wm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=1.5), size = 3, inherit.aes=FALSE) +
+  geom_point(data=df.wm,aes(x=feature, y = weightedmean, fill=pop),shape = 23, position=position_dodge(width=1.5), size = 3, inherit.aes=FALSE) +
   facet_grid(.~feature, scales="free") +
   scale_y_continuous(trans = 'log10') +
   scale_x_discrete("Genomic feature") +
@@ -1000,10 +997,11 @@ ggplot(data = dataframe, aes(x=feature, y = watterson_ave, fill =pop)) +
         panel.border = element_blank(),
         panel.background = element_blank(),
         strip.background = element_blank(),
-        strip.text.x = element_blank()) +
+        strip.text.x = element_blank()) + 
+        stat_summary(fun.y=mean, colour="darkred", geom="point", shape=18, size=3,show_guide = FALSE) + 
         geom_text(data = df.wm.gathered, aes(feature, percentage_po_ki, label=paste((percentage_po_ki %>% round(2)),(percentage_no_ki%>% round(2)), sep='\n')), angle = 45, size=2, vjust="inward",hjust="inward")
 
-ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_feature_watterson.eps", sep =""), device="eps")
+ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_feature_watterson.eps", sep =""),device="eps")
 
 
 # Cosas útiles 
@@ -1037,12 +1035,13 @@ library(viridis)
 
 
 # wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
-wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
-# wd <- "/Users/marialucenaperez/Desktop/"
+# wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
+wd <- "/Users/marialucenaperez/Desktop/"
 
 
-finsdiversity = list.files(path = wd,pattern="*per.unit.averages.per_specie.tsv$") %>% grep("informative_sites", ., invert = T, value=T)
-# infile <- "contatenat_do_sm"
+# finsdiversity = list.files(path = wd,pattern="*per.unit.averages.per_specie.tsv$") %>% grep("informative_sites", ., invert = T, value=T)
+
+infile <- "c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv"
 
 INFORMATIVE_SITES=1
 PERCENTAGE_COVERED=0
@@ -1050,9 +1049,9 @@ PERCENTAGE_COVERED=0
 
 
 
-for (i in 1:length(finsdiversity))
-{
- infile <- finsdiversity[i]
+# for (i in 1:length(finsdiversity))
+# {
+#  infile <- finsdiversity[i]
   
   dataframe <- read.csv (paste (wd,infile, sep="/"), header = T, sep = '\t', stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".") 
   dataframe$watterson_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$watterson_ave))
@@ -1072,8 +1071,8 @@ distinct_vector_pop = distinct_pop$pop
 
 combinations <- t(combn(distinct_vector_pop, 2)) # %>% mutate (combination=paste(V1,V2,sep="/")) %>% select(combination)
 
-for(a in 1:nrow(combinations)) {
-    row <- NULL
+# for(a in 1:nrow(combinations)) {
+#    row <- NULL
     row <- combinations[a,]
     # do stuff with row
     POP1 <- NULL
@@ -1342,20 +1341,18 @@ dataframe <- dataframe %>%
 name_diversity[1] <- paste(name_diversity[1],".percentagecovered05_mininformativesites10", sep="")
 ########################################################
 
-ddply(dataframe, "feature", summarise, rating.mean=mean(pairwise_ave))
-df.pm <- ddply(dataframe, "feature", summarise, rating.mean=weighted.mean(pairwise_ave, informative_sites))
-write.csv(df.pm, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""))
+ddply(dataframe, "feature", summarise, weightedmean=mean(pairwise_ave))
+df.pm <- ddply(dataframe, "feature", summarise, weightedmean=weighted.mean(pairwise_ave, informative_sites))
 
 
-ddply(dataframe, "feature", summarise, rating.mean=mean(watterson_ave))
-df.wm <- ddply(dataframe, "feature", summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
-write.csv(df.wm, paste(wd,"/", name_diversity[1], ".watterson_mean.csv", sep = ""))
+ddply(dataframe, "feature", summarise, weightedmean=mean(watterson_ave))
+df.wm <- ddply(dataframe, "feature", summarise, weightedmean=weighted.mean(watterson_ave, informative_sites))
 
 
 # pdf(file = paste(wd,"/Diversity_by_region_pairwise",name_diversity[1],".pdf", sep = ""))
 ggplot(data = dataframe, aes(x=feature, y = pairwise_ave)) + 
   geom_boxplot()+
-  geom_point(data=df.pm,aes(x=feature, y = rating.mean),shape = 23, 
+  geom_point(data=df.pm,aes(x=feature, y = weightedmean),shape = 23, 
              size = 3, inherit.aes=FALSE) +
   # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
   facet_grid(.~feature, scales="free") +
@@ -1387,7 +1384,7 @@ ggsave (file = paste(wd,"/",name_diversity[1],".diversity_region_pairwise.pdf", 
 
 ggplot(data = dataframe, aes(x=feature, y = watterson_ave)) + 
   geom_boxplot()+
-  geom_point(data=df.wm,aes(x=feature, y = rating.mean),shape = 23, 
+  geom_point(data=df.wm,aes(x=feature, y = weightedmean),shape = 23, 
              size = 3, inherit.aes=FALSE) +
   # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
   facet_grid(.~feature, scales="free") +
@@ -1512,11 +1509,8 @@ for (i in 1:length(finsdiversity))
 }
 
 
-```
-
 ##### Lynx pardinus
 
-```{r}
 
 dataframe <- `data_diversity_c_lp_do_n012-c_lp_sm_n019`
 name_diversity[1] <- "c_lp_do_n012-c_lp_sm_n019"
@@ -1524,31 +1518,32 @@ name_diversity[1] <- "c_lp_do_n012-c_lp_sm_n019"
 
 # Calculo weighted mean y lo guardo en un df.
 
-df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(pairwise_ave, informative_sites))
+df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, weightedmean=weighted.mean(pairwise_ave, informative_sites), mean=mean(pairwise_ave))
+df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, weightedmean=weighted.mean(watterson_ave, informative_sites), mean=mean(watterson_ave))
 
-df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
 
 
 # LYNX PARDINUS
 # Hago spread para calcular el porcentage que representa do respecto a sm
-df.pm_lost <-tidyr::spread(df.pm, pop, rating.mean) %>%
+df.pm_lost <- df.pm %>%  select (., -mean) %>% tidyr::spread(., pop, weightedmean) %>%
  mutate(., percentage_do_sm=(c_lp_do_n012 *100)/c_lp_sm_n019)
 # Hago gathered para poder plotearlo.
-df.pm.gathered <- tidyr::gather(df.pm_lost, "pop", "rating.mean", -specie, -feature, -percentage_do_sm)
+df.pm.gathered <- tidyr::gather(df.pm_lost, "pop", "weightedmean", -specie, -feature, -percentage_do_sm)
+
 # Hago spread para calcular el porcentage de perdida
-df.wm_lost <-tidyr::spread(df.wm, pop, rating.mean) %>% mutate(., percentage_do_sm=(c_lp_do_n012 *100)/c_lp_sm_n019)
+df.wm_lost <- df.pm %>%  select (., -mean) %>% tidyr::spread(., pop, weightedmean) %>% mutate(., percentage_do_sm=(c_lp_do_n012 *100)/c_lp_sm_n019)
 # Hago gathered para poder plotearlo.
-df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "rating.mean", -specie, -feature, -percentage_do_sm)
+df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "weightedmean", -specie, -feature, -percentage_do_sm)
 
 
 # Guardo el porcentage de perdida. 
-write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""))
-write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""))
+write.csv(df.pm, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""), row.names = F)
+write.csv(df.wm, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""), row.names = F)
 
 
 ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
   geom_boxplot(outlier.shape=NA)+
-  geom_point(data=df.pm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+  geom_point(data=df.pm,aes(x=feature, y = weightedmean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
   facet_grid(.~feature, scales="free") +
   scale_y_continuous(trans = 'log10') +
   scale_x_discrete("Genomic region") +
@@ -1568,7 +1563,8 @@ ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
         panel.border = element_blank(),
         panel.background = element_blank(),
         strip.background = element_blank(),
-        strip.text.x = element_blank())+
+        strip.text.x = element_blank())+ 
+        stat_summary(fun.y=mean, colour="darkred", geom="point", shape=18, size=3,show_guide = FALSE) + 
   geom_text(data = df.pm.gathered, aes(feature, percentage_do_sm, label=(percentage_do_sm %>% round(2))),angle = 45, size=2)
 ggsave (file = paste(wd,"/",name_diversity[1],".diversity_region_pairwise.eps", sep = ""), device = "eps")
 # dev.off()
@@ -1576,7 +1572,7 @@ ggsave (file = paste(wd,"/",name_diversity[1],".diversity_region_pairwise.eps", 
 
 ggplot(data = dataframe, aes(x=feature, y = watterson_ave, fill =pop)) + 
   geom_boxplot(outlier.shape=NA)+
-  geom_point(data=df.wm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+  geom_point(data=df.wm,aes(x=feature, y = weightedmean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
   # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
   facet_grid(.~feature, scales="free") +
   scale_y_continuous(trans = 'log10') +
@@ -1597,51 +1593,31 @@ ggplot(data = dataframe, aes(x=feature, y = watterson_ave, fill =pop)) +
         panel.border = element_blank(),
         panel.background = element_blank(),
         strip.background = element_blank(),
-        strip.text.x = element_blank()) +
+        strip.text.x = element_blank()) + 
+        stat_summary(fun.y=mean, colour="darkred", geom="point", shape=18, size=3,show_guide = FALSE) + 
   geom_text(data = df.wm.gathered, aes(feature, percentage_do_sm, label=(percentage_do_sm %>% round(2))),angle = 45, size=2)
 ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_region_watterson.eps", sep = ""), device="eps")
 
-
-
-
-
-
-# Cosas útiles 
-
-# geom_box(outliers.shape=NA)
-
-# Si quiero plotear todos los indices a la vez:
-#index = c("watterson_ave", "pairwise_ave")
-#for (i in 1:length(index))
-#{
-#  ggplot(data = dataframe, aes_string(x='feature', y = index[1], fill='pop'))+
-  
-```
-
-##### Lynx lynx
-
-
-```{r}
-
+#### Lynx lynx
 
 dataframe <- `data_diversity_c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008`
 name_diversity[1] <- "c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008"
 
 # Calculo weighted mean y lo guardo en un df.
 
-df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(pairwise_ave, informative_sites))
+df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, weightedmean=weighted.mean(pairwise_ave, informative_sites), mean=mean(pairwise_ave))
+df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, weightedmean=weighted.mean(watterson_ave, informative_sites), mean=mean(watterson_ave))
 
-df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
 
-df.pm_lost <-tidyr::spread(df.pm, pop, rating.mean) %>% 
+df.pm_lost <- df.pm %>%  select (., -mean) %>% tidyr::spread(., pop, weightedmean) %>% 
   mutate(., percentage_po_ki=(c_ll_po_n008 *100)/c_ll_ki_n013) %>% 
   mutate(., percentage_no_ki=(c_ll_no_n008*100)/c_ll_ki_n013)
-df.pm.gathered <- tidyr::gather(df.pm_lost, "pop", "rating.mean", -specie, -feature,  -percentage_po_ki, -percentage_no_ki)
+df.pm.gathered <- tidyr::gather(df.pm_lost, "pop", "weightedmean", -specie, -feature,  -percentage_po_ki, -percentage_no_ki)
 
-df.wm_lost <-tidyr::spread(df.wm, pop, rating.mean) %>% 
+df.wm_lost <- df.wm %>%  select (., -mean) %>% tidyr::spread(., pop, weightedmean) %>% 
   mutate(., percentage_po_ki=(c_ll_po_n008 *100)/c_ll_ki_n013) %>% 
   mutate(., percentage_no_ki=(c_ll_no_n008*100)/c_ll_ki_n013)
-df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "rating.mean", -specie, -feature,  -percentage_po_ki, -percentage_no_ki) 
+df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "weightedmean", -specie, -feature,  -percentage_po_ki, -percentage_no_ki) 
 
 
 
@@ -1651,7 +1627,7 @@ write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep
 
 ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
   geom_boxplot(outlier.shape=NA)+
-  geom_point(data=df.pm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+  geom_point(data=df.pm,aes(x=feature, y = weightedmean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
   # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
   facet_grid(.~feature, scales="free") +
   scale_y_continuous(trans = 'log10') +
@@ -1682,7 +1658,7 @@ ggsave (file = paste(wd,"/",name_diversity[1],".diversity_region_pairwise.eps", 
 
 ggplot(data = dataframe, aes(x=feature, y = watterson_ave, fill =pop)) + 
   geom_boxplot(outlier.shape=NA, position=position_dodge(width=1.5))+
-  geom_point(data=df.wm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=1.5), size = 3, inherit.aes=FALSE) +
+  geom_point(data=df.wm,aes(x=feature, y = weightedmean, fill=pop),shape = 23, position=position_dodge(width=1.5), size = 3, inherit.aes=FALSE) +
   facet_grid(.~feature, scales="free") +
   scale_y_continuous(trans = 'log10') +
   scale_x_discrete("Genomic region") +
@@ -1724,6 +1700,8 @@ ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_region_watterson.ep
 ```{bash}
 
 scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*eps /Users/marialucenaperez/ownCloud/publico/WG_diversity/diversity_plots/diversity_per_unit 
+
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*csv /Users/marialucenaperez/ownCloud/publico/WG_diversity/diversity_plots/diversity_per_unit 
 
 
 scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/*eps /Users/marialucenaperez/ownCloud/publico/WG_diversity/diversity_plots/diversity_per_region/
