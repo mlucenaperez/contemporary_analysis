@@ -504,9 +504,17 @@ done
 
 rm "$POP".iter.transformedThetas.borrar
 
+
+```
+
+#### Correcciones diversity per feature!!
+
+```{bash}
+
 # Calculo el número de sitios informativos, para todos los archivos:
 
 FILES_DIVERSITY=("c_ll_ki_n013.per.unit.averages.tsv" "c_ll_po_n008.per.unit.averages.tsv" "c_lp_sm_n019.per.unit.averages.tsv" "c_ll_no_n008.per.unit.averages.tsv" "c_lp_do_n012.per.unit.averages.tsv")
+
 
 # Añado una columna con el número de sitios informativos. 
 for i in "${FILES_DIVERSITY[@]}"
@@ -534,27 +542,6 @@ cat <(awk -v OFS='\t' '(NR==1) {$17="pop"; print}' $i) <(awk -v OFS='\t' 'NR >= 
 mv ${i/.tsv/_corrected.tsv} $i
 done
 
-
-# Create a unique file with all the information
-
-awk '
-    FNR==1 && NR!=1 { while (/^<header>/) getline; }
-    1 {print}' c_lp*.per.unit.averages.tsv > c_lp_do_n012-c_lp_sm_n019.per.unit.averages.tsv
-
-awk '
-    FNR==1 && NR!=1 { while (/^<header>/) getline; }
-    1 {print}' c_ll*.per.unit.averages.tsv > c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.tsv
-
-
-
-mv c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.tsv c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv 
-
-
-mv c_lp_do_n012-c_lp_sm_n019.per.unit.averages.tsv c_lp_do_n012-c_lp_sm_n019.per.unit.averages.per_specie.tsv
-
-
-FILES_DIVERSITY=("c_ll_ki_n013.per.unit.averages.tsv" "c_ll_po_n008.per.unit.averages.tsv" "c_lp_sm_n019.per.unit.averages.tsv" "c_ll_no_n008.per.unit.averages.tsv" "c_lp_do_n012.per.unit.averages.tsv" "c_lp_do_n012-c_lp_sm_n019.per.unit.averages.per_specie.tsv" "c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv")
-
 # Añado una columna con la specie
 for i in "${FILES_DIVERSITY[@]}"
 do
@@ -567,11 +554,58 @@ mv ${i/.tsv/_corrected.tsv} $i
 done
 
 
+# 8/9/2017: Haciendo un plot me he dado cuenta que hay algunas filas duplicadas en el archivo original .gff3, corresponden a UTR. 
+# En la carpeta /home/mlucena/grupolince/notation, están especificadas cuales son. He corregido el gff3, pero como no voy a volver a correr mis archivos para sacar los números, voy a corregir todos los originales para tenerlo todo bien desde el principio. 
+
+# Check:
+
+# sort c_ll_ki_n013.per.unit.averages.tsv | uniq -c | sort -nr | head
+
+# 2 lp23.s36682     338697  338929  232     -1      3UTR    +       .       LYPA23C000008   LYPA23C000008   1.4564973179*10^-06     4.5837356691*10^-06     4.4811971320*10^-07     1.3890498033*10^-06     -3.1562808160*1
+# 2 lp23.s36682     328523  328962  439     75      5UTR    -       .       LYPA23C000003   LYPA23C000003   5.0803158132*10^-06     1.2267826914*10^-05     1.8178262696*10^-06     4.0698820431*10^-06     -3.9712504595*1
+# 2 lp23.s36682     279677  279811  134     -1      3UTR    +       .       LYPA23C000015   LYPA23C000015   1.0437203878*10^-06     4.1265547119*10^-06     3.1206706874*10^-07     1.2333416354*10^-06     -2.5288512495*1
+# 2 lp23.s36682     100823  101610  787     82      3UTR    +       .       LYPA23C000004   LYPA23C000004   3.7669060166*10^-04     9.8624719772*10^-03     3.9965744098*10^-04     1.0556168131*10^-02     3.3103961265*10
+# 2 lp23.s26402     92633   95884   3251    166     3UTR    +       .       LYPA23C000017   LYPA23C000017   9.8348133084*10^-06     3.1577310510*10^-04     4.3617798050*10^-06     1.5841654621*10^-04     -3.4633370151*1
+# 2 lp23.s10719     96754   96794   40      -1      5UTR    -       .       LYPA23C000041   LYPA23C000041   3.0378406270*10^-06     1.0043475395*10^-06     1.0387353248*10^-06     3.9400597979*10^-07     -3.2716817179*1
+# 2 lp23.s10719     156260  156378  118     96      5UTR    -       .       LYPA23C000045   LYPA23C000045   1.3834272997*10^-05     2.2261745529*10^-06     6.3570507930*10^-06     1.2906641862*10^-06     -7.9734277877*1
+# 1 scaffold        start   end     length  NAs     feature strandness      frame   id_gene id      watterson_ave   watterson_sd    pairwise_ave    pairwise_sd     tajimaD informative_sites       pop     specie
+# 1 lp23.s41700     1       200     199     199     intergenic      -       .       intergenic_region_65795 intergenic_region_65795         0       c_ll_ki_n013    c_ll
+# 1 lp23.s41699     1       200     199     199     intergenic      -       .       intergenic_region_65794 intergenic_region_65794         0       c_ll_ki_n013    c_ll
+
+
+# 491637 c_ll_ki_n013.per.unit.averages.tsv
+
+# Efectivamente aquí también está duplicados, así que corro el loop para corregirlo:
+
+for i in  *.per.unit.averages.tsv
+do
+echo $i
+POP=$(echo ${i} | cut -d "." -f 1 )
+SPECIE=$(echo $POP | cut -d"_" -f 1-2)
+awk '!seen[$0]++' $i > ${i/.tsv/.corrected.tsv} # remove duplicated rows.
+mv ${i/.tsv/.corrected.tsv} $i
+done
+
+
+
+# Create a unique file with all the information
+
+awk 'FNR==1 && NR!=1{next;}{print}' c_lp*averages.tsv > c_lp_do_n012-c_lp_sm_n019.per.unit.averages.per_specie.tsv
+awk 'FNR==1 && NR!=1{next;}{print}' c_ll*averages.tsv > c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv
+
+
+# Compruebo que ha funcionado:
+
+# sort c_ll_ki_n013.per.unit.averages.tsv | uniq -c | sort -nr | head
+# 1 scaffold	start	end	length	NAs	feature	strandness	frame	id_gene	id	watterson_ave	watterson_sd	pairwise_ave	pairwise_sd	tajimaD	informative_sites	pop	specie
+# 1 lp23.s41700	1	200	
+      
+# Perfecto!!
+      
 ```
 
 
-
-#### Representation per pop
+#### Representation per pop --> I rm this files, but I keep the script in case is useful. 
 
 Este script nos devuelve una gráfica por cada población. Hay un segundo script que devuelve una gráfica para lynx lynx y otra para lynx pardinus. 
 
@@ -584,10 +618,12 @@ library ("scales")
 library ("magrittr")
 
 # wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
-# wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
-wd <- "/Users/marialucenaperez/Desktop/Diversity_per_unit"
+wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/Users/marialucenaperez/Desktop/Diversity_per_unit"
 
 finsdiversity = list.files(path = wd,pattern="*per.unit.averages.tsv$")
+INFORMATIVE_SITES=1
+PERCENTAGE_COVERED=0.5
 
 for (i in 1:length(finsdiversity))
 {
@@ -609,8 +645,8 @@ dataframe$tajimaD <- as.numeric(gsub("\\*10\\^","e",dataframe$tajimaD))
 ########################################################
 # Filtering
 dataframe <- dataframe %>% 
-  mutate(percentage_covered=ifelse(NAs>0, (as.numeric(length)-as.numeric(NAs))/as.numeric(length), 1)) %>% dplyr::filter(percentage_covered>0.5) %>% dplyr::filter(informative_sites>10)
-name_diversity[1] <- paste(name_diversity[1],".percentagecovered05_mininformativesites10", sep="")
+  mutate(percentage_covered=ifelse(NAs>0, (as.numeric(length)-as.numeric(NAs))/as.numeric(length), 1)) %>% dplyr::filter(percentage_covered>PERCENTAGE_COVERED) %>% dplyr::filter(informative_sites>INFORMATIVE_SITES)
+name_diversity[1] <- paste(name_diversity[1],".percentagecovered",PERCENTAGE_COVERED,"_mininformativesites",INFORMATIVE_SITES, sep="")
 ########################################################
 
 ddply(dataframe, "feature", summarise, rating.mean=mean(pairwise_ave))
@@ -620,7 +656,7 @@ write.csv(df.pm, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = "")
 
 ddply(dataframe, "feature", summarise, rating.mean=mean(watterson_ave))
 df.wm <- ddply(dataframe, "feature", summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
-write.csv(df.wm, paste(wd,"/", name_diversity[1], ".watterson_mean.csv", sep = ""))
+write.csv(df.wm, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""))
 
 
 # pdf(file = paste(wd,"/Diversity_by_feature_pairwise",name_diversity[1],".pdf", sep = ""))
@@ -682,7 +718,7 @@ ggplot(data = dataframe, aes(x=feature, y = watterson_ave)) +
         strip.background = element_blank(),
         strip.text.x = element_blank())
 
-ggsave(filename = paste(wd,"/", name_diversity[1], ".diversity_feature_watterson.pdf", sep = ""), device = "pdf")
+ggsave(filename = paste(wd,"/", name_diversity[1],".diversity_feature_watterson.pdf", sep = ""), device = "pdf")
 
 
 ggplot(data = dataframe, aes(x=feature, y = tajimaD)) + 
@@ -708,7 +744,7 @@ ggplot(data = dataframe, aes(x=feature, y = tajimaD)) +
         panel.background = element_blank(),
         strip.background = element_blank(),
         strip.text.x = element_blank())
-ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_feature_tajimaD.pdf", sep = ""), device = "pdf")
+ggsave(filename = paste(wd,"/",name_diversity[1],".percentagecovered",PERCENTAGE_COVERED,"_mininformativesites",INFORMATIVE_SITES,".diversity_feature_tajimaD.pdf", sep = ""), device = "pdf")
 
 
 # Exploratory plots
@@ -763,6 +799,8 @@ wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit
 # wd <- "/Users/marialucenaperez/Desktop/Diversity_per_unit"
 
 finsdiversity = list.files(path = wd,pattern="*per_specie.tsv$")
+INFORMATIVE_SITES=1
+PERCENTAGE_COVERED=0
 
 
 for (i in 1:length(finsdiversity))
@@ -780,23 +818,29 @@ for (i in 1:length(finsdiversity))
   #### Para que almacene varias dataframe con el nombre correcto
   dataframename <- paste("data_diversity", name_diversity[1], sep ='_')
   assign(dataframename, dataframe)
+  
+  ########################################################
+# Filtering
+  
+  dataframe <- dataframe %>% 
+  mutate(percentage_covered=ifelse(NAs>0, (as.numeric(length)-as.numeric(NAs))/as.numeric(length), 1)) %>% dplyr::filter(percentage_covered>PERCENTAGE_COVERED) %>% dplyr::filter(informative_sites>INFORMATIVE_SITES)
+  
+  
+########################################################
 }
 
 
-```
 
-##### Lynx pardinus
-
-```{r}
+### LYNX PARDINUS #### 
 
 dataframe <- `data_diversity_c_lp_do_n012-c_lp_sm_n019`
 name_diversity[1] <- "c_lp_do_n012-c_lp_sm_n019"
+name_diversity[1] <- paste(name_diversity[1],".percentagecovered",PERCENTAGE_COVERED,"_mininformativesites",INFORMATIVE_SITES, sep="")
 
 
 # Calculo weighted mean y lo guardo en un df.
 
 df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(pairwise_ave, informative_sites))
-
 df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, rating.mean=weighted.mean(watterson_ave, informative_sites))
 
 
@@ -818,7 +862,7 @@ write.csv(df.wm_lost, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep
 
 
 ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
-  geom_boxplot(outlier.shape=NA)+
+  geom_boxplot(outlier.shape=NA) +
   geom_point(data=df.pm,aes(x=feature, y = rating.mean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
   facet_grid(.~feature, scales="free") +
   scale_y_continuous(trans = 'log10') +
@@ -826,7 +870,7 @@ ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
   xlab(label = "Genomic feature") + #x title
   ylab(label = "Pairwise average") + # y title
   theme_bw() +  #theme selection for background and lines
- # scale_x_continuous(expand = c(0, 1)) +# + scale_y_continuous(expand = c(0, 0)) +
+  # scale_x_continuous(expand = c(0, 1)) +# + scale_y_continuous(expand = c(0, 0)) +
   ggtitle(paste ("Diversity feature",name_diversity[1], sep = " " )) +
   theme(axis.line.x = element_line(color="black", size = 0.5),
         axis.line.y = element_line(color="black", size = 0.5),
@@ -841,6 +885,7 @@ ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
         strip.background = element_blank(),
         strip.text.x = element_blank())+
   geom_text(data = df.pm.gathered, aes(feature, percentage_do_sm, label=(percentage_do_sm %>% round(2))),angle = 45, size=2)
+
 ggsave (file = paste(wd,"/",name_diversity[1],".diversity_feature_pairwise.eps", sep = ""), device = "eps")
 # dev.off()
 
@@ -874,29 +919,11 @@ ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_feature_watterson.e
 
 
 
-
-
-
-# Cosas útiles 
-
-# geom_box(outliers.shape=NA)
-
-# Si quiero plotear todos los indices a la vez:
-#index = c("watterson_ave", "pairwise_ave")
-#for (i in 1:length(index))
-#{
-#  ggplot(data = dataframe, aes_string(x='feature', y = index[1], fill='pop'))+
-  
-```
-
-##### Lynx lynx
-
-
-```{r}
-
+### LYNX LYNX ####
 
 dataframe <- `data_diversity_c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008`
 name_diversity[1] <- "c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008"
+name_diversity[1] <- paste(name_diversity[1],".percentagecovered",PERCENTAGE_COVERED,"_mininformativesites",INFORMATIVE_SITES, sep="")
 
 # Calculo weighted mean y lo guardo en un df.
 
@@ -976,16 +1003,139 @@ ggplot(data = dataframe, aes(x=feature, y = watterson_ave, fill =pop)) +
         strip.text.x = element_blank()) +
         geom_text(data = df.wm.gathered, aes(feature, percentage_po_ki, label=paste((percentage_po_ki %>% round(2)),(percentage_no_ki%>% round(2)), sep='\n')), angle = 45, size=2, vjust="inward",hjust="inward")
 
-
-
 ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_feature_watterson.eps", sep =""), device="eps")
 
 
-# Cosas útiles outliers.shape=NA.
+# Cosas útiles 
+
+# geom_box(outliers.shape=NA)
+
+# Si quiero plotear todos los indices a la vez:
+#index = c("watterson_ave", "pairwise_ave")
+#for (i in 1:length(index))
+#{
+#  ggplot(data = dataframe, aes_string(x='feature', y = index[1], fill='pop'))+
 
 
 
 ```
+
+
+#### Pairwise Pi diversity
+
+```{r}
+
+
+library ("ggplot2")
+library ("plyr")
+library ("dplyr")
+library ("RColorBrewer")
+library ("scales")
+library ("magrittr")
+library("tidyr")
+library(viridis)
+
+
+# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/Users/marialucenaperez/Desktop/"
+
+
+finsdiversity = list.files(path = wd,pattern="*per.unit.averages.per_specie.tsv$") %>% grep("informative_sites", ., invert = T, value=T)
+# infile <- "contatenat_do_sm"
+
+INFORMATIVE_SITES=1
+PERCENTAGE_COVERED=0
+
+
+
+
+for (i in 1:length(finsdiversity))
+{
+ infile <- finsdiversity[i]
+  
+  dataframe <- read.csv (paste (wd,infile, sep="/"), header = T, sep = '\t', stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".") 
+  dataframe$watterson_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$watterson_ave))
+  dataframe$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$pairwise_ave))
+  dataframe$tajimaD <- as.numeric(gsub("\\*10\\^","e",dataframe$tajimaD))
+# Filtering
+  dataframe <- dataframe %>% 
+  mutate(percentage_covered=ifelse(NAs>0, (as.numeric(length)-as.numeric(NAs))/as.numeric(length), 1)) %>% dplyr::filter(percentage_covered>PERCENTAGE_COVERED) %>% dplyr::filter(informative_sites>INFORMATIVE_SITES)
+  
+
+  
+# scaffold_start_end_feature_id, length NAs feature strandness frame id_gene watterson_ave watterson_sd pairwise_ave pairwise_sdtajimaD informative_sites pop specie length NAs
+distinct_pop <- dataframe %>% distinct(pop)
+distinct_vector_pop = distinct_pop$pop
+
+# distinct_vector_pop=c("don","smo","po","cat","bia")
+
+combinations <- t(combn(distinct_vector_pop, 2)) # %>% mutate (combination=paste(V1,V2,sep="/")) %>% select(combination)
+
+for(a in 1:nrow(combinations)) {
+    row <- NULL
+    row <- combinations[a,]
+    # do stuff with row
+    POP1 <- NULL
+    POP2 <- NULL
+    POP1 <- row[1]
+    POP2 <- row[2]
+    NAME <- paste(POP1,"_",POP2,".percentagecovered",PERCENTAGE_COVERED,"_mininformativesites",INFORMATIVE_SITES, sep="")
+
+    
+    df_POP1 <- filter (dataframe, pop == POP1) %>% mutate(., feature2=feature) %>% unite (., scaffold, start, end, feature2, id, col="scaffold_start_end_feature_id")
+    
+    df_POP2 <- filter (dataframe, pop == POP2) %>% mutate(., feature2=feature) %>% unite (., scaffold, start, end, feature2, id, col="scaffold_start_end_feature_id") 
+    
+
+    vector_positions_POP1 <- unique(df_POP1$scaffold_start_end_feature_id) %>% sort(.)
+    vector_positions_POP2 <- unique(df_POP2$scaffold_start_end_feature_id) %>% sort(.)
+    
+    vector_common_positions <- as.vector(intersect(vector_positions_POP1, vector_positions_POP2))
+    
+    df_POP1_filtered <- df_POP1 %>% filter(scaffold_start_end_feature_id  %in% vector_common_positions) %>% arrange(., scaffold_start_end_feature_id) %>% select (., scaffold_start_end_feature_id, feature, id_gene, pairwise_ave, informative_sites, length, NAs, pop )
+    
+    df_POP2_filtered <- df_POP2 %>% filter(scaffold_start_end_feature_id  %in% vector_common_positions) %>% arrange(., scaffold_start_end_feature_id) %>% select (., scaffold_start_end_feature_id, feature, id_gene, pairwise_ave, informative_sites, length, NAs, pop )
+
+if (identical(df_POP1_filtered$scaffold_start_end_feature_id, df_POP2_filtered$scaffold_start_end_feature_id))
+{ df_pairwise <- cbind (
+  setNames(data.frame(df_POP1_filtered), c("scaffold_start_end_feature_id", "feature", "id_gene", "pairwise_ave1","informative_sites1", "length1", "NAs1", "pop1")),
+  setNames(data.frame(df_POP2_filtered), c("scaffold_start_end_feature_id2", "feature2", "id_gene2", "pairwise_ave2","informative_sites2", "length2", "NAs2", "pop2"))) %>% select_ (., "scaffold_start_end_feature_id", "feature", "id_gene", "pairwise_ave1","informative_sites1", "length1", "NAs1", "pop1","pairwise_ave2","informative_sites2", "length2", "NAs2", "pop2")
+           } else {print("First column not matching") }
+
+    
+ggplot(df_pairwise, aes(informative_sites1, informative_sites2)) +
+  geom_point() +
+  labs(x=paste("Informative sites", POP1, sep =" "),y=paste("Informative sites", POP2, sep =" ")) +
+  theme_classic()
+
+ggsave(filename = paste(wd,"/",NAME,"_informativesites.eps", sep = ""), device="eps")
+
+
+ggplot(df_pairwise, aes(pairwise_ave1, pairwise_ave2,  color = informative_sites1)) +
+  geom_point() +
+  facet_wrap(~feature) +
+  # scale_color_gradient(low="red", high="blue") +
+  #scale_color_gradientn(colours = rainbow(5)) +
+  # scale_colour_gradient(limits = c(0, quantile(df_pairwise$informative_sites1, 0.5))) +
+  # scale_colour_gradientn(colours = myPalette(100), values=nrm.vals) +
+  labs(colour = paste("Informative sites", POP1, sep =" ")) +
+  labs(x=paste("Pi diversity", POP1, sep =" "),y=paste("Pi diversity", POP2, sep =" ")) +
+  scale_color_viridis(option="magma",limits = c(0, quantile(df_pairwise$informative_sites1, 0.5))) +
+  theme_classic()
+
+ggsave(filename = paste(wd,"/",NAME,"_informative_sites1_Pi_pairwise.eps", sep = ""), device="eps")
+
+}
+
+}
+
+# https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html
+
+```
+
+
+
 
 
 ### Diversity per region.
@@ -1565,108 +1715,23 @@ ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_region_watterson.ep
 
 ```
 
-#### Pairwise diversity
-
-```{r}
-
-
-library ("ggplot2")
-library ("plyr")
-library ("dplyr")
-library ("RColorBrewer")
-library ("scales")
-library ("magrittr")
-library("tidyr")
-install.packages("viridis")
-library(viridis)
-
-
-# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
-# wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region"
-wd <- "/Users/marialucenaperez/Desktop/"
-
-
-# finsdiversity = list.files(path = wd,pattern="*per_specie.tsv$")
-infile <- "contatenat_do_sm"
-
-INFORMATIVE_SITES=200
-
-
-# for (i in 1:length(finsdiversity))
-#{
-#  infile <- finsdiversity[i]
-  
-  dataframe <- read.csv (paste (wd,infile, sep="/"), header = T, sep = '\t', stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".")
-  dataframe = dataframe[-1,]
-  dataframe$watterson_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$watterson_ave))
-  dataframe$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$pairwise_ave))
-  dataframe$tajimaD <- as.numeric(gsub("\\*10\\^","e",dataframe$tajimaD))
-  dataframe$pop <- as.factor(dataframe$pop)
-  dataframe$pop <- factor(dataframe$pop, levels=c("c_ll_ki_n013", "c_ll_po_n008", "c_ll_no_n008", "c_lp_sm_n019", "c_lp_do_n012"))
 
 
 
-# scaffold_start_end_id, length NAs feature strandness frame id_gene watterson_ave watterson_sd pairwise_ave pairwise_sdtajimaD informative_sites pop specie length NAs
-distinct_pop <- dataframe %>% distinct(pop)
-distinct_vector_pop = distinct_pop$pop
 
-# distinct_vector_pop=c("don","smo","po","cat","bia")
+### Copy
 
-combinations <- t(combn(distinct_vector_pop, 2)) # %>% mutate (combination=paste(V1,V2,sep="/")) %>% select(combination)
+```{bash}
 
-for(i in 1:nrow(combinations)) {
-    row <- NULL
-    row <- combinations[i,]
-    # do stuff with row
-    POP1 <- NULL
-    POP2 <- NULL
-    POP1 <- row[1]
-    POP2 <- row[2]
-    
-    df_POP1 <- filter (dataframe, pop == POP1) %>%  unite (., scaffold, start, end, id, col="scaffold_start_end_id") %>% filter (., informative_sites > INFORMATIVE_SITES)
-    
-    df_POP2 <- filter (dataframe, pop == POP2) %>%  unite (., scaffold, start, end, id, col="scaffold_start_end_id") %>% filter (., informative_sites > INFORMATIVE_SITES)
-    
-    # Todos deben ser únicos, pero así me aseguro que efectivamente es así. Porque me ha pasado que gracias a esto me he dado cuenta que hay posiciones iguales que son intron 1 para un gen A e intron 3 par un gen B. 
-    vector_positions_POP1 <- unique(df_POP1$scaffold_start_end) %>% sort(.)
-    vector_positions_POP2 <- unique(df_POP2$scaffold_start_end) %>% sort(.)
-    
-    vector_common_positions <- intersect(vector_positions_POP1, vector_positions_POP2)
-    
-    df_POP1_filtered <- df_POP1 %>% filter(scaffold_start_end_id  %in% vector_common_positions) %>% arrange(., scaffold_start_end_id) %>% select (., scaffold_start_end_id, feature, id_gene, pairwise_ave, informative_sites, length, NAs, pop )
-    
-    df_POP2_filtered <- df_POP2 %>% filter(scaffold_start_end_id  %in% vector_common_positions) %>% arrange(., scaffold_start_end_id) %>% select (., scaffold_start_end_id, feature, id_gene, pairwise_ave, informative_sites, length, NAs, pop )
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*eps /Users/marialucenaperez/ownCloud/publico/WG_diversity/diversity_plots/diversity_per_unit 
 
-if (identical(df_POP1_filtered$scaffold_start_end_id, df_POP2_filtered$scaffold_start_end_id))
-{ df_pairwise <- cbind (
-  setNames(data.frame(df_POP1_filtered), c("scaffold_start_end_id", "feature", "id_gene", "pairwise_ave1","informative_sites1", "length1", "NAs1", "pop1")),
-  setNames(data.frame(df_POP2_filtered), c("scaffold_start_end_id2", "feature2", "id_gene2", "pairwise_ave2","informative_sites2", "length2", "NAs2", "pop2"))) %>% select_ (., "scaffold_start_end_id", "feature", "id_gene", "pairwise_ave1","informative_sites1", "length1", "NAs1", "pop1","pairwise_ave2","informative_sites2", "length2", "NAs2", "pop2")
-           } else {print("First column not matching") }
 
-    
-ggplot(df_pairwise, aes(informative_sites1, informative_sites2)) +
-  geom_point()
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/*eps /Users/marialucenaperez/ownCloud/publico/WG_diversity/diversity_plots/diversity_per_region/
 
-ggplot(df_pairwise, aes(pairwise_ave1, pairwise_ave2,  color = informative_sites1)) +
-  geom_point() +
-  facet_wrap(~feature) +
-  # scale_color_gradient(low="red", high="blue") +
-  #scale_color_gradientn(colours = rainbow(5)) +
-  # scale_colour_gradient(limits = c(0, quantile(df_pairwise$informative_sites1, 0.5))) +
-  # scale_colour_gradientn(colours = myPalette(100), values=nrm.vals) +
-  labs(colour = paste("Informative sites", POP1, sep =" ")) +
-  labs(x=paste("Pi diversity", POP1, sep =" "),y=paste("Pi diversity", POP2, sep =" ")) +
-  scale_color_viridis(option="magma",limits = c(0, quantile(df_pairwise$informative_sites1, 0.75)))
 
-ggplot(df_pairwise, aes(informative_sites1, informative_sites2)) +
-  geom_point()
-
-  
-}
-
-# https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html
 
 ```
+
 
 
 
@@ -1710,21 +1775,6 @@ Así que ordeno antes:
 
 ```
 
-
-
-
-# Copy
-
-```{bash}
-
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*eps /Users/marialucenaperez/ownCloud/publico/WG_diversity/diversity_plots/diversity_per_unit 
-
-
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/*eps /Users/marialucenaperez/ownCloud/publico/WG_diversity/diversity_plots/diversity_per_region/
-
-
-
-```
 
 
 
