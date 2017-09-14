@@ -506,7 +506,6 @@ done
 
 
 
-
 ```{bash}
 
 
@@ -535,154 +534,6 @@ rm  c_ll_tu_0159_sorted_rmdup_sorted_indelrealigner.*
 ```
 
 
-
-
-
-## Fastq & BAM stats
-
-```{r, engine=bash, eval=FALSE}
-
-
- # FASTQ
- ######################################################################### 
-
-
-# Get in with Godoy's account.
-
-mkdir /home/jagodoy/backup/raw_data/stats # En este directorio voy a almacenar todos los archivos que genere de los distintos proyectos.
-
-mkdir /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/stats_information # Los transfiero a la carpeta BAM para poder fusionarlos con los de los mapeados. 
-
-
-# Voy a llevar la cuenta de los que estoy haciendo en una hoja excel para hacerlo sobre todos los proyectos que tenemos. 
-
-cd /home/jagodoy/backup/raw_data/LYNX_06_08/LYNX_06_08_not_trimmed # LYNX_06_08
-cd /home/jagodoy/backup/raw_data/LYNX_09/LYNX_09_not_trimmed # LYNX_09
-cd /home/jagodoy/backup/raw_data/LYNX_13/20170127/LYNX_13_not_trimmed # LYNX_13
-cd /home/jagodoy/backup/raw_data/LYNX_15/20170206/FASTQ # LYNX_15
-cd /home/jagodoy/backup/raw_data/LYNX_16/20170206/FASTQ # LYNX_16
-cd /home/jagodoy/backup/raw_data/MACROGEN/MACROGEN_not_trimmed # MACROGEN
-cd /home/jagodoy/backup/raw_data/genome_project_raw_data_used_for_5x_project # genome proyect
-
-# Corre el BARCODEID que corresponda
-ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq))                     
-
-# This part calculates how many reads do I have in the fastq file and name with the sample name so that latter we can added if they are coming from the same library.
-# In case they are different libraries, you should use it, cause you have to calculate your statistics per library not per sample. 
-
-for i in ${ARRAY[@]}
-do
-echo $i 
-echo ${BARCODEID["${i}"]}_${i} >> kk
-zcat ${i}_1.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar1.rawseq
-zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar2.rawseq
-done
-
-
-
-# # For MACROGEN SAMPLES:
-# ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1 | uniq))
-# for i in ${ARRAY[@]}
-# do
-# echo $i
-# echo ${BARCODEID["${i}"]}_${i}
-# zcat ${i}_R1.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar1.rawseq
-# zcat ${i}_R2.fastq.gz | wc -l | awk '{print $1/4}' > /home/jagodoy/backup/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar2.rawseq
-# done
-#
-# For the genome proyect I run them lately after copying the former files, so I keep them in the same folder and them copy and move.
-# 
-# # For genome project
-# ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq | grep -v "^6")) # grep -v "^6" es para quitar todos los run de candiles que se corren aparte
-# for i in ${ARRAY[@]}
-# do
-# echo $i
-# echo ${BARCODEID["${i}"]}_${i}
-# zcat ${i}_1.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar1.rawseq
-# zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar2.rawseq
-# done
-# 
-# # For CANDILES:
-# ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-4 | uniq | grep "^6"))                     
-# for i in ${ARRAY[@]}
-# do
-# echo $i
-# echo ${BARCODEID["${i}"]}_${i}
-# zcat ${i}_1.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar1.rawseq
-# zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar2.rawseq
-# done
-
-# --> to do with genome proyect:
-
-# for sample in "${SAMPLESLIST[@]}"
-# SAMPLESLIST=($(echo ${BARCODEID[@]} | tr ' ' '\n' | sort | uniq | tr ' ' '\n'))
-# for sample in "${SAMPLESLIST[@]}"
-# do
-# cat "${sample}"*.borrar1.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R1.rawseq
-# cat "${sample}"*.borrar2.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R2.rawseq
-# done
-# rm *borrar*
-# --> scp /home/jagodoy/backup/raw_data/genome_project_raw_data_used_for_5x_project/*rawseq /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/stats_information
-# --> mv /home/jagodoy/backup/raw_data/genome_project_raw_data_used_for_5x_project/*rawseq /home/jagodoy/backup/raw_data/stats/
-
-
-cd /home/jagodoy/backup/raw_data/stats
-
-SAMPLESLIST=($(echo ${BARCODEID[@]} | tr ' ' '\n' | sort | uniq | tr ' ' '\n'))
-
-
-for sample in "${SAMPLESLIST[@]}"
-do
-cat "${sample}"*.borrar1.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R1.rawseq
-cat "${sample}"*.borrar2.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R2.rawseq
-done
-
-rm *borrar*
-scp *rawseq /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/stats_information
-
-cd /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/
-
-  
- # BAM  
- ######################################################################### 
-  
-# Generalizo el samplelist: (lo podría haber hecho así también antes)
-  
-SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
-for sample in "${SAMPLELIST[@]}"
-do
-echo $sample
-samtools flagstat $sample  >  /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/${sample}_bam.stats
-done
-
-
-  
-SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
-for sample in "${SAMPLELIST[@]}"
-do
-echo $sample
-samtools flagstat $sample  > ${sample}_bam.stats
-done
-
-# Checks:
-
-# * He tenido que modificar h_lp_do_007 a c_lp_do_007, y c_lr_xx y c_lc_xx a c_lr_zz y c_lc_zz respectivamente para que sean comparables. 
-cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final
-ls *_recal_round-1.bam | cut -d "_" -f1-4 | sort | uniq > stats_information/recal_list
-cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
-ls *rawseq | cut -d "_" -f1-4 | sort | uniq > rawseq_list
-ls *stats | cut -d "_" -f1-4 | sort | uniq > stats_list
-
-diff rawseq_list stats_list # ok! none! 
-diff recal_list stats_list  # ok! none!
-
-## 
-
-
-
-```
-
-
 ## Insert size distribution
 
 Hay dos formas de calcularlo
@@ -690,22 +541,31 @@ Hay dos formas de calcularlo
 ```{r, engine=bash, eval=FALSE}
 
 # I run picard tool with the option H, that output an histogram. 
-cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/
-  
+# cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/
+# Adding urals: cd /home/mlucena/grupolince/lynx_genomes_5x/raw_data/LYNX_18/20170828/FASTQ/recal
+
+
 for sample in *recal_round-1.bam
 do
 echo $sample
 java  -Xms10g  -Xmx40g -jar /home/tmp/Software/Picard/picard-tools-1.66/CollectInsertSizeMetrics.jar I=$sample H=${sample/.bam/.histogram_length} O=${sample/.bam/.picard_length}
 done
 
-mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*.picard_length /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
-mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*.histogram_length /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
+# mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*.picard_length /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
+# mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*.histogram_length /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
 
-for sample in *.histogram_length
+for sample in c_ll_ur_*.histogram_length
 do
 echo "$sample""--->""${sample/.histogram_length/_histogram_length.pdf}"
 mv $sample ${sample/.histogram_length/_histogram_length.pdf}
 done
+
+
+# Adding urals:
+
+mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*.picard_length /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
+
+mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*_histogram_length.pdf  /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
 
 ```
 
@@ -747,6 +607,19 @@ rm global_coverage.tsv
 
 
 
+###### Añado urales:
+
+SAMPLELIST=($(ls c_ll_ur*_recal_round-1.bam | uniq ))
+for sample in "${SAMPLELIST[@]}"
+do
+echo $sample
+DEPTH=$(samtools depth $sample | awk '{sum+=$3; sumsq+=$3*$3} END { print sum/2413209059; print sqrt(sumsq/2413209059 - (sum/2413209059)**2)}')
+paste \
+<(echo $sample ) \
+<(echo $DEPTH ) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/coverage_samtools
+done
+
 
 
 ```
@@ -774,6 +647,159 @@ rm global_coverage.tsv
 <!-- done -->
 
 <!-- ``` -->
+
+
+
+## Fastq & BAM stats
+
+```{r, engine=bash, eval=FALSE}
+
+
+ # FASTQ
+ ######################################################################### 
+
+
+# Get in with Godoy's account.
+
+mkdir /home/jagodoy/backup/raw_data/stats # En este directorio voy a almacenar todos los archivos que genere de los distintos proyectos.
+# 11/09/2017: A partir de ahora están en: /backup/grupolince/raw_data/stats/
+
+mkdir /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/stats_information # Los transfiero a la carpeta BAM para poder fusionarlos con los de los mapeados. 
+
+
+# Voy a llevar la cuenta de los que estoy haciendo en una hoja excel para hacerlo sobre todos los proyectos que tenemos. 
+
+cd /home/jagodoy/backup/raw_data/LYNX_06_08/LYNX_06_08_not_trimmed # LYNX_06_08
+cd /home/jagodoy/backup/raw_data/LYNX_09/LYNX_09_not_trimmed # LYNX_09
+cd /home/jagodoy/backup/raw_data/LYNX_13/20170127/LYNX_13_not_trimmed # LYNX_13
+cd /home/jagodoy/backup/raw_data/LYNX_15/20170206/FASTQ # LYNX_15
+cd /home/jagodoy/backup/raw_data/LYNX_16/20170206/FASTQ # LYNX_16
+cd /home/jagodoy/backup/raw_data/MACROGEN/MACROGEN_not_trimmed # MACROGEN
+cd /home/jagodoy/backup/raw_data/genome_project_raw_data_used_for_5x_project # genome proyect
+
+# 11/09/2017: A partir de ahora están en: /backup/grupolince/raw_data/stats/
+cd /backup/grupolince/raw_data/LYNX_18/
+
+
+
+# Corre el BARCODEID que corresponda
+ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq))                     
+
+# This part calculates how many reads do I have in the fastq file and name with the sample name so that latter we can added if they are coming from the same library.
+# In case they are different libraries, you should use it, cause you have to calculate your statistics per library not per sample. 
+
+for i in ${ARRAY[@]}
+do
+echo $i 
+echo ${BARCODEID["${i}"]}_${i} >> kk
+zcat ${i}_1.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar1.rawseq
+zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar2.rawseq
+done
+
+
+
+# # For MACROGEN SAMPLES:
+# ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1 | uniq))
+# for i in ${ARRAY[@]}
+# do
+# echo $i
+# echo ${BARCODEID["${i}"]}_${i}
+# zcat ${i}_R1.fastq.gz | wc -l | awk '{print $1/4}' > /backup/grupolince/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar1.rawseq
+# zcat ${i}_R2.fastq.gz | wc -l | awk '{print $1/4}' > /backup/grupolince/raw_data/stats/${BARCODEID["${i}"]}_${i}.borrar2.rawseq
+# done
+#
+# For the genome proyect I run them lately after copying the former files, so I keep them in the same folder and them copy and move.
+# 
+# # For genome project
+# ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq | grep -v "^6")) # grep -v "^6" es para quitar todos los run de candiles que se corren aparte
+# for i in ${ARRAY[@]}
+# do
+# echo $i
+# echo ${BARCODEID["${i}"]}_${i}
+# zcat ${i}_1.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar1.rawseq
+# zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar2.rawseq
+# done
+# 
+# # For CANDILES:
+# ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-4 | uniq | grep "^6"))                     
+# for i in ${ARRAY[@]}
+# do
+# echo $i
+# echo ${BARCODEID["${i}"]}_${i}
+# zcat ${i}_1.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar1.rawseq
+# zcat ${i}_2.fastq.gz | wc -l | awk '{print $1/4}' > ${BARCODEID["${i}"]}_${i}.borrar2.rawseq
+# done
+
+# --> to do with genome proyect:
+
+# for sample in "${SAMPLESLIST[@]}"
+# SAMPLESLIST=($(echo ${BARCODEID[@]} | tr ' ' '\n' | sort | uniq | tr ' ' '\n'))
+# for sample in "${SAMPLESLIST[@]}"
+# do
+# cat "${sample}"*.borrar1.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R1.rawseq
+# cat "${sample}"*.borrar2.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R2.rawseq
+# done
+# rm *borrar*
+# --> scp /home/jagodoy/backup/raw_data/genome_project_raw_data_used_for_5x_project/*rawseq /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/stats_information
+# --> mv /home/jagodoy/backup/raw_data/genome_project_raw_data_used_for_5x_project/*rawseq /backup/grupolince/raw_data/stats/
+
+
+
+
+SAMPLESLIST=($(echo ${BARCODEID[@]} | tr ' ' '\n' | sort | uniq | tr ' ' '\n'))
+
+
+for sample in "${SAMPLESLIST[@]}"
+do
+cat "${sample}"*.borrar1.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R1.rawseq
+cat "${sample}"*.borrar2.rawseq | awk '{sum+=$1}END{print sum}' > "${sample}"_R2.rawseq
+done
+
+rm *borrar*
+scp *rawseq /backup/grupolince/raw_data/stats/
+
+  
+ # BAM  
+ ######################################################################### 
+  
+# Generalizo el samplelist: (lo podría haber hecho así también antes)
+# cd /home/jagodoy/grupolince/lynx_genomes_5x/BAM_files_final/
+
+
+# Adding urals:
+cd /home/mlucena/grupolince/lynx_genomes_5x/raw_data/LYNX_18/20170828/FASTQ/recal
+SAMPLELIST=($(ls c_ll_ur*_recal_round-1.bam | uniq ))
+
+# SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
+for sample in "${SAMPLELIST[@]}"
+do
+echo $sample
+samtools flagstat $sample  >  /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/${sample}_bam.stats
+done
+
+
+
+  
+  
+# Checks:
+
+# * He tenido que modificar h_lp_do_007 a c_lp_do_007, y c_lr_xx y c_lc_xx a c_lr_zz y c_lc_zz respectivamente para que sean comparables. 
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final
+ls *_recal_round-1.bam | cut -d "_" -f1-4 | sort | uniq > stats_information/recal_list
+cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
+ls *rawseq | cut -d "_" -f1-4 | sort | uniq > rawseq_list
+ls *stats | cut -d "_" -f1-4 | sort | uniq > stats_list
+
+diff rawseq_list stats_list # ok! none! 
+diff recal_list stats_list  # ok! none!
+
+## 
+
+
+
+```
+
+
 
 ## Summary report
 
