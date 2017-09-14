@@ -1,9 +1,17 @@
 
+
+
 # Creating intergenic bam files
 
+Yo había lanzado este script para todas las muestras de lynx lynx. Pero como tenemos varias coberturas distintas, me llevo las de MACROGEN a una subcarpeta que indiquen que tienen mas cobertura. Despues lanzo este primer script para las de lynx pardinus (5x + 25 submuestreadas a 5x), también lo lanzo para las submuestreadas de lynx lynx, y por último para las NO submuestreadas de proyecto genomas (para ponerlo en la carpeta junto a macrogen, porque para ciertos análisis necesitas tener más cobertura).
+
+1. Para muestras 5x o muestras submuestreadas.
+2. Para muestras 25x (cambia solo la ruta de las carpetas).
+
+1. Para muestras 5x.
 ```{bash}
 
-mkdir /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic
+# mkdir /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic
 cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic
 
 screen -S extracting_intergenic_from_bam_files_using_bedtools
@@ -14,22 +22,45 @@ OUTPUT_DIR="/home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_interge
 
 cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/
 
-POPS=("c_ll_ka" "c_ll_og"  "c_ll_tu")  
+# POPS=("c_ll_ka" "c_ll_og"  "c_ll_tu")  
+# POPS=("c_lp_do" "c_lp_sm")
+# POPS=("c_ll_ur")
+
 
 task(){
-   bedtools intersect -a $i -b /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.intergenic.PLUS1000.bed -sorted -g /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/lp23.version.sorted.genome > $OUTPUT_DIR/${i/_recal_round-1/_intergenic_bed}; # Si quiero puedo cambiar el nombre a intergenic.bam que es el final. 
+   bedtools intersect -a $i -b /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.intergenic.PLUS1000.bed -sorted -g /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/lp23.version.sorted.genome > $OUTPUT_DIR/${i/_recal_round-1.bam/_intergenic.bam}; # Si quiero puedo cambiar el nombre a intergenic.bam que es el final. 
    touch $OUTPUT_DIR/${i/_recal_round-1.bam/.finished}
 }
+
 
 for POP in ${POPS[@]}
 do
 echo $POP
-declare -a ARRAY=($(ls "$POP"*.bam)) 
+declare -a ARRAY=($(ls "$POP"*_recal_round-1.bam)) 
 for i in ${ARRAY[@]} 
 do
- task "$i" &
+echo $i
+ task "$i" 
 done
 done
+
+
+
+# Estas son las que ahora están submuestreadas y por tanto voy a repetir. 
+ARRAY=("c_ll_cr_0212_recal_round-1.bam" "c_ll_ki_0090_recal_round-1.bam" "c_ll_ya_0146_recal_round-1.bam" "c_ll_vl_0112_recal_round-1.bam" "c_lr_zz_0001_recal_round-1.bam" "c_lc_zz_0001_recal_round-1.bam")
+
+ARRAY=("c_ll_ur_0194_recal_round-1.bam" "c_ll_ur_0195_recal_round-1.bam" "c_ll_ur_0196_recal_round-1.bam" "c_ll_ur_0199_recal_round-1.bam" "c_ll_ur_0200_recal_round-1.bam")
+
+i="c_ll_ur_0203_recal_round-1.bam"
+
+
+
+for i in ${ARRAY[@]} 
+do
+echo $i
+ task "$i" 
+done
+
 
 
 # Para los nuevos remapeados, los muevo a su nombre original:
@@ -40,6 +71,15 @@ echo $sample"--->"${sample/_intergenic_bed.bam/_intergenic.bam}
 mv $sample ${sample/_intergenic_bed.bam/_intergenic.bam}
 done
 rm *finished
+
+
+
+for sample in $(ls *_intergenic.bam)
+do
+echo $sample
+samtools index $sample
+done
+
 
 ```
 
@@ -60,4 +100,43 @@ done
 
 ```
 
+
+
+2. Para muestras 25x del proyecto genoma (cambia solo la ruta de las carpetas)
+```{bash}
+
+mkdir /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_25x
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_25x
+
+
+screen -S extracting_intergenic_from_bam_files_using_bedtools_25x
+script extracting_intergenic_from_bam_files_using_bedtools_25x.log
+
+INPUTFILE_BED="/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.intergenic.PLUS1000.bed"
+OUTPUT_DIR="/home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_25x"
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/genome_project_samples_25x/
+POPS=("c_lp_do" "c_lp_sm")
+
+task(){
+   bedtools intersect -a $i -b /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.intergenic.PLUS1000.bed -sorted -g /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/lp23.version.sorted.genome > $OUTPUT_DIR/${i/_recal_round-1_25x/_25x_intergenic}; # Si quiero puedo cambiar el nombre a intergenic.bam que es el final. 
+   touch $OUTPUT_DIR/${i/_recal_round-1.bam/.finished}
+}
+
+for POP in ${POPS[@]}
+do
+echo $POP
+declare -a ARRAY=($(ls "$POP"*.bam)) 
+for i in ${ARRAY[@]} 
+do
+echo $i
+ task "$i" 
+done
+done
+
+```
+
+
+2. Para muestras 25x (cambia solo la ruta de las carpetas)
 
