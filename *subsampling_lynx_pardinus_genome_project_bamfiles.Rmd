@@ -86,3 +86,50 @@ samtools index c_ll_ya_0146_recal_round-1.bam
 ```
 
 
+
+# Otros linces
+
+En este caso, sí voy a calcular la media de cobertura por población y aplicar un submuestreo para que esa muestra se quede en la media de cobertura para esa población.
+
+Por tanto, me quedaría:
+
+percentage_to_sample	sample
+0,349470518	          c_lr_zz_0001
+0,402428553	          c_lc_zz_0001
+
+
+```{bash}
+
+
+mv c_lr_zz_0001_recal_round-1.bam* MACROGEN_samples_25x/
+mv c_lc_zz_0001_recal_round-1.bam* MACROGEN_samples_25x/
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/MACROGEN_samples_25x
+
+sample="c_lr_zz_0001_recal_round-1.bam" 
+sample="c_lc_zz_0001_recal_round-1.bam"
+
+echo $sample
+echo ${sample/_recal_round-1.bam/_recal_round-1_25x.bam}
+mv $sample ${sample/_recal_round-1.bam/_recal_round-1_25x.bam}
+
+
+sample="c_lr_zz_0001_recal_round-1.bam.bai" 
+sample="c_lc_zz_0001_recal_round-1.bam.bai"
+
+echo $sample
+echo ${sample/_recal_round-1.bam.bai/_recal_round-1_25x.bam.bai}
+mv ${sample} ${sample/_recal_round-1.bam.bai/_recal_round-1_25x.bam.bai}
+
+
+samtools view -s 0.35 -b c_lr_zz_0001_recal_round-1_25x.bam  > /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/c_lr_zz_0001_recal_round-1.bam
+samtools view -s 0.40 -b c_lc_zz_0001_recal_round-1_25x.bam > /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/c_lc_zz_0001_recal_round-1.bam
+
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final
+
+samtools index c_lr_zz_0001_recal_round-1.bam
+samtools index c_lc_zz_0001_recal_round-1.bam
+
+```
+
