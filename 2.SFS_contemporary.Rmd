@@ -837,7 +837,19 @@ name_diversity[1] <- paste(name_diversity[1],".percentagecovered",PERCENTAGE_COV
 # Calculo weighted mean y lo guardo en un df.
 
 df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, weightedmean=weighted.mean(pairwise_ave, informative_sites), mean=mean(pairwise_ave))
+
+df.pm1 <- df.pm %>% select (feature,pop, weightedmean) %>% spread (., pop, weightedmean) %>% select (feature, wm_sm= c_lp_sm_n019,wm_do=c_lp_do_n012)
+df.pm2 <- df.pm %>% select (feature,pop, mean) %>% spread (., pop, mean) %>% select (feature, m_sm= c_lp_sm_n019,m_do=c_lp_do_n012)
+
+df.pm_guardar <- full_join(df.pm1, df.pm2)
+
+
 df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, weightedmean=weighted.mean(watterson_ave, informative_sites), mean=mean(watterson_ave))
+
+df.wm1 <- df.pm %>% select (feature,pop, weightedmean) %>% spread (., pop, weightedmean) %>% select (feature, wm_sm= c_lp_sm_n019,wm_do=c_lp_do_n012)
+df.wm2 <- df.pm %>% select (feature,pop, mean) %>% spread (., pop, mean) %>% select (feature, m_sm= c_lp_sm_n019,m_do=c_lp_do_n012)
+
+df.wm_guardar <- full_join(df.pm1, df.pm2)
 
 
 # LYNX PARDINUS
@@ -853,8 +865,8 @@ df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "weightedmean", -specie, -fea
 
 
 # Guardo el porcentage de perdida. 
-write.csv(df.pm, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""), row.names = F)
-write.csv(df.wm, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""), row.names = F)
+write.table(df.pm_guardar, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""), row.names = F, dec=",", sep=";")
+write.table(df.wm_guardar, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""), row.names = F, dec=",", sep=";")
 
 
 ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
@@ -926,7 +938,20 @@ name_diversity[1] <- paste(name_diversity[1],".percentagecovered",PERCENTAGE_COV
 # Calculo weighted mean y lo guardo en un df.
 
 df.pm <- ddply(dataframe, c("feature","specie","pop"), summarise, weightedmean=weighted.mean(pairwise_ave, informative_sites), mean=mean(pairwise_ave))
+
+df.pm1 <- df.pm %>% select (feature,pop, weightedmean) %>% spread (., pop, weightedmean) %>% select (feature, wm_ki= c_ll_ki_n013,wm_no=c_ll_no_n008,wm_po=c_ll_po_n008)
+df.pm2 <- df.pm %>% select (feature,pop, mean) %>% spread (., pop, mean) %>% select (feature, m_ki= c_ll_ki_n013,m_no=c_ll_no_n008,m_po=c_ll_po_n008)
+
+df.pm_guardar <- full_join(df.pm1, df.pm2)
+
+
 df.wm <- ddply(dataframe, c("feature","specie","pop"), summarise, weightedmean=weighted.mean(watterson_ave, informative_sites), mean=mean(watterson_ave))
+
+df.wm1 <- df.wm %>% select (feature,pop, weightedmean) %>% spread (., pop, weightedmean) %>% select (feature, wm_ki= c_ll_ki_n013,wm_no=c_ll_no_n008,wm_po=c_ll_po_n008)
+df.wm2 <- df.wm %>% select (feature,pop, mean) %>% spread (., pop, mean) %>% select (feature, m_ki= c_ll_ki_n013,m_no=c_ll_no_n008,m_po=c_ll_po_n008)
+
+df.wm_guardar <- full_join(df.pm1, df.pm2)
+
 
 df.pm_lost <- df.pm %>% select(.,-mean) %>% tidyr::spread(., pop, weightedmean) %>% 
   mutate(., percentage_po_ki=(c_ll_po_n008 *100)/c_ll_ki_n013) %>% 
@@ -939,8 +964,8 @@ df.wm_lost <- df.wm %>% select(.,-mean) %>% tidyr::spread(., pop, weightedmean) 
 df.wm.gathered <- tidyr::gather(df.wm_lost, "pop", "weightedmean", -specie, -feature,  -percentage_po_ki, -percentage_no_ki) 
 
 # Guardo el porcentage de perdida. 
-write.csv(df.pm, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""))
-write.csv(df.wm, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""))
+write.table(df.pm_guardar, paste(wd,"/", name_diversity[1],".pairwise_mean.csv", sep = ""), row.names = F, dec=",", sep=";")
+write.table(df.wm_guardar, paste(wd,"/", name_diversity[1],".watterson_mean.csv", sep = ""), row.names = F, dec=",", sep=";")
 
 
 
