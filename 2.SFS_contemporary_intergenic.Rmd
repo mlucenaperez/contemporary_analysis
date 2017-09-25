@@ -20,20 +20,20 @@ cd $RUTA/intergenic_analysis/intergenic_sfs
 
 #To launch one by one
 
-POP="c_ll_ba"  # <--CHANGE POP HERE
+POP="c_ll_ki"  # <--CHANGE POP HERE
 
 #screen -S "$POP"_sfs
 screen -S "$POP"_thetas
 
-POP="c_ll_ba"  # <--CHANGE POP HERE
+POP="c_ll_ki"  # <--CHANGE POP HERE
 
 #script "$POP"_sfs.log
 script "$POP"_thetas.log
 
-POP="x_ll_ba"  # <--CHANGE POP HERE
+POP="c_ll_ki"  # <--CHANGE POP HERE
 
 THREADS=25                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
-RUTA=/home/mlucena/ANGSD_analysis 
+RUTA=/home/mlucena/ANGSD_analysis/depth_calculus 
 
 read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < $RUTA/"${POP}"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
 
@@ -52,6 +52,7 @@ MIN_IND=$(expr $N_IND / 2)
 echo $POP
 echo $N_IND
 echo $MIN_IND
+echo $minDepth
 
 
 ```
@@ -73,7 +74,7 @@ echo $MIN_IND
 
 echo "-------$POP----------SAF (likelihood)-----------------------------------------"
 
-$ANGSD/angsd -P $THREADS -b $RUTA/intergenic_analysis/"$POP".intergenic.bamlist -ref $REF -anc $ANC \
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic.bamlist -ref $REF -anc $ANC \
 -out "$POP".unfolded-lr \
 $FILTER1 \
 $FILTER2 \
@@ -102,7 +103,7 @@ $NGSTOOLS/realSFS "$POP".unfolded-lr.saf.idx  -P $THREADS > "$POP".unfolded-lr.s
 
 echo "-------$POP----------SAF (postprob)-----------------------------------------"
 
-$ANGSD/angsd -P $THREADS -b $RUTA/intergenic_analysis/"$POP".intergenic.bamlist -ref $REF -anc $ANC \
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic.bamlist -ref $REF -anc $ANC \
 -out "$POP".unfolded-lr.postprob \
 $FILTER1 \
 $FILTER2 \
@@ -112,23 +113,94 @@ $FILTER2 \
 
 ```
 
+
+
+
 ##  Make bed theta        
 
 ```{r, engine=bash, eval=FALSE}
 
 echo "-------$POP----------Make bed theta -----------------------------------------"
 
-# $NGSTOOLS/thetaStat  make_bed $POP.postprob.thetas.gz --> esto no corre!!!
-
+$NGSTOOLS/thetaStat print $POP.unfolded-lr.postprob.thetas.idx > $POP.printed.stats
 
 # Transform the coordinates to use 0Based bedtools
-zcat $POP.unfolded-lr.postprob.thetas.gz | awk 'NR>1 {print  $1" "$2-1" "$2}' > $POP.0basedcoordinates.borrar
+
+awk 'NR>1 {print  $1" "$2-1" "$2}' $POP.printed.stats > $POP.0basedcoordinates.borrar # --> 1, 2, 3
 # log transformation of watterson and pairwise:
-zcat $POP.unfolded-lr.postprob.thetas.gz | awk 'NR>1 {print  "e("$3")"}'  | bc -l > "$POP".watterson.borrar
-zcat $POP.unfolded-lr.postprob.thetas.gz | awk 'NR>1 {print  "e("$4")"}'  | bc -l > "$POP".pairwise.borrar 
+awk 'NR>1 {print  "e("$3")"}' $POP.printed.stats | bc -l > "$POP".watterson.borrar # --> 4
+awk 'NR>1 {print  "e("$4")"}' $POP.printed.stats | bc -l > "$POP".pairwise.borrar # --> 5
+                                                                                  # --> PAIRWISE - WATTERSON
+awk 'NR>1 {print  "e("$5")"}' $POP.printed.stats | bc -l > "$POP".thetaFL.borrar # --> 6
+awk 'NR>1 {print  "e("$6")"}' $POP.printed.stats | bc -l > "$POP".thetaH.borrar # --> 7
+awk 'NR>1 {print  "e("$7")"}' $POP.printed.stats | bc -l > "$POP".thetaL.borrar # --> 8
 
 # Create a header for the "$POP".transformedThetas file
-echo "scaffold position1 position2 watterson pairwise pairwise-watterson" > "$POP".transformedThetas
-paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar | awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4}' >> "$POP".transformedThetas
+
+echo "scaffold position1 position2 watterson pairwise pairwise-watterson thetaFL thetaH thetaL" > "$POP".transformedThetas
+
+paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar "$POP".thetaFL.borrar "$POP".thetaH.borrar "$POP".thetaL.borrar | \
+awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP".transformedThetas
+
+rm "$POP".*.borrar
+mv $POP.printed.stats /backup/mlucena/intermediate_files_ANGSD/
+
+
+
+```
+
+
+
+
+
+## SFS graphical representation
+
+
+First we copy the SFS files to our local folder.
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/*sfs /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs
+
+# I need to change name as R does not like "-lr.sfs"
+
+cd /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/
+for i in *sfs
+do 
+#echo $i
+echo $i "--->" ${i/-lr.sfs/_lr.sfs}
+mv $i ${i/-lr.sfs/_lr.sfs}
+done
+
+
+```
+
+Now we run the script. 
+
+```{r}
+library(dplyr)
+library(magrittr)
+
+wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/"
+
+my_files_unfolded = list.files(path = wd, pattern="*sfs$")    
+for (i in 1:length(my_files_unfolded)) 
+{ assign(my_files_unfolded[i], (scan(paste(wd,my_files_unfolded[i], sep = ""), sep = " ", dec = ".")) %>% .[!is.na(.)])}
+
+norm <- function(x) x/sum(x)
+
+for (i in 1:length (my_files_unfolded))
+{
+  temp1=(eval(parse(text=my_files_unfolded[i])))
+  temp2=norm(temp1[-1])
+  temp3=norm(temp2[-c(length(temp2))])
+  barplot(temp3,xlab="Chromosomes",
+          names=1:length(temp3),ylab="Proportions",main=my_files_unfolded[i],col='grey')
+  dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/",my_files_unfolded[i],".eps"), onefile=FALSE, horizontal=FALSE)
+  dev.off()
+  rm(temp1)
+  rm(temp2)
+  rm(temp3)
+}
+
 
 ```
