@@ -542,7 +542,6 @@ Hay dos formas de calcularlo
 
 # I run picard tool with the option H, that output an histogram. 
 # cd /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/
-# Adding urals: cd /home/mlucena/grupolince/lynx_genomes_5x/raw_data/LYNX_18/20170828/FASTQ/recal
 
 
 for sample in *recal_round-1.bam
@@ -554,7 +553,26 @@ done
 # mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*.picard_length /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
 # mv /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*.histogram_length /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/
 
+# Adding urals: cd /home/mlucena/grupolince/lynx_genomes_5x/raw_data/LYNX_18/20170828/FASTQ/recal
+
+
 for sample in c_ll_ur_*.histogram_length
+do
+echo "$sample""--->""${sample/.histogram_length/_histogram_length.pdf}"
+mv $sample ${sample/.histogram_length/_histogram_length.pdf}
+done
+
+
+# Recalculating c_lr_zz_0001_recal_round-1.bam c_lc_zz_0001_recal_round-1.bam as I subsampled them. 
+# Los he eliminado a mano antes del archivo coverage_samtools porque estaban calculados para toda la cobertura. 
+
+for sample in c_*_zz_*recal_round-1.bam
+do
+echo $sample
+java  -Xms10g  -Xmx40g -jar /home/tmp/Software/Picard/picard-tools-1.66/CollectInsertSizeMetrics.jar I=$sample H=${sample/.bam/.histogram_length} O=${sample/.bam/.picard_length}
+done
+
+for sample in c_*_zz_*.histogram_length
 do
 echo "$sample""--->""${sample/.histogram_length/_histogram_length.pdf}"
 mv $sample ${sample/.histogram_length/_histogram_length.pdf}
@@ -606,7 +624,6 @@ cat global_coverage.tsv | sed 's/_recal_round-1.bam//g' | sed 's/\t/,/g' > cover
 rm global_coverage.tsv
 
 
-
 ###### Añado urales:
 
 SAMPLELIST=($(ls c_ll_ur*_recal_round-1.bam | uniq ))
@@ -620,8 +637,18 @@ paste \
 sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/coverage_samtools
 done
 
-
-
+# Recalculating c_lr_zz_0001_recal_round-1.bam c_lc_zz_0001_recal_round-1.bam as I subsampled them. 
+# Los he eliminado a mano antes del archivo coverage_samtools porque estaban calculados para toda la cobertura. 
+SAMPLELIST=($(ls c_*zz*_recal_round-1.bam | uniq ))
+for sample in "${SAMPLELIST[@]}"
+do
+echo $sample
+DEPTH=$(samtools depth $sample | awk '{sum+=$3; sumsq+=$3*$3} END { print sum/2413209059; print sqrt(sumsq/2413209059 - (sum/2413209059)**2)}')
+paste \
+<(echo $sample ) \
+<(echo $DEPTH ) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/stats_information/coverage_samtools
+done
 ```
 
 <!-- ## Count primary alignment: -->
@@ -767,8 +794,11 @@ scp *rawseq /backup/grupolince/raw_data/stats/
 
 
 # Adding urals:
-cd /home/mlucena/grupolince/lynx_genomes_5x/raw_data/LYNX_18/20170828/FASTQ/recal
 SAMPLELIST=($(ls c_ll_ur*_recal_round-1.bam | uniq ))
+
+# Recalculating c_lr_zz_0001_recal_round-1.bam c_lc_zz_0001_recal_round-1.bam as I subsampled them. 
+SAMPLELIST=($(ls c_*zz*_recal_round-1.bam | uniq ))
+
 
 # SAMPLELIST=($(ls *_recal_round-1.bam | uniq ))
 for sample in "${SAMPLELIST[@]}"
@@ -778,9 +808,6 @@ samtools flagstat $sample  >  /home/GRUPOS/grupolince/lynx_genomes_5x/BAM_files_
 done
 
 
-
-  
-  
 # Checks:
 
 # * He tenido que modificar h_lp_do_007 a c_lp_do_007, y c_lr_xx y c_lc_xx a c_lr_zz y c_lc_zz respectivamente para que sean comparables. 
@@ -837,7 +864,7 @@ COVERAGE_BASED_DISTRIBUTION=$(tail -n+12 "${sample}"*.picard_length  | awk '($1 
 echo "$NAME,$TOTAL_SEQ,$TOTAL_READS,$DUPLICATES,$MAPPED,$PROPERLY_PAIR,$WITH_MATE_TO_ANOTHER_CHR,$UNIQ_MAPPED,$UNIQ_MAPPED_vs_TOTAL_READS,$DUPLICATES_vs_TOTAL_READS,$MAPPED_vs_TOTAL_SEQ,$PROPERLY_PAIR_vs_TOTAL_SEQ,$WITH_MATE_TO_ANOTHER_CHR_vs_TOTAL_SEQ,$COVERAGE_BASED_DISTRIBUTION" | sed 's/ //g' >> raw.stats 
 done
 
-LANG=en_EN  join -1 1 -2 1 -t","  <(head -n 2 raw.stats && tail -n +3 raw.stats | LANG=en_EN sort -k 1,1) <(head -n 2 coverage_samtools && tail -n +3 coverage_samtools | LANG=en_EN sort -k 1,1 ) | sed 's/,/;/g' | sed 's/\./,/g' > global_stats_all_samples.csv # de esta manera tiene en cuenta el header. 
+LANG=en_EN  join -1 1 -2 1 -t","  <(head -n 1 raw.stats && tail -n +2 raw.stats | LANG=en_EN sort -k 1,1) <(head -n 1 coverage_samtools && tail -n +2 coverage_samtools | LANG=en_EN sort -k 1,1 ) | sed 's/,/;/g' | sed 's/\./,/g' > global_stats_all_samples.csv # de esta manera tiene en cuenta el header. 
  
 # 138732275 + 0 in total (QC-passed reads + QC-failed reads)
 # 301702 + 0 duplicates
