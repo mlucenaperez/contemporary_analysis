@@ -98,6 +98,9 @@ $FILTER1 $FILTER2 \
 # SNP_pval = #ind*(2allelos/ind) = x alelos ; 1/x = y  # esto sería un filtro aceptable. En mi caso el dataset más pequeño (h_lypa_all) es de 55 indivíduos (1/(2*55)=9e-3) y el más grande (x_lyxx_all) de 189 (1/(2*189)=2.6e-3)
 # Para el PCA vamos a usar 1e-3 porque es un filtro suuuper light.
 
+### OJO! NO ES TAN SUPER LIGHT!!!
+
+
 # Unzip the results (but you cannot open it since it is in binary format)
 
 gunzip $POP.intergenic.geno.gz
