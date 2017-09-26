@@ -29,10 +29,9 @@ FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
 FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
 N_IND=$(echo ${POP: -3} )
 MIN_IND=$(expr $N_IND / 2)
-SNP_PVAL=$(expr 1/$MIN_IND)
-  
+SNP_PVAL=$(echo "1/("$N_IND" *2)" | bc -l)
+
 RUTA=/home/mlucena/ANGSD_analysis 
-MIN_IND_DEPTH=1
 
 
 # Sanity checks:
@@ -42,6 +41,7 @@ echo $N_IND
 echo $MIN_IND
 echo $maxDepth
 echo $minDepth
+echo $SNP_PVAL
 
 # Running GL:
 
@@ -51,7 +51,7 @@ $FILTER1 \
 $FILTER2 \
 -GL 1  -doGlf 2 \
 -doMajorMinor 1 -doMaf 3 -SNP_pval $SNP_PVAL -skipTriallelic 1 \
--minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth -setMinDepthInd $MIN_IND_DEPTH 
+-minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth 
 
 
 # Parameters chosen:
