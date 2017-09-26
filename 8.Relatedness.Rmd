@@ -1,0 +1,83 @@
+---
+title: "8.Relatedness"
+output: html_document
+---
+
+http://www.popgen.dk/software/index.php/NgsRelate
+```{bash}
+# Assume we have file containing paths to 100 BAM/CRAM files; one line per BAN/CRAM file. Then we can use ANGSD to estimate frequencies and calculate genotype likelihoods while doing SNP calling and in the end produce the the input files needed for the NgsRelate program as follows:
+
+mkdir /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_relatedness
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_relatedness/
+
+
+POP="c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080"  # <--CHANGE POP HERE
+
+
+THREADS=15 
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < /home/mlucena/ANGSD_analysis/depth_calculus/"${POP}"_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+N_IND=$(echo ${POP: -3} )
+MIN_IND=$(expr $N_IND / 2)
+SNP_PVAL=$(echo "1/("$N_IND" *2)" | bc -l)
+
+
+
+# Sanity checks:
+
+echo $POP
+echo $N_IND
+echo $MIN_IND
+echo $maxDepth
+echo $minDepth
+echo $SNP_PVAL
+
+### First we generate a file with allele frequencies (angsdput.mafs.gz) and a file with genotype likelihoods (angsdput.glf.gz).
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/$POP.intergenic.bamlist -ref $REF -out $POP.intergenic \
+$FILTER1 $FILTER2 \
+-GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
+-SNP_pval $SNP_PVAL \
+-minmaf 0.05 -doGlf 3
+-minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth -setMinDepthInd $MIN_IND_DEPTH 
+
+
+
+### Then we extract the frequency column from the allele frequency file and remove the header (to make it in the format NgsRelate needs)
+zcat angsdput.mafs.gz | cut -f5 |sed 1d >freq
+
+
+
+
+# Once we have these files we can use NgsRelate to estimate relatedness between any pairs of individuals. E.g. if we want to estimate relatedness between the first two individuals (numbered from 0, so 0 and 1) we can do it using the following command:
+
+./ngsrelate -g angsdput.glf.gz -n 100 -f freq -a 0 -b 1 >gl.res
+Here we specify the name of our file with genotype likelihoods after the option "-g", the number of individuals in the file after the option "-n", the name of the file with allele frequencies after the option "-f" and the number of the two individuals after the options "-a" and "-b" . If -a and -b are not specified NgsRelate will loop through all pairs of individuals in the input file.
+
+NEW: Note that if you want you also input a file with the IDs of the individuals (on ID per line) in the same order as in the file 'filelist' used to make the genotype likelihoods. If you do the output will also contain these IDs and not just the numbers of the samples (one can actually just use that exact file, however the IDs then tend to be a bit long). This can be done with the optional flag -z followed by the filename.
+
+
+
+
+/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_PCA/c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n111.intergenic.mafs.gz
+
+
+
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic.bamlist -ref $REF -anc $ANC \
+$FILTER1 \
+$FILTER2 \
+-GL 1 -doGlf 3  \
+-minInd  $MIN_IND -setMaxDepth $maxDepth \
+-doThetas 1 -pest "$POP".unfolded-lr.sfs 
+
+
+```
+
