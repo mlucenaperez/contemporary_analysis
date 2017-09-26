@@ -142,10 +142,31 @@ echo "scaffold position1 position2 watterson pairwise pairwise-watterson thetaFL
 paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar "$POP".thetaFL.borrar "$POP".thetaH.borrar "$POP".thetaL.borrar | \
 awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP".transformedThetas
 
+
+
+# Hasta aquí!
+
 rm "$POP".*.borrar
+
+
 mv $POP.printed.stats /backup/mlucena/intermediate_files_ANGSD/
 
 
+
+```
+
+
+
+
+```{bash}
+$NGSTOOLS/realSFS c_ll_la_n006.unfolded-lr.postprob.thetas.idx  > "$POP".unfolded-lr.sfs
+The heterozygosity is then:
+
+#in R
+a<-scan("c_ll_la_n006.unfolded-lr.sfs")
+a[2]/sum(a)
+
+# FUNCIONA!!!
 
 ```
 
