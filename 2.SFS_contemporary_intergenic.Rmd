@@ -149,27 +149,51 @@ awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP".trans
 rm "$POP".*.borrar
 
 
-mv $POP.printed.stats /backup/mlucena/intermediate_files_ANGSD/
+scp *.printed.stats /backup/mlucena/intermediate_files_ANGSD/intergenic_analysis/
 
 
 
 ```
-
 
 
 
 ```{bash}
-$NGSTOOLS/realSFS c_ll_la_n006.unfolded-lr.postprob.thetas.idx  > "$POP".unfolded-lr.sfs
-The heterozygosity is then:
+nano heterozigosity_calculus.R
+```
 
+```{bash}
 #in R
-a<-scan("c_ll_la_n006.unfolded-lr.sfs")
-a[2]/sum(a)
-
-# FUNCIONA!!!
+library (dplyr)
+args <- commandArgs(TRUE)
+print(args)
+a<-scan(args[1])
+heterozigosity <- a[2]/sum(a)
+write (heterozigosity,paste0(args[1],"_heterozigosity.csv"))
 
 ```
 
+```{bash}
+
+
+for i in *sfs;
+do
+echo $i
+Rscript heterozigosity_calculus.R $i 
+done
+
+for i in *heterozigosity_borrar.csv
+do
+echo $i
+heterozigosity=$(cat $i)
+echo ${i/.unfolded-lr.sfs_heterozigosity_borrar.csv/} $heterozigosity >> heterozigosity_per_pop.csv
+done
+
+rm *_heterozigosity_borrar.csv
+
+
+
+
+```
 
 
 
@@ -180,17 +204,19 @@ a[2]/sum(a)
 First we copy the SFS files to our local folder.
 
 ```{bash}
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/*sfs /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*sfs /Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs
 
 # I need to change name as R does not like "-lr.sfs"
 
-cd /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/
+cd /Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs
 for i in *sfs
 do 
 #echo $i
 echo $i "--->" ${i/-lr.sfs/_lr.sfs}
 mv $i ${i/-lr.sfs/_lr.sfs}
+rm $i
 done
+
 
 
 ```
@@ -201,7 +227,7 @@ Now we run the script.
 library(dplyr)
 library(magrittr)
 
-wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/"
+wd<-"/Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs/"
 
 my_files_unfolded = list.files(path = wd, pattern="*sfs$")    
 for (i in 1:length(my_files_unfolded)) 
@@ -216,12 +242,11 @@ for (i in 1:length (my_files_unfolded))
   temp3=norm(temp2[-c(length(temp2))])
   barplot(temp3,xlab="Chromosomes",
           names=1:length(temp3),ylab="Proportions",main=my_files_unfolded[i],col='grey')
-  dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/",my_files_unfolded[i],".eps"), onefile=FALSE, horizontal=FALSE)
+  dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs/",my_files_unfolded[i],".eps", sep=""), onefile=FALSE, horizontal=FALSE)
   dev.off()
   rm(temp1)
   rm(temp2)
   rm(temp3)
 }
-
 
 ```
