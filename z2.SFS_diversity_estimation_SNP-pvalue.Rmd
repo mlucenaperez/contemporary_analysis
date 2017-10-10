@@ -1,0 +1,197 @@
+---
+title: "z2.SFS_diversity_estimation_SNP-pvalue"
+output: html_document
+---
+
+
+# Principal Component Analysis: 
+
+I will use Elena intergenic to apply different SNP-pval to see how Balkans diversity change with the different p-val. 
+
+
+
+```{bash}
+
+mkdir /home/mlucena/ANGSD_analysis/intergenic_analysis/SNP-pval_test
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/SNP-pval_test/
+
+POP=("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080")
+
+#  We start the analysis now:
+
+POP="c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl"  # <--CHANGE POP HERE
+screen -S test_SNP-pval
+POP="c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl"  # <--CHANGE POP HERE
+script test_SNP-pval.log
+POP="c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl"  # <--CHANGE POP HERE
+
+# Set paths to software and some commom files
+
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < /home/mlucena/ANGSD_analysis/depth_calculus/"$POP"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+
+ANGSD=/opt/angsd/angsd
+NGSTOOLS=/opt/ngsTools_19092016/
+THREADS=30                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+REGIONFILE="/home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+N_IND=$(echo ${POP: -3} )
+MIN_IND=$(expr $N_IND / 2) 
+
+echo $POP
+
+MIN_IND=1
+
+echo $POP
+echo $N_IND
+echo $MIN_IND
+echo $maxDepth
+echo $minDepth
+
+
+### Calling genotype likelihoods: 
+
+# Para 0 tengo que eliminar lo de SNP_pval, no lo puedo lanzar así como está. 
+
+for PV in 0 0.05 1e-2 1e-3 1e-4 1e-5 1e-6
+do
+echo $PV 
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/$POP.intergenic.bamlist -ref $REF -out $POP.Small-Intergenic.SNP-pval_$PV \
+$FILTER1 $FILTER2 \
+-minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth -setMinDepthInd $MIN_IND_DEPTH \
+-rf $REGIONFILE \
+-GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
+-SNP_pval $PV \ 
+-doGeno 32 -doPost 1
+done
+
+
+POP=("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080")
+
+
+rm Nsites_different_pval.txt
+
+for PV in 0 0.05 1e-2 1e-3 1e-4 1e-5 1e-6
+do
+echo $PV 
+echo $PV `zcat $POP.Small-Intergenic.SNP-pval_$PV.mafs.gz | tail -n+2 | wc -l` >> Nsites_different_pval.txt
+zcat $POP.Small-Intergenic.SNP-pval_$PV.mafs.gz  | awk -v OFS='\t' '{print $1, $2}' > sites_$PV.txt
+done
+
+##################################################################################
+# ¿Cuantos sitios tengoen total?
+
+# Lo calculo en total sites:
+# 1666368
+
+
+# Voy a usar esos sitios totales para corregir pi, multiplicando por el total de sitios cubiertos y dividiendo por los totales. 
+
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/SNP-pval_test
+
+POPS=$(ls /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*.transformedThetas | cut -d"/" -f 7)
+
+echo -e "p_value\tpop\tN_sites_covered\tpi\ttotal_sites\tpi_corrected" > pv.pop.pi_averages.tsv
+for POP in ${POPS[@]}
+do
+echo $POP
+for PV in 0 0.05 1e-2 1e-3 1e-4 1e-5 1e-6
+do
+echo $PV
+# grep -wFf sites_$PV.txt /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/$POP > ${POP/.transformedThetas/_$PV.transformedThetas.borrar}
+# echo "grep done for" $POP $PV
+TOTAL_SITES=$(cut -d":" -f2  /home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf | awk 'BEGIN { FS = "-" } ; {sum+=$2-$1} END {print sum}' )
+# Lo he hecho aparte y salen 1666368
+N_SITES_COVERED=$(wc -l ${POP/.transformedThetas/_$PV.transformedThetas.borrar} | cut -d" " -f 1)
+AVERAGE=$(awk '{ sum += $5 } END { if (NR > 0) print sum / NR }'      ${POP/.transformedThetas/_$PV.transformedThetas.borrar})
+paste \
+<(echo $PV) \
+<(echo ${POP/.transformedThetas/}) \
+<(echo $N_SITES_COVERED) \
+<(echo $AVERAGE) \
+<(echo $TOTAL_SITES) \
+<(echo $AVERAGE*$N_SITES_COVERED/$TOTAL_SITES | bc -l) | sed 's/ /\t/g'| sed 's/\t\+/\t/g' >> pv.pop.pi_averages.tsv
+done
+done
+
+
+
+echo -e "p_value\tpop\tN_sites_covered\twatterson\ttotal_sites\twatterson_corrected"  > pv.pop.watterson_averages.tsv
+for POP in ${POPS[@]}
+do
+echo $POP
+for PV in 0 0.05 1e-2 1e-3 1e-4 1e-5 1e-6
+do
+echo $PV
+# grep -wFf sites_$PV.txt /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/$POP > ${POP/.transformedThetas/_$PV.transformedThetas.borrar}
+# echo "grep done for" $POP $PV
+N_SITES_COVERED=$(wc -l ${POP/.transformedThetas/_$PV.transformedThetas.borrar} | cut -d" " -f 1)
+AVERAGE=$(awk '{ sum += $4 } END { if (NR > 0) print sum / NR }'      ${POP/.transformedThetas/_$PV.transformedThetas.borrar})
+paste \
+<(echo $PV) \
+<(echo ${POP/.transformedThetas/}) \
+<(echo $N_SITES_COVERED) \
+<(echo $AVERAGE) \
+<(echo $TOTAL_SITES) \
+<(echo $AVERAGE*$N_SITES_COVERED/$TOTAL_SITES | bc -l) | sed 's/ /\t/g'| sed 's/\t\+/\t/g' >> pv.pop.watterson_averages.tsv
+done
+done
+
+```
+
+## Copy to my local
+
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/SNP-pval_test/*tsv /Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_test_SNP-pval 
+```
+
+
+
+
+## R representation
+
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# wd <- "/home/mlucena/ANGSD_analysis/intergenic_analysis/SNP-pval_test/"
+# wd <- "/Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_test_SNP-pval/"
+
+pv.pop.pi_average <- read.table(paste (wd, "pv.pop.pi_averages.tsv", sep =""), header=TRUE, dec=".") %>% 
+  mutate (p_value = replace(p_value, p_value==0, 1)) 
+
+ggplot (pv.pop.pi_average, aes(p_value, pi_corrected, colour=pop, fill=pop)) +
+  geom_line() +
+  scale_x_continuous(trans = "reverse") +
+  geom_point() +
+  scale_x_log10() +
+  theme_classic()
+
+ggsave(file = "pi_diversity_per_pop_different_pvalue.pdf", device = "pdf")
+
+
+#_______________________________________________________________________________________# 
+
+
+pv.pop.watterson_average <- read.table(paste (wd, "pv.pop.watterson_averages.tsv", sep =""), header=TRUE, dec=".") %>% 
+  mutate (p_value = replace(p_value, p_value==0, 1)) 
+
+ggplot (pv.pop.watterson_average, aes(p_value, watterson, colour=pop, fill=pop)) +
+  geom_line() +
+  scale_x_continuous(trans = "reverse") +
+  geom_point() +
+  scale_x_log10() +
+  theme_classic()
+
+ggsave(file = "watterson_diversity_per_pop_different_pvalue.pdf", device = "pdf")
+
+
+
+```
+

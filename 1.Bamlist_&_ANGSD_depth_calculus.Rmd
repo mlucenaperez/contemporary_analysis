@@ -47,6 +47,15 @@ cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/
 
 # All individuals pop: --> Done 20/06/2017
 POPS=(ll_ba c_ll_cr c_ll_ka c_ll_ki c_ll_la c_ll_no c_ll_og c_ll_po c_ll_to c_ll_tu c_ll_vl c_ll_ya c_lp_do c_lp_sm)
+
+
+POPS=(ll_ba  c_ll_ka  c_ll_la c_ll_no c_ll_og c_ll_po c_ll_to c_ll_tu c_ll_vl c_ll_ya c_lp_do c_lp_sm)
+
+# Somo individuals pop (as I subsample those)
+
+POPS=(c_ll_cr c_ll_ki c_ll_vl c_ll_ya c_lp_do c_lp_sm)
+
+
 # Some pop combinations: --> Done 20/06/2017
 POPS=(c_ll_ka-c_ll_og  ) 
 # Both species: --> Done 20/06/2017
@@ -112,11 +121,10 @@ NUMBER_IND=$(printf "%03d" `wc -l "$POP".bamlist | cut -f1 -d " "`);
 mv "$POP".bamlist "$POP"_n"$NUMBER_IND".bamlist
 ```
 
-### MaxDepth --> Done with WG bamlist
 
 Distinguimos entre poblaciones únicas que se corren con todo el genoma, y poblaciones más grandes que por optimización de tiempo vamos a correr usando el intergénico de Elena.
 
-#### For single or small populations:
+#### Representation: For single or small populations:
 
 --> Lynx pardinus
 c_lp_do (including 25x samples) --> Previously done
@@ -131,40 +139,43 @@ h_lp_mt
 c_ll_no --> Previously done
 c_ll_ba --> Previously done
 h_ll_ba       "
-c_ll_cr (including 25x MACROGEN sample) --> Previously done
-c_ll_cr (including subsampled MACROGEN sample) -->  To do
+c_ll_cr (including 25x MACROGEN sample) --> Previously done (borrado)
+c_ll_cr (including subsampled MACROGEN sample) -->  Lanzado! 21/09/2017
 c_ll_po --> Previously done
 c_ll_la --> Previously done
-c_ll_ki (including 25x MACROGEN sample) -->  Previously done
-c_ll_ki (including subsampled MACROGEN sample) -->  To do
+c_ll_ki (including 25x MACROGEN sample) -->  Previously done (borrado)
+c_ll_ki (including subsampled MACROGEN sample) -->  Lanzado! 21/09/2017 ()
 c_ll_ur
 c_ll_tu --> Done
 c_ll_to --> Previously done
 c_ll_ka --> No
 c_ll_og --> No
-c_ll_ya (including 25x MACROGEN sample) --> Previously done
+c_ll_ya (including 25x MACROGEN sample) --> Previously done (borrado)
 c_ll_ya (including subsampled MACROGEN sample) -->  To do
-c_ll_vl (including 25x MACROGEN sample) --> Previously done
+c_ll_vl (including 25x MACROGEN sample) --> Previously done (borrado)
 c_ll_vl (including subsampled MACROGEN sample) -->  To do
 c_ll_ka-c_ll_og --> Done
 c_ll_to-c_ll_ka-c_ll_og --> Done
 
+
+Para los análisis de intergénico vamos a usar un filtro sacado de wg. 
 
 
 ```{r, engine=bash, eval=FALSE}
 
 cd /home/mlucena/ANGSD_analysis/depth_calculus
 #To launch one by one
-POP="c_ll_ki_n0"  # <--CHANGE POP HERE
+POP="c_ll_vl_n008"  # <--CHANGE POP HERE
 screen -S "$POP"_qc_test
-POP="c_ll_ki_n0"  # <--CHANGE POP HERE
+POP="c_ll_vl_n008"  # <--CHANGE POP HERE
 script "$POP"_qc.log
-POP="c_ll_ki_n0"  # <--CHANGE POP HERE
+POP="c_ll_vl_n008"  # <--CHANGE POP HERE
 
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
 THREADS=15                    # no. of computer cores used 20 = OK, >20 = ask people first!
 
-BAMLIST=$(ls /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP".bamlist)
+# BAMLIST=$(ls /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP".bamlist)
+BAMLIST=$(ls /home/mlucena/ANGSD_analysis/depth_calculus/"$POP".bamlist)
 OUT_NAME="/home/mlucena/ANGSD_analysis/depth_calculus/"$POP".qc"
 NUMBER_IND=$(echo ${BAMLIST: -11}  | sed 's/.bamlist//g')
 MAXDEPTH=$(expr $NUMBER_IND \* 1000)
@@ -190,6 +201,11 @@ echo $MAXDEPTH
 -maxDepth $MAXDEPTH  
 
 # Antes el nombre de out era: # ${BAMLIST/.bamlist/.qc} \ por lo que me lo escribía en whole_genome_analysis folder. 
+# 21/09/2017 --> También he cambiado que los bamlist se cojan de aquí en vez de en whole_genome, porque creo que tiene más sentido. Aun así, en whole genome o en intergenic están los correspondientes bamlist. 
+
+# ¡¡Ojo!! Para los análisis intergenic, yo estoy calculando el maxDepth y minDepth usando WG, por lo que uso los bamlist con todo el genoma, mientras que los análisis propiamente dichos de intergénico se hacen con el subset. Por tanto el bamlist de intergénico es distinto al que encuentro en depth_calculus. Esto lo hago sí para reutilizar los calculados para lo análisis de whole genome de doñana, sierramorena, polonia y noruega para los nuevos análisis de intergenic (y no tener que volverlos a calcular sobre el cachito solamente)
+
+
 
 ```
 
@@ -271,7 +287,126 @@ done
 ```
 
 
-#### For huge populations:
+
+
+
+
+### Creating Bamlist for intergenic analysis 
+
+
+```{bash}
+
+### Defining Bamlist per pop
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis
+
+# All individuals pop: --> Done 20/06/2017
+POPS=(ll_ba c_ll_cr c_ll_ka c_ll_ki c_ll_la c_ll_no c_ll_og c_ll_po c_ll_to c_ll_tu c_ll_vl c_ll_ya c_lp_do c_lp_sm)
+# Some pop combinations: --> Done 20/06/2017
+POPS=(c_ll_ka-c_ll_og  ) 
+# Both species (without Urals): --> Done 20/06/2017
+POPS=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+# Only lynx lynx (without Urals): --> Done 20/06/2017
+POPS=(c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+# Only pardinus: --> Done 20/06/2017
+POPS=(c_lp_do-c_lp_sm)
+
+# Done: --> 14/09/2017
+POPS=(c_ll_ur)
+POPS=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+POPS=(c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+
+
+# Oriental lynx lynx
+POPS=(c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+
+
+
+for POP in ${POPS[@]}
+do
+echo $POP
+rm "$POP".intergenic.bamlist
+echo $POP
+IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
+for POP1 in "${POPS1[@]}"
+do
+echo "$POP --> $POP1"
+ls /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/*${POP1}*intergenic.bam  >> "$POP".intergenic.bamlist
+done
+NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
+mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
+done
+
+
+# OJO!  
+# mv ll_ba_n003.intergenic.bamlist c_ll_ba_n003.intergenic.bamlist
+
+# Modifico el archivo que incluye ambas especies para hacer uno que sólo tenga los individuos secuenciados a 5x.  
+
+nano samples_genome_project
+c_lp_do_0153
+c_lp_do_0173
+c_lp_do_0443
+c_lp_sm_0138
+c_lp_sm_0140
+c_lp_sm_0185
+c_lp_sm_0186
+c_lp_sm_0298
+c_lp_sm_0359
+c_lp_do_0007
+c_lp_sm_0221
+
+#  --> Done 20/06/2017
+
+POP=c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl
+grep -v -f samples_genome_project ${POP}_n105.intergenic.bamlist > ${POP}.intergenic.bamlist
+NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
+mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
+
+#  --> Done 20/06/2017
+
+POP=(c_lp_do-c_lp_sm)
+grep -v -f samples_genome_project ${POP}_n031.intergenic.bamlist > ${POP}.intergenic.bamlist
+NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
+mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
+
+POPS=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+
+
+
+
+########################################################################################################################################
+########################################################################################################################################
+
+############################################# OLD--> Lo dejo por si es útil ############################################# 
+##### Este script es el que usaba antes que cogía la información de la tabla de depth:
+# NO es el que voy a usar ahora, si no que voy a definir cada bam list como para WG partiendo de todo. 
+POPS=(cat /home/mlucena/ANGSD_analysis/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv | awk '{print $1}')
+for POP in ${POPS[@]}
+do
+echo $POP
+rm "$POP".intergenic.bamlist
+POP=$(echo $POP | awk -F'_' '{for (i=1; i<NF; i++) printf("%s_", $i)}' | awk '{print substr ($0, 1, length($0)-1)}')
+echo $POP
+IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
+for POP1 in "${POPS1[@]}"
+do
+echo "$POP --> $POP1"
+ls /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/${POP1}*intergenic.bam  >> "$POP".intergenic.bamlist
+done
+NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
+mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
+done
+
+########################################################################################################################################
+########################################################################################################################################
+
+
+```
+
+
+
+#### Rep: For huge populations:
 
 En este caso usamos el intergénico de Elena. 
 
@@ -279,10 +414,15 @@ En este caso usamos el intergénico de Elena.
 c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n094  --> Done 20/07/2017
 c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n105 --> Done 20/07/2017
 
---> Only lynx lynx:  
-
+--> DEFINITIVO:
 POPS=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+--> Done 14/09/2017
+
+--> Only lynx lynx:  
 POPS=(c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+
+--> Oriental lynx lynx:  
+POPS=(c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
 
 
 --> Only pardinus: --> Previously done 
@@ -293,15 +433,10 @@ c_lp_do-c_lp_sm
 ```{r, engine=bash, eval=FALSE}
 cd /home/mlucena/ANGSD_analysis/depth_calculus
 #To launch one by one
-POP=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n111)
+screen -S oriental_lynx_lyxn_do_depth
+script oriental_lynx_lyxn_do_depth_qc.log
 
-screen -S do_depth_both_species_all_ind
-
-POP=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n111)
-
-script c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n111_qc.log
-
-POP=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n111)
+POP=(c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n030)
 
 REF="/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
 THREADS=20                    # no. of computer cores used 20 = OK, >20 = ask people first!
@@ -507,6 +642,10 @@ scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/depth_calculus/mean_s
 
   
 # Separate in populations:
+  
+ssh mlucena@genomics-b.ebd.csic.es
+
+
 cd /home/mlucena/ANGSD_analysis/depth_calculus/
 POPS=$(cat /home/mlucena/ANGSD_analysis/depth_calculus/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv | awk '{print $1}')
   
@@ -519,117 +658,6 @@ done
 
   
   
-```
-
-
-
-
-### Creating Bamlist for intergenic analysis 
-
-```{bash}
-
-### Defining Bamlist per pop
-
-cd /home/mlucena/ANGSD_analysis/intergenic_analysis
-
-# All individuals pop: --> Done 20/06/2017
-POPS=(ll_ba c_ll_cr c_ll_ka c_ll_ki c_ll_la c_ll_no c_ll_og c_ll_po c_ll_to c_ll_tu c_ll_vl c_ll_ya c_lp_do c_lp_sm)
-# Some pop combinations: --> Done 20/06/2017
-POPS=(c_ll_ka-c_ll_og  ) 
-# Both species (without Urals): --> Done 20/06/2017
-POPS=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
-# Only lynx lynx (without Urals): --> Done 20/06/2017
-POPS=(c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
-# Only pardinus: --> Done 20/06/2017
-POPS=(c_lp_do-c_lp_sm)
-
-# Done: --> 14/09/2017
-POPS=(c_ll_ur)
-POPS=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
-POPS=(c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
-
-
-
-for POP in ${POPS[@]}
-do
-echo $POP
-rm "$POP".intergenic.bamlist
-echo $POP
-IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
-for POP1 in "${POPS1[@]}"
-do
-echo "$POP --> $POP1"
-ls /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/*${POP1}*intergenic.bam  >> "$POP".intergenic.bamlist
-done
-NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
-mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
-done
-
-
-# OJO!  
-# mv ll_ba_n003.intergenic.bamlist c_ll_ba_n003.intergenic.bamlist
-
-# Modifico el archivo que incluye ambas especies para hacer uno que sólo tenga los individuos secuenciados a 5x.  
-
-nano samples_genome_project
-c_lp_do_0153
-c_lp_do_0173
-c_lp_do_0443
-c_lp_sm_0138
-c_lp_sm_0140
-c_lp_sm_0185
-c_lp_sm_0186
-c_lp_sm_0298
-c_lp_sm_0359
-c_lp_do_0007
-c_lp_sm_0221
-
-#  --> Done 20/06/2017
-
-POP=c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl
-grep -v -f samples_genome_project ${POP}_n105.intergenic.bamlist > ${POP}.intergenic.bamlist
-NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
-mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
-
-#  --> Done 20/06/2017
-
-POP=(c_lp_do-c_lp_sm)
-grep -v -f samples_genome_project ${POP}_n031.intergenic.bamlist > ${POP}.intergenic.bamlist
-NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
-mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
-
-POPS=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
-
-
-
-
-########################################################################################################################################
-########################################################################################################################################
-
-############################################# OLD--> Lo dejo por si es útil ############################################# 
-##### Este script es el que usaba antes que cogía la información de la tabla de depth:
-# NO es el que voy a usar ahora, si no que voy a definir cada bam list como para WG partiendo de todo. 
-POPS=(cat /home/mlucena/ANGSD_analysis/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv | awk '{print $1}')
-for POP in ${POPS[@]}
-do
-echo $POP
-rm "$POP".intergenic.bamlist
-POP=$(echo $POP | awk -F'_' '{for (i=1; i<NF; i++) printf("%s_", $i)}' | awk '{print substr ($0, 1, length($0)-1)}')
-echo $POP
-IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
-for POP1 in "${POPS1[@]}"
-do
-echo "$POP --> $POP1"
-ls /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/${POP1}*intergenic.bam  >> "$POP".intergenic.bamlist
-done
-NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
-mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
-done
-
-########################################################################################################################################
-########################################################################################################################################
-
-
 ```
 
 
