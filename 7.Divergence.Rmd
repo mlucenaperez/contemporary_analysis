@@ -55,7 +55,7 @@ FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
 N_IND=$(echo ${POP: -3} )
 MIN_IND=$(expr $N_IND / 2)
 RUTA=/home/mlucena/ANGSD_analysis 
-SNP_PVAL=$(echo 1/$N_IND |  bc -l | sed 's/./0./') 
+SNP_PVAL=rrrrr
 
 
 # Sanity checks:
