@@ -172,7 +172,7 @@ for (i in 1:length (my_files_unfolded))
   temp3=norm(temp2[-c(length(temp2))])
   barplot(temp3,xlab="Chromosomes",
           names=1:length(temp3),ylab="Proportions",main=my_files_unfolded[i],col='grey')
-  dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/",my_files_unfolded[i],".eps"), onefile=FALSE, horizontal=FALSE)
+  dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/",my_files_unfolded[i],".eps", sep =""), onefile=FALSE, horizontal=FALSE)
   dev.off()
   rm(temp1)
   rm(temp2)
@@ -793,7 +793,7 @@ library ("magrittr")
 library("tidyr")
 library ("dplyr")
 # wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
-wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
 # wd <- "/Users/marialucenaperez/Desktop/Diversity_per_unit"
 
 finsdiversity = list.files(path = wd,pattern="*per_specie.tsv$")
@@ -870,7 +870,7 @@ write.table(df.wm_guardar, paste(wd,"/", name_diversity[1],".watterson_mean.csv"
 
 
 ggplot(data = dataframe, aes(x=feature, y = pairwise_ave, fill=pop)) +
-  geom_boxplot(outlier.shape=NA) +
+  geom_boxplot() +
   geom_point(data=df.pm,aes(x=feature, y = weightedmean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
   facet_grid(.~feature, scales="free") +
   scale_y_continuous(trans = 'log10') +
