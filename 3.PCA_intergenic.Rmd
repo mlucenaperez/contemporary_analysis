@@ -29,7 +29,7 @@ Lynx lynx, oriental populations:
 c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n030
 
 
-```{r, engine=bash, eval=FALSE}
+```{bash}
 
 # We are now performing a principal component analyses (PCA) without relying on called genotypes, but rather by taking their uncertainty into account. 
 # More specifically, the next program we are going to use (ngsTools) takes as input genotype probabilities in binary format, 
@@ -52,6 +52,7 @@ script pca_lynx_lynx_oriental.log
 POP="c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl"  # <--CHANGE POP HERE
 
 
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < /home/mlucena/ANGSD_analysis/depth_calculus/"$POP"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
 
 
 # Set paths to software and some commom files
@@ -63,19 +64,23 @@ REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without
 ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
 FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
 FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+N_IND=$(echo ${POP: -3} )
+MIN_IND=$(expr $N_IND / 2) 
 
 
-read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < /home/mlucena/ANGSD_analysis/depth_calculus/"$POP"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+SNP_PVAL="1e-4"
 
+
+
+# Sanity checks:
 
 echo $POP
-# We don't need regionfile because we are using a bam file with a subset of the data.
-
-N_IND=$(echo ${POP: -3} )
-MIN_IND=$(expr $N_IND / 2) # We stablish a sharp threshold, usually we divided into 2. 
-MIN_IND_DEPTH=1
-
+echo $N_IND
 echo $MIN_IND
+echo $maxDepth
+echo $minDepth
+echo $SNP_PVAL
+
 
 ### Calling genotype likelihoods: 
  
@@ -83,8 +88,12 @@ $ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/$PO
 $FILTER1 $FILTER2 \
 -minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth -setMinDepthInd $MIN_IND_DEPTH \
 -GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
--SNP_pval 1e-3 \
+-SNP_pval $SNP_PVAL \
 -doGeno 32 -doPost 1
+
+
+
+# doPost 1 uses the estimates perstie allele frequency as a rpior for genotyped proportions, assuming HWE. 
 
 
 ### URGENTE ULTIMA ACTUALIZACION!!
@@ -125,7 +134,7 @@ echo $N_SITES
 
 # I have 3765577 sites lynx lynx + lynx pardinus. Sept 2017.
 # I have 2261952 sites only lynx lynx. Sept 2017.
-# I have 1903889 sites only lynx lynx oriental. Sept 2017.
+# I have 1773532 sites only lynx lynx oriental. Oct 2017.
 
 # Does it make sense?
 
@@ -134,6 +143,7 @@ echo $N_SITES
 
 $NGSTOOLS/ngsPopGen/ngsCovar -probfile $POP.*geno -outfile $POP.covar -nind $N_IND  -nsites $N_SITES -call 0 -norm 0 &> /dev/null
 
+#-minmaf FLOAT: ignore sites below this threshold of minor allele frequency
 
 # with the options -call 0 meaning that we do not perform genotype calling 
 # and -norm 0 that we are not normalising by allele frequency. 
@@ -330,11 +340,10 @@ ggplot() +
   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations"), size = 5) + 
   scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
  ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC2_PC3.pdf", sep=""),units="mm",  width=270, height=190)
- 
+
 #ggplot() + 
 #  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations", shape="seq"), size = 5) + 
 #  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
- 
 
 # ggplot() + 
 #   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, shape="subspecies"), size = 3) + 
@@ -352,8 +361,6 @@ ggplot() +
 # ggsave(paste(WORKING_DIR,pop, "_pca.TEST.eps", sep=""),plot=a, units="mm",  width=270, height=190)
 # 
 # ggsave(paste(WORKING_DIR,pop, "_pca2.TEST.eps", sep=""),plot=b, units="mm",  width=270, height=190)
-  
-  
   
 
 ###########################################################################################
