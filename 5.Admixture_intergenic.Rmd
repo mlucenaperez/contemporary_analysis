@@ -10,7 +10,7 @@ output: html_document
 ## Converting our data in beagle format:
 
 
-```{r, engine=bash, eval=FALSE}
+```{bash}
 
 
 POP="c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080"  # <--CHANGE POP HERE
@@ -29,7 +29,7 @@ FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
 FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
 N_IND=$(echo ${POP: -3} )
 MIN_IND=$(expr $N_IND / 2)
-SNP_PVAL=$(echo "1/("$N_IND" *2)" | bc -l)
+SNP_PVAL="1e-4"
 
 RUTA=/home/mlucena/ANGSD_analysis 
 
@@ -65,6 +65,12 @@ $FILTER2 \
 # -SNP_pval [float]
 # The p-value used for calling snaps. see Allele_Frequency_estimation for additional options --> I choose at least 1 ind heterozygote. 
 
+
+
+#################################
+# Lo que hacemos con este script es: Primero decidimos que vamos a usar las frecencias alellicas en cuenta para establecer cual es el minor y major allele, usando los Genotipes likelihood. Usando estos major y minor Usamos los GL para obteenr la frecuencia del mayor y el minor. Además también asumimos cierta incertidumbre en el minor. 
+
+#################################
 
 # for i in $POP*
 # do
@@ -145,12 +151,9 @@ Estimating the Best K
 
 The method of Evanno enables the user to identify a single k value, out of a range of K values, which captures the uppermost level of structure. This method was purposed by Evonno et al. in 2005 (Molecular Ecology 14, 2005). In addition, we also use ln(Pr(X|K) values in order to identify the k for which Pr(K=k) is highest (as described in STRUCTURE's manual, section 5.1).
 
-http://clumpak.tau.ac.il/bestK.html
-
 Encontrado en:
 
 https://github.com/alexkrohn/AmargosaVoleTutorials/blob/master/ngsAdmix_tutorial.md
-
 
 
 ```{bash}
@@ -159,19 +162,17 @@ https://github.com/alexkrohn/AmargosaVoleTutorials/blob/master/ngsAdmix_tutorial
 
 for i in *log
 do
-echo $i | cut -d'.' -f 1 | rev | cut -d'_' -f1 | rev | cut -d 'K' -f 2 >> Ks.borrar
+echo $i | cut -d'.' -f 1 | cut -d 'K' -f 2 | cut -d'_' -f1 >> Ks.borrar
 grep "best like=" $i | cut -d'=' -f 2 | cut -d' ' -f 1 >> likelihood.borrar
 done
 
-paste  Ks.borrar likelihood.borrar | sort -n -k2 > Ks_log_prob_table.txt
+paste Ks.borrar likelihood.borrar | sort -n -k2 > Ks_log_prob_table.txt
 
 rm *borrar
 
 ```
 
-
-
-## Plotting results
+## Plotting admix results
 
 First we need a file with our population information:
 
