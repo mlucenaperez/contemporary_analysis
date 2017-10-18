@@ -132,9 +132,11 @@ gunzip $POP.intergenic.geno.gz
 N_SITES=`zcat $POP.intergenic.mafs.gz | tail -n+2 | wc -l`
 echo $N_SITES 
 
-# I have 3765577 sites lynx lynx + lynx pardinus. Sept 2017.
-# I have 2261952 sites only lynx lynx. Sept 2017.
+# I have 3636950 sites lynx lynx + lynx pardinus. Oct 2017.
+# I have 2096552 sites only lynx lynx. Oct 2017.
 # I have 1773532 sites only lynx lynx oriental. Oct 2017.
+
+
 
 # Does it make sense?
 
@@ -238,7 +240,7 @@ annot <- read.table(paste(WORKING_DIR,pop, ".ALL.clst", sep=""), header=TRUE)
 # comp <- as.numeric(strsplit(opt$comp, "-", fixed=TRUE)[[1]])
 
 # comp <- c(1,2)
-comp <- c(2,3)
+# comp <- c(2,3)
 # comp <- c(1,3)
 
 
@@ -339,7 +341,7 @@ y_axis = paste("PC",comp[2],sep="")
 ggplot() + 
   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations"), size = 5) + 
   scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
- ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC2_PC3.pdf", sep=""),units="mm",  width=270, height=190)
+ ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
 
 #ggplot() + 
 #  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations", shape="seq"), size = 5) + 
@@ -352,7 +354,7 @@ ggplot() +
 ggplot() + 
   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Subspecies"), size = 5)  +
   ggtitle(title) + theme_classic()
-  ggsave(paste(WORKING_DIR,pop, "_pca_subspecies_PC2_PC3.pdf", sep=""),units="mm",  width=270, height=190)
+  ggsave(paste(WORKING_DIR,pop, "_pca_subspecies_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
 
 # ggplot() + 
 #   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="subspecies"), size = 3)  +
@@ -370,6 +372,10 @@ ggplot() +
 scatterplot3js(PC$PC1, PC$PC2, PC$PC3, 
                 col=PC$color,  labels=PC$Ind,
                size=0.7, grid=FALSE, renderer = "canvas", axis =F)
+
+scatterplot3js(PC$PC1, PC$PC2, PC$PC3, 
+                col=PC$color,  labels=PC$Ind,
+               size=0.7)
 
 
 
