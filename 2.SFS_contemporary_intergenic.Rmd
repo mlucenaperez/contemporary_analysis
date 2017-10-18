@@ -20,17 +20,17 @@ cd $RUTA/intergenic_analysis/intergenic_sfs
 
 #To launch one by one
 
-POP="c_ll_ki"  # <--CHANGE POP HERE
+POP="c_ll_to-c_ll_ka-c_ll_og"  # <--CHANGE POP HERE
 
 #screen -S "$POP"_sfs
 screen -S "$POP"_thetas
 
-POP="c_ll_ki"  # <--CHANGE POP HERE
+POP="c_ll_to-c_ll_ka-c_ll_og"  # <--CHANGE POP HERE
 
 #script "$POP"_sfs.log
 script "$POP"_thetas.log
 
-POP="c_ll_ki"  # <--CHANGE POP HERE
+POP="c_ll_to-c_ll_ka-c_ll_og"  # <--CHANGE POP HERE
 
 THREADS=25                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 RUTA=/home/mlucena/ANGSD_analysis/depth_calculus 
