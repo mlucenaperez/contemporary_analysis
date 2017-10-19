@@ -864,4 +864,92 @@ done
 
 ```
 
+# Ojo!!!! Corrección. 
+
+Me he dado cuenta a posteriori de que algunos 5UTR estaban repetidos. 
+
+README_corrected.gff3_file
+
+Como estaba corriendo mis cuentas usando la carpeta per scaffold, lo dejé pasar, y luego lo he corregido a mano de mis resultados, y comprobado que es así el 12/10/2017. Este mismo día estoy corrigiendo todos los archivos anteriores por si alguna vez se utilizan. 
+
+Como las features repetidas son UTR listo todo lo que tenga UTR:
+
+
+```{bash}
+ls *UTR*
+
+LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.corrected.gff3
+LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
+LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.bed
+LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.corrected.bed
+LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.corrected.gff3
+LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3
+LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
+LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.bed
+LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3
+LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.bed
+LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.gff3
+LYPA23C.UTRs_gene-cds.nr.gff3
+
+```
+
+Comando para ver si hay cosas repetidas:
+
+```{bash}
+# Archivos que ya tenían generado su archivo corrected:
+
+i=LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.corrected.gff3 # --> Efectivamente corregido.
+i=LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 # --> No corregido y lo elimino pq ya había generado su equivalente corregido
+
+i=LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.bed # --> No corregido, eliminado.
+i=LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.corrected.bed # --> Corregido, se guarda.
+
+i=LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.corrected.gff3 # --> Corregido, se guarda.
+i=LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3 # --> No corregido, eliminado.
+
+
+# Archivos sin su archivo corrected generado:
+
+i=LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
+i=LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3
+i=LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.gff3
+i=LYPA23C.UTRs_gene-cds.nr.gff3
+
+sort $i | uniq -c | sort -nr | head
+awk '!seen[$0]++' $i >  ${i/.nr./.nr.corrected.} 
+
+# Archivos que genero:
+
+LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.corrected.gff3
+LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.corrected.gff3
+LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.corrected.PLUS1000bp.gff3
+LYPA23C.UTRs_gene-cds.nr.corrected.gff3
+
+
+# Archivos que elimino:
+
+rm LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
+rm LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3
+rm LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.gff3
+rm LYPA23C.UTRs_gene-cds.nr.gff3
+
+# Además de esto, hay dos archivos bed que realmente están bien, porque al generarlos hice un merge. Por tanto aunque sean más antiguos, son de fiar. Estos archivos son:
+
+LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.bed
+LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.bed
+
+# Además de esto genero elimino la carpeta porScaffold para tner más sitio, pero si Elena o cualquier persona la necesitase, sólo tendría que crearla de nuevo con el siguiente script:
+
+awk '{print >> $1; close($1)}' ../LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.corrected.gff3
+
+# Rename gff3.
+for file in lp23*
+do
+echo $file
+mv $file ${file/lp23/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.corrected.gff3_lp23}
+done
+
+
+
+```
 
