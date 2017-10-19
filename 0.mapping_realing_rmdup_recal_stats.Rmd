@@ -50,6 +50,17 @@ ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the 
 # BARCODE LYNX_18:
 # declare -A BARCODEID=(["CB84PANXX_7_152nfDI"]="c_ll_ur_0194" ["CB84PANXX_7_164nfDI"]="c_ll_ur_0195" ["CBCA6ANXX_7_176nfDI"]="c_ll_ur_0200" ["CBCA6ANXX_7_188nfDI"]="c_ll_ur_0196" ["CBCA6ANXX_8_105nfDI"]="c_ll_ur_0203" ["CBCA6ANXX_8_117nfDI"]="c_ll_ur_0199")
 
+
+
+
+# declare -A BARCODEID=(["8153YABXX_lane5_sequence_0"]="c_ll_zz_023A"  ["8153YABXX_lane6_sequence_0"]="c_ll_zz_023A" ["8153YABXX_lane7_sequence_0"]="c_ll_zz_023A" ["8153YABXX_lane8_sequence_0"]="c_ll_zz_023A")
+
+# For this barcode:
+# ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-4 | uniq)) # The array will contain the names of all the samples and we'll loop through it to process all the samples. 
+
+
+
+
 ```
 
 24/05/2017
