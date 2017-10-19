@@ -1779,9 +1779,6 @@ Así que ordeno antes:
 ```
 
 
-
-
-
 ### Diversity per region & feature
 
 
