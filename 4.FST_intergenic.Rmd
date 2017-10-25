@@ -65,6 +65,7 @@ cd $FST_FOLDER
 POP_PAIRS=($(echo ${POPS[@]} | Rscript pops_combinations.R))
 
 # I have 28 combinations:
+# Already done!
 
 c_ll_cr_n006/c_ll_ki_n013
 c_ll_cr_n006/c_ll_la_n006
@@ -94,7 +95,6 @@ c_ll_po_n008/x_ll_ba_n003
 c_ll_vl_n008/c_ll_ya_n008
 c_ll_vl_n008/x_ll_ba_n003
 c_ll_ya_n008/x_ll_ba_n003
-
 
 
 
