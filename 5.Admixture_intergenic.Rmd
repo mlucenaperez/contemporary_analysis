@@ -50,7 +50,7 @@ $ANGSD/angsd -nThreads $THREADS -bam $RUTA/intergenic_analysis/"$POP".intergenic
 $FILTER1 \
 $FILTER2 \
 -GL 1  -doGlf 2 \
--doMajorMinor 1 -doMaf 3 -SNP_pval $SNP_PVAL -skipTriallelic 1 \
+-doMajorMinor 1 -doMaf 1 -SNP_pval $SNP_PVAL -skipTriallelic 1 \
 -minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth 
 
 
