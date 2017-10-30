@@ -264,12 +264,82 @@ echo ${i/_recal_round-1.g.vcf.gz/}
 done
 
 
+# for i in *.g.vcf.stats 
+# do
+# cat $i |  grep -v QUAL | grep -v DP | grep -v IDD >> all_ind_g.vcf.stats
+# done
+
+
+rm general_stats_SNPs.csv
+rm number_SNPs.borrar
+rm ratio_ts_tv.borrar
+rm ratio_ts_tv_SiS.borrar
+rm number_SiS.borrar
+
+echo "id;n_SNPs;TSTV" > general_stats_per_id_SNPs.csv
+
 for i in *.g.vcf.stats 
 do
-cat $i |  grep -v QUAL | grep -v DP | grep -v IDD >> all_ind_g.vcf.stats
+
+echo $i
+
+cat $i  |  grep -v QUAL | grep -v DP | grep -v IDD  | grep -E '^SN' | grep 'SNPs' | awk -F':\t' -v  var="${i/_recal_round-1.g.vcf.stats/}"  '{print var";"$2}' >> number_SNPs.borrar
+
+cat $i  |  grep -v QUAL | grep -v DP | grep -v IDD  | grep -E '^TSTV' | awk  -v var="${i/_recal_round-1.g.vcf.stats/}" ' {print $5}' | sed 's/\./,/g'>> ratio_ts_tv.borrar
+
 done
+
+cat general_stats_per_id_SNPs.csv <(paste -d ';' number_SNPs.borrar ratio_ts_tv.borrar )>  general_stats_per_id_SNPs2.csv && mv general_stats_per_id_SNPs2.csv general_stats_per_id_SNPs.csv 
+
+
+# Only if the calculus is pop-based. 
+
+echo "id;n_SNPs;TSTV;TSTV_SiS;Sis" > general_stats_per_pop_SNPs.csv
+
+for i in *.g.vcf.stats 
+do
+
+echo $i
+
+cat $i  |  grep -v QUAL | grep -v DP | grep -v IDD  | grep -E '^SN' | grep 'SNPs' | awk -F':\t' -v  var="${i/_recal_round-1.g.vcf.stats/}"  '{print var";"$2}' >> number_SNPs.borrar
+
+cat $i  |  grep -v QUAL | grep -v DP | grep -v IDD  | grep -E '^TSTV' | awk  -v var="${i/_recal_round-1.g.vcf.stats/}" ' {print $5}' | sed 's/\./,/g'>> ratio_ts_tv.borrar
+
+
+cat $i  |  grep -v QUAL | grep -v DP | grep -v IDD  | grep -E '^SiS' | awk  -v var="${i/_recal_round-1.g.vcf.stats/}" ' {print $5/$6}' | sed 's/\./,/g' >> ratio_ts_tv_SiS.borrar
+
+cat $i  |  grep -v QUAL | grep -v DP | grep -v IDD  | grep -E '^SiS' | awk  -v var="${i/_recal_round-1.g.vcf.stats/}" '{print $4}' >> number_SiS.borrar
+
+done
+
+cat  general_stats_per_pop_SNPs.csv <(paste -d ';' number_SNPs.borrar ratio_ts_tv.borrar ratio_ts_tv_SiS.borrar number_SiS.borrar ) >  general_stats_per_pop_SNPs2.csv && mv  general_stats_per_pop_SNPs2.csv  general_stats_per_pop_SNPs.csv
+
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/general_stats_per_id_SNPs.csv  /Users/marialucenaperez/Dropbox/PhD/contemporary/SNPs_stats
 
 
 
 ```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+setwd("/Users/marialucenaperez/Dropbox/PhD/contemporary/SNPs_stats/")
+n_snps_raw <- read.csv("/Users/marialucenaperez/Dropbox/PhD/contemporary/SNPs_stats/general_stats_per_id_SNPs.csv", sep=";")  
+pop_names <- substr(n_snps$id, 1, 7)
+
+n_snps <- n_snps_raw %>%  mutate (pop=(pop_names)) 
+
+ggplot (n_snps, aes(x=id, y=n_SNPs, fill=pop))  +
+   geom_bar( stat="identity") 
+
+
+
+ggplot (n_snps, aes(x=id, y=TSTV, fill=pop))  +
+   geom_bar( stat="identity") 
+
+```
+
+
 
