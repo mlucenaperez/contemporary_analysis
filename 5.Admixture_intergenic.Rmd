@@ -247,9 +247,9 @@ http://clumpak.tau.ac.il/bestK.html
 
 ```{bash}
 
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/Ks_log_prob_table.txt /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-16_Snp-pval_/
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/Ks_log_prob_table.txt /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Snp-pval/
 
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/*pdf /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-16_Snp-pval_/
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/*pdf /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Snp-pval/
 
 ```
 
@@ -257,7 +257,9 @@ scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_anal
 
 
 ```{bash}
+
 perl BestKByEvanno.pl --i 110 --d /home/mlucena/results --f /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/Ks_log_prob_table.txt  -- inputtype lnprobbyk
+
 ```
 
 
