@@ -129,14 +129,14 @@ gunzip $POP.intergenic.geno.gz
 # For instance, we need to define how many sites we have. To retrieve such value, we can inspect the file with allele frequencies:
 
 #less -S $POP.mafs.gz
-N_SITES=`zcat $POP.intergenic.mafs.gz | tail -n+2 | wc -l`
+N_SITES=`zcat $POP.intergenic.mafs.gz | tail -n+2 | wc -l` 
+
+# Hago tail -n+2 porque tengo cabecero. 
+
 echo $N_SITES 
 
-<<<<<<< HEAD
-# I have 3765577 sites lynx lynx + lynx pardinus. Sept 2017.
-=======
+
 # I have 3636950 sites lynx lynx + lynx pardinus. Oct 2017.
->>>>>>> b72e867dee9adccaa908a1a1336d088f93cd6da1
 # I have 2096552 sites only lynx lynx. Oct 2017.
 # I have 1773532 sites only lynx lynx oriental. Oct 2017.
 
