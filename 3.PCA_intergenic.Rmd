@@ -206,7 +206,7 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analy
 ## R representation
 
 ```{r "setup", include=FALSE}
-
+install.packages("optparse")
 library(methods)
 library(optparse)
 library(ggplot2)
@@ -253,6 +253,8 @@ annot <- read.table(paste(WORKING_DIR,pop, ".ALL.clst", sep=""), header=TRUE)
 eig <- eigen(covar, symm=TRUE);
 eig$val <- eig$val/sum(eig$val);
 cat(signif(eig$val, digits=3)*100,"\n");
+eig$values
+
 
 # Plot
 PC <- as.data.frame(eig$vectors)
