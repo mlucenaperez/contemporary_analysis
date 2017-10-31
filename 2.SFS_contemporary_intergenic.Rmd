@@ -211,6 +211,8 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analy
 # I need to change name as R does not like "-lr.sfs"
 
 cd /Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs
+
+
 for i in *sfs
 do 
 #echo $i
@@ -219,11 +221,18 @@ mv $i ${i/-lr.sfs/_lr.sfs}
 rm $i
 done
 
+## OJO!!!!! READMEEEEEE!!!!! #######
 
+# Le he quitado a mano a c_ll_to-c_ll_ka-c_ll_og_n008.unfolded_lr.sfs los guiones medios porque si no, no corre en R!!
 
 ```
 
 Now we run the script. 
+
+ 
+```{bash}
+nano SFS_graphical_representation
+```
 
 ```{r}
 library(dplyr)
@@ -242,7 +251,7 @@ for (i in 1:length (my_files_unfolded))
   temp1=(eval(parse(text=my_files_unfolded[i])))
   temp2=norm(temp1[-1])
   temp3=norm(temp2[-c(length(temp2))])
-  barplot(temp3,xlab="Chromosomes",
+  barplot(temp3,xlab="Alleles",
           names=1:length(temp3),ylab="Proportions",main=my_files_unfolded[i],col='grey')
   dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs/",my_files_unfolded[i],".eps", sep=""), onefile=FALSE, horizontal=FALSE)
   dev.off()
@@ -252,3 +261,157 @@ for (i in 1:length (my_files_unfolded))
 }
 
 ```
+
+# SAF variable_sites 1
+
+As we find that balkans have a wierd behaviour, we are going to repeat all the stats, using onel sites that were already filter out by SNP-pval 1e-4 for PCA and ADMIXTURE. We found that this threshold is already stable, and therefore, SNPs called are trustworthy. 
+
+First we are going to select this sites, using PCA maf file.
+
+
+```{bash}
+# This is how it looks:
+
+mkdir /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/intergenic_sfs_filtered_sites
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_PCA
+zcat c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080.intergenic.mafs.gz | head
+# chromo	position	major	minor	ref	knownEM	pK-EM	nInd
+# lp23.s00001	3926	G	A	N	0.020146	9.075109e-08	80
+# lp23.s00001	5895	T	A	N	0.031340	3.633791e-08	80
+# lp23.s00001	6927	C	T	C	0.015890	0.000000e+00	80
+# lp23.s00001	9059	C	T	N	0.064255	0.000000e+00	80
+# lp23.s00001	13418	G	A	A	0.065885	0.000000e+00	80
+# lp23.s00001	13869	T	G	T	0.025897	0.000000e+00	80
+# lp23.s00001	14821	T	G	T	0.041811	0.000000e+00	80
+
+# We are making a site file using the first column (See ANGSD documentation)
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/intergenic_sfs_filtered_sites
+
+zcat /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_PCA/c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080.intergenic.mafs.gz | awk  'BEGIN{OFS="\t";} ; NR>1{print $1,$2}' > PCA_Maf1_SNP-pval1e_4.sites
+
+angsd sites index PCA_Maf1_SNP-pval1e_4.sites
+
+```
+
+
+```{bash}
+
+screen -S diversity_calculus_subset
+
+POPS=$(ls /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*.transformedThetas | cut -d"/" -f 7)
+
+
+echo -e "pop\tpairwise\twatterson"  > Maf1_SNP-pval1e_4_diversity_averages_per_pop.tsv
+
+for POP in ${POPS[@]}
+
+do
+
+echo "grep for" $POP
+
+grep -wFf PCA_Maf1_SNP-pval1e_4.sites /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/$POP > ${POP/.transformedThetas/_Maf1_SNP-pval1e_4.transformedThetas.borrar}
+
+WATTERSON_AVERAGE=$(cut -f 4 ${POP/.transformedThetas/_Maf1_SNP-pval1e_4.transformedThetas.borrar} | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+PAIRWISE_AVERAGE=$(cut -f 5 ${POP/.transformedThetas/_Maf1_SNP-pval1e_4.transformedThetas.borrar} | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+DIFFERENCE_PAIRWISE_WATTERSON_SD=$(cut -f 6  ${POP/.transformedThetas/_Maf1_SNP-pval1e_4.transformedThetas.borrar} |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+TAJIMAS_D=$(echo "(($PAIRWISE_AVERAGE) - ($WATTERSON_AVERAGE))/($DIFFERENCE_PAIRWISE_WATTERSON_SD)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+
+paste \
+<(echo ${POP/.transformedThetas/}) \
+<(echo $WATTERSON_AVERAGE) \
+<(echo $PAIRWISE_AVERAGE) \
+<(echo $TAJIMAS_D) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >> Maf1_SNP-pval1e_4_diversity_averages_per_pop.tsv
+
+rm *borrar
+
+done
+
+
+
+
+
+```
+
+
+# SAF variable_sites 2
+
+```{r, engine=bash, eval=FALSE}
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_filtered_sites
+
+#To launch one by one
+
+POP="c_ll_ur"  # <--CHANGE POP HERE
+
+#screen -S "$POP"_sfs
+screen -S "$POP"_thetas_filtered
+
+POP="c_ll_ur"  # <--CHANGE POP HERE
+
+#script "$POP"_sfs.log
+script "$POP"_thetas_filtered.log
+
+POP="c_ll_ur"  # <--CHANGE POP HERE
+
+THREADS=25                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+RUTA=/home/mlucena/ANGSD_analysis/depth_calculus 
+
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < $RUTA/"${POP}"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+N_IND=$(echo ${POP: -3} )
+MIN_IND=$(expr $N_IND / 2)
+SITES="PCA_Maf1_SNP-pval1e_4.sites"
+
+
+# Sanity checks:
+
+echo $POP
+echo $N_IND
+echo $MIN_IND
+echo $minDepth
+echo $SITES
+
+```
+
+## Unfolded SAF 
+
+```{r, engine=bash, eval=FALSE}
+
+#The read command will read one line at a time from mean_sd_depthGlobal_lynx_per_pop_sd_folds2.csv
+# put the first field (fields being blank separated, and where backslash can be used to escape the field or line separator) in the variable $discard, the second in $x, the third in $y and the rest of the fields in $discard.
+#while read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated; 
+#do
+
+# Anyway I will do it one by one:
+
+##########################
+#  SAF (likelihood):     
+##########################
+
+echo "-------$POP----------SAF (likelihood)-----------------------------------------"
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic.bamlist -ref $REF -anc $ANC \
+-out "$POP"_filtered_Maf1_SNP-pval1e_4.unfolded_lr \
+$FILTER1 \
+$FILTER2 \
+-sites $SITES \
+-GL 1 -doSaf 1  \
+-minInd  $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth
+
+```
+
+
+
+
