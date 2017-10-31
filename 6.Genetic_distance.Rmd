@@ -48,7 +48,7 @@ echo $N_SITES
 
 # Calculo distancia.
 
-$NGSTOOLS/ngsDist --n_threads 10 --seed 12345 --geno $POP.genolike.beagle.gz --probs --n_ind 80 --n_sites $N_SITES --labels labels.txt --call_geno --out $POP.dist
+$NGSTOOLS/ngsDist/ngsDist --n_threads 10 --seed 12345 --geno $POP.genolike.beagle.gz --probs --n_ind 80 --n_sites $N_SITES --labels labels.txt --call_geno --out $POP.dist
 
 
 # Ninguno de estos porque ya he hecho la selección de sitios que quiero en el maf. 
@@ -60,7 +60,6 @@ $NGSTOOLS/ngsDist --n_threads 10 --seed 12345 --geno $POP.genolike.beagle.gz --p
 
 ```
 
-ERROR: [call_geno] missing data threshold must be smaller than calling genotype threshold!
 
 --geno FILE: input file with genotypes, genotype likelihoods or genotype posterior probabilities.
 --n_ind INT: sample size (number of individuals).
@@ -84,18 +83,21 @@ ERROR: [call_geno] missing data threshold must be smaller than calling genotype 
 --seed INT: random number generator seed (only for the bootstrap analysis).
 
 
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_genetic_distances/*dist /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_genetic_distance 
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_genetic_distances/*png /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_genetic_distance 
+```
+
 
 ```{r}
 
-data <- read.table("/Users/marialucenaperez/Desktop/c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-h_ll_ba.genolike.beagle.gz.dist", sep ="\t", header=F, dec=".")
+wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_genetic_distance/"
+POP="c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080"
 
-# preubecinas anteriores:
-# m <- as.dist(matrix)
-# hmap(m)
-# matrix <- read.table("/Users/marialucenaperez/Desktop/prueba.csv", sep =";", header=T, dec=".")
-# a <- heatmap(as.matrix(matrix),symm = T, keep.dendro=F)
-# rotate <- function() t(apply(x, 2, rev))
+data <- read.table(paste (wd , POP, ".dist", sep=""), sep ="\t", header=F, dec=".",skip = 2) 
 
+# skip 2 para que ignore la primera linea
 
 # Script from http://sebastianraschka.com/Articles/heatmaps_in_r.html
 #########################################################
@@ -133,31 +135,23 @@ col_breaks = c(seq(-1,0,length=100),  # for red
   seq(0.81,1,length=100))             # for green
 
 # creates a 5 x 5 inch image
-png("../images/heatmaps_in_r.png",    # create PNG for the heat map        
-  width = 5*300,        # 5 x 300 pixels
-  height = 5*300,
+png(paste (wd, POP, ".png", sep=""),    # create PNG for the heat map        
+  width = 20,        # 5 x 300 pixels
+  height =20,
+  units = "cm",
   res = 300,            # 300 pixels per inch
-  pointsize = 8)        # smaller font size
+  pointsize = 10)        # smaller font size
 
 heatmap.2(mat_data,
   symm = T,
   trace="none",         # turns off trace lines inside the heat map
   main = "Distance matrix", # heat map title
   density.info="none",  # turns off density plot inside color legend
-  col=my_palette,       # use on color palette defined earlier
-  Rowv="NA",            # turn off column clustering
-  Colv="NA")
-  #   margins =c(12,9))     # widens margins around plot
-  # cellnote = mat_data,  # same data set for cell labels
-  # notecol="black",      # change font color of cell labels to black
-  # dendrogram="row")#,     # only draw a row dendrogram
-  # breaks=col_breaks)    # enable color transition at specified limits
-
-dev.off()   
-
-
+  col=my_palette,     # use on color palette defined earlier
+  Colv="NA", # turn off column clustering
+  Rowv="NA", 
+  dendrogram="none",labCol=data$V1)
 
 ```
-
 
 
