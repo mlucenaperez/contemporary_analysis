@@ -65,63 +65,36 @@ cd $FST_FOLDER
 POP_PAIRS=($(echo ${POPS[@]} | Rscript pops_combinations.R))
 
 # I have 28 combinations:
-# Already done!
 
 c_ll_cr_n006/c_ll_ki_n013
 c_ll_cr_n006/c_ll_la_n006
 c_ll_cr_n006/c_ll_no_n008
 c_ll_cr_n006/c_ll_po_n008
-c_ll_cr_n006/c_ll_to-c_ll_ka-c_ll_og_n008
-c_ll_cr_n006/c_ll_tu_n006
-c_ll_cr_n006/c_ll_ur_n006
 c_ll_cr_n006/c_ll_vl_n008
 c_ll_cr_n006/c_ll_ya_n008
 c_ll_cr_n006/x_ll_ba_n003
 c_ll_ki_n013/c_ll_la_n006
 c_ll_ki_n013/c_ll_no_n008
 c_ll_ki_n013/c_ll_po_n008
-c_ll_ki_n013/c_ll_to-c_ll_ka-c_ll_og_n008
-c_ll_ki_n013/c_ll_tu_n006
-c_ll_ki_n013/c_ll_ur_n006
 c_ll_ki_n013/c_ll_vl_n008
 c_ll_ki_n013/c_ll_ya_n008
 c_ll_ki_n013/x_ll_ba_n003
 c_ll_la_n006/c_ll_no_n008
 c_ll_la_n006/c_ll_po_n008
-c_ll_la_n006/c_ll_to-c_ll_ka-c_ll_og_n008
-c_ll_la_n006/c_ll_tu_n006
-c_ll_la_n006/c_ll_ur_n006
 c_ll_la_n006/c_ll_vl_n008
 c_ll_la_n006/c_ll_ya_n008
 c_ll_la_n006/x_ll_ba_n003
 c_ll_no_n008/c_ll_po_n008
-c_ll_no_n008/c_ll_to-c_ll_ka-c_ll_og_n008
-c_ll_no_n008/c_ll_tu_n006
-c_ll_no_n008/c_ll_ur_n006
 c_ll_no_n008/c_ll_vl_n008
 c_ll_no_n008/c_ll_ya_n008
 c_ll_no_n008/x_ll_ba_n003
-c_ll_po_n008/c_ll_to-c_ll_ka-c_ll_og_n008
-c_ll_po_n008/c_ll_tu_n006
-c_ll_po_n008/c_ll_ur_n006
 c_ll_po_n008/c_ll_vl_n008
 c_ll_po_n008/c_ll_ya_n008
 c_ll_po_n008/x_ll_ba_n003
-c_ll_to-c_ll_ka-c_ll_og_n008/c_ll_tu_n006
-c_ll_to-c_ll_ka-c_ll_og_n008/c_ll_ur_n006
-c_ll_to-c_ll_ka-c_ll_og_n008/c_ll_vl_n008
-c_ll_to-c_ll_ka-c_ll_og_n008/c_ll_ya_n008
-c_ll_to-c_ll_ka-c_ll_og_n008/x_ll_ba_n003
-c_ll_tu_n006/c_ll_ur_n006
-c_ll_tu_n006/c_ll_vl_n008
-c_ll_tu_n006/c_ll_ya_n008
-c_ll_tu_n006/x_ll_ba_n003
-c_ll_ur_n006/c_ll_vl_n008
-c_ll_ur_n006/c_ll_ya_n008
-c_ll_ur_n006/x_ll_ba_n003
 c_ll_vl_n008/c_ll_ya_n008
 c_ll_vl_n008/x_ll_ba_n003
 c_ll_ya_n008/x_ll_ba_n003
+
 
 
 
@@ -149,7 +122,7 @@ $NGSTOOLS/realSFS -P $THREADS $SFS_FOLDER/$POP1.unfolded-lr.saf.idx $SFS_FOLDER/
 echo "-------------------->FST  $POP1 and $POP2"
 $NGSTOOLS/realSFS fst index -P $THREADS $SFS_FOLDER/$POP1.unfolded-lr.saf.idx $SFS_FOLDER/$POP2.unfolded-lr.saf.idx  -sfs $POP1.$POP2.unfolded-lr.saf.idx.ml -fstout $POP1.$POP2.unfolded-lr
 echo "--------------------------------->FST  $POP1 and $POP2 printing"
-# $NGSTOOLS/realSFS fst print $POP1.$POP2.unfolded-lr.fst.idx > $POP1.$POP2.unfolded-lr.fst.print
+$NGSTOOLS/realSFS fst print $POP1.$POP2.unfolded-lr.fst.idx > $POP1.$POP2.unfolded-lr.fst.print
 # Ojo!!! el archivo print ocupa muchísimo!!!!!!
 done
 
