@@ -412,6 +412,128 @@ $FILTER2 \
 
 ```
 
+Sanity check
+
+```{bash}
+
+$NGSTOOLS/realSFS print  c_ll_ur_n006_filtered_Maf1_SNP-pval1e_4.unfolded_lr.saf.idx | wc -l
+# 2058550
+
+wc -l PCA_Maf1_SNP-pval1e_4.sites
+# 2096552 PCA_Maf1_SNP-pval1e_4.sites
+
+$NGSTOOLS/realSFS print  c_ll_ur_n006_filtered_Maf1_SNP-pval1e_4.unfolded_lr.saf.idx | awk  'BEGIN{OFS="\t";} ;{print $1, $2}'  > sitios_SAF.sites
+
+ wc -l sitios_SAF.sites 
+# 2058550 sitios_SAF.sites
+
+
+diff sitios_SAF.sites PCA_Maf1_SNP-pval1e_4.sites | head
+# 23a24
+# > lp23.s00001	53180
+# 50a52
+# > lp23.s00001	95912
+# 57a60
+# > lp23.s00001	120814
+# 59a63,65
+# > lp23.s00001	121922
+# > lp23.s00001	121934
+# > lp23.s00001	121970
+
+# ¿Todos los sitios de sitios_SAF.sites están en PCA_Maf1_SNP-pval1e_4.sites?
+
+diff sitios_SAF.sites PCA_Maf1_SNP-pval1e_4.sites | grep "<"  
+#Nada! Ergo, sí. 
+
+
+# Voy a buscar este sitio en el SAF de todo el genoma:
+# lp23.s00001	53180
+
+cd ../intergenic_sfs
+
+$NGSTOOLS/realSFS print c_ll_ur_n006.unfolded-lr.saf.idx | grep "lp23.s00001" | grep "53180"
+
+
+```
+
+
+
+## SFS 
+
+```{r, engine=bash, eval=FALSE}
+
+##########################
+#  SFS                   #(I dont require the -rf file as the saf already only contains the -rf sites
+##########################
+echo "-------$POP----------SFS------------------------------------------------------"
+
+$NGSTOOLS/realSFS "$POP"_filtered_Maf1_SNP-pval1e_4.unfolded_lr.saf.idx  -P $THREADS > "$POP"_filtered_Maf1_SNP-pval1e_4.unfolded_lr.sfs
+
+```
+
+##  SAF (postprob) 
+
+```{r, engine=bash, eval=FALSE}
+
+
+echo "-------$POP----------SAF (postprob)-----------------------------------------"
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic.bamlist -ref $REF -anc $ANC \
+-out "$POP"_filtered_Maf1_SNP-pval1e_4.unfolded_lr.postprob \
+$FILTER1 \
+$FILTER2 \
+-GL 1 -doSaf 1  \
+-sites $SITES \
+-minInd  $MIN_IND -setMaxDepth $maxDepth \
+-doThetas 1 -pest "$POP"_filtered_Maf1_SNP-pval1e_4.unfolded_lr.sfs 
+
+```
+
+
+
+
+##  Make bed theta        
+
+```{r, engine=bash, eval=FALSE}
+
+echo "-------$POP----------Make bed theta -----------------------------------------"
+
+$NGSTOOLS/thetaStat print "$POP"_filtered_Maf1_SNP-pval1e_4.unfolded_lr.postprob.thetas.idx > "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats
+
+# Transform the coordinates to use 0Based bedtools
+
+awk 'NR>1 {print  $1" "$2-1" "$2}' "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats > "$POP"_filtered_Maf1_SNP-pval1e_4.0basedcoordinates.borrar # --> 1, 2, 3
+# log transformation of watterson and pairwise:
+awk 'NR>1 {print  "e("$3")"}' "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats | bc -l > "$POP"_filtered_Maf1_SNP-pval1e_4.watterson.borrar # --> 4
+awk 'NR>1 {print  "e("$4")"}' "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats | bc -l > "$POP"_filtered_Maf1_SNP-pval1e_4.pairwise.borrar # --> 5
+                                                                                  # --> PAIRWISE - WATTERSON
+awk 'NR>1 {print  "e("$5")"}' "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats | bc -l > "$POP"_filtered_Maf1_SNP-pval1e_4.thetaFL.borrar # --> 6
+awk 'NR>1 {print  "e("$6")"}' "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats | bc -l > "$POP"_filtered_Maf1_SNP-pval1e_4.thetaH.borrar # --> 7
+awk 'NR>1 {print  "e("$7")"}' "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats | bc -l > "$POP"_filtered_Maf1_SNP-pval1e_4.thetaL.borrar # --> 8
+
+# Create a header for the "$POP"_filtered_Maf1_SNP-pval1e_4.transformedThetas file
+
+echo "scaffold position1 position2 watterson pairwise pairwise-watterson thetaFL thetaH thetaL" > "$POP"_filtered_Maf1_SNP-pval1e_4.transformedThetas
+
+paste "$POP"_filtered_Maf1_SNP-pval1e_4.0basedcoordinates.borrar "$POP"_filtered_Maf1_SNP-pval1e_4.watterson.borrar "$POP"_filtered_Maf1_SNP-pval1e_4.pairwise.borrar "$POP"_filtered_Maf1_SNP-pval1e_4.thetaFL.borrar "$POP"_filtered_Maf1_SNP-pval1e_4.thetaH.borrar "$POP"_filtered_Maf1_SNP-pval1e_4.thetaL.borrar | \
+awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP"_filtered_Maf1_SNP-pval1e_4.transformedThetas
+
+
+
+# Hasta aquí!
+
+rm "$POP"_filtered_Maf1_SNP-pval1e_4.*.borrar
+
+
+scp *.printed.stats /backup/mlucena/intermediate_files_ANGSD/intergenic_analysis/
+
+
+  
+  
+
+
+
+```
 
 
 
