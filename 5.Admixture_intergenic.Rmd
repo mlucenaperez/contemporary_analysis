@@ -202,6 +202,7 @@ print(args)
 admix<-t(as.matrix(read.table(args[1])))
 pop<-read.table(args[2],as.is=T)
 
+
 names(pop) <- c("pop", "ind")
 pop$pop <- as.factor (pop$pop)
 pop$pop <- factor (pop$pop, levels=c("c_ll_no", "h_ll_ba", "c_ll_ba","c_ll_cr",  "c_ll_po", "c_ll_la", "c_ll_ki", "c_ll_ur", "c_ll_vl", "c_ll_ya", "c_ll_tu", "c_ll_og", "c_ll_ka", "c_ll_to"))
@@ -491,5 +492,86 @@ scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_anal
 ```
 
 
+test
+
+```{r}
+
+library(RColorBrewer)
+library (dplyr)
+library("reshape2")
+library(ggplot2)
+library(lemon)
+
+
+wd <-"/Users/marialucenaperez/Desktop/"
+# args <- commandArgs(TRUE)
+# print(args)
+
+admix<-t(as.matrix(read.table(paste (wd,"c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080_K9_run8.qopt", sep=""))))
+
+pop<-read.table(paste(wd,"c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080.info", sep =""))
+
+names(pop) <- c("pop", "ind")
+pop$pop <- as.factor (pop$pop)
+pop$pop <- factor (pop$pop, levels=c("c_ll_no", "h_ll_ba", "c_ll_ba","c_ll_cr",  "c_ll_po", "c_ll_la", "c_ll_ki", "c_ll_ur", "c_ll_tu", "c_ll_og", "c_ll_ka", "c_ll_to", "c_ll_ya", "c_ll_vl"))
+
+
+
+admix<-admix[,order(pop[,1])]
+pop <-pop[order(pop[,1]),] 
+pop$Var2 <- seq.int(nrow(pop)) 
+pop <- pop %>% mutate (Population =  
+                          ifelse (pop == "c_ll_po", "Poland",
+                          ifelse (pop == "c_ll_ur", "Urals",
+                          ifelse (pop == "c_ll_ki", "Kirov",
+                          ifelse (pop == "c_ll_la", "Latvia",
+                          ifelse (pop == "c_ll_no", "Norway",
+                          ifelse (pop == "c_ll_ba" | pop == "h_ll_ba", "Balkans" ,
+                          ifelse (pop == "c_ll_cr","Carpathians",
+                          ifelse (pop == "c_ll_to", "Centr_Mong",
+                          ifelse (pop == "c_ll_tu", "Tuva",
+                          ifelse (pop == "c_ll_ka", "Khentiy_Mong", 
+                          ifelse (pop == "c_ll_og", "South_Gobi", 
+                          ifelse (pop == "c_ll_vl", "Vladivostok", 
+                          ifelse (pop == "c_ll_ya", "Yakutia",
+                          ifelse (pop == "c_ll_zz", "Zoo",NA)))))))))))))))  %>% rename(Pop=pop)
+tmp <- melt(admix)  %>% full_join(., pop, by="Var2") 
+
+tmp$ind <- factor (tmp$ind, levels=c("c_ll_no_0075", "c_ll_no_0076", "c_ll_no_0077", "c_ll_no_0078", "c_ll_no_0079", "c_ll_no_0080", "c_ll_no_0081", "c_ll_no_0082", "c_ll_ba_0216", "h_ll_ba_0214", "h_ll_ba_0215", "c_ll_cr_0205", "c_ll_cr_0206", "c_ll_cr_0207", "c_ll_cr_0208", "c_ll_cr_0209", "c_ll_cr_0212", "c_ll_po_0001", "c_ll_po_0002", "c_ll_po_0003", "c_ll_po_0011", "c_ll_po_0014", "c_ll_po_0019", "c_ll_po_0105", "c_ll_po_0106", "c_ll_la_0044", "c_ll_la_0047", "c_ll_la_0048", "c_ll_la_0052", "c_ll_la_0053", "c_ll_la_0054", "c_ll_ki_0090", "c_ll_ki_0091", "c_ll_ki_0092", "c_ll_ki_0093", "c_ll_ki_0094", "c_ll_ki_0095", "c_ll_ki_0096", "c_ll_ki_0097", "c_ll_ki_0098", "c_ll_ki_0099", "c_ll_ki_0100", "c_ll_ki_0101", "c_ll_ki_0102", "c_ll_ur_0194", "c_ll_ur_0195", "c_ll_ur_0196", "c_ll_ur_0199", "c_ll_ur_0200", "c_ll_ur_0203", "c_ll_tu_0153", "c_ll_tu_0157", "c_ll_tu_0158", "c_ll_tu_0159", "c_ll_tu_0165", "c_ll_tu_0166", "c_ll_to_0190", "c_ll_to_0191", "c_ll_ka_0184", "c_ll_ka_0186", "c_ll_ka_0188", "c_ll_ka_0189", "c_ll_og_0181", "c_ll_og_0187", "c_ll_ya_0138", "c_ll_ya_0139", "c_ll_ya_0140", "c_ll_ya_0142", "c_ll_ya_0143", "c_ll_ya_0145", "c_ll_ya_0146", "c_ll_ya_0147", "c_ll_vl_0107", "c_ll_vl_0108", "c_ll_vl_0109", "c_ll_vl_0110", "c_ll_vl_0112", "c_ll_vl_0113", "c_ll_vl_0128", "c_ll_vl_0132"))
+
+
+# n <- 24 # Esto servía porque aquí venían las k y así hacia una paleta adecuada a la k que tenía, en mi caso, ahora no hace falta. 
+# qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',] Antes era así, lo que significa que coje aquellas paletas que son cualitativas. como yo quiero que coja paired la primera para que sea como en el PCA, pongo como condición que tenga maxcolors de 12. 
+twelve_col_pals = brewer.pal.info[brewer.pal.info$maxcolors == '12',] 
+col_vector = unlist(mapply(brewer.pal, twelve_col_pals$maxcolors, rownames(twelve_col_pals)))
+# pie(rep(1,n), col=sample(col_vector, n))
+my_paired_colours <- as.vector(col_vector)
+
+x_breaks <-tapply(1:nrow(pop),pop[,4],mean)
+x_breaks_to_dataframe <- data.frame(Population=names(x_breaks), breaks=x_breaks) 
+
+#setEPS()
+# postscript(paste0(args[4],"_K",args[3],".eps"))
+
+# pdf(paste0("K_8.pdf"), height=10, width = 30)
+
+admix_plot <- ggplot() + 
+   geom_bar (data = tmp, (aes(x=ind, y=value, fill=Var1)), stat = "identity", position = "fill",  width=1) +
+   scale_fill_manual(values=my_paired_colours) +
+   scale_y_continuous(breaks = seq(0, 1, by = 0.2)) +
+   # geom_text (data=x_breaks_to_dataframe, aes(x=breaks, y=1.2, size=20, label=Population), angle = 45) +
+   theme_classic() +
+   theme(plot.margin = unit(c(3,3,3,3), "cm")) 
+
+for (i in 1:length(x_breaks_to_dataframe$breaks)) {
+admix_plot <- admix_plot + annotation_custom(
+      grob = textGrob(label = x_breaks_to_dataframe$Population[i], hjust = 1, gp = gpar(cex = 1.5)),
+      ymin = 1.5,      # Vertical position of the textGrob
+      ymax = 1.5,
+      xmin = x_breaks_to_dataframe$breaks[i],         # Note: The grobs are positioned outside the plot area
+      xmax = x_breaks_to_dataframe$breaks[i])
+}
+    
+```
 
 
