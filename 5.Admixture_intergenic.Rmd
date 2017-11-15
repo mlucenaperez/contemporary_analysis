@@ -424,118 +424,87 @@ rm *borrar
 
 ### Creating a plot
 
-Guardo este script para lanzarlo en secuencial para cada una de las ks:
 
-```{bash}
-nano Admix_plot.R
-```
+He creado este script fancy de R pero por alguna razónno me ha ce el merge en el servidor, ni con full_join ni con merge. Por tanto me voy a copiar los archivos *.qopt en dropbox y lo voy a correr ahí, y luego los borro. 
 
-Script que guardo
-
-```{r}
-library(RColorBrewer)
-library (dplyr)
-args <- commandArgs(TRUE)
-print(args)
-admix<-t(as.matrix(read.table(args[1])))
-pop<-read.table(args[2],as.is=T)
-
-names(pop) <- c("pop", "ind")
-pop$pop <- as.factor (pop$pop)
-pop$pop <- factor (pop$pop, levels=c("c_ll_no", "h_ll_ba", "c_ll_ba","c_ll_cr",  "c_ll_po", "c_ll_la", "c_ll_ki", "c_ll_ur", "c_ll_vl", "c_ll_ya", "c_ll_tu", "c_ll_og", "c_ll_ka", "c_ll_to"))
-
-admix<-admix[,order(pop[,1])]
-pop<-pop[order(pop[,1]),]
-n <- args[3]
-# qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',] Antes era así, lo que significa que coje aquellas paletas que son cualitativas. como yo quiero que coja paired la primera para que sea como en el PCA, pongo como condición que tenga maxcolors de 12. 
-twelve_col_pals = brewer.pal.info[brewer.pal.info$maxcolors == '12',] 
-col_vector = unlist(mapply(brewer.pal, twelve_col_pals$maxcolors, rownames(twelve_col_pals)))
-pie(rep(1,n), col=sample(col_vector, n))
-#setEPS()
-# postscript(paste0(args[4],"_K",args[3],".eps"))
-
-pdf(paste0(args[4],"_K",args[3],".pdf"), height=10, width = 30)
-barplot(admix,col=col_vector,space=0,xlab="Individuals",ylab="Admixture")
-text(tapply(1:nrow(pop),pop[,1],mean),-0.1,unique(pop[,1]),xpd=T,srt=60)
-dev.off()
-
-
-```
-
-Lo lanzo de manera secuencial.
-
+#### Copy to dropbox
 ```{bash}
 
-for run in `seq 1 10`;
-do
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/*qopt /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Maf1/
 
-for i in `seq 1 13`;
-do
-echo $i
-Rscript Admix_plot.R "$POP"_K"$i"_run$run.qopt "$POP".info $i $POP"_run"$run
-done
-
-done
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/*info /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Maf1 
 
 ```
 
-Copiar tabla para correr CLUMPAK
+De camino ya guardo también la tabla para correr CLUMPAK
 
 http://clumpak.tau.ac.il/bestK.html
 
 ```{bash}
 
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/Ks_log_prob_table.txt /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-16_Snp-pval_/
-
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/*pdf /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-16_Snp-pval_/
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/Ks_log_prob_table.txt /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Maf1/
 
 ```
 
 
-test
+Guardo este script para lanzarlo en secuencial para cada una de las ks:
+
+```{bash}
+nano Admix_plot_fancy.R
+```
+
+
+#### Final graphical script FANCY (the first one used is before)
+
 
 ```{r}
 
 library(RColorBrewer)
-library (dplyr)
-library("reshape2")
+library(dplyr)
+library(reshape2)
 library(ggplot2)
 library(lemon)
+library(grid)
+library(data.table) # 1.8.10
+
+args <- commandArgs(TRUE)
+print(args)
+admix<-t(as.matrix(read.table(args[1])))
+pop<-read.table(args[2],as.is=T)
 
 
-wd <-"/Users/marialucenaperez/Desktop/"
-# args <- commandArgs(TRUE)
-# print(args)
+admix <- t(as.matrix(read.table("/Users/marialucenaperez/Desktop/c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080_K9_run8.qopt")))
+pop <- read.table("/Users/marialucenaperez/Desktop/c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080.info")
 
-admix<-t(as.matrix(read.table(paste (wd,"c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080_K9_run8.qopt", sep=""))))
-
-pop<-read.table(paste(wd,"c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080.info", sep =""))
 
 names(pop) <- c("pop", "ind")
 pop$pop <- as.factor (pop$pop)
 pop$pop <- factor (pop$pop, levels=c("c_ll_no", "h_ll_ba", "c_ll_ba","c_ll_cr",  "c_ll_po", "c_ll_la", "c_ll_ki", "c_ll_ur", "c_ll_tu", "c_ll_og", "c_ll_ka", "c_ll_to", "c_ll_ya", "c_ll_vl"))
 
-
-
 admix<-admix[,order(pop[,1])]
-pop <-pop[order(pop[,1]),] 
+pop <-pop[order(pop[,1]),]
+
+
 pop$Var2 <- seq.int(nrow(pop)) 
+
 pop <- pop %>% mutate (Population =  
-                          ifelse (pop == "c_ll_po", "Poland",
+                          ifelse (pop == "c_ll_po", "Bialowieza",
                           ifelse (pop == "c_ll_ur", "Urals",
                           ifelse (pop == "c_ll_ki", "Kirov",
                           ifelse (pop == "c_ll_la", "Latvia",
                           ifelse (pop == "c_ll_no", "Norway",
                           ifelse (pop == "c_ll_ba" | pop == "h_ll_ba", "Balkans" ,
                           ifelse (pop == "c_ll_cr","Carpathians",
-                          ifelse (pop == "c_ll_to", "Centr_Mong",
+                          ifelse (pop == "c_ll_to", "Töv",
                           ifelse (pop == "c_ll_tu", "Tuva",
-                          ifelse (pop == "c_ll_ka", "Khentiy_Mong", 
-                          ifelse (pop == "c_ll_og", "South_Gobi", 
+                          ifelse (pop == "c_ll_ka", "Khentii", 
+                          ifelse (pop == "c_ll_og", "Ömnögovi", 
                           ifelse (pop == "c_ll_vl", "Vladivostok", 
                           ifelse (pop == "c_ll_ya", "Yakutia",
-                          ifelse (pop == "c_ll_zz", "Zoo",NA)))))))))))))))  %>% rename(Pop=pop)
-tmp <- melt(admix)  %>% full_join(., pop, by="Var2") 
+                          ifelse (pop == "c_ll_zz", "Zoo",NA)))))))))))))))  %>% rename(Pop=pop) 
+tmp1 <- melt(admix)  
+
+tmp <- full_join(tmp1, pop, by="Var2")
 
 tmp$ind <- factor (tmp$ind, levels=c("c_ll_no_0075", "c_ll_no_0076", "c_ll_no_0077", "c_ll_no_0078", "c_ll_no_0079", "c_ll_no_0080", "c_ll_no_0081", "c_ll_no_0082", "c_ll_ba_0216", "h_ll_ba_0214", "h_ll_ba_0215", "c_ll_cr_0205", "c_ll_cr_0206", "c_ll_cr_0207", "c_ll_cr_0208", "c_ll_cr_0209", "c_ll_cr_0212", "c_ll_po_0001", "c_ll_po_0002", "c_ll_po_0003", "c_ll_po_0011", "c_ll_po_0014", "c_ll_po_0019", "c_ll_po_0105", "c_ll_po_0106", "c_ll_la_0044", "c_ll_la_0047", "c_ll_la_0048", "c_ll_la_0052", "c_ll_la_0053", "c_ll_la_0054", "c_ll_ki_0090", "c_ll_ki_0091", "c_ll_ki_0092", "c_ll_ki_0093", "c_ll_ki_0094", "c_ll_ki_0095", "c_ll_ki_0096", "c_ll_ki_0097", "c_ll_ki_0098", "c_ll_ki_0099", "c_ll_ki_0100", "c_ll_ki_0101", "c_ll_ki_0102", "c_ll_ur_0194", "c_ll_ur_0195", "c_ll_ur_0196", "c_ll_ur_0199", "c_ll_ur_0200", "c_ll_ur_0203", "c_ll_tu_0153", "c_ll_tu_0157", "c_ll_tu_0158", "c_ll_tu_0159", "c_ll_tu_0165", "c_ll_tu_0166", "c_ll_to_0190", "c_ll_to_0191", "c_ll_ka_0184", "c_ll_ka_0186", "c_ll_ka_0188", "c_ll_ka_0189", "c_ll_og_0181", "c_ll_og_0187", "c_ll_ya_0138", "c_ll_ya_0139", "c_ll_ya_0140", "c_ll_ya_0142", "c_ll_ya_0143", "c_ll_ya_0145", "c_ll_ya_0146", "c_ll_ya_0147", "c_ll_vl_0107", "c_ll_vl_0108", "c_ll_vl_0109", "c_ll_vl_0110", "c_ll_vl_0112", "c_ll_vl_0113", "c_ll_vl_0128", "c_ll_vl_0132"))
 
@@ -548,7 +517,20 @@ col_vector = unlist(mapply(brewer.pal, twelve_col_pals$maxcolors, rownames(twelv
 my_paired_colours <- as.vector(col_vector)
 
 x_breaks <-tapply(1:nrow(pop),pop[,4],mean)
-x_breaks_to_dataframe <- data.frame(Population=names(x_breaks), breaks=x_breaks) 
+x_breaks_to_dataframe <- data.frame(Population=names(x_breaks), breaks=x_breaks) %>% mutate ()
+x_breaks_to_dataframe$Population <- as.character(x_breaks_to_dataframe$Population) 
+
+
+# Here I try to get when the pop changes to add vertical lines. 
+
+count_changes_in_pop <- pop %>% select (Population) %>% mutate (Population2 = Population)
+end <- nrow(count_changes_in_pop)
+values_to_change <- data.table:::uniqlist(count_changes_in_pop[, 1:2])  # De esta manera me quedo con los numeros donde hay un cambio. 
+values_to_change <- append(values_to_change , end)
+
+###
+
+
 
 #setEPS()
 # postscript(paste0(args[4],"_K",args[3],".eps"))
@@ -559,19 +541,62 @@ admix_plot <- ggplot() +
    geom_bar (data = tmp, (aes(x=ind, y=value, fill=Var1)), stat = "identity", position = "fill",  width=1) +
    scale_fill_manual(values=my_paired_colours) +
    scale_y_continuous(breaks = seq(0, 1, by = 0.2)) +
-   # geom_text (data=x_breaks_to_dataframe, aes(x=breaks, y=1.2, size=20, label=Population), angle = 45) +
    theme_classic() +
-   theme(plot.margin = unit(c(3,3,3,3), "cm")) 
+   labs(y="Admixture proportion") +
+   coord_cartesian(ylim = c(0, 1.2), xlim = c(0, nrow(pop)+10)) +
+   theme(plot.margin=unit(c(1,1,1,1),"cm"), # top, right, bottom, and left margins
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.line = element_blank(),
+        # axis.title.y = element_blank(),
+        legend.position="none",
+        axis.text.y=element_text(size=18),
+        axis.title.y =  element_text(size=15,color="grey30", hjust = 0.4)) 
+
+admix_plot <- admix_plot + annotation_custom(
+      grob = linesGrob(y = c(0, 1),x = c(0,0), gp = gpar(col = "black", lwd = 2)),
+      ymin = 0,      # Vertical position of the textGrob
+      ymax = 1)
 
 for (i in 1:length(x_breaks_to_dataframe$breaks)) {
 admix_plot <- admix_plot + annotation_custom(
-      grob = textGrob(label = x_breaks_to_dataframe$Population[i], hjust = 1, gp = gpar(cex = 1.5)),
-      ymin = 1.5,      # Vertical position of the textGrob
-      ymax = 1.5,
-      xmin = x_breaks_to_dataframe$breaks[i],         # Note: The grobs are positioned outside the plot area
-      xmax = x_breaks_to_dataframe$breaks[i])
+      grob = textGrob(label = x_breaks_to_dataframe$Population[i], rot =50, vjust = 1.05, hjust=0.1,
+                      gp = gpar(col = "grey30",fontsize = 15, face="plain")),
+      xmin = x_breaks_to_dataframe$breaks[i],         
+      xmax = x_breaks_to_dataframe$breaks[i],
+      ymin = 1,      # Vertical position of the textGrob
+      ymax = 1.15)
+
+admix_plot <- admix_plot + annotation_custom(
+      grob = grid.lines(y = c(0,1), gp = gpar(col = "grey30", lwd = 1)),
+      ymin = 0,      # Vertical position of the textGrob
+      ymax = 1.02,
+      xmin = values_to_change[i]-0.5,      # Vertical position of the textGrob
+      xmax = values_to_change[i]-0.5)
 }
-    
+   
+ggsave (paste0(args[4],"_K",args[3],".pdf"), admix_plot, width = 25, height = 15, units = "cm", device="pdf")
+ 
 ```
 
+
+Lo lanzo de manera secuencial.
+
+```{bash}
+
+for run in `seq 1 10`;
+do
+
+for i in `seq 1 13`;
+do
+echo $i
+Rscript Admix_plot_fancy.R "$POP"_K"$i"_run$run.qopt "$POP".info $i $POP"_run"$run
+done
+
+done
+
+rm *.qopt
+
+```
 
