@@ -3,7 +3,7 @@ title: "unreaveling_differences_sites"
 output: html_document
 ---
 
-
+Solución: It was due to Maf3 vs Maf1. We are finally using Maf1. 
 
 ```{bash}
 
