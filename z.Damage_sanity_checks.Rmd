@@ -1,0 +1,28 @@
+---
+title: "Damage sanity check"
+output: html_document
+---
+
+
+
+```{bash}
+
+mkdir damage_sanity_check
+cd damage_sanity_check/
+
+screen -S damage_sanity_controls
+
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+
+
+for i in /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/*_ll_ba*recal_round-1.bam
+
+do
+echo $i
+mapDamage -i ${i} -r $REF --no-stats
+
+done
+
+
+```
+
