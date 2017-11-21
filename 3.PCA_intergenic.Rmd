@@ -347,7 +347,7 @@ y_axis = paste("PC",comp[2],sep="")
 
 ggplot() + 
   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations"), size = 5) + 
-  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
+  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic() + theme(text = element_text(size=20)) 
  ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
 
 #ggplot() + 
@@ -360,7 +360,7 @@ ggplot() +
 
 ggplot() + 
   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Subspecies"), size = 5)  +
-  ggtitle(title) + theme_classic()
+  ggtitle(title) + theme_classic() + theme(text = element_text(size=20)) 
   ggsave(paste(WORKING_DIR,pop, "_pca_subspecies_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
 
 # ggplot() + 
