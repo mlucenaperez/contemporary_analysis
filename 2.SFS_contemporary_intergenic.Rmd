@@ -174,7 +174,6 @@ write (heterozigosity,paste0(args[1],"_heterozigosity.csv"))
 
 ```{bash}
 
-
 for i in *sfs;
 do
 echo $i
@@ -192,12 +191,55 @@ done
 
 rm *_heterozigosity_borrar.csv
 
-
-
-
 ```
 
 
+# Pairwise-Watterson estimation genome wide. 
+
+
+```{bash}
+
+screen -S diveristy_summary_per_pop
+script diveristy_summary_per_pop.log
+
+
+POPS=($(ls *sfs |  sed -e "s/.unfolded-lr.sfs//" ))
+
+
+# Create headers for the outfile
+echo -e "pop\tpositions\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > diversity.per.pop.averages.tsv
+
+for POP in "${POPS[@]}"
+do
+echo "---------------------------------------------------$POP---------------------------------------------------"
+
+WATTERSON_AVERAGE=$(cut -f 4 "$POP".transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+WATTERSON_SD=$(cut -f 4 "$POP".transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+PAIRWISE_AVERAGE=$(cut -f 5 "$POP".transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+PAIRWISE_SD=$(cut -f 5 "$POP".transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+DIFFERENCE_PAIRWISE_WATTERSON_SD=$(cut -f 6  "$POP".transformedThetas |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+TAJIMAS_D=$(echo "(($PAIRWISE_AVERAGE) - ($WATTERSON_AVERAGE))/($DIFFERENCE_PAIRWISE_WATTERSON_SD)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+
+NR=$(wc -l  "$POP".transformedThetas  | cut -d" " -f1)
+
+paste \
+<(echo $POP) \
+<(echo $NR) \
+<(echo $WATTERSON_AVERAGE) \
+<(echo $WATTERSON_SD) \
+<(echo $PAIRWISE_AVERAGE) \
+<(echo $PAIRWISE_SD) \
+<(echo $TAJIMAS_D) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  diversity.per.pop.averages.tsv
+
+done 
+
+```
 
 
 ## SFS graphical representation
@@ -341,7 +383,7 @@ done
 
 # SAF variable_sites 2
 
-I will also check if this stimation is correct by running one of my pops from the very beginning using this sites, and then compare the diversity. 
+I will also check if this estimation is correct by running one of my pops from the very beginning using this sites, and then compare the diversity. 
 
 ```{r, engine=bash, eval=FALSE}
 
@@ -539,52 +581,150 @@ scp *.printed.stats /backup/mlucena/intermediate_files_ANGSD/intergenic_analysis
 
 ```
 
-## Ploting heterozigosity
 
+##
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/diversity.per.pop.averages.tsv /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/
+```
+
+
+
+
+## Plotting diversity
 
 ```{r}
+library(dplyr) 
+library(RColorBrewer)
+library(ggplot2)
 
-library(dplyr)
+wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/" 
+diversity <- read.csv(paste(wd, "diversity.per.pop.averages.tsv", sep =""), sep ="\t", dec=".", header=T) %>%  
+ mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                           ifelse (pop == "c_ll_ur_n006", "Urals", 
+                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                           ifelse (pop == "c_ll_la_n006", "Latvia", 
+                           ifelse (pop == "c_ll_no_n008", "Norway", 
+                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
+                           ifelse (pop == "c_ll_to_n002", "Töv",
+                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
+                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
+                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
+                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
+                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
+                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
+                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA)))))))))))))))  %>% 
+filter(Populations!="Balkans") 
+  
+diversity$watterson_ave <- as.numeric(gsub("\\*10\\^","e",diversity$watterson_ave))
+diversity$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",diversity$pairwise_ave))
+diversity$tajimaD <- as.numeric(gsub("\\*10\\^","e",diversity$tajimaD))
+  
+diversity$Populations <- factor (diversity$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Khentii", "Töv", "Ömnögovi", "Mongolia",  "Yakutia", "Vladivostok"))
 
-wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/"
-heterozigosity <- read.csv(paste(wd, "heterozigosity_per_pop.csv", sep =""), sep =" ", dec=".", header=F) %>% 
-mutate (., Populations =  ifelse (V1 == "c_ll_po_n008", "Bialowieza",
-                          ifelse (V1 == "c_ll_ur_n006", "Urals",
-                          ifelse (V1 == "c_ll_ki_n013", "Kirov",
-                          ifelse (V1 == "c_ll_la_n006", "Latvia",
-                          ifelse (V1 == "c_ll_no_n008", "Norway",
-                          ifelse (V1 == "x_ll_ba_n003", "Balkans" ,
-                          ifelse (V1 == "c_ll_cr_n006","Carpathians",
-                          ifelse (V1 == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia",
-                          ifelse (V1 == "c_ll_tu_n006", "Tuva",
-                          ifelse (V1 == "c_ll_vl_n008", "Vladivostok", 
-                          ifelse (V1 == "c_ll_ya_n008", "Yakutia", NA)))))))))))) %>% 
-  filter(Populations!="Balkans")
+ cols <- c("Carpathians"=brewer.pal(12,"Paired")[9], 
+           "Kirov"=brewer.pal(12,"Paired")[1],  
+           "Latvia"=brewer.pal(12,"Paired")[3],  
+           "Norway"=brewer.pal(12,"Paired")[2],  
+           "Bialowieza"=brewer.pal(12,"Paired")[4],  
+           "Mongolia"=brewer.pal(12,"Paired")[12], 
+           "Töv"=brewer.pal(12,"Paired")[12], 
+          "Khentii"=brewer.pal(12,"Paired")[7], 
+          "Ömnögovi"=brewer.pal(12,"Paired")[11], 
+              "Tuva"=brewer.pal(12,"Paired")[8],  
+           "Urals"=brewer.pal(11,"BrBG")[9],  
+           "Vladivostok"=brewer.pal(12,"Paired")[5], 
+           "Yakutia"=brewer.pal(12,"Paired")[6], 
+           "Balkans"=brewer.pal(12,"Paired")[10])  
 
-heterozigosity$Populations <- factor (heterozigosity$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Mongolia",  "Yakutia", "Vladivostok"))
+ ggplot (diversity, aes(x=Populations, y= pairwise_ave, fill=Populations)) + 
+   geom_point(color="dimgrey", size=5, shape=22) + 
+   scale_fill_manual("Población",labels = c("Noruega","Balkans","Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva","Mongolia","Yakutia" ,"Vladivostok"), values = cols) + 
+  xlab ("Populations") + ylab ("Diversidad nucleotidica") +  theme_classic() + 
+theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) 
 
+ggsave(paste(wd,"pi_per_pop.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") 
 
-cols <- c("Carpathians"=brewer.pal(12,"Paired")[9], 
-          "Kirov"=brewer.pal(12,"Paired")[1], 
-          "Latvia"=brewer.pal(12,"Paired")[3], 
-          "Norway"=brewer.pal(12,"Paired")[2], 
-          "Bialowieza"=brewer.pal(12,"Paired")[4], 
-          "Mongolia"=brewer.pal(12,"Paired")[12],  
-          "Tuva"=brewer.pal(12,"Paired")[8], 
-          "Urals"=brewer.pal(11,"BrBG")[9], 
-          "Vladivostok"=brewer.pal(12,"Paired")[5], 
-          "Yakutia"=brewer.pal(12,"Paired")[6],
-          "Balkans"=brewer.pal(12,"Paired")[10]) 
+ggplot (diversity, aes(x=Populations, y=watterson_ave, fill=Populations)) + 
+   geom_point(color="dimgrey", size=5, shape=22) + 
+   scale_fill_manual("Población",labels = c("Noruega","Balkans","Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva","Mongolia","Yakutia" ,"Vladivostok"), values = cols) + 
+  xlab ("Populations") + ylab ("Watterson") +  theme_classic() + 
+theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) 
 
-ggplot (heterozigosity, aes(x=Populations, y= V2, fill=Populations)) +
-  geom_point(color="dimgrey", size=5, shape=22) +
-  scale_fill_manual(values = cols) +
-  xlab ("Populations") + ylab ("Average heterozigosity") +  
-theme (legend.position="right", panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-panel.background = element_blank(), legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() )
-
-ggsave(paste(wd,"heterozigosity_per_pop.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm")
+ggsave(paste(wd,"watterson_per_pop.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") 
 
 ```
 
+
+
+<!-- ## Ploting heterozigosity --> No tiene sentido!! -->
+
+
+<!-- ```{r} -->
+
+<!-- library(dplyr) -->
+
+<!-- wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/" -->
+<!-- heterozigosity <- read.csv(paste(wd, "heterozigosity_per_pop.csv", sep =""), sep =" ", dec=".", header=F) %>%  -->
+<!-- mutate (., Populations =  ifelse (V1 == "c_ll_po_n008", "Bialowieza", -->
+<!--                           ifelse (V1 == "c_ll_ur_n006", "Urals", -->
+<!--                           ifelse (V1 == "c_ll_ki_n013", "Kirov", -->
+<!--                           ifelse (V1 == "c_ll_la_n006", "Latvia", -->
+<!--                           ifelse (V1 == "c_ll_no_n008", "Norway", -->
+<!--                           ifelse (V1 == "x_ll_ba_n003", "Balkans" , -->
+<!--                           ifelse (V1 == "c_ll_cr_n006","Carpathians", -->
+<!--                           ifelse (V1 == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", -->
+<!--                           ifelse (V1 == "c_ll_tu_n006", "Tuva", -->
+<!--                           ifelse (V1 == "c_ll_vl_n008", "Vladivostok",  -->
+<!--                           ifelse (V1 == "c_ll_ya_n008", "Yakutia", NA)))))))))))) %>%  -->
+<!--   filter(Populations!="Balkans") -->
+
+<!-- heterozigosity$Populations <- factor (heterozigosity$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Mongolia",  "Yakutia", "Vladivostok")) -->
+
+
+<!-- cols <- c("Carpathians"=brewer.pal(12,"Paired")[9],  -->
+<!--           "Kirov"=brewer.pal(12,"Paired")[1],  -->
+<!--           "Latvia"=brewer.pal(12,"Paired")[3],  -->
+<!--           "Norway"=brewer.pal(12,"Paired")[2],  -->
+<!--           "Bialowieza"=brewer.pal(12,"Paired")[4],  -->
+<!--           "Mongolia"=brewer.pal(12,"Paired")[12],   -->
+<!--           "Tuva"=brewer.pal(12,"Paired")[8],  -->
+<!--           "Urals"=brewer.pal(11,"BrBG")[9],  -->
+<!--           "Vladivostok"=brewer.pal(12,"Paired")[5],  -->
+<!--           "Yakutia"=brewer.pal(12,"Paired")[6], -->
+<!--           "Balkans"=brewer.pal(12,"Paired")[10])  -->
+
+<!-- ggplot (heterozigosity, aes(x=Populations, y= V2, fill=Populations)) + -->
+<!--   geom_point(color="dimgrey", size=5, shape=22) + -->
+<!--   scale_fill_manual("Población",labels = c("Noruega","Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva", "Mongolia","Yakutia" ,"Vladivostok"), values = cols) + -->
+<!--   xlab ("Populations") + ylab ("Heterozigosidad promedio") +  theme_classic() + -->
+<!-- theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) -->
+
+<!-- ggsave(paste(wd,"heterozigosity_per_pop.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") -->
+
+<!-- ``` -->
+
+
+
+
+
+
+## Moving to datos!!!!
+
+```{bash}
+
+mkdir /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
+
+scp /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*.printed.stats /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
+scp /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*.transformedThetas /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
+scp /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*.unfolded-lr.postprob.thetas.gz /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
+scp /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*.unfolded-lr.postprob.thetas.idx /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
+scp /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*.unfolded-lr.saf.gz /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
+scp /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*.unfolded-lr.saf.idx /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
+scp /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*.unfolded-lr.saf.pos.gz /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
+
+
+# Cuando esté pasado --> borrarlos! 
+
+```
 
