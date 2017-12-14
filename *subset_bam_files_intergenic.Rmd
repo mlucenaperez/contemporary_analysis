@@ -7,8 +7,9 @@ Yo había lanzado este script para todas las muestras de lynx lynx. Pero como te
 
 1. Para muestras 5x o muestras submuestreadas.
 2. Para muestras 25x (cambia solo la ruta de las carpetas).
+3. Muestras cortadas para intergénico las vuelvo a cortar con el intergénico de captura. 
 
-1. Para muestras 5x.
+# 1. Para muestras 5x.
 ```{bash}
 
 # mkdir /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic
@@ -101,8 +102,9 @@ done
 ```
 
 
+# 2. Para muestras 25x del proyecto genoma (cambia solo la ruta de las carpetas)
 
-2. Para muestras 25x del proyecto genoma (cambia solo la ruta de las carpetas)
+
 ```{bash}
 
 mkdir /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_25x
@@ -138,5 +140,62 @@ done
 ```
 
 
-2. Para muestras 25x (cambia solo la ruta de las carpetas)
 
+# 3. Hago el interset de mis archivos de intergénico con los archivos intergénicos de Elena de su captura, para ser capaz de hacer blast sobre estos y tener una medida de diversidad. 
+
+Vamos a cortar nuestros archivos intergénicos para conseguir el intergénico de Elena. Lo hacemos sobre los de intergénico por si hay alguna región que ella clasifico como intergénico que ahora no es con la nueva notación. Así que tenemos que aplicar el bed file para cortar nuestro .intergenic.bam. 
+
+Sobre estos archivos cortados voy a hacer BLAST y despues calcular los estadísticos básicos (diversidad y FST) para ver si se corrige la contaminación de balcanes. 
+
+
+```{bash}
+
+mkdir /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture
+
+scp home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture/
+
+
+screen -S extracting_intergenic_capture_from_bam_files_using_bedtools
+script extracting_intergenic_capture_from_bam_files_using_bedtools.log
+
+# We convert the rf file into bed:
+
+sed -i 's/-/ /g' no_genes_Lypa_10000longest_center_final_slop20_dot.rf 
+sed -i 's/:/ /g' no_genes_Lypa_10000longest_center_final_slop20_dot.rf 
+
+
+# If you are using a newer version of sed you can use -i to read from and write to the same file. Using -i you can specify a file extension so a backup will be made, incase something went wrong. Also you don't need to use the -e flag unless you are using multiple commands
+
+mv no_genes_Lypa_10000longest_center_final_slop20_dot.rf  no_genes_Lypa_10000longest_center_final_slop20_dot.bed
+sed 's/ /CTR+V+TAB/g' no_genes_Lypa_10000longest_center_final_slop20_dot.bed > no_genes_Lypa_10000longest_center_final_slop20_dot1.bed
+
+mv no_genes_Lypa_10000longest_center_final_slop20_dot1.bed no_genes_Lypa_10000longest_center_final_slop20_dot.bed
+
+INPUTFILE_BED="/home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture/no_genes_Lypa_10000longest_center_final_slop20_dot.bed"
+OUTPUT_DIR="/home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture"
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic
+
+INDS=($(ls *intergenic.bam | sort | uniq))
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture/
+
+task(){
+   bedtools intersect -a /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/$i -b $INPUTFILE_BED -sorted -g /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/lp23.version.sorted.genome > $OUTPUT_DIR/${i/_intergenic.bam/_intergenic_capture.bam}; # Si quiero puedo cambiar el nombre a intergenic.bam que es el final. 
+   touch $OUTPUT_DIR/${i/_intergenic.bam/.finished}
+}
+
+
+for i in ${INDS[@]}
+do
+echo $i
+ task "$i" 
+done
+
+# Despues me lo llevo al servidor A para hacer blast en este servidor. 
+
+
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/*_intergenic_capture.bam /home/mlucena/remove_contamination_from_lynx_lynx/ 
+
+```
