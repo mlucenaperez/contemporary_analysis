@@ -1,0 +1,60 @@
+---
+title: "Tree representation"
+output: html_document
+---
+
+
+```{r}
+
+library("phylotate")
+library("ape")
+library("phytools")
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/demographic_models_to_test/"
+
+modelo1 <- "(Kirov,Carpatian,Tuva,Yakutia)Rufus;"
+modelo2 <- "((Kirov,Carpathians,(Tuva,Yakutia))Rufus;"
+modelo3 <- "((((Kirov),Carpathians),Tuva),Yakutia)Rufus;"
+modelo4 <- "((Kirov,Carpathians),(Tuva,Yakuta))Rufus;"
+modelo5<- "(Carpathians,Kirov,Yakuta)Rufus;"
+modelo6<- "((((Kirov),Carpathians),Yakutia),Tuva)Rufus;"
+
+
+#modelo5 <- 
+tree1 <- read.newick(text=modelo1)
+tree2 <- read.newick(text=modelo2)
+tree3 <- read.newick(text=modelo3)
+tree4 <- read.newick(text=modelo4)
+tree5 <- read.newick(text=modelo5)
+tree6 <- read.newick(text=modelo6)
+
+
+jpeg(paste(wd,"model1.jpg",sep=""))
+plot(tree1 , direction="downwards")
+dev.off()
+
+jpeg(paste(wd,"model2.jpg",sep=""))
+plot(tree2, direction="downwards")
+dev.off()
+
+
+jpeg(paste(wd,"model3.jpg",sep=""))
+plot(tree3, direction="downwards")
+dev.off()
+
+jpeg(paste(wd,"model4.jpg",sep=""))
+plot(tree4, direction="downwards")
+dev.off()
+
+
+jpeg(paste(wd,"model5.jpg",sep=""))
+plot(tree5 , direction="downwards")
+dev.off()
+
+jpeg(paste(wd,"model6.jpg",sep=""))
+plot(tree6 , direction="downwards")
+dev.off()
+
+```
+ 
+ 
