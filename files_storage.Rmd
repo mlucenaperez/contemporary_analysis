@@ -1,0 +1,25 @@
+---
+title: "files_storage"
+output: html_document
+---
+
+20/Nov/2017
+
+I need to move some files to datos and backup as we are running out of space in the server. 
+
+First I create a folder in datos:
+
+```{bash}
+mkdir /home/mlucena/datos/intermediate_ANGSD_files
+cd /home/mlucena/datos/intermediate_ANGSD_files
+
+mkdir /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis
+mkdir /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_fst
+
+mv /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_fst/*unfolded* /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_fst
+
+
+
+
+```
+
