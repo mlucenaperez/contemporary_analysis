@@ -1,0 +1,487 @@
+---
+title: "2.SFS_contemporary_intergenic_X"
+output: html_document
+---
+
+All my "$POP".transformedThetas are already in datos:
+
+/home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
+
+Therefore, I will work in this folder to subset X_intergenic sites and calculate diversity from those. 
+
+
+```{bash}
+cd /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
+
+DIVERSITY_FILES=($(ls *transformedThetas | sort | uniq))
+
+BED_FILE="/GRUPOS/grupolince/Lynx_Xchr/Xchr.intergenic.bed"
+
+for DIVERSITY_FILE in "${DIVERSITY_FILES[@]}"
+do
+echo $DIVERSITY_FILE 
+
+bedtools intersect -a $DIVERSITY_FILE -b $BED_FILE -sorted -g /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/lp23.version.sorted.genome > ${DIVERSITY_FILE/.transformedThetas/.transformedThetas_XChr}
+
+done
+
+
+```
+
+
+# Pairwise-Watterson estimation genome wide. 
+
+
+```{bash}
+
+POPS=($(ls *sfs |  sed -e "s/.unfolded-lr.sfs//" ))
+
+
+# Create headers for the outfile
+echo -e "pop\tpositions\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > diversity.per.pop.averages.tsv
+
+for POP in "${POPS[@]}"
+do
+echo "---------------------------------------------------$POP---------------------------------------------------"
+
+WATTERSON_AVERAGE=$(cut -f 4 "$POP".transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+WATTERSON_SD=$(cut -f 4 "$POP".transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+PAIRWISE_AVERAGE=$(cut -f 5 "$POP".transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+PAIRWISE_SD=$(cut -f 5 "$POP".transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+DIFFERENCE_PAIRWISE_WATTERSON_SD=$(cut -f 6  "$POP".transformedThetas |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+TAJIMAS_D=$(echo "(($PAIRWISE_AVERAGE) - ($WATTERSON_AVERAGE))/($DIFFERENCE_PAIRWISE_WATTERSON_SD)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+
+NR=$(wc -l  "$POP".transformedThetas  | cut -d" " -f1)
+
+paste \
+<(echo $POP) \
+<(echo $NR) \
+<(echo $WATTERSON_AVERAGE) \
+<(echo $WATTERSON_SD) \
+<(echo $PAIRWISE_AVERAGE) \
+<(echo $PAIRWISE_SD) \
+<(echo $TAJIMAS_D) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  diversity.per.pop.averages.tsv
+
+done 
+
+```
+
+
+## SFS graphical representation
+
+
+First we copy the SFS files to our local folder.
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*sfs /Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs
+
+# I need to change name as R does not like "-lr.sfs"
+
+cd /Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs
+
+
+for i in *sfs
+do 
+#echo $i
+echo $i "--->" ${i/-lr.sfs/_lr.sfs}
+mv $i ${i/-lr.sfs/_lr.sfs}
+rm $i
+done
+
+## OJO!!!!! READMEEEEEE!!!!! #######
+
+# Le he quitado a mano a c_ll_to-c_ll_ka-c_ll_og_n008.unfolded_lr.sfs los guiones medios porque si no, no corre en R!!
+
+```
+
+Now we run the script. 
+
+ 
+```{bash}
+nano SFS_graphical_representation
+```
+
+```{r}
+library(dplyr)
+library(magrittr)
+
+wd<-"/Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs/"
+
+my_files_unfolded = list.files(path = wd, pattern="*sfs$")    
+for (i in 1:length(my_files_unfolded)) 
+{ assign(my_files_unfolded[i], (scan(paste(wd,my_files_unfolded[i], sep = ""), sep = " ", dec = ".")) %>% .[!is.na(.)])}
+
+norm <- function(x) x/sum(x)
+
+for (i in 1:length (my_files_unfolded))
+{
+  temp1=(eval(parse(text=my_files_unfolded[i])))
+  temp2=norm(temp1[-1])
+  temp3=norm(temp2[-c(length(temp2))])
+  barplot(temp3,xlab="Alleles",
+          names=1:length(temp3),ylab="Proportions",main=my_files_unfolded[i],col='grey')
+  dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs/",my_files_unfolded[i],".eps", sep=""), onefile=FALSE, horizontal=FALSE)
+  dev.off()
+  rm(temp1)
+  rm(temp2)
+  rm(temp3)
+}
+
+```
+
+# SAF variable_sites 1
+
+As we find that balkans have a wierd behaviour, we are going to repeat all the stats, using onel sites that were already filter out by SNP-pval 1e-4 for PCA and ADMIXTURE. We found that this threshold is already stable, and therefore, SNPs called are trustworthy. 
+
+First we are going to select this sites, using PCA maf file.
+
+
+```{bash}
+# This is how it looks:
+
+mkdir /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/intergenic_sfs_filtered_sites
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_PCA
+zcat c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080.intergenic.mafs.gz | head
+# chromo	position	major	minor	ref	knownEM	pK-EM	nInd
+# lp23.s00001	3926	G	A	N	0.020146	9.075109e-08	80
+# lp23.s00001	5895	T	A	N	0.031340	3.633791e-08	80
+# lp23.s00001	6927	C	T	C	0.015890	0.000000e+00	80
+# lp23.s00001	9059	C	T	N	0.064255	0.000000e+00	80
+# lp23.s00001	13418	G	A	A	0.065885	0.000000e+00	80
+# lp23.s00001	13869	T	G	T	0.025897	0.000000e+00	80
+# lp23.s00001	14821	T	G	T	0.041811	0.000000e+00	80
+
+# We are making a site file using the first column (See ANGSD documentation)
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/intergenic_sfs_filtered_sites
+
+zcat /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_PCA/c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080.intergenic.mafs.gz | awk  'BEGIN{OFS="\t";} ; NR>1{print $1,$2}' > PCA_Maf1_SNP-pval1e_4.sites
+
+angsd sites index PCA_Maf1_SNP-pval1e_4.sites
+
+```
+
+
+```{bash}
+
+screen -S diversity_calculus_subset
+
+POPS=$(ls /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*.transformedThetas | cut -d"/" -f 7)
+
+
+echo -e "pop\tpairwise\twatterson"  > Maf1_SNP-pval1e_4_diversity_averages_per_pop.tsv
+
+for POP in ${POPS[@]}
+
+do
+
+echo "grep for" $POP
+
+grep -wFf PCA_Maf1_SNP-pval1e_4.sites /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/$POP > ${POP/.transformedThetas/_Maf1_SNP-pval1e_4.transformedThetas.borrar}
+
+WATTERSON_AVERAGE=$(cut -f 4 ${POP/.transformedThetas/_Maf1_SNP-pval1e_4.transformedThetas.borrar} | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+PAIRWISE_AVERAGE=$(cut -f 5 ${POP/.transformedThetas/_Maf1_SNP-pval1e_4.transformedThetas.borrar} | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+DIFFERENCE_PAIRWISE_WATTERSON_SD=$(cut -f 6  ${POP/.transformedThetas/_Maf1_SNP-pval1e_4.transformedThetas.borrar} |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+TAJIMAS_D=$(echo "(($PAIRWISE_AVERAGE) - ($WATTERSON_AVERAGE))/($DIFFERENCE_PAIRWISE_WATTERSON_SD)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+
+paste \
+<(echo ${POP/.transformedThetas/}) \
+<(echo $WATTERSON_AVERAGE) \
+<(echo $PAIRWISE_AVERAGE) \
+<(echo $TAJIMAS_D) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >> Maf1_SNP-pval1e_4_diversity_averages_per_pop.tsv
+
+rm *borrar
+
+done
+
+
+
+
+
+```
+
+
+# SAF variable_sites 2
+
+I will also check if this estimation is correct by running one of my pops from the very beginning using this sites, and then compare the diversity. 
+
+```{r, engine=bash, eval=FALSE}
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_filtered_sites
+
+#To launch one by one
+
+POP="c_ll_ur"  # <--CHANGE POP HERE
+
+#screen -S "$POP"_sfs
+screen -S "$POP"_thetas_filtered
+
+POP="c_ll_ur"  # <--CHANGE POP HERE
+
+#script "$POP"_sfs.log
+script "$POP"_thetas_filtered.log
+
+POP="c_ll_ur"  # <--CHANGE POP HERE
+
+THREADS=25                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+RUTA=/home/mlucena/ANGSD_analysis/depth_calculus 
+
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < $RUTA/"${POP}"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+N_IND=$(echo ${POP: -3} )
+MIN_IND=$(expr $N_IND / 2)
+SITES="PCA_Maf1_SNP-pval1e_4.sites"
+
+
+# Sanity checks:
+
+echo $POP
+echo $N_IND
+echo $MIN_IND
+echo $minDepth
+echo $SITES
+
+```
+
+## Unfolded SAF 
+
+```{r, engine=bash, eval=FALSE}
+
+#The read command will read one line at a time from mean_sd_depthGlobal_lynx_per_pop_sd_folds2.csv
+# put the first field (fields being blank separated, and where backslash can be used to escape the field or line separator) in the variable $discard, the second in $x, the third in $y and the rest of the fields in $discard.
+#while read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated; 
+#do
+
+# Anyway I will do it one by one:
+
+##########################
+#  SAF (likelihood):     
+##########################
+
+echo "-------$POP----------SAF (likelihood)-----------------------------------------"
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic.bamlist -ref $REF -anc $ANC \
+-out "$POP"_filtered_Maf1_SNP-pval1e_4.unfolded_lr \
+$FILTER1 \
+$FILTER2 \
+-sites $SITES \
+-GL 1 -doSaf 1  \
+-minInd  $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth
+
+```
+
+Sanity check
+
+```{bash}
+
+$NGSTOOLS/realSFS print  c_ll_ur_n006_filtered_Maf1_SNP-pval1e_4.unfolded_lr.saf.idx | wc -l
+# 2058550
+
+wc -l PCA_Maf1_SNP-pval1e_4.sites
+# 2096552 PCA_Maf1_SNP-pval1e_4.sites
+
+$NGSTOOLS/realSFS print  c_ll_ur_n006_filtered_Maf1_SNP-pval1e_4.unfolded_lr.saf.idx | awk  'BEGIN{OFS="\t";} ;{print $1, $2}'  > sitios_SAF.sites
+
+ wc -l sitios_SAF.sites 
+# 2058550 sitios_SAF.sites
+
+
+diff sitios_SAF.sites PCA_Maf1_SNP-pval1e_4.sites | head
+# 23a24
+# > lp23.s00001	53180
+# 50a52
+# > lp23.s00001	95912
+# 57a60
+# > lp23.s00001	120814
+# 59a63,65
+# > lp23.s00001	121922
+# > lp23.s00001	121934
+# > lp23.s00001	121970
+
+# ¿Todos los sitios de sitios_SAF.sites están en PCA_Maf1_SNP-pval1e_4.sites?
+
+diff sitios_SAF.sites PCA_Maf1_SNP-pval1e_4.sites | grep "<"  
+#Nada! Ergo, sí. 
+
+# Voy a buscar este sitio en el SAF de todo el genoma:
+# lp23.s00001	53180
+
+cd ../intergenic_sfs
+
+# $NGSTOOLS/realSFS print c_ll_ur_n006.unfolded-lr.saf.idx | grep "lp23.s00001" | grep "53180"
+
+
+```
+
+
+
+## SFS 
+
+```{r, engine=bash, eval=FALSE}
+
+##########################
+#  SFS                   #(I dont require the -rf file as the saf already only contains the -rf sites
+##########################
+echo "-------$POP----------SFS------------------------------------------------------"
+
+$NGSTOOLS/realSFS "$POP"_filtered_Maf1_SNP-pval1e_4.unfolded_lr.saf.idx  -P $THREADS > "$POP"_filtered_Maf1_SNP-pval1e_4.unfolded_lr.sfs
+
+```
+
+##  SAF (postprob) 
+
+```{r, engine=bash, eval=FALSE}
+
+
+echo "-------$POP----------SAF (postprob)-----------------------------------------"
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic.bamlist -ref $REF -anc $ANC \
+-out "$POP"_filtered_Maf1_SNP-pval1e_4.unfolded_lr.postprob \
+$FILTER1 \
+$FILTER2 \
+-GL 1 -doSaf 1  \
+-sites $SITES \
+-minInd  $MIN_IND -setMaxDepth $maxDepth \
+-doThetas 1 -pest "$POP"_filtered_Maf1_SNP-pval1e_4.unfolded_lr.sfs 
+
+```
+
+
+
+
+##  Make bed theta        
+
+```{r, engine=bash, eval=FALSE}
+
+echo "-------$POP----------Make bed theta -----------------------------------------"
+
+
+# Ojo si pop tiene la n006 o no!
+
+$NGSTOOLS/thetaStat print "$POP"_filtered_Maf1_SNP-pval1e_4.unfolded_lr.postprob.thetas.idx > "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats
+
+# Transform the coordinates to use 0Based bedtools
+
+awk 'NR>1 {print  $1" "$2-1" "$2}' "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats > "$POP"_filtered_Maf1_SNP-pval1e_4.0basedcoordinates.borrar # --> 1, 2, 3
+# log transformation of watterson and pairwise:
+awk 'NR>1 {print  "e("$3")"}' "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats | bc -l > "$POP"_filtered_Maf1_SNP-pval1e_4.watterson.borrar # --> 4
+awk 'NR>1 {print  "e("$4")"}' "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats | bc -l > "$POP"_filtered_Maf1_SNP-pval1e_4.pairwise.borrar # --> 5
+                                                                                  # --> PAIRWISE - WATTERSON
+awk 'NR>1 {print  "e("$5")"}' "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats | bc -l > "$POP"_filtered_Maf1_SNP-pval1e_4.thetaFL.borrar # --> 6
+awk 'NR>1 {print  "e("$6")"}' "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats | bc -l > "$POP"_filtered_Maf1_SNP-pval1e_4.thetaH.borrar # --> 7
+awk 'NR>1 {print  "e("$7")"}' "$POP"_filtered_Maf1_SNP-pval1e_4.printed.stats | bc -l > "$POP"_filtered_Maf1_SNP-pval1e_4.thetaL.borrar # --> 8
+
+# Create a header for the "$POP"_filtered_Maf1_SNP-pval1e_4.transformedThetas file
+
+echo "scaffold position1 position2 watterson pairwise pairwise-watterson thetaFL thetaH thetaL" > "$POP"_filtered_Maf1_SNP-pval1e_4.transformedThetas
+
+paste "$POP"_filtered_Maf1_SNP-pval1e_4.0basedcoordinates.borrar "$POP"_filtered_Maf1_SNP-pval1e_4.watterson.borrar "$POP"_filtered_Maf1_SNP-pval1e_4.pairwise.borrar "$POP"_filtered_Maf1_SNP-pval1e_4.thetaFL.borrar "$POP"_filtered_Maf1_SNP-pval1e_4.thetaH.borrar "$POP"_filtered_Maf1_SNP-pval1e_4.thetaL.borrar | \
+awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP"_filtered_Maf1_SNP-pval1e_4.transformedThetas
+
+
+
+# Hasta aquí!
+
+rm "$POP"_filtered_Maf1_SNP-pval1e_4.*.borrar
+
+
+scp *.printed.stats /backup/mlucena/intermediate_files_ANGSD/intergenic_analysis/
+
+
+  
+  
+
+
+
+```
+
+
+##
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/diversity.per.pop.averages.tsv /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/
+```
+
+
+
+
+## Plotting diversity
+
+```{r}
+library(dplyr) 
+library(RColorBrewer)
+library(ggplot2)
+
+wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/" 
+diversity <- read.csv(paste(wd, "diversity.per.pop.averages.tsv", sep =""), sep ="\t", dec=".", header=T) %>%  
+ mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                           ifelse (pop == "c_ll_ur_n006", "Urals", 
+                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                           ifelse (pop == "c_ll_la_n006", "Latvia", 
+                           ifelse (pop == "c_ll_no_n008", "Norway", 
+                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
+                           ifelse (pop == "c_ll_to_n002", "Töv",
+                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
+                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
+                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
+                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
+                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
+                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
+                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA)))))))))))))))  %>% 
+filter(Populations!="Balkans") 
+  
+diversity$watterson_ave <- as.numeric(gsub("\\*10\\^","e",diversity$watterson_ave))
+diversity$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",diversity$pairwise_ave))
+diversity$tajimaD <- as.numeric(gsub("\\*10\\^","e",diversity$tajimaD))
+  
+diversity$Populations <- factor (diversity$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Khentii", "Töv", "Ömnögovi", "Mongolia",  "Yakutia", "Vladivostok"))
+
+ cols <- c("Carpathians"=brewer.pal(12,"Paired")[9], 
+           "Kirov"=brewer.pal(12,"Paired")[1],  
+           "Latvia"=brewer.pal(12,"Paired")[3],  
+           "Norway"=brewer.pal(12,"Paired")[2],  
+           "Bialowieza"=brewer.pal(12,"Paired")[4],  
+           "Mongolia"=brewer.pal(12,"Paired")[12], 
+           "Töv"=brewer.pal(12,"Paired")[12], 
+          "Khentii"=brewer.pal(12,"Paired")[7], 
+          "Ömnögovi"=brewer.pal(12,"Paired")[11], 
+              "Tuva"=brewer.pal(12,"Paired")[8],  
+           "Urals"=brewer.pal(11,"BrBG")[9],  
+           "Vladivostok"=brewer.pal(12,"Paired")[5], 
+           "Yakutia"=brewer.pal(12,"Paired")[6], 
+           "Balkans"=brewer.pal(12,"Paired")[10])  
+
+ ggplot (diversity, aes(x=Populations, y= pairwise_ave, fill=Populations)) + 
+   geom_point(color="dimgrey", size=5, shape=22) + 
+   scale_fill_manual("Población",labels = c("Noruega","Balkans","Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva","Mongolia","Yakutia" ,"Vladivostok"), values = cols) + 
+  xlab ("Populations") + ylab ("Diversidad nucleotidica") +  theme_classic() + 
+theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) 
+
+ggsave(paste(wd,"pi_per_pop.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") 
+
+ggplot (diversity, aes(x=Populations, y=watterson_ave, fill=Populations)) + 
+   geom_point(color="dimgrey", size=5, shape=22) + 
+   scale_fill_manual("Población",labels = c("Noruega","Balkans","Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva","Mongolia","Yakutia" ,"Vladivostok"), values = cols) + 
+  xlab ("Populations") + ylab ("Watterson") +  theme_classic() + 
+theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) 
+
+ggsave(paste(wd,"watterson_per_pop.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") 
+
+```
