@@ -1,0 +1,115 @@
+---
+title: "keep_only_x_y_chromosome"
+output: html_document
+---
+
+# X chromosome
+
+We want to have a list with X and Y chromosome to be able to:
+
+1. Report diverity for X and compare with autosomal (both for intergenic sites). 
+2. Report basic statistics for Y. 
+
+In this script we are going to get X data from BAM files to continue the analysis. 
+
+1) We are obtaining X-sites from synteny with cat genome.
+2) Then we are doing an overlap with intergenic sites from notation (we will create a BED file X intergenic). How many sites does it have? If there are too many, we will reduce it to ~2.5Mb to have a proper compare with our intergenic autosomal sites. 
+
+--> This bed file will be used as to filter out all x positions and calculates diversities!: See 2.SFS_contemporary_intergenic_X.
+
+However, if I want to do a blast I need the intersect with the BAM files and calculate everything from the beggining. 
+
+3) We will do a intersect (BED file X intergenic) with our BAM files. 
+4) Those BAMS with x positions will be blasted and not blasted to compared with diversity from blasted autosomal sites (after removing x positions) and with unblasted autosomal sites (after remove x positons)
+
+
+##1) X-sites from synteny with cat genome.
+
+```{bash}
+
+cd /GRUPOS/grupolince/copia_fabascal/MAPPINGS
+
+# Elena already obtained those for doing X determination. The file is:
+
+head /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger_Xchr.sorted.merged.bed
+
+
+```
+
+##2) Overlap with intergenic sites from notation
+
+```{bash}
+mkdir /GRUPOS/grupolince/Lynx_Xchr
+
+cd /GRUPOS/grupolince/Lynx_Xchr
+
+screen -S intersect_X_intergenic
+
+INTERGENIC_FILE="/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.intergenic.PLUS1000.bed"
+X_SINTENY="/GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger_Xchr.sorted.merged.bed"
+OUTPUT_DIR="/GRUPOS/grupolince/Lynx_Xchr"
+
+
+bedtools intersect -a $INTERGENIC_FILE -b $X_SINTENY -sorted -g /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23 > $OUTPUT_DIR/Xchr.intergenic.bed
+
+
+# How many positions does it have?
+
+awk  '{sum+=($3-$2)} END{print sum;}' Xchr.intergenic.bed
+
+# 29909379; 29M is too much, for doing blast, so I will have two different dataset. 
+
+#1. Data set 1 --> Whole intergenic X. 
+#2. Data set 2 --> Reduced 2.5Mb intergenic X (for blast analysis)
+
+# So I will create this reduced bed file. 
+
+# First I shuffle the bed file, then I create a new column to determine when I reach 2.5Mb aproximately. First I sum up the positions and then I printed them until I reached 2.5Mb. I will then sorted them and ready!
+
+sort -R Xchr.intergenic.bed | awk  '{sum+=($3-$2)}{print $0, sum}' | awk -v OFS='\t' '$4 < 2500150 {print $1,$2,$3}' | LANG=en_EN sort -k 1,1 -k 2,2n > Xchr.intergenic.subset.bed
+
+
+
+# File to cut our diversity files for non-blasted bam:  /GRUPOS/grupolince/Lynx_Xchr/Xchr.intergenic.bed
+
+```
+
+
+## 2) Intersect (BED file X intergenic) with our BAM files for doing a BLAST latter. 
+
+
+```{bash}
+
+screen -S intersect_X_intergenic_subset
+
+
+BED_FILE_DIR="/GRUPOS/grupolince/Lynx_Xchr"
+BAM_DIR="/home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final"
+
+
+OUTPUT_DIR="/home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_X_intergenic/BAM_X_intergenic_subset"
+BED_FILE_1="Xchr.intergenic.subset.bed"
+
+# ¡¡OJO cambia el nombre del archivo final!
+
+cd $BAM_DIR
+
+INDS=($(ls *_ll_*_recal_round-1.bam | sort | uniq))
+
+
+task(){
+   bedtools intersect -a $BAM_DIR/$i -b $BED_FILE_DIR/$BED_FILE_1 -sorted -g /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/lp23.version.sorted.genome > $OUTPUT_DIR/${i/_recal_round-1.bam/_intergenic_X_subset.bam}; # Si quiero puedo cambiar el nombre a intergenic.bam que es el final. 
+   touch $OUTPUT_DIR/${i/_recal_round-1.bam/.finished}
+}
+
+cd $OUTPUT_DIR
+
+for i in ${INDS[@]}
+do
+echo $i
+ task "$i" 
+done
+
+
+```
+
