@@ -15,7 +15,6 @@ cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_i
 
 scp /home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture/BAM_intergenic_capture_filtered
 
-
 sed 's/:/ /g' no_genes_Lypa_10000longest_center_final_slop20_dot.rf | sed 's/-/ /g' | awk '{print $1"\t"$2-1"\t"$3}' > no_genes_Lypa_10000longest_center_final_slop20_dot.bed
 
 
@@ -45,6 +44,8 @@ paste \
 sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  global_coverage_blasted_samples.tsv
 done
 
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture/BAM_intergenic_capture_filtered/global_coverage_blasted_samples.tsv /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/remove_contamination/coverage/
 ```
 
 
@@ -65,7 +66,7 @@ I'll plotted it:
 ```{r}
 
 # Get a list of the bedtools output files you'd like to read in
-wd <- ("/Users/marialucenaperez/Desktop/coverage/")
+wd <- ("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/remove_contamination/coverage/")
 files <- list.files(path = wd, pattern="all.txt$")
 labs <- gsub("_intergenic_capture_blast_filtered\\.hist\\.txt\\.all\\.txt", "", files, perl=TRUE)
 labs <- gsub("_intergenic_capture_blast_filtered.hist.all.txt", "", files)
@@ -96,6 +97,31 @@ ggplot (general_coverage_for_all_samples, aes(x=V2, y=V3,color=sample)) +
 ggsave(paste(wd, "coverageByThreshold.pdf", sep=""))
 
 dev.off()
+```
+
+
+Merging with blast resutls. For evaluating the samples.
+
+```{r}
+
+library(RColorBrewer)
+library(ggplot2)
+library(dplyr)
+cols <- brewer.pal(length(cov), "Dark2")
+
+## I merge the results of blast with coverage:
+
+wd <- ("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/remove_contamination/")
+coverage <- read.table(paste (wd, "coverage/global_coverage_blasted_samples.tsv", sep="")) %>%  rename(sample=V1) %>% rename(ave_coverage =V2) %>% rename(stdev_cov=V3)
+
+stats_blast <- read.table(paste(wd,"stats_remove_contamination_by_blasting.csv", sep=""), header=T, sep=",")
+stats_blast$sample <- gsub("_intergenic_capture\\.bam", "", stats_blast$sample, perl=TRUE)
+coverage$sample <- gsub("_intergenic_capture_blast_filtered\\.bam", "", coverage$sample, perl=TRUE)
+
+datos_globales_blast <- coverage %>% full_join(stats_blast) %>% mutate(mismatch_rate = n_mismatching_reads/n_reads_total*100) %>% mutate (contamination_rate = n_nonfelid/n_reads_total*100) 
+
+
+write.table(datos_globales_blast, paste(wd, "general_stats_evaluation.csv"), row.names = F, quote = F, dec =",", sep=";")
 ```
 
 
@@ -234,13 +260,13 @@ echo "-------$POP----------SAF (likelihood)-------------------------------------
 echo "-------$POP----------SAF (postprob)-----------------------------------------"
 
 $ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic.bamlist -ref $REF -anc $ANC \
--out "$POP".intergenic_capture_blasted_noTrans.unfolded-lr.postprob \
+-out "$POP".intergenic_capture_blasted.unfolded-lr.postprob \
 $FILTER1 \
 $FILTER2 \
 -GL 1 -doSaf 1  \
 -rf $REGIONFILE \
 -minInd  $MIN_IND -setMaxDepth $maxDepth \
--doThetas 1 -pest "$POP".intergenic_capture_blasted_noTrans.unfolded-lr.sfs 
+-doThetas 1 -pest "$POP".intergenic_capture_blasted.unfolded-lr.sfs 
 
 done < <(cat /home/mlucena/ANGSD_analysis/depth_calculus/depth_calculus_intergenic_captured_blasted_samples/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv | grep "x_ll_ba") 
 
@@ -833,7 +859,6 @@ done < <(cat /home/mlucena/ANGSD_analysis/depth_calculus/depth_calculus_intergen
 ```{r, engine=bash, eval=FALSE}
 
 POPS=($(ls *sfs | cut -d "." -f 1))
-POPS=($(ls *ll_ba*sfs | cut -d "." -f 1))
 
 THREADS=25                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 RUTA="/home/mlucena/ANGSD_analysis/depth_calculus/depth_calculus_intergenic_captured_blasted_samples"
@@ -883,11 +908,11 @@ done
 
 ```{bash}
 
-screen -S diveristy_summary_per_pop
-script diveristy_summary_per_pop.log
+screen -S diveristy_summary_per_pop_no_TRANS
+script diveristy_summary_per_pop_no_TRANS.log
 
 
-POPS=($(ls *sfs |  sed -e "s/.intergenic_capture_blasted_noTrans.unfolded-lr.sfs//" ))
+POPS=($(ls *sfs |  sed 's/.intergenic_capture_blasted_noTrans.unfolded-lr.sfs//g' ))
 
 
 # Create headers for the outfile
