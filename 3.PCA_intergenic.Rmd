@@ -58,7 +58,7 @@ read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncate
 # Set paths to software and some commom files
 
 ANGSD=/opt/angsd/angsd
-NGSTOOLS="/opt/angsd/angsd/misc"
+NGSTOOLS="/opt/ngsTools"
 THREADS=20                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
 ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
@@ -140,6 +140,7 @@ echo $N_SITES
 # I have 3636950 sites lynx lynx + lynx pardinus. Oct 2017.
 # I have 2096552 sites only lynx lynx. Oct 2017.
 # I have 1773532 sites only lynx lynx oriental. Oct 2017.
+# I have 1488015 sites only lynx lynx west. Nov 2017.
 
 
 
@@ -221,7 +222,8 @@ require("knitr")
 
 WORKING_DIR="/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_PCA/"
 # samples_info <-read.csv("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena/c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba.ALL.clst")
-pop=c("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080")
+# pop=c("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080")
+pop=c("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur_n050")
 # pop= c("c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n111")
 pop=c("c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n030")
 
@@ -289,8 +291,13 @@ PC <- PC %>%  mutate(.,
                           ifelse (Pop == "c_ll_ya", "Yakutia",
                           ifelse (Pop == "c_lp_sm", "Sierra Morena",
                           ifelse (Pop == "c_lp_do", "Doñana", NA)))))))))))))))) %>% 
+<<<<<<< HEAD
     mutate (., color =  ifelse (Populations == "Poland", brewer.pal(12,"Paired")[4], 
                       ifelse (Populations == "Urals", brewer.pal(9,"RdPu")[6], 
+=======
+    mutate (., color =  ifelse (Populations == "Bialowieza", brewer.pal(12,"Paired")[4], 
+                      ifelse (Populations == "Urals", brewer.pal(11,"BrBG")[9], 
+>>>>>>> fffcaa59ba6b1a711d0220af8c72dd218ffaa19b
                       ifelse (Populations == "Balkans", brewer.pal(12,"Paired")[10], 
                       ifelse (Populations == "Carpathians", brewer.pal(12,"Paired")[9], 
                       ifelse (Populations == "Kirov", brewer.pal(12,"Paired")[1], 
@@ -325,6 +332,9 @@ cols <- c("Poland"=brewer.pal(12,"Paired")[4],
           "Sierra Morena"=brewer.pal(8, "Greys") [5],
           "Doñana"=brewer.pal(8, "Greys") [8])
 
+PC$Populations <- factor (PC$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii", "Ömnögovi",  "Yakutia", "Vladivostok"))
+
+
 title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
 
 x_axis = paste("PC",comp[1],sep="")
@@ -346,10 +356,50 @@ y_axis = paste("PC",comp[2],sep="")
 #   scale_shape_manual(values=1:7)
 
 ggplot() + 
+<<<<<<< HEAD
   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations"), size = 5) + 
   scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic() + theme(text = element_text(size=20)) 
  ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
 
+=======
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Populations"), size = 5) + 
+scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic() +
+ ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
+
+
+
+
+
+ ggplot() + 
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations"), size = 5) + 
+  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic() +
+  scale_y_reverse()
+ ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2_reverse_axis.pdf", sep=""),units="mm",  width=270, height=190)
+
+  ggplot() + 
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations"), size = 5) + 
+  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic() +
+  scale_y_reverse() + scale_x_reverse() 
+ ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2_reverse_axis.pdf", sep=""),units="mm",  width=270, height=190)
+
+ 
+ 
+ 
+ # SECEM plot #
+ ggplot() + 
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Populations"), size = 5) + 
+#  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic() +
+   scale_color_manual("Población",labels = c("Noruega","Balcanes", "Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva", "Töv","Khentii","Ömnögovi", "Yakutia", "Vladivostok"), values = cols) + theme_classic() + ggtitle(title) +
+   scale_y_reverse() +
+theme (legend.text=element_text(size=18),legend.title = element_text(size=23), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=23))
+ 
+ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2_reverse_axis_spanish.pdf", sep=""),  width=270, height=190,units="mm")
+
+
+
+ 
+ 
+>>>>>>> fffcaa59ba6b1a711d0220af8c72dd218ffaa19b
 #ggplot() + 
 #  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations", shape="seq"), size = 5) + 
 #  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
@@ -363,6 +413,9 @@ ggplot() +
   ggtitle(title) + theme_classic() + theme(text = element_text(size=20)) 
   ggsave(paste(WORKING_DIR,pop, "_pca_subspecies_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
 
+  
+  
+  
 # ggplot() + 
 #   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="subspecies"), size = 3)  +
 #   scale_shape_manual(values=1:7)
