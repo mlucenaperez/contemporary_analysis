@@ -153,11 +153,6 @@ scaleBar <- function(lon, lat, distanceLon, distanceLat, distanceLegend, dist.un
 
 
 
-
-
-
-
-
 # Whole species:
 
 
@@ -344,6 +339,11 @@ coordenadas_per_pop <- coordenadas %>% rename (Pop=pop) %>%
                           ifelse (Pop == "c_lp_do", "Doñana", NA)))))))))))))))) %>%  group_by(Populations) %>%  summarise(latitude = mean(latitude), longitude=mean(longitude))
 
 
+
+coordenada_per_pop <- coordenadas_per_pop %>%  group_by(Populations) %>%
+  summarize(mean_latitude = mean(latitude, na.rm = TRUE), mean_longitude = mean(longitude, na.rm = TRUE))
+
+
 # As matrix for procrustes analysis.
 
 coord_matrix<-as.matrix(cbind(PC_coordinates$longitude,PC_coordinates$latitude))
@@ -407,7 +407,7 @@ general_map <- ggplot() +
   theme (legend.position="none",panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
 panel.background = element_rect(fill="white"), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25)) +
   geom_point(data=coordenadas_per_pop, aes(x=longitude, y=latitude, fill=Populations), size=2, shape=20) + scale_fill_manual(values = cols) +
- xlab ("Longitude") + ylab ("Latitude") + 
+  
   # Values for whole world 
 coord_map (xlim = c(min_long-20, max_long+20),ylim = c(min_lat-13, max_lat+13)) +
 scaleBar(lon = 146, lat = 30, distanceLon = 1000, distanceLat = 10, distanceLegend = 230, dist.unit = "km", orientation = FALSE) 
@@ -419,14 +419,37 @@ ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeogra
 # Whole world : 15.1 x 13.7 
 
 
+############################################  GENERAL MAP - ONLY ONE COORDINATE PER POP #######################################
+
+max_long=max_long_sampling
+min_long=min_long_sampling
+max_lat=max_lat_sampling 
+min_lat=min_lat_sampling 
+
+
+general_map <- ggplot() +
+  borders(database = "world", fill="gray95", color="gray95", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
+  geom_spatial(distribution_layer, fill="gray85", alpha=0.5, inherit.aes = NULL, show.legend = F) +
+  theme (legend.position="none",panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_rect(fill="white"), axis.title = element_blank(), axis.text = element_text(size=18), title=element_text(size=25)) +
+  geom_point(data=coordenada_per_pop, aes(x=mean_longitude, y=mean_latitude, fill=Populations), size=2, shape=20) + scale_fill_manual(values = cols) +
+  
+  # Values for whole world 
+coord_map (xlim = c(min_long-20, max_long+20),ylim = c(min_lat-13, max_lat+13)) +
+scaleBar(lon = 146, lat = 30, distanceLon = 1000, distanceLat = 10, distanceLegend = 230, dist.unit = "km", orientation = FALSE) 
+
+general_map2 <- cowplot::ggdraw(general_map ) + cowplot::draw_grob(north_image ,x=0.95, y=0.28, width=0.05, height=0.05)
+
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/maps/",pop,"_general_map_only_one_coordinate.pdf", sep=""), general_map2, device = pdf, width = 15.1, height =  13.7 )
+
+# Whole world : 15.1 x 13.7 
+
+
+
+
+
 ########################################################################################################## 
 ########################################################################################################## 
-
-
-
-
-
-
 
 
 
@@ -460,8 +483,8 @@ legend.key = element_rect(colour = 'white', fill = 'white', inherit.blank = T)) 
 # sampling_map2 <- cowplot::ggdraw(sampling_map) + cowplot::draw_grob(north_image ,x=0.95, y=0.28, width=0.05, height=0.05)
 
 # East
-# coord_map (xlim = c(min_long-10, max_long+10),ylim = c(min_lat-10, max_lat+10)) +
-# scaleBar(lon = 140, lat = 35, distanceLon = 1000, distanceLat = 10, distanceLegend = 200, dist.unit = "km", orientation = FALSE) 
+ coord_map (xlim = c(min_long-10, max_long+10),ylim = c(min_lat-10, max_lat+10)) +
+scaleBar(lon = 140, lat = 35, distanceLon = 1000, distanceLat = 10, distanceLegend = 200, dist.unit = "km", orientation = FALSE) 
 # sampling_map2 <- cowplot::ggdraw(sampling_map) + cowplot::draw_grob(north_image ,x=0.85, y=0.13, width=0.05, height=0.05)
 
 # West
@@ -497,15 +520,16 @@ title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," /
 
 PCA_map <- ggplot() +
   borders(database = "world", fill="gray95", color="gray95", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
- geom_spatial(distribution_layer, fill="gray85", alpha=0.5, inherit.aes = NULL, show.legend = F) +
+  geom_spatial(distribution_layer, fill="gray85", alpha=0.5, inherit.aes = NULL, show.legend = F) +
   theme (legend.position="left", panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-panel.background = element_rect(fill="white"), legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25),  
-legend.key = element_rect(colour = 'white', fill = 'white', inherit.blank = T)) +
+  panel.background = element_rect(fill="white"), legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18),   title=element_text(size=25),  
+  legend.key = element_rect(colour = 'white', fill = 'white', inherit.blank = T)) +
   geom_point(data = PCA_procrustes, aes (X1, X2,  fill=Populations), color="dimgrey", size=3, shape=23) +
   ggtitle(title) + 
+  coord_map("gilbert", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
   scale_fill_manual("Populations",
 # labels = c("Noruega","Balcanes", "Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva", "Töv","Khentii","Ömnögovi", "Vladivostok","Yakutia"),
-  values = cols) + xlab ("Longitude") + ylab ("Latitude") + 
+  values = cols) +  
 ########################################################################################################## 
 #########################################       CHANGE      ##############################################   
 ########################################################################################################## 
@@ -515,14 +539,15 @@ legend.key = element_rect(colour = 'white', fill = 'white', inherit.blank = T)) 
 # PCA_map2 <- cowplot::ggdraw(PCA_map) + cowplot::draw_grob(north_image ,x=0.95, y=0.28, width=0.05, height=0.05)
 
 # East  
-# coord_cartesian (xlim = c(min_long-10, max_long+10),ylim = c(min_lat-10, max_lat+10)) +
-# scaleBar(lon = 138, lat = 27, distanceLon = 1000, distanceLat = 10, distanceLegend = 200, dist.unit = "km", orientation = FALSE) 
-# PCA_map2 <- cowplot::ggdraw(PCA_map) + cowplot::draw_grob(north_image ,x=0.89, y=0.13, width=0.05, height=0.05)
+#scale_x_continuous(min_long-10, max_long+10)+  scale_y_continuous(min_lat-10, max_lat+10)+
+#coord_cartesian (xlim = c(min_long-10, max_long+10),ylim = c(min_lat-10, max_lat+10)) +
+scaleBar(lon = 138, lat = 27, distanceLon = 1000, distanceLat = 10, distanceLegend = 200, dist.unit = "km", orientation = FALSE) 
+PCA_map2 <- cowplot::ggdraw(PCA_map) + cowplot::draw_grob(north_image ,x=0.89, y=0.13, width=0.05, height=0.05)
 
 # West
-coord_map (xlim = c(min_long-10, max_long+10),ylim = c(min_lat-10, max_lat+10)) +
-scaleBar(lon = 59, lat = 33, distanceLon = 1000, distanceLat = 10, distanceLegend = 100, dist.unit = "km", orientation = FALSE) 
-PCA_map2 <- cowplot::ggdraw(PCA_map) + cowplot::draw_grob(north_image ,x=0.93, y=0.20, width=0.05, height=0.05)
+#coord_map (xlim = c(min_long-10, max_long+10),ylim = c(min_lat-10, max_lat+10)) +
+#scaleBar(lon = 59, lat = 33, distanceLon = 1000, distanceLat = 10, distanceLegend = 100, dist.unit = "km", orientation = FALSE) 
+#PCA_map2 <- cowplot::ggdraw(PCA_map) + cowplot::draw_grob(north_image ,x=0.93, y=0.20, width=0.05, height=0.05)
 
 ########################################################################################################## 
 
@@ -530,6 +555,89 @@ ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeogra
 
 
 
+
+
+```
+```{r}
+
+
+library(dplyr)
+library(ggplot2)
+library(sp)
+library(maptools)
+library(mapproj)
+library(magrittr)
+
+# Maptools dataset
+data(wrld_simpl)
+world <- fortify(wrld_simpl)
+
+
+
+worldmerc <-  SpatialPointsDataFrame(coords = data_frame(x = world$long, y = world$lat), 
+                                data = world, proj4string = CRS("+proj=longlat +datum=WGS84")) %>%
+         subset((lat < 90 & lat > -90)) %>%   # needed because transform not defined at the poles !!!!
+         spTransform(CRS("+init=epsg:3857")) 
+worldmerc  <-  mutate(worldmerc@data, longmerc = coordinates(worldmerc)[,1], latmerc = coordinates(worldmerc)[,2])
+
+
+xlim = c(40,150)
+ylim = c(30,80)
+
+
+# Get the coordinates of the limits in mercator projection
+lims = SpatialPoints(coords = data_frame(x = xlim, y = ylim), 
+                     proj4string = CRS("+proj=longlat +datum=WGS84"))%>%
+       spTransform(CRS("+init=epsg:3857"))
+
+# Create regular "grids" of latlon coordinates and find points 
+# within xlim/ylim - will be our labels
+
+majgrid_wid_lat = 20
+majgrid_wid_lon = 30
+
+majbreaks_lon = data_frame(x=seq(-180,  180, majgrid_wid_lon)) %>% 
+                filter(x >= xlim[1] & x <= xlim[2]) %>% 
+                as.data.frame()
+majbreaks_lat = data_frame(x=seq(-90,   90, majgrid_wid_lat)) %>%
+                filter(x >= ylim[1] & x <= ylim[2]) %>% 
+                as.data.frame()
+
+#Find corresponding mercator coordinates
+
+mercbreaks_lat = SpatialPoints(coords = expand.grid(x = majbreaks_lon$x, y = majbreaks_lat$x), proj4string = CRS("+init=epsg:4326")) %>% spTransform(CRS("+init=epsg:3857")) %>% coordinates() %>% extract(,2) %>% unique() 
+
+mercbreaks_lon = SpatialPoints(coords = expand.grid(x = majbreaks_lon$x, y = majbreaks_lat$x), proj4string = CRS("+init=epsg:4326"))%>% spTransform(CRS("+init=epsg:3857")) %>% coordinates()  %>% extract(,1) %>% unique()
+
+
+
+ggplot(worldmerc, mapping = aes(x = longmerc, y = latmerc, group = group)) +
+  geom_polygon(fill = "gray95", colour = "gray95") + 
+  coord_fixed(xlim = coordinates(lims)[,1], ylim = coordinates(lims)[,2]) +
+  scale_x_continuous("lon", breaks = mercbreaks_lon, labels = signif(majbreaks_lon$x, 2)) + 
+  scale_y_continuous("lat", breaks = mercbreaks_lat, labels = signif(majbreaks_lat$x,2)) +
+  geom_spatial(distribution_layer, fill="red", alpha=0.5, inherit.aes = NULL, show.legend = F) +
+    theme (legend.position="left", panel.grid.major = element_blank(), panel.grid.minor = element_blank(),  
+           panel.background = element_rect(fill="white"), legend.text=element_text(size=18),legend.title = element_text(size=20),
+           axis.title = element_text(size = 20), axis.text = element_text(size=18),   title=element_text(size=25),  
+           legend.key = element_rect(colour = 'white', fill = 'white', inherit.blank = T))
+
+
+
+
+
+
+coord_cartesian (xlim = c(min_long-10, max_long+10),ylim = c(min_lat-10, max_lat+10)) +
+scaleBar(lon = 138, lat = 27, distanceLon = 1000, distanceLat = 10, distanceLegend = 200, dist.unit = "km", orientation = FALSE) 
+PCA_map2 <- cowplot::ggdraw(PCA_map) + cowplot::draw_grob(north_image ,x=0.89, y=0.13, width=0.05, height=0.05)
+
+  borders(database = "world", fill="gray95", color="gray95", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
+  geom_spatial(distribution_layer, fill="gray85", alpha=0.5, inherit.aes = NULL, show.legend = F) +
+  theme (legend.position="left", panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill="white"), legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18),   title=element_text(size=25),  
+  legend.key = element_rect(colour = 'white', fill = 'white', inherit.blank = T)) +
+  geom_point(data = PCA_procrustes, aes (X1, X2,  fill=Populations), color="dimgrey", size=3, shape=23) +
+  ggtitle(title) + 
 
 
 ```
