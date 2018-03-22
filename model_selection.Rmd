@@ -1,0 +1,151 @@
+---
+title: "model_selection"
+output: html_document
+---
+
+# Prepare VCF and pop file. 
+
+We are using the VCF file that Dani prepared.
+
+```{bash}
+
+mkdir /home/mlucena/fastsimcoal
+
+VCF_file=/home/mlucena/grupolince/lynx_genomes_5x/VCFs_Dani/ll_species_SNPs.vcf
+
+```
+
+Now I made the pop file:
+
+Haciendo esto veo todas las poblaciones que hay y selecciono las que voy a usar. 
+
+```{bash}
+
+/opt/bcftools-1.6/bcftools query -l /home/mlucena/grupolince/lynx_genomes_5x/VCFs_Dani/ll_species_SNPs.vcf
+
+```
+
+# Guardo mi archivo de poblaciones.
+
+
+```{bash}
+nano c_ll_cr-c_ll_ki-c_ll_ya_n027.popfile
+
+c_ll_cr_0205  Pop1
+c_ll_cr_0206  Pop1
+c_ll_cr_0207  Pop1
+c_ll_cr_0208  Pop1
+c_ll_cr_0209  Pop1
+c_ll_cr_0212  Pop1
+c_ll_ki_0090  Pop2
+c_ll_ki_0091  Pop2
+c_ll_ki_0092  Pop2
+c_ll_ki_0093  Pop2
+c_ll_ki_0094  Pop2
+c_ll_ki_0095  Pop2
+c_ll_ki_0096  Pop2
+c_ll_ki_0097  Pop2
+c_ll_ki_0098  Pop2
+c_ll_ki_0099  Pop2
+c_ll_ki_0100  Pop2
+c_ll_ki_0101  Pop2
+c_ll_ki_0102  Pop2
+c_ll_ya_0138  Pop3
+c_ll_ya_0139  Pop3
+c_ll_ya_0140  Pop3
+c_ll_ya_0142  Pop3
+c_ll_ya_0143  Pop3
+c_ll_ya_0145  Pop3
+c_ll_ya_0146  Pop3
+c_ll_ya_0147  Pop3
+
+```
+
+#Copio script
+
+Copio el script que me ha pasado Vanina y tambie´n el archivo VCF que luego borraré.
+
+
+```{bash}
+
+scp /home/mlucena/grupolince/lynx_genomes_5x/VCFs_Dani/ll_species_SNPs.vcf .
+scp /Users/marialucenaperez/Desktop/fastsimcoal/Script_SFS.py mlucena@genomics-b.ebd.csic.es:/home/mlucena/fastsimcoal
+chmod 777 Script_SFS.py
+
+```
+
+# Corro el script
+
+```{bash}
+
+python Script_SFS.py c_ll_cr-c_ll_ki-c_ll_ya_n027.popfile 6,13,8 c_ll_cr-c_ll_ki-c_ll_ya_n027_SFS ll_species_SNPs.vcf 5
+
+
+
+python Script_SFS.py c_ll_cr-c_ll_ki-c_ll_ya_n027.popfile 6,13,8 c_ll_cr-c_ll_ki-c_ll_ya_n027_SFS /home/mlucena/grupolince/lynx_genomes_5x/VCFs_Dani/c_ll_lp_plus_h_ll_renamed.vcf 5
+
+```
+
+
+
+
+```{bash}
+# Los campos que nos interesan son estos:
+
+awk '{print $9}' ll_species_SNPs.vcf | sort | uniq -c
+8517148 GT:AD:DP:GQ:PGT:PID:PL
+5518131 GT:AD:DP:GQ:PL
+
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa #path to reference genome
+GATK=/opt/GATK-3.7/GenomeAnalysisTK.jar #GATK software path
+BCF=/opt/bcftools-1.6/bcftools #BCFtools software path
+
+
+# Remove balcans: do a list_to_keep with all the individuals but balcans and h_ll_pv.
+
+
+
+java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC -XX:+UseStringDeduplication -Xms16g -Xmx32g -jar $GATK \
+    -T SelectVariants \
+    -R $REF \
+    -V ll_species_SNPs.vcf \
+    -o ll_species_SNPs_no_balcans.vcf \
+    --sample_file list_to_keep.txt 
+
+# Tag SNPs with standard filters:
+
+java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC -XX:+UseStringDeduplication -Xms16g -Xmx32g -jar $GATK \
+  -T VariantFiltration \
+  --filterName "snpsfilter" \
+  --filterExpression "QD<2.0 || FS>60.0 || MQ<40.0 || MQRankSum<-12.5 || ReadPosRankSum<-8.0 || SOR>3.0" \
+  -R $REF \
+  -V ll_species_SNPs_no_balcans.vcf  \
+  -o ll_species_SNPs_no_balcans_tagged.vcf
+
+# Para que quede constancia, me da un error: WARN  15:26:53,131 Interpreter - ![38,47]: 'QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0 || SOR > 3.0;' undefined variable MQRankSum 
+
+#Filter previously tagged SNPs to obtain a standard-filter VCF.
+
+java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC -XX:+UseStringDeduplication -Xms16g -Xmx32g -jar $GATK \
+  -T SelectVariants \
+  -select 'vc.isNotFiltered()' \
+  -R $REF \
+  -V ll_species_SNPs_no_balcans_tagged.vcf \
+  -o ll_species_SNPs_no_balcans_tagged_filtered.vcf
+
+
+
+/opt/vcftools_0.1.13/bin/vcftools --vcf ll_species_SNPs_no_balcans_tagged_filtered.vcf --max-missing 1 --out ll_species_SNPs_no_balcans_tagged_filtered_no_missing.vcf
+
+
+python Script_SFS_from_VCF_maria.py c_ll_cr-c_ll_ki-c_ll_ya_n027.popfile 6,13,8 ll_species_SNPs_no_balcans_tagged_filtered.vcf 5
+
+
+# Exclude sites on the basis of the proportion of missing data (defined to be between 0 and 1, where 0 allows sites that are completely missing and 1 indicates no missing data allowed).
+```
+
+
+
+
+
+
