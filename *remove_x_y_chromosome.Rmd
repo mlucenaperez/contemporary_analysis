@@ -3,11 +3,12 @@ title: "Remove_x_chromosome"
 output: html_document
 ---
 
-# Lynx lynx MACROGEN samples
+# Remove all positions call as X or Y by Elena.
+## Lynx lynx MACROGEN samples
 
 Todo esto lo corro desde la cuenta de Elena! 
 
-Elena ha hecho un script para extraer las posiciones del X y del Y del genoma. Tuiene varios pasos, (completar Elena) entre ellos quitar cualquier contig del que el 30% de sus bases dieran señal del cromosoma que fuera teniendo en cuenta que los otros podían ser Ns y que en realidad preferimos filtrar de más que de menos.
+Elena ha hecho un script para extraer las posiciones del X y del Y del genoma. Tiene varios pasos, (completar Elena) entre ellos quitar cualquier contig del que el 30% de sus bases dieran señal del cromosoma que fuera teniendo en cuenta que los otros podían ser Ns y que en realidad preferimos filtrar de más que de menos.
 
 Los bed con las posiciones son:
 
@@ -97,7 +98,7 @@ done
 ```
 
 
-# Lynx pardinus GENOME PROJECT samples
+## Lynx pardinus GENOME PROJECT samples
 
 I will do it with all of them, even thought we then only plot one or two. 
 
@@ -123,4 +124,110 @@ done
 
 
 ```
+
+
+# Create a bed file containing autosomic positions only.
+
+We want to have a list with autosomic position so that we can filter our windows based on autosomic vs X position in the window. 
+
+1) We are obtaining Autosomic-sites from synteny with cat genome.
+2) Then we are doing an overlap with intergenic sites from notation (we will create a BED file X intergenic). 
+
+
+##1) Autosomic-sites from synteny with cat genome.
+
+```{bash}
+
+# 12/02/2018
+
+cd /GRUPOS/grupolince/copia_fabascal/MAPPINGS
+
+# Elena already obtained those. The file is:
+
+head /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger_AUTOSOMALchr.sorted.merged.bed
+
+# He hecho sanity checks y los archivos parece que no están bien. El de autosomico parece q también tiene posiciiones X!!!
+
+# A partir de aquí, ojo!!! Las dos ultimas columnas son posiciones X y posiciones autosomicas y si observamos tiene el mismo número y no debía de ser así. 
+lp23.s00118	100000	150000	125000	0.016682	0.010272	0.026232	0.029158	0.019715	-0.224692	-0.141638	-0.095277	-0.213636	0.029010	2211	4168	2032	2032	c_ll_cr_n006
+lp23.s00118	150000	200000	175000	0.219931	0.146627	0.423066	0.218310	0.182468	-0.649917	-0.650568	-0.539209	-0.197183	-0.092123	14496	4169	11755	11755	c_ll_cr_n006
+lp23.s00118	200000	250000	225000	0.061608	0.039015	0.116851	0.070147	0.054581	-0.403916	-0.356359	-0.284544	-0.177784	-0.034422	9374	4170	7493	7493	c_ll_cr_n006
+lp23.s00118	250000	300000	275000	0.232351	0.139013	0.494412	0.194088	0.166551	-0.801289	-0.811923	-0.675403	-0.146411	-0.156808	12628	4171	10174	10174	c_ll_cr_n006
+
+# Repasar!!!
+
+grep lp23.s00118 /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_Xchr/Xchr.intergenic.bed
+grep lp23.s00118 /GRUPOS/grupolince/Lynx_AUTOSOMALchr/AUTOSOMAL.intergenic.bed
+
+# Efectivamente está mal. Mirar los archivos de notación, que generó Elena a ver si también están mal y si es así comprobar los originales. Si los originales están mal, tirate por la ventana!  Sospecho que el que está mal es el de autosomico que ha generado Elena pero para comprobarlo hago algunos sanity checks (sospecha confirmada más abajo):
+
+# ¿Cuantas posiciones tengo en el archivo de Xchr?
+cat lynx2cat_wTiger_Xchr.sorted.merged.bed | awk '{sum+=($3-$2)}END{print sum}' 
+# 45245057
+
+# ¿Cuantas posiciones tengo en el archivo de notación anotadas como Xchr?
+ grep chrX lynx2cat_wTiger.sorted.bed | wc -l
+# 45245057
+
+# ¡Coincide!
+
+# ¿Cuantas posiciones tengo en el archivo de AUTOSOMAL?
+cat lynx2cat_wTiger_AUTOSOMALchr.sorted.merged.bed | awk '{sum+=($3-$2)}END{print sum}' 
+# 1180577743
+
+# ¿Cuantas posiciones tengo en el archivo de notación anotadas como NO Xchr (i.e. AUTOSOMAL)?
+grep -v chrX lynx2cat_wTiger.sorted.bed | wc -l
+# 1135332686
+
+# ¡No coincide!
+
+# ¿Cuantas posiciones totales en el archivo de la notación? 
+wc -l lynx2cat_wTiger.sorted.bed
+# 1180577743
+
+# El archivo anotado como AUTOSOMAL está mal. 
+
+# Genero un nuevo archivo con el Autosómico.
+
+grep -v chrX lynx2cat_wTiger.sorted.bed | bedtools  merge  | awk  -v OFS='\t' '{print $0,"AUTOSOMAL"}' > lynx2cat_wTiger_AUTOSOMALchr.sorted.merged.corrected.bed
+
+# En el nuevo archivo autosómico.
+
+cat lynx2cat_wTiger_AUTOSOMALchr.sorted.merged.corrected.bed | awk '{sum+=($3-$2)}END{print sum}'
+# 1135332686
+# ¡Genial! ¡¡¡Coincide!!!
+
+
+
+```
+
+##2) Overlap with intergenic sites from notation
+
+```{bash}
+
+mkdir /GRUPOS/grupolince/Lynx_AUTOSOMALchr
+
+cd /GRUPOS/grupolince/Lynx_AUTOSOMALchr
+
+screen -S intersect_AUTOSOMAL_intergenic
+
+INTERGENIC_FILE="/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.intergenic.PLUS1000.bed"
+AUTOSOMAL_SINTENY="/GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger_AUTOSOMALchr.sorted.merged.corrected.bed"
+OUTPUT_DIR="/GRUPOS/grupolince/Lynx_AUTOSOMALchr"
+
+
+bedtools intersect -a $INTERGENIC_FILE -b $AUTOSOMAL_SINTENY -sorted -g /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23 > $OUTPUT_DIR/AUTOSOMAL.intergenic.bed
+
+
+# How many positions does it have?
+
+awk  '{sum+=($3-$2)} END{print sum;}' AUTOSOMAL.intergenic.bed
+
+#646299594; 
+
+
+# File to cut our diversity files for non-blasted bam: /GRUPOS/grupolince/Lynx_AUTOSOMALchr/AUTOSOMAL.intergenic.bed
+
+```
+
 
