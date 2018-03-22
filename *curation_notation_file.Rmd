@@ -359,12 +359,12 @@ while read GENEID ;
 do
 echo "$GENEID" 
 # gene
-grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3   | # Solo si uso el file con todas las isoformas sed 's/^\(.\{4\}\)/\1./'  | \
+grep "$GENEID" /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3   | # Solo si uso el file con todas las isoformas sed 's/^\(.\{4\}\)/\1./'  | \
 grep -e $'\t''EVM_PASA'$'\t''gene'$'\t' | awk -v OFS='\t' '{print $1,$2,$3,$4-1,$5,$6,$7,$8,$9}' \
 > gene.iter.bed.borrar
 # He convertido el archivo en 0-based para hacer el substract. 
 # cds
-grep "$GENEID" /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3  | # Solo si uso el file con todas las isoformassed 's/^\(.\{4\}\)/\1./'  | \
+grep "$GENEID" /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.all.fix.nr.gff3  | # Solo si uso el file con todas las isoformassed 's/^\(.\{4\}\)/\1./'  | \
 grep -e $'\t''EVM_PASA'$'\t''CDS'$'\t' | \
 awk -v OFS='\t' 'NR == 1 {min = $4} NR>1 && $4<min {min = $4}; NR == 1 {max = $5} NR>1 && $5>max {max = $5} END {print  $1,min-1,max}'  \
 > cds.iter.bed.borrar
@@ -376,7 +376,7 @@ awk -v OFS='\t' 'NR==1 {if ($7=="+") print $1,$2,"5UTR",$4,$5,$6,$7,$8,$9,$5-$4 
 NR==2 {if ($7=="+") print $1,$2,"3UTR",$4,$5,$6,$7,$8,$9,$5-$4; else print $1,$2,"5UTR",$4,$5,$6,$7,$8,$9,$5-$4 }' gene-cds.iter.bed.borrar | \
 awk -v OFS='\t' '$10>1 {print $1,$2,$3,$4+1,$5,$6,$7,$8,$9}' >>  LYPA23C.UTRs_gene-cds.nr.gff3  
 # Lo que hace es quitarme todos los UTR que sean de un tamañao de 1 o 0. Además lo hago 1-based. 
-done < <( zcat /home/GRUPOS/grupolince/Lynx_annotation/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
+done < <( zcat /GRUPOS/grupolince/Lyp_annotation_Apr14_final/APPRIS/p23A.v3.14Oct2013/appris_data.corsair.lynx_pardinus.gff3.gz |  awk '$6>3 {  print $0 }' | awk '{ split($0,a,"Parent="); print a[2] }' | sort | uniq |  tr -d '"' | sed 's/LYPA23A/LYPA23C/g')
 
 # Este fallo se debe a que gene es igual a cds. 
 # Error: Invalid record in file gene.iter.bed.borrar. Record is 
@@ -755,7 +755,6 @@ Vamos a construir dos tipos de regiones intergénicas:
 
 # 1. 
 
-
 # Por un lado, tendríamos las regiones intergénicas que salen directamente de la resta del genoma menos la región funcional.
 
 # First create bed file based on the previous file. Como es un bed lo pasamos a es 0-based.
@@ -770,27 +769,23 @@ awk -v OFS='\t' '{print $1, $4-1, $5}' LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE
 # ¡¡¡Solapan muchas cosas!!! Tambien tenemos que tener en cuenta que tenemos gene y mRNA que solapan, pero también promotores 250, 500 y 100 para genes y lncRNa que solapan también completamente. 
 ##### 
 
-
 # Define intergenic region 1-based!!
 
 bedtools subtract -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome.bed -b LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.bed > LYPA23C.intergenic.bed
 
-
-
-
 # 2. 
-
 
 # Por otro vamos a crear un intergénico que recoja las regiones que estén al menos a 1000pb de cualquier zona funcional. 
 # First create bed file based on the previous file. Como es un bed lo pasamos a es 0-based.
 
 # con este awk sustituyo la columna que yo quiero por un valor concreto y el resto lo dejo igual. 
 
-awk -v OFS='\t' '{$4=$4-1000; $5=$5+1000; print}' LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3 > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.gff3
+awk -v OFS='\t' '{$4=$4-1000; $5=$5+1000; print}' LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.gff3 > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.DO_NOT_USE.gff3
 
+# Ojo! Este archivo es completamente artificial! Porque las unidades empiezan mil pares de bases antes de lo q deberían y acaban mil pares de bases despues, así que lo borro en cuanto lo use para no crear confusión. 
 
-join -1 1 -2 1 <(cat /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23)  <(LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.gff3) |  
-awk -v OFS='\t' '{if ($5<0) {$5="1"} else {$5=$5}; print}' | awk -v OFS='\t' '{if ($6>$2) {$6=$2} else {$6=$6}; print $1,$5-1,$6}' | bedtools merge -i stdin -d 1 > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.bed
+join -1 1 -2 1 <(cat /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23)  <(LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.DO_NOT_USE.gff3) |  
+awk -v OFS='\t' '{if ($5<0) {$5="1"} else {$5=$5}; print}' | awk -v OFS='\t' '{if ($6>$2) {$6=$2} else {$6=$6}; print $1,$5-1,$6}' | bedtools merge -i stdin -d 1 > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.DO_NOT_USE.bed
 
 ## Nota:Con este awk:
 # awk -v OFS='\t' '{if ($5<0) {$5="1"} else {$5=$5}; print}' | awk -v OFS='\t' '{if ($6>$2) {$6=$2} else {$6=$6}; print $1,$5-1,$6}'
@@ -801,7 +796,7 @@ awk -v OFS='\t' '{if ($5<0) {$5="1"} else {$5=$5}; print}' | awk -v OFS='\t' '{i
 
 # Define strict intergenic region 1-based!!
 
-bedtools subtract -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome.bed -b LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.bed > LYPA23C.intergenic.PLUS1000.bed
+bedtools subtract -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome.bed -b LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.nr.PLUS1000bp.DO_NOT_USE.bed > LYPA23C.intergenic.PLUS1000.bed
 
 # I need to create also a gff3 file with the intergenic, even thought it can be contraintuitive to have so (as gff3 have only functional features), but I need it to do all the numbers. I will used LYPA23C.intergenic.PLUS1000.bed to be sure of using intergenic regions (therefore there should be 1000pb between any functional category and the intergenic region for each individual feature).
 
@@ -813,7 +808,7 @@ awk -v OFS='\t' '{print $1,"manual","intergenic",$2+1,$3,".", "-", ".", "ID=inte
 # lp23.s41699	manual	intergenic	1	200	.	-	.	ID=intergenic_region_65794
 # lp23.s41700	manual	intergenic	1	200	.	-	.	ID=intergenic_region_65795
 
-
+rm *.DO_NOT_USE.*
 ```
 
 
@@ -837,13 +832,15 @@ cat LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_i
 # First I create the dataset to do diversity calculus. I remove Gene and mRNA.
 
 wc -l LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
-534136 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
+534123 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
 
-grep -v "EVM_PASA      gene" LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 | grep -v "EVM_PASA       mRNA" | wc -l
-491636
+grep -v "EVM_PASA      gene" LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 | grep -v "EVM_PASA        mRNA" | wc -l
+491623
 
 # I will compute way less sites, so I will use this file with no genes or mRNA. 
 grep -v "EVM_PASA      gene" LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 | grep -v "EVM_PASA  mRNA" > LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
+
+
 
 # Now I will separate it by scaffolds. 
 mkdir LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3.PerScaffold
@@ -864,7 +861,9 @@ done
 
 ```
 
-# Ojo!!!! Corrección. 
+# Ojo!!!! Corrección. Dos correcciones:
+
+## Día 12/10/2017
 
 Me he dado cuenta a posteriori de que algunos 5UTR estaban repetidos. 
 
@@ -940,7 +939,13 @@ LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_intro
 
 # Además de esto genero elimino la carpeta porScaffold para tner más sitio, pero si Elena o cualquier persona la necesitase, sólo tendría que crearla de nuevo con el siguiente script:
 
+cd /GRUPOS/grupolince/Lyp_annotation_Apr14_final
+mkdir LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.corrected.PerScaffold 
+cd LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.corrected.PerScaffold
+
+
 awk '{print >> $1; close($1)}' ../LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.corrected.gff3
+
 
 # Rename gff3.
 for file in lp23*
@@ -949,7 +954,71 @@ echo $file
 mv $file ${file/lp23/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.corrected.gff3_lp23}
 done
 
-
-
 ```
 
+## Día 12/10/2017
+
+
+Haciendo comprobaciones me doy cuenta que hay varios asuntos que no están bien. 
+
+En primer lugar hay varios UTR (tanto 5 como 3) que aparecen dos veces pero no son exactamente iguales y por eso no los ha eliminado el script de antes. La diferencia está en que uno es 0-based y otro 1-based.
+
+En segundo lugar compruebo que algunas unidades empiezan en números negativos, y esto se debe a que creabamos un archivo PLUS1000 para sacar el intergénico que estabamos usando auqnue era totalemnte erroneo porque agrandaba las zonas funcionales 1000 pb. 
+
+
+Para solucionar todo he vuelto a correr los UTR y comprobado que ya están bien. 
+
+Esta es la lista que tenía más de uno y ya no lo tiene. 
+
+2 5UTR LYPA23C000017 LYPA23C000017
+2 5UTR LYPA23C000015 LYPA23C000015
+2 5UTR LYPA23C000008 LYPA23C000008
+2 3UTR LYPA23C000045 LYPA23C000045
+2 3UTR LYPA23C000041 LYPA23C000041
+2 3UTR LYPA23C000003 LYPA23C000003
+      
+```{bash}
+
+
+grep LYPA23C000017 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 | grep UTR
+# lp23.s26402	EVM_PASA	5UTR	73114	73122	.	+	.	ID=LYPA23C000017
+# lp23.s26402	EVM_PASA	3UTR	92633	95884	.	+	.	ID=LYPA23C000017
+
+grep LYPA23C000017 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 | grep UTR
+# lp23.s26402	EVM_PASA	5UTR	73114	73122	.	+	.	ID=LYPA23C000017
+# lp23.s26402	EVM_PASA	3UTR	92633	95884	.	+	.	ID=LYPA23C000017
+
+grep LYPA23C000015 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 | grep UTR
+# lp23.s36682	EVM_PASA	5UTR	252655	252723	.	+	.	ID=LYPA23C000015
+# lp23.s36682	EVM_PASA	3UTR	279677	279811	.	+	.	ID=LYPA23C000015
+
+grep LYPA23C000008 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 | grep UTR
+# lp23.s36682	EVM_PASA	5UTR	329118	329217	.	+	.	ID=LYPA23C000008
+# lp23.s36682	EVM_PASA	3UTR	338697	338929	.	+	.	ID=LYPA23C000008
+
+grep LYPA23C000045 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 | grep UTR
+# lp23.s10719	EVM_PASA	3UTR	127698	128105	.	-	.	ID=LYPA23C000045
+# lp23.s10719	EVM_PASA	5UTR	156260	156378	.	-	.	ID=LYPA23C000045
+
+grep LYPA23C000041 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 | grep UTR
+# lp23.s10719	EVM_PASA	3UTR	85593	86080	.	-	.	ID=LYPA23C000041
+# lp23.s10719	EVM_PASA	5UTR	96754	96794	.	-	.	ID=LYPA23C000041
+
+grep LYPA23C000003 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 | grep UTR
+# lp23.s36682	EVM_PASA	3UTR	320799	321993	.	-	.	ID=LYPA23C000003
+# lp23.s36682	EVM_PASA	5UTR	328523	328962	.	-	.	ID=LYPA23C000003
+
+
+# Perfecto!
+```
+      
+En segundo lugar también modifico todos los archivos que se generen a partir de ahí. Y además el archivo con los 1000pb aumentados por ambos extremos lo elimino por completo para que no de pie a confusión. 
+
+He copiado los archivos correctos en backup. 
+
+De todas formas para que quede constancia hemos observado que hay varios ncRNA y esto se debe a que estos se seleccionaron en base a un evalue, así que dos secuencias a podido dar hit al mismo ncRNA con un evalue relativamente alto y por tanto las dos han pasado el filtro. 
+
+
+
+      
+  
