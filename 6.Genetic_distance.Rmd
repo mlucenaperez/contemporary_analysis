@@ -169,6 +169,18 @@ distance_nj_matrix <- nj(as.dist(t(mat_data)))
 
 plot.phylo(distance_nj_matrix, type = "u" ,  rotate.tree = -110, lab4ut="axial", edge.width=1)
 
+# then, you will find the tip labels in the following vector:
+
+distance_nj_matrix$tip.label
+
+distance_nj_matrix$tip.label <- data[,1]
+distance_nj_matrix$tip.label<- as.character(distance_nj_matrix$tip.label)
+
+plot.phylo(distance_nj_matrix, type = "u" ,  rotate.tree = -110, lab4ut="axial", edge.width=1)
+
+dev.print(dev = pdf, "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_genetic_distance/phylo_genetic_distances.pdf")
+
+dev.off()
 ```
 
 ## Intergenic data blast filtered.
