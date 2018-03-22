@@ -83,9 +83,16 @@ $FILTER2 \
 
 
 # -doMaf 2 Esto te saca el known y el unknown: http://www.popgen.dk/angsd/index.php/Allele_Frequencies
-
+## Cuidado porque el minor y major puede no coincidir, y todas las cuentas que hagas despues estarán mal. Puedes forzarlo haciendo Maf 4
 
 ```
+
+
+######### OJO!!!!!######### OJO!!!!!######### OJO!!!!!######### OJO!!!!!######### OJO!!!!!
+
+# Cuidado porque el minor y major puede no coincidir, y todas las cuentas que hagas despues estarán mal. Puedes forzarlo haciendo Maf 4
+
+######### OJO!!!!!######### OJO!!!!!######### OJO!!!!!######### OJO!!!!!######### OJO!!!!!
 
 
 We can now calculate some summary statistics, namely number of segregating sites, expected heterozygosity, number of fixed differences and dxy. Please note that the latter 2 statistics have not been properly tested and they are shown to be For instance, dxy been shown to be over-estimated and should be used only for inspecting the distribution and not to make inferences based on its absolute values. In case you want to estimate dxy, you can find in ngsTools/ngsPopGen/scripts folder a perl script written by Nagarjun Vijay and a R script written by [Joshua Penalba][https://joshuapenalba.com/] which calculate Dxy from ANGSD allele frequency files. Please see that script for additional help.
@@ -95,8 +102,21 @@ We can now calculate some summary statistics, namely number of segregating sites
 ```{bash}
 
 
+POP1=c_lp_do_n012.genolike.mafs.gz
+POP2=c_lp_sm_n019.genolike.mafs.gz
 
-chromo  position        major   minor   ref     anc     unknownEM       pu-EM   nInd
+# Esta es la pinta del archivo maf
+# chromo	position	major	minor	ref	anc	unknownEM	pu-EM	nInd
+# lp23.s00001	42503	G	T	G	G	0.051070	6.026475e-02	11
+# lp23.s00001	62369	G	A	G	G	0.097718	1.830133e-02	12
+# lp23.s00001	62377	G	T	G	G	0.092205	3.373843e-02	12
+# lp23.s00001	94627	T	A	T	A	0.233673	1.110223e-16	12
+# lp23.s00001	94676	A	T	A	T	0.301259	3.219647e-15	12
+# lp23.s00001	110613	C	A	N	C	0.055303	3.387711e-02	12
+# lp23.s00001	112776	A	G	A	A	0.044053	1.246238e-02	12
+# lp23.s00001	118717	A	G	A	A	0.311334	0.000000e+00	12
+# lp23.s00001	120814	G	C	G	N	0.421426	0.000000e+00	12
+
 
 zcat c_lp_do_n012.genolike.mafs.gz | awk -v OFS='\t' '{printf ("%s\t%s\t%s\t%s\t%s\t%f\t%s\t%s\n", $1, $2, $3, $4, $5, (1-$7), $7, $9)}'  > prueba_1
 zcat c_lp_sm_n019.genolike.mafs.gz | awk -v OFS='\t' '{printf ("%s\t%s\t%s\t%s\t%s\t%f\t%s\t%s\n", $1, $2, $3, $4, $5, (1-$7), $7, $9)}'  > prueba_2
@@ -110,7 +130,7 @@ POP2=c_lp_sm_n019.genolike.mafs.gz
 
 ./getDxy.pl --pop1maf $POP1 --pop2maf $POP2 --nInd 31
 
-./getDxy.pl --pop1maf prueba_1 --pop2maf prueba_2 --minInd 6
+./getDxy.pl --pop1maf prueba_1 --pop2maf prueba_2 --minInd 13
 
 
 ```
@@ -265,15 +285,9 @@ if(is.null(opt$totLen)){
 
 
 
-
-
-
 ### Reading data in
 allfreqA <- read.table("prueba_1",sep='\t',row.names=NULL, header=T)
 allfreqB <- read.table("prueba_2",sep='\t',row.names=NULL, header=T)
-
-
-
 
 
 ### Manipulating the table and print dxy table
@@ -285,7 +299,9 @@ write.table(allfreq[,c("chromo","position","dxy")], file="Dxy_persite.txt",quote
 print('Created Dxy_persite.txt')
 
 
-### Print global dxy
+
+
+# Print global dxy
 print(paste0('Global dxy is: ',sum(allfreq$dxy)))
 if(!is.null(opt$totLen)){
   print(paste0('Global per site Dxy is: ',sum(allfreq$dxy)/opt$totLen))
@@ -295,11 +311,6 @@ if(!is.null(opt$totLen)){
 print(paste0('Global per site Dxy is: ',sum(allfreq$dxy)/407194))
 
 ```
-
-
-
-
-
 
 
  "Global dxy is: 155416.991753343"
@@ -323,5 +334,119 @@ all.equal.default      all.equal.formula      all.equal.POSIXt       allfreq    
 > print(paste0('Global per site Dxy is: ',sum(allfreq$dxy)/407194))
 [1] "Global per site Dxy is: 0.38167800054358"
 
+
+# Divergence --> substitutions
+
+VCF creado por Dani. Email:
+
+Hola María,
+
+En el servidor B, en 
+
+/home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani 
+
+he creado:
+
+un archivo con la lista de posiciones en c_ll_ki_0090 y c_lr_zz_0001 (c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions), 
+de ahí otro archivo con la clasificación de cada posición (c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class), 
+y ahora estoy generando un tercero sin NAs, INDELs o multialélicos (c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe). 
+
+Lo que quedaría lo podemos definir como el universo callable.
+Puedes usar este tercero para tus cálculos por ventana. 
+
+Tengo que hacer ventanas de 50000pb contando el número de posiciones callable y las sustituciones en estas. 
+
+Debo reportar:
+
+1. Scaffold
+2. Win start, win end
+3. Win center
+4. Number of substitutions
+5. Number of callable sites
+
+¿Cómo es el archivo?
+
+Scaffold Position Reference Alternative c_ll_ki_0090 c_lr_zz_0001 Class
+lp23.s00001	1	C	.	0/0	0/0	 Invariable
+lp23.s00001	2	T	.	0/0	0/0	 Invariable
+lp23.s00001	3	T	.	0/0	0/0	 Invariable
+lp23.s00001	4	G	.	0/0	0/0	 Invariable
+lp23.s00001	5	T	.	0/0	0/0	 Invariable
+lp23.s00001	7	G	.	0/0	0/0	 Invariable
+lp23.s00001	8	T	.	0/0	0/0	 Invariable
+lp23.s00001	9	T	.	0/0	0/0	 Invariable
+lp23.s00001	10	G	.	0/0	0/0	 Invariable
+
+
+
+
+```{bash}
+
+# Primero lo hago cero based.Y convierto todas las "SUSBSTITUTIONS" en 1 y lo demás en 0, para que me sea muy comodo hacer el slidding window. 
+
+mkdir -p /home/mlucena/divergence/intergenic_analysis
+
+WD="/home/mlucena/divergence/intergenic_analysis"
+WINDOW_DIRECTORY="/home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs"
+FILE_DANI="/home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe"
+FILE_DANI_MODIF="c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized"
+
+# Modifico el archivo de Dani:
+tail -n+2  $FILE_DANI | awk '{if ($7=="Substitution") print $1, $2-1, "1"; else print $1, $2-1, "0"}' > $WD/$FILE_DANI_MODIF
+
+
+# Nombre de un archivos por ventanas:
+# c_ll_ya_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions
+
+# Lo que hago es coger el archivo de diversidad por ventanas de un par de poblaciones (en este caso kirov, tuva y cr, con la idea de juntarlos luego para que no falte ninguna ventana) y correr este script definiendo el rango que tienen que coger usando ese rango de ventanas estudiadas para esas poblaciones. Idealmente si estuvieran cubiertas completamente todas las ventanas en todas las poblaciones los archivos de salida serían idénticos, puesto que la divergencia se establece usando la poblacion de kirov-rufus. 
+
+cd $WINDOW_DIRECTORY
+
+# POPS USADAS
+
+# POP=c_ll_cr_n006
+POP=c_ll_ki_n013
+# POP=c_ll_tu_n006
+
+screen -S $POP.divergence
+
+# POP=c_ll_cr_n006
+POP=c_ll_ki_n013
+# POP=c_ll_tu_n006
+
+WD="/home/mlucena/divergence/intergenic_analysis"
+WINDOW_DIRECTORY="/home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs"
+FILE_DANI="/home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe"
+FILE_DANI_MODIF="c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized"
+cd $WD
+echo $POP
+rm $POP.divergence_with_rufus
+
+while read CHR WinStart WinStop WinCenter tW tP tF tH tL Tajima fuf fud fayh zeng nSites WinNumber AUTOSOMICpositions Xpositions
+
+do
+
+echo "Window: " "$CHR" "$WinStart"-"$WinStop"
+
+grep $CHR $FILE_DANI_MODIF | awk -v CHR="$CHR" -v WinStart="$WinStart" -v WinStop="$WinStop" '$2>WinStop { exit } $2>=WinStart && $2<=WinStop{sum+=$3;count++;}END{print CHR, WinStart, WinStop, count, sum, sum/count} ' >> $POP.divergence_with_rufus
+
+done < <(tail -n+2  "$WINDOW_DIRECTORY"/"$POP".unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions)
+
+# Cuando acabe borrar: $FILE_DANI_MODIF
+
+# Sanity checks:
+
+diff c_ll_cr_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions c_ll_ki_n013.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions
+
+diff c_ll_cr_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions c_ll_tu_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions
+
+diff c_ll_ki_n013.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions c_ll_tu_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions
+
+
+
+# Si tiene todos los campos que debiera podemos hacer un join con el archivo de diversidad.
+
+
+```
 
 
