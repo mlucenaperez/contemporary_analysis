@@ -385,6 +385,7 @@ done
 
 I will also check if this estimation is correct by running one of my pops from the very beginning using this sites, and then compare the diversity. 
 
+
 ```{r, engine=bash, eval=FALSE}
 
 cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_filtered_sites
@@ -581,15 +582,11 @@ scp *.printed.stats /backup/mlucena/intermediate_files_ANGSD/intergenic_analysis
 
 ```
 
-
 ##
 
 ```{bash}
 scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/diversity.per.pop.averages.tsv /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/
 ```
-
-
-
 
 ## Plotting diversity
 
@@ -639,15 +636,15 @@ diversity$Populations <- factor (diversity$Populations, levels=c("Norway", "Balk
 
  ggplot (diversity, aes(x=Populations, y= pairwise_ave, fill=Populations)) + 
    geom_point(color="dimgrey", size=5, shape=22) + 
-   scale_fill_manual("Población",labels = c("Noruega","Balkans","Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva","Mongolia","Yakutia" ,"Vladivostok"), values = cols) + 
-  xlab ("Populations") + ylab ("Diversidad nucleotidica") +  theme_classic() + 
+   scale_fill_manual(values = cols) + 
+  xlab ("Populations") + ylab ("Nucleotide diversity") +  theme_classic() + 
 theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) 
 
 ggsave(paste(wd,"pi_per_pop.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") 
 
 ggplot (diversity, aes(x=Populations, y=watterson_ave, fill=Populations)) + 
    geom_point(color="dimgrey", size=5, shape=22) + 
-   scale_fill_manual("Población",labels = c("Noruega","Balkans","Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva","Mongolia","Yakutia" ,"Vladivostok"), values = cols) + 
+   scale_fill_manual(values = cols) + 
   xlab ("Populations") + ylab ("Watterson") +  theme_classic() + 
 theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) 
 
@@ -727,4 +724,319 @@ scp /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*.unfolded-l
 # Cuando esté pasado --> borrarlos! 
 
 ```
+
+# Window analysis
+
+Para tener una medida de dispersión de la diversidad vamos a hacer ventanas, para ello vamos a trabajar en datos que es donde están los archivos brutos. 
+
+```{bash}
+
+cd /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs/
+
+ls -ltr *.postprob.thetas.idx | sort | uniq
+
+# c_ll_no_n008.unfolded-lr.postprob.thetas.idx --> Done
+# c_ll_po_n008.unfolded-lr.postprob.thetas.idx --> Done
+# c_ll_ki_n013.unfolded-lr.postprob.thetas.idx --> Done
+# c_ll_to-c_ll_ka-c_ll_og_n008.unfolded-lr.postprob.thetas.idx --> Done
+# c_ll_ya_n008.unfolded-lr.postprob.thetas.idx --> Lanzado
+# c_ll_vl_n008.unfolded-lr.postprob.thetas.idx --> Lanzado
+# c_ll_la_n006.unfolded-lr.postprob.thetas.idx --> Lanzado
+# c_ll_cr_n006.unfolded-lr.postprob.thetas.idx --> Lanzado
+# c_ll_tu_n006.unfolded-lr.postprob.thetas.idx --> Lanzado
+# x_ll_ba_n003.unfolded-lr.postprob.thetas.idx --> No lanzado para todo el intergénico. 
+# c_ll_ur_n006.unfolded-lr.postprob.thetas.idx --> Lanzado
+
+
+#To launch one by one
+
+POP="c_ll_ur_n006"  # <--CHANGE POP HERE
+#screen -S "$POP"_sfs
+screen -S "$POP"_window_analysis
+POP="c_ll_ur_n006"  # <--CHANGE POP HERE
+#script "$POP"_sfs.log
+script "$POP"_window_analysis.log
+POP="c_ll_ur_n006"  # <--CHANGE POP HERE
+
+NGSTOOLS="/opt/angsd/angsd/misc"
+
+THREADS=10                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+
+WINDOWSIZE=50000
+WINDOWSTEP=50000 
+
+
+echo "-------$POP---------- Window analysis -----------------------------------------"
+
+$NGSTOOLS/thetaStat do_stat $POP.unfolded-lr.postprob.thetas.idx -win $WINDOWSIZE -step $WINDOWSTEP  -outnames $POP.unfolded-lr.postprob.thetasWindow_$WINDOWSIZE.$WINDOWSTEP.gz
+
+
+```
+
+Now I cat window files with the proper name
+
+```{bash}
+# Primero defino para cada archivos que ventanas son x y que ventanas no. 
+
+# El archivo BED con las posiciones del X está en:
+
+/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_Xchr/Xchr.intergenic.bed
+
+
+
+# Primero voy a comprobar que todos los archivos tienen el mismo número de ventanas.
+
+wc -l *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG
+#   41432 c_ll_cr_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG
+#   41428 c_ll_ki_n013.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG
+#   41427 c_ll_la_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG
+#   41422 c_ll_no_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG
+#   41431 c_ll_po_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG
+#   41431 c_ll_to-c_ll_ka-c_ll_og_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG
+#   41430 c_ll_tu_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG
+#   41433 c_ll_ur_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG
+#   41430 c_ll_vl_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG
+#   41428 c_ll_ya_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG
+
+# No las tienen. Así que tengo que buscar una manera de numerar a las ventanas del 1 a x que tenga en cuenta todas las ventanas posibles de manera que si falta una ventana se salte ese número.
+
+# La primera ventana nunca está.
+
+# Para ello voy primero a imprimir en un mismo archivo totdas las ventanas distitnas que puedo tener.
+
+# Primero cuantas ventanas totales tengo.
+
+awk  -v OFS='\t' 'FNR==1 && NR!=1{next;}{print $2"_"$1}' *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG | cut -d"(" -f 1,4 | sed 's/(//g' | sed 's/)//g' | sed 's/,/_/g' |  sort | uniq | wc -l
+# 41440
+
+# Ahora les añado un número sequencial.
+
+awk 'FNR==1 && NR!=1{next;}{print $2,$1}' *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG | cut -d"(" -f 1,4 | sed 's/(//g' | sed 's/)//g' | sed 's/,/ /g' | LANG=en_EN sort -k1,1 -k2,2n | uniq | sed 's/ /_/g' | awk  -v OFS='\t' 'FNR==1 && NR!=1{next;}{print $0, NR-1}' | sed 's/#//g' | sed 's/ /_/g' | awk 'FNR==1{$2="WinNumber"};1'  > list_of_window_identity_and_number.tsv
+
+
+# Ahora vamos a ordenar las columnas del archivo de ventanas para que me sean útiles. 
+
+for i in *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG
+do
+echo $i
+cut -d"(" -f 4  $i | sed 's/)//g' | sed 's/,/_/g' | awk  -v OFS='\t' 'FNR==1 && NR!=1{next;}{print $2"_"$1,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14}' > ${i/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif}
+done
+
+
+# Ahora tengo que hacer un join para nombrar cada ventana en cada archivo.  
+
+for file in *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif
+do
+echo $file
+LANG=en_EN join -1 1 -2 1 <(LANG=en_EN sort -k1,1 $file)  <(LANG=en_EN sort -k1,1 list_of_window_identity_and_number.tsv) | LANG=en_EN  sort -k14,14n | sed $'s/_/\t/g' | sed $'s/ /\t/g'  > ${file/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif2}
+done
+
+
+# Ahora ya tengo el numero de ventana, así que aunuq pierda las posiciones al hacer el merge lo voy a poder recuperar luego. 
+
+############################################################################################################
+
+############################################################################################################
+
+##################X-CHR##################
+
+
+# Primero con X.
+
+FILE_TO_MERGE="/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_Xchr/Xchr.intergenic.bed" 
+
+
+for file in *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif2
+do
+echo $file
+bedtools intersect -a <(tail -n +2  $file) -b $FILE_TO_MERGE > ${file/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif2/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_synteny_X_chr}
+done
+
+# Ahora calculo el numero de bases por ventana del X
+# Primero creo la resta y luego ya sumo la resta:
+
+for file in *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_synteny_X_chr
+do
+echo $file
+awk  -v OFS='\t' '{print $0, $3-$2}' $file | \
+awk -v OFS='\t' '{ count[$16]++; sum[$16]+=$17}END {
+    for(number in count) {print number, sum[number]} }' | LANG=en_EN sort -k1,1n  > ${file/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_synteny_X_chr/number_of_window_X_chr_positions} 
+done
+
+############################################################################################################
+
+############################################################################################################
+
+##################AUTOSOMIC##################
+
+
+# Ahora con autosomico. He creado este archivo su ruta está en remove_x_y_chromosome. 
+
+FILE_TO_MERGE="/GRUPOS/grupolince/Lynx_AUTOSOMALchr/AUTOSOMAL.intergenic.bed" 
+
+for file in *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif2
+do
+echo $file
+bedtools intersect -a <(tail -n +2  $file) -b $FILE_TO_MERGE > ${file/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif2/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_synteny_AUTOSOME_chr}
+done
+
+# Ahora calculo el numero de bases por ventana del AUTOSOMICO
+# Primero creo la resta y luego ya sumo la resta:
+
+for file in *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_synteny_AUTOSOME_chr
+do
+echo $file
+awk  -v OFS='\t' '{print $0, $3-$2}' $file | \
+awk -v OFS='\t' '{ count[$16]++; sum[$16]+=$17}END {
+    for(number in count) {print number, sum[number]} }' | LANG=en_EN sort -k1,1n  > ${file/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_synteny_AUTOSOME_chr/number_of_window_AUTOSOMIC_chr_positions} 
+done
+
+############################################################################################################
+
+############################################################################################################
+
+# Ahora concateno el numero de posiciones X y autosomicas.
+
+for file in *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif2
+do
+echo $file
+# the a1 a2 if for doing a full join. -e '0' only works with -o
+LANG=en_EN join -a1 -a2 -1 16 -2 1 -e '0' -o '1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,1.10,1.11,1.12,1.13,1.14,1.15,0,2.2' <(tail -n +2 $file | LANG=en_EN sort -k16,16 ) <(LANG=en_EN sort -k1,1 ${file/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif2/number_of_window_AUTOSOMIC_chr_positions}) | \
+LANG=en_EN join  -a1 -a2 -1 16 -2 1 -e '0' -o '1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,1.10,1.11,1.12,1.13,1.14,1.15,0,1.17,2.2' - <(LANG=en_EN sort -k1,1 ${file/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif2/number_of_window_X_chr_positions}) | cat <( head -n1 $file ) - | awk 'FNR==1{$17="AUTOSOMICpositions"};1' | awk 'FNR==1{$18="Xpositions"};1' |  sed $'s/ /\t/g' | LANG=en_EN sort -k16,16n > ${file/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif2/unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions}
+done
+
+# Borro todos los archivos intermedios.
+
+rm list_of_window_identity_and_number.tsv 
+rm *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif
+rm *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_modif2
+rm *number_of_window_AUTOSOMIC_chr_positions
+rm *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_synteny_AUTOSOME_chr
+rm *number_of_window_X_chr_positions
+rm *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_synteny_X_chr
+
+# Ahora paso a concatenar los archivos para poder importarlos en R y hacer todos los calculos necesarios.
+
+awk 'FNR==1 && NR!=1{next;}{print $0, FILENAME}' *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions | awk 'FNR==1{$19="population"};1' | sed 's/.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions//g' | sed $'s/ /\t/g'  > c_ll_no_n008-c_ll_po_n008-c_ll_ki_n013-c_ll_to-c_ll_ka-c_ll_og_n008-c_ll_ya_n008-c_ll_vl_n008-c_ll_la_n006-c_ll_cr_n006-c_ll_tu_n006-c_ll_ur_n006.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions 
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs/c_ll_no_n008-c_ll_po_n008-c_ll_ki_n013-c_ll_to-c_ll_ka-c_ll_og_n008-c_ll_ya_n008-c_ll_vl_n008-c_ll_la_n006-c_ll_cr_n006-c_ll_tu_n006-c_ll_ur_n006.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/analysis_diversity_window
+
+```
+
+## R window analysis
+
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library (tidyr)
+
+wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/analysis_diversity_window"
+
+index="tP"
+
+
+window_diversity <- read.table("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/analysis_diversity_window/c_ll_no_n008-c_ll_po_n008-c_ll_ki_n013-c_ll_to-c_ll_ka-c_ll_og_n008-c_ll_ya_n008-c_ll_vl_n008-c_ll_la_n006-c_ll_cr_n006-c_ll_tu_n006-c_ll_ur_n006.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions", sep="\t", dec=".", header=T, na.strings = "-nan") %>% mutate (XvsTOTAL= Xpositions/(Xpositions+AUTOSOMICpositions))
+
+ggplot(data = window_diversity, aes(window_diversity$XvsTOTAL)) +
+  geom_histogram() #+
+# scale_y_continuous(limits = c(0, 200))
+
+# Podemos ver que la mayoría de ventanas son o bien autosomicas o bien del X, sin embargo si añadimos scale_y_continuous(limits = c(0, 200)), vemos que sí hay algunas que tiene valores intermedios. En mi caso y dado que tenemos suficientes, voy a filtrar esas ventanas y me quedo con las que son del x y autosómicas 100%.
+
+window_diversity_filtered <- window_diversity %>%  filter(XvsTOTAL=="1" | XvsTOTAL=="0" ) %>% mutate(window_type=ifelse(
+  XvsTOTAL==1 , "Xchr", "Autosomic"))
+
+
+# The number of rows are 325010, and before we had 414282, so how many of those are na:
+
+sum(is.na(window_diversity$XvsTOTAL))
+# 88262
+
+# The total is 413272; so, 414282-413272=1010. Only 1010 windows are between 0 and 1 and has a value! We found the gap!!!!! :)
+
+window_diversity_filtered_autosomic <- window_diversity_filtered %>%  filter(XvsTOTAL=="0")
+
+ggplot(data=window_diversity_filtered_autosomic, aes_string(x="population", y=index))+
+ geom_violin() +
+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+# Este grafico es interesante. Ahora computo un boxplot sobre estos datos.
+
+ggplot(data=window_diversity_filtered_autosomic, aes_string(x="population", y=index))+
+ geom_boxplot(outlier.alpha = 0.5)  +
+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+         
+# By pop, average and standard deviation
+
+summary_diversity <- window_diversity_filtered_autosomic %>% group_by(population) %>% summarise_at(vars(tW,tP),funs(mean, sd))
+
+
+ggplot (data = summary_diversity, aes_string(x="population", y=paste0(index,"_mean")))+
+  geom_point() +
+  geom_errorbar(aes_string(ymin=paste(index,"_mean - ",index,"_sd", sep =""),ymax=paste(index,"_mean + ",index,"_sd", sep ="")), colour="black", width=.1) 
+
+
+
+# Ahora pruebo la misma funcion eliminando outliers.
+
+remove_outliers <- function(x, na.rm = TRUE, ...) {
+  qnt <- quantile(x, probs=c(.25, .75), na.rm = na.rm, ...)
+  H <- 1.5 * IQR(x, na.rm = na.rm)
+  y <- x
+  y[x < (qnt[1] - H)] <- NA
+  y[x > (qnt[2] + H)] <- NA
+  y
+}
+
+window_diversity_filtered_autosomic$tW_noOutliers <- remove_outliers(window_diversity_filtered_autosomic$tW)
+window_diversity_filtered_autosomic$tP_noOutliers <- remove_outliers(window_diversity_filtered_autosomic$tP)
+
+summary_diversity_no_outliers <- window_diversity_filtered_autosomic %>% group_by(population) %>% summarise_at(vars(tW_noOutliers,tP_noOutliers),funs(mean(.,na.rm=TRUE), sd(.,na.rm=TRUE)))
+
+
+ggplot (data = summary_diversity_no_outliers, aes_string(x="population", y=paste0(index,"_noOutliers_mean")))+
+  geom_point() +
+  geom_errorbar(aes_string(ymin=paste(index,"_noOutliers_mean - ",index,"_noOutliers_sd", sep =""),ymax=paste(index,"_noOutliers_mean + ",index,"_noOutliers_sd", sep ="")), colour="black", width=.1) 
+
+
+summary_diversity_ratio_autosome_XChr <- window_diversity_filtered %>% group_by(population, window_type) %>% summarise_at(vars(tW,tP),funs(mean, sd)) %>% select (population, window_type, paste0(index,"_mean")) %>% spread(., window_type, paste0(index,"_mean")) %>% mutate (ratio=Xchr/Autosomic)
+
+
+ggplot (data = summary_diversity_no_outliers, aes_string(x="population", y=paste0(index,"_noOutliers_mean")))+
+  geom_point() +
+  geom_errorbar(aes_string(ymin=paste(index,"_noOutliers_mean - ",index,"_noOutliers_sd", sep =""),ymax=paste(index,"_noOutliers_mean + ",index,"_noOutliers_sd", sep ="")), colour="black", width=.1) 
+
+# u_f^2  = ((u_a^2 / a^2) + (u_b^2 / b^2)) * f^2
+# u_f=sqrt(((u_a^2 / a^2) + (u_b^2 / b^2)) * f^2)
+
+# Del artículo esta es la versión naif: CVratio~ sqrt(CVx^2 + CVy^2)
+
+
+```
+
+Pregunta en research gate:
+
+You have a ratio between 2 variables so the propagation of uncertainties for ratio applies. If I call "a" your first variable and "b" the second one, then the uncertainty of their ratio (I call it here "f = a/b") can be obtained via simple propagation as follows: (u_f^2 / f^2) = (u_a^2 / a^2) + (u_b^2 / b^2) where u_f is the uncertainty of the ratio f=a/b, u_a is the uncertainty of the variable a and u_b is the uncertainty of variable b. In your case variables a and b are arithmetic means (I guess) so the uncertainty of arithmetic means (u_a and u_b in our examples) can be again calculated using the propagation of uncertainties. This is a classical formula in propagation of uncertainties and can be further simplified if the uncertainties of each single measurement are the same.
+
+Me lleva al artículo en cuestión:
+Clin Biochem. 2007 Jun;40(9-10):728-34. Epub 2007 Mar 12.
+Error propagation in calculated ratios.
+Holmes DT1, Buhr KA.
+
+Por otro lado,
+
+https://stats.stackexchange.com/questions/161042/ratio-of-standard-deviation-to-mean:
+
+My interval is like this: µ ± σ, where σ is the standard deviation and µ is the mean. 
+I want to know if the ratio σ/µ has any interpretation:
+
+That ratio is called the Coefficient of Variation(CV) and it shows the magnitude of variation in relation to the population mean. It is used to describe the variation within the data without depending on the measurement unit of the data, so you can easily compare the dispersion across different distributions of data 
+
+
+https://stats.stackexchange.com/questions/204264/interpreting-standard-deviation-ratio-is-std-deviation-ratio-equal-to-coefficie
+
+
 
