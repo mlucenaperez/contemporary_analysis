@@ -1,0 +1,468 @@
+---
+title: "2.SFS_contemporary_intergenic_X_vs_autosomic"
+output: html_document
+---
+
+# Copy transformed thetas from datos.
+
+All my "$POP".transformedThetas are already in datos:
+
+/home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
+
+Therefore, I will copy them:
+
+```{bash}
+screen -S copying_thetas_file
+
+scp /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs/*transformedThetas /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs
+
+```
+
+# XCHR
+
+## Create folder for SFS diversity for X chr intergenic and autosomic
+
+I will create a folder where I will save the cut thetas file. 
+```{bash}
+
+mkdir /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_Xchr/
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_Xchr/
+
+```
+
+
+## Create folders separated by scaffolds for diversity calculus per unit 
+
+Mi rf file está en:
+
+/GRUPOS/grupolince/Lynx_Xchr/Xchr.intergenic.bed
+
+Para este analisis tenemos que rompar el bed file con el que queremos hacer el intersect en distintos scaffolds, porque no puede cargar el archivo de diversidades (thetas )
+para hacer un intersect con todo el bed.Así que vamos a partirlo en scaffold y despues buscar para cada scaffolds que regiones quiero y así costruir un archivo 
+thetas de diversidades de X intergénico. 
+
+
+```{bash}
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_Xchr
+
+screen -S folder_for_diversity_for_chrX_analysis
+
+scp /GRUPOS/grupolince/Lynx_Xchr/Xchr.intergenic.bed /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_Xchr
+
+TARGETBED=/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_Xchr/Xchr.intergenic.bed
+TARGET_FOLDER=$TARGETBED.PerScaffold
+
+mkdir $TARGET_FOLDER
+cd $TARGET_FOLDER
+
+scp $TARGETBED $TARGET_FOLDER
+
+#Split per scaffold
+# Create multiple files base on one column: transformedThetas:
+awk '{print >> $1; close($1)}' "$TARGETBED"
+
+# Rename the files: splitted_annotations
+for file in lp23*
+do
+echo $file
+mv $file ${file/lp23/Xchr.intergenic.bed_lp23}
+done
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_Xchr/Xchr.intergenic.bed.PerScaffold
+rm Xchr.intergenic.bed
+
+```
+
+# Autosomic
+
+First I will create the folder:
+```{bash}
+mkdir /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_autosomic
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_autosomic
+```
+
+## Create folders separated by scaffolds for diversity calculus per unit 
+
+Mi rf file está en:
+
+/home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome_without_Y_X_chr.bed
+
+Igual que antes rompemos el archivo en los distintos cromosomas:
+```{bash}
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_autosomic
+
+screen -S folder_for_diversity_for_autosomic_analysis
+
+scp /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome_without_Y_X_chr.bed /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_autosomic
+
+TARGETBED=/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_autosomic/bed_file_all_the_genome_without_Y_X_chr.bed
+TARGET_FOLDER=$TARGETBED.PerScaffold
+
+mkdir $TARGET_FOLDER
+cd $TARGET_FOLDER
+
+scp $TARGETBED $TARGET_FOLDER
+
+#Split per scaffold
+# Create multiple files base on one column: transformedThetas:
+awk '{print >> $1; close($1)}' "$TARGETBED"
+
+# Rename the files: splitted_annotations
+for file in lp23*
+do
+echo $file
+mv $file ${file/lp23/autosomic.intergenic.bed_lp23}
+done
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_autosomic/bed_file_all_the_genome_without_Y_X_chr.bed.PerScaffold
+rm bed_file_all_the_genome_without_Y_X_chr.bed
+
+```
+
+
+# Diversity Calculus
+
+## Defining variables
+
+I checked that all bam files were indexed --> OK
+
+##Create script file
+
+To run in loop
+
+###Open nano
+
+```{bash}
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs
+nano  script_from_saf_to_diversity_Xchr_vs_autosomic.sh
+```
+
+
+El archivo donde se almacenan las diversidades lo tengo que crear antes.
+
+```{bash}
+# Create headers for the outfile
+echo -e "pop\tregion\tpositions\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > diversity.per.pop.averages_Xchr.tsv
+
+# Create headers for the outfile
+echo -e "pop\tregion\tpositions\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > diversity.per.pop.averages_autosomic.tsv
+
+```
+
+
+
+###Script itself
+
+```{bash}
+#!/bin/bash
+POP=$(cat /dev/stdin)
+
+
+##Split transformedThetas per scaffold.
+
+DIR_thetafile=/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs
+cd "$DIR_thetafile"
+# mkdir "$DIR_thetafile"/diversity_per_scaffold/
+mkdir "$DIR_thetafile"/diversity_per_scaffold/"$POP"_separated_by_scaffold/
+mv "$POP".transformedThetas "$DIR_thetafile"/diversity_per_scaffold/"$POP"_separated_by_scaffold/
+cd  "$DIR_thetafile"/diversity_per_scaffold/"$POP"_separated_by_scaffold/
+# Create multiple files base on one column: transformedThetas:
+awk '{print >> $1; close($1)}' "$POP".transformedThetas
+rm scaffold ### no se pq esto? porque aparece un archivo, el de la primera línea, que se llama scaffold
+
+# Rename the files: transformedThetas
+for file in lp23*
+do
+echo $file
+mv $file ${file/lp23/"$POP".transformedThetas_lp23}
+done
+
+##Diversity x Chomosome.
+
+## WG variables
+
+cd "$DIR_thetafile"/diversity_per_scaffold/"$POP"_separated_by_scaffold/
+SCAFFOLDS_FOLDER_X=/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_Xchr/Xchr.intergenic.bed.PerScaffold/
+cd $SCAFFOLDS_FOLDER_X
+SCAFFOLDS=($(find $SCAFFOLDS_FOLDER_X -name "Xchr.intergenic.bed*" -exec ls {} \; | awk '{ print substr( $0, length($0) - 10, length($0) ) }'  | LANG=en_EN sort | uniq ))
+DIR=/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_Xchr/
+SFS_FOLDER="$DIR"
+ANALYIS="X_chr"
+
+cd $DIR
+
+for SCAFFOLD in ${SCAFFOLDS[@]}
+do
+echo "---------------------$SCAFFOLD---------------------"
+bedtools intersect -a <(cat "$DIR_thetafile"/diversity_per_scaffold/"$POP"_separated_by_scaffold/"$POP".transformedThetas_"$SCAFFOLD") -b <(cat "$SCAFFOLDS_FOLDER_X"Xchr.intergenic.bed_"$SCAFFOLD") >> "$POP".transformedThetas_Xchr
+done
+
+
+
+
+WATTERSON_AVERAGE=$(cut -f 4 "$POP".transformedThetas_Xchr | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+WATTERSON_SD=$(cut -f 4 "$POP".transformedThetas_Xchr | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+PAIRWISE_AVERAGE=$(cut -f 5 "$POP".transformedThetas_Xchr | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+PAIRWISE_SD=$(cut -f 5 "$POP".transformedThetas_Xchr | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+DIFFERENCE_PAIRWISE_WATTERSON_SD=$(cut -f 6  "$POP".transformedThetas_Xchr |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+TAJIMAS_D=$(echo "(($PAIRWISE_AVERAGE) - ($WATTERSON_AVERAGE))/($DIFFERENCE_PAIRWISE_WATTERSON_SD)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+NR=$(wc -l  "$POP".transformedThetas_Xchr  | cut -d" " -f1)
+
+
+#Before printing check all variables are full, if empty use NA
+if [ -z ${POP} ]; then  POP=NA;  fi
+if [ -z ${NR} ]; then  NR=NA;  fi
+if [ -z ${WATTERSON_AVERAGE} ]; then  WATTERSON_AVERAGE=NA;  fi
+if [ -z ${WATTERSON_SD} ]; then  WATTERSON_SD=NA;  fi
+if [ -z ${PAIRWISE_AVERAGE} ]; then  PAIRWISE_AVERAGE=NA;  fi
+if [ -z ${PAIRWISE_SD} ]; then  PAIRWISE_SD=NA;  fi
+if [ -z ${DIFFERENCE_PAIRWISE_WATTERSON_SD} ]; then  DIFFERENCE_PAIRWISE_WATTERSON_SD=NA;  fi
+if [ -z ${TAJIMAS_D} ]; then  TAJIMAS_D=NA;  fi
+if [ -z ${ANALYIS} ]; then  ANALYIS=NA;  fi
+
+
+
+paste \
+<(echo $POP) \
+<(echo $ANALYIS) \
+<(echo $NR) \
+<(echo $WATTERSON_AVERAGE) \
+<(echo $WATTERSON_SD) \
+<(echo $PAIRWISE_AVERAGE) \
+<(echo $PAIRWISE_SD) \
+<(echo $TAJIMAS_D) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  diversity.per.pop.averages_Xchr.tsv
+
+
+unset NR
+unset ANALYIS
+unset WATTERSON_AVERAGE
+unset WATTERSON_SD
+unset PAIRWISE_AVERAGE
+unset PAIRWISE_SD
+unset TAJIMAS_D
+unset DIFFERENCE_PAIRWISE_WATTERSON_SD
+unset SCAFFOLDS
+unset DIR
+
+
+###################################################################
+##Diversity autosomic
+
+## WG variables
+
+cd "$DIR_thetafile"/diversity_per_scaffold/"$POP"_separated_by_scaffold/
+SCAFFOLDS_FOLDER_autosomic=/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_autosomic/bed_file_all_the_genome_without_Y_X_chr.bed.PerScaffold/
+cd $SCAFFOLDS_FOLDER_autosomic
+SCAFFOLDS=($(find $SCAFFOLDS_FOLDER_autosomic -name "autosomic.intergenic.bed*" -exec ls {} \; | awk '{ print substr( $0, length($0) - 10, length($0) ) }'  | LANG=en_EN sort | uniq ))
+DIR=/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_autosomic
+SFS_FOLDER="$DIR"
+ANALYIS="autosomic"
+
+cd $DIR
+
+for SCAFFOLD in ${SCAFFOLDS[@]}
+do
+echo "---------------------$SCAFFOLD---------------------"
+bedtools intersect -a <(cat "$DIR_thetafile"/diversity_per_scaffold/"$POP"_separated_by_scaffold/"$POP".transformedThetas_"$SCAFFOLD") -b <(cat "$SCAFFOLDS_FOLDER_autosomic"autosomic.intergenic.bed_"$SCAFFOLD") >> "$POP".transformedThetas_autosomic
+done
+
+
+
+WATTERSON_AVERAGE=$(cut -f 4 "$POP".transformedThetas_autosomic | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+WATTERSON_SD=$(cut -f 4 "$POP".transformedThetas_autosomic | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+PAIRWISE_AVERAGE=$(cut -f 5 "$POP".transformedThetas_autosomic | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+PAIRWISE_SD=$(cut -f 5 "$POP".transformedThetas_autosomic | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+DIFFERENCE_PAIRWISE_WATTERSON_SD=$(cut -f 6  "$POP".transformedThetas_autosomic |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+TAJIMAS_D=$(echo "(($PAIRWISE_AVERAGE) - ($WATTERSON_AVERAGE))/($DIFFERENCE_PAIRWISE_WATTERSON_SD)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+NR=$(wc -l  "$POP".transformedThetas_autosomic  | cut -d" " -f1)
+
+
+#Before printing check all variables are full, if empty use NA
+if [ -z ${POP} ]; then  POP=NA;  fi
+if [ -z ${NR} ]; then  NR=NA;  fi
+if [ -z ${WATTERSON_AVERAGE} ]; then  WATTERSON_AVERAGE=NA;  fi
+if [ -z ${WATTERSON_SD} ]; then  WATTERSON_SD=NA;  fi
+if [ -z ${PAIRWISE_AVERAGE} ]; then  PAIRWISE_AVERAGE=NA;  fi
+if [ -z ${PAIRWISE_SD} ]; then  PAIRWISE_SD=NA;  fi
+if [ -z ${DIFFERENCE_PAIRWISE_WATTERSON_SD} ]; then  DIFFERENCE_PAIRWISE_WATTERSON_SD=NA;  fi
+if [ -z ${TAJIMAS_D} ]; then  TAJIMAS_D=NA;  fi
+if [ -z ${ANALYIS} ]; then  ANALYIS=NA;  fi
+
+
+
+paste \
+<(echo $POP) \
+<(echo $ANALYIS) \
+<(echo $NR) \
+<(echo $WATTERSON_AVERAGE) \
+<(echo $WATTERSON_SD) \
+<(echo $PAIRWISE_AVERAGE) \
+<(echo $PAIRWISE_SD) \
+<(echo $TAJIMAS_D) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  diversity.per.pop.averages_autosomic.tsv
+
+
+unset NR
+unset ANALYIS
+unset WATTERSON_AVERAGE
+unset WATTERSON_SD
+unset PAIRWISE_AVERAGE
+unset PAIRWISE_SD
+unset TAJIMAS_D
+unset DIFFERENCE_PAIRWISE_WATTERSON_SD
+unset SCAFFOLDS
+unset DIR
+
+# rm -r "$DIR_thetafile"/diversity_per_scaffold/"$POP"_separated_by_scaffold
+
+```
+
+###Chmod
+
+```{bash}
+
+chmod 777 script_from_saf_to_diversity_Xchr_vs_autosomic.sh
+chmod 777 script_from_saf_to_diversity_Xchr_vs_autosomic_small.sh
+
+```
+
+
+###Run loop
+
+```{r, engine=bash, eval=FALSE}
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs
+
+POPS=$(ls *.transformedThetas | cut -d"." -f 1 | uniq )
+
+# Cuidado con el script que quieres lanzar
+
+for POP in ${POPS[@]}
+do
+echo $POP
+nohup echo $POP | ./script_from_saf_to_diversity_Xchr_vs_autosomic.sh > $POP.log 2>&1&
+echo $! > $POP_save_pid.txt
+done
+
+
+###
+#El script global no ha funcionado para autosomi, asi que lo lanzo solo despuest
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs
+
+POPS=$(ls *.transformedThetas | cut -d"." -f 1 | uniq )
+
+
+for POP in ${POPS[@]}
+do
+echo $POP
+nohup echo $POP | ./script_autosomic.sh > $POP.log 2>&1&
+echo $! > $POP_save_pid.txt
+done
+
+
+```
+
+
+## R representation
+
+First I contatenate the tables.
+
+```{bash}
+# First I create a directory:
+# mkdir /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_comparison_X_autosomic
+
+cat /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_autosomic/diversity.per.pop.averages_autosomic.tsv /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_Xchr/diversity.per.pop.averages_Xchr.tsv > /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_comparison_X_autosomic/diversity.per.pop.averages_autosomic_vs_Xchr.tsv
+
+# I download this folder because it is easy to run R in local. 
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_comparison_X_autosomic/diversity.per.pop.averages_autosomic_vs_Xchr.tsv /Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs
+
+```
+
+```{r}
+
+library(dplyr) 
+library(RColorBrewer)
+library(ggplot2)
+library(tidyr)
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/" 
+diversity <- read.csv(paste(wd, "diversity.per.pop.averages_autosomic_vs_Xchr.tsv", sep =""), sep ="\t", dec=".", header=T) %>%  
+ mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                           ifelse (pop == "c_ll_ur_n006", "Urals", 
+                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                           ifelse (pop == "c_ll_la_n006", "Latvia", 
+                           ifelse (pop == "c_ll_no_n008", "Norway", 
+                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
+                           ifelse (pop == "c_ll_to_n002", "Töv",
+                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
+                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
+                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
+                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
+                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
+                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
+                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA)))))))))))))))  %>% 
+filter(Populations!="Balkans") 
+  
+diversity$watterson_ave <- as.numeric(gsub("\\*10\\^","e",diversity$watterson_ave))
+diversity$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",diversity$pairwise_ave))
+diversity$tajimaD <- as.numeric(gsub("\\*10\\^","e",diversity$tajimaD))
+  
+
+diversity$Populations <- factor (diversity$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Khentii", "Töv", "Ömnögovi", "Mongolia",  "Yakutia", "Vladivostok"))
+
+
+
+diversity_to_plot<- data.frame(pop=character(),
+                 Populations=character(), 
+                 autosomic=double(),
+                 X_chr=double(),
+                 ratio=double(),
+                 index=character(),
+                 stringsAsFactors=FALSE) 
+
+for(POP in unique(diversity$pop)){
+diversity_watterson_per_pop <-  subset(diversity, pop==POP) %>% select (pop,region,watterson_ave,Populations) %>% spread(., region, watterson_ave) %>% mutate (ratio=X_chr/autosomic)  %>% mutate(index="watterson")
+diversity_to_plot <- rbind(diversity_to_plot, diversity_watterson_per_pop)
+
+diversity_pairwise_per_pop <-  subset(diversity, pop==POP) %>% select (pop,region,pairwise_ave,Populations) %>% spread(., region, pairwise_ave) %>% mutate (ratio=X_chr/autosomic)  %>% mutate(index="pairwise")
+diversity_to_plot <- rbind(diversity_to_plot, diversity_pairwise_per_pop)
+
+}
+  
+cols <- c("Carpathians"=brewer.pal(12,"Paired")[9], 
+           "Kirov"=brewer.pal(12,"Paired")[1],  
+           "Latvia"=brewer.pal(12,"Paired")[3],  
+           "Norway"=brewer.pal(12,"Paired")[2],  
+           "Bialowieza"=brewer.pal(12,"Paired")[4],  
+           "Mongolia"=brewer.pal(12,"Paired")[12], 
+           "Töv"=brewer.pal(12,"Paired")[12], 
+          "Khentii"=brewer.pal(12,"Paired")[7], 
+          "Ömnögovi"=brewer.pal(12,"Paired")[11], 
+            "Tuva"=brewer.pal(12,"Paired")[8],  
+           "Urals"=brewer.pal(11,"BrBG")[9],  
+           "Vladivostok"=brewer.pal(12,"Paired")[5], 
+           "Yakutia"=brewer.pal(12,"Paired")[6], 
+           "Balkans"=brewer.pal(12,"Paired")[10])  
+
+ 
+for (INDICE in unique(diversity_to_plot$index))
+{
+ ggplot (filter(diversity_to_plot,index==INDICE), aes(x=Populations, y=ratio, fill=Populations)) + 
+   geom_point(color="dimgrey", size=5, shape=22) + 
+   scale_fill_manual(values = cols) + 
+  xlab ("Populations") + ylab (paste("Ratio X/autosome:",INDICE, sep="")) +  theme_classic() + 
+theme (legend.text=element_text(size=18),legend.title = element_blank(), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) 
+ggsave(paste("/Users/marialucenaperez/Desktop/ratio_Xchr_autosomic_",INDICE,".pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") 
+
+ }
+
+
+
+
+
+
