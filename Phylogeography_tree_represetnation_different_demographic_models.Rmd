@@ -16,8 +16,9 @@ modelo1 <- "(Kirov,Carpatian,Tuva,Yakutia)Rufus;"
 modelo2 <- "((Kirov,Carpathians,(Tuva,Yakutia))Rufus;"
 modelo3 <- "((((Kirov),Carpathians),Tuva),Yakutia)Rufus;"
 modelo4 <- "((Kirov,Carpathians),(Tuva,Yakuta))Rufus;"
-modelo5<- "(Carpathians,Kirov,Yakuta)Rufus;"
-modelo6<- "((((Kirov),Carpathians),Yakutia),Tuva)Rufus;"
+modelo5 <- "((((Yakutia),Tuva),Kirov),Carpathians)Rufus;"
+#modelo6<- "(Carpathians,Kirov,Yakuta)Rufus;"
+# modelo7<- "((((Kirov),Carpathians),Yakutia),Tuva)Rufus;"
 
 
 #modelo5 <- 
@@ -26,7 +27,8 @@ tree2 <- read.newick(text=modelo2)
 tree3 <- read.newick(text=modelo3)
 tree4 <- read.newick(text=modelo4)
 tree5 <- read.newick(text=modelo5)
-tree6 <- read.newick(text=modelo6)
+#tree6 <- read.newick(text=modelo6)
+# tree7 <- read.newick(text=modelo7)
 
 
 jpeg(paste(wd,"model1.jpg",sep=""))
@@ -51,9 +53,14 @@ jpeg(paste(wd,"model5.jpg",sep=""))
 plot(tree5 , direction="downwards")
 dev.off()
 
-jpeg(paste(wd,"model6.jpg",sep=""))
-plot(tree6 , direction="downwards")
-dev.off()
+# jpeg(paste(wd,"model6.jpg",sep=""))
+# plot(tree6 , direction="downwards")
+# dev.off()
+
+# jpeg(paste(wd,"model6.jpg",sep=""))
+# plot(tree6 , direction="downwards")
+# dev.off()
+
 
 ```
  
