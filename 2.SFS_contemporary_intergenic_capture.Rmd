@@ -1,0 +1,1137 @@
+---
+title: "2.SFS_contemporary_intergenic_capture"
+output: html_document
+---
+
+# 0. Coverage of blasted samples
+
+The first thing I will do is to calculate the coverage for these bam files:
+
+```{bash}
+
+# Voy a medir la cobertura de estos archivos:
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture/BAM_intergenic_capture_filtered
+
+scp /home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture/BAM_intergenic_capture_filtered
+
+sed 's/:/ /g' no_genes_Lypa_10000longest_center_final_slop20_dot.rf | sed 's/-/ /g' | awk '{print $1"\t"$2-1"\t"$3}' > no_genes_Lypa_10000longest_center_final_slop20_dot.bed
+
+
+# How many bases do I have?
+
+# Uniq bases:
+
+cat no_genes_Lypa_10000longest_center_final_slop20_dot.bed | awk '{for(i=$2;i<$3;i++) print $1"\t"i}' | sort | uniq | wc -l
+# 1674784
+# For all bases:
+cat no_genes_Lypa_10000longest_center_final_slop20_dot.bed | awk '{for(i=$2;i<$3;i++) print $1"\t"i}' | wc -l
+#1674784
+
+
+
+SAMPLELIST=($(ls *_intergenic_capture_blast_filtered.bam | uniq ))
+rm global_coverage_blasted_samples.tsv
+echo -e "sample_name\tcoverage_based_samtools\tstdev_based_samtools" > global_coverage.tsv
+for sample in "${SAMPLELIST[@]}"
+do
+echo $sample
+bedtools coverage -hist -b $sample -a no_genes_Lypa_10000longest_center_final_slop20_dot.bed | grep ^all > ${sample/.bam/.hist.all.txt}
+DEPTH=$(samtools depth -b no_genes_Lypa_10000longest_center_final_slop20_dot.bed $sample | awk '{sum+=$3; sumsq+=$3*$3} END { print sum/1674784; print sqrt(sumsq/1674784 - (sum/1674784)**2)}')
+paste \
+<(echo $sample ) \
+<(echo $DEPTH ) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  global_coverage_blasted_samples.tsv
+done
+
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture/BAM_intergenic_capture_filtered/global_coverage_blasted_samples.tsv /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/remove_contamination/coverage/
+```
+
+
+Another approach:
+http://www.gettinggeneticsdone.com/2014/03/visualize-coverage-exome-targeted-ngs-bedtools.html
+```{bash}
+SAMPLELIST=($(ls *_intergenic_capture_blast_filtered.bam | uniq ))
+
+for sample in "${SAMPLELIST[@]}"
+do
+echo $sample
+bedtools coverage -hist -b $sample -a no_genes_Lypa_10000longest_center_final_slop20_dot.bed | grep ^all > ${sample/.bam/.hist.all.txt}
+done
+```
+
+I'll plotted it:
+
+```{r}
+
+# Get a list of the bedtools output files you'd like to read in
+wd <- ("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/remove_contamination/coverage/")
+files <- list.files(path = wd, pattern="all.txt$")
+labs <- gsub("_intergenic_capture_blast_filtered\\.hist\\.txt\\.all\\.txt", "", files, perl=TRUE)
+labs <- gsub("_intergenic_capture_blast_filtered.hist.all.txt", "", files)
+
+
+library(RColorBrewer)
+library(ggplot2)
+library(dplyr)
+cols <- brewer.pal(length(cov), "Dark2")
+
+# Create lists to hold coverage and cumulative coverage for each alignment,
+# and read the data into these lists.
+
+cov <- list()
+
+for (i in 1:length(files)) {
+    cov[[i]] <- read.table(paste (wd, files[i], sep ="")) %>% mutate (sample=labs[i]) 
+    }
+
+general_coverage_for_all_samples <- do.call("rbind", cov) %>% mutate(pop=substr(sample,1,7))
+           
+
+ggplot (general_coverage_for_all_samples, aes(x=V2, y=V3,color=sample)) +
+  geom_line() +
+  xlim(0,25)
+
+# Save the graph to a file
+ggsave(paste(wd, "coverageByThreshold.pdf", sep=""))
+
+dev.off()
+```
+
+
+Merging with blast resutls. For evaluating the samples.
+
+```{r}
+
+library(RColorBrewer)
+library(ggplot2)
+library(dplyr)
+cols <- brewer.pal(length(cov), "Dark2")
+
+## I merge the results of blast with coverage:
+
+wd <- ("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/remove_contamination/")
+coverage <- read.table(paste (wd, "coverage/global_coverage_blasted_samples.tsv", sep="")) %>%  rename(sample=V1) %>% rename(ave_coverage =V2) %>% rename(stdev_cov=V3)
+
+stats_blast <- read.table(paste(wd,"stats_remove_contamination_by_blasting.csv", sep=""), header=T, sep=",")
+stats_blast$sample <- gsub("_intergenic_capture\\.bam", "", stats_blast$sample, perl=TRUE)
+coverage$sample <- gsub("_intergenic_capture_blast_filtered\\.bam", "", coverage$sample, perl=TRUE)
+
+datos_globales_blast <- coverage %>% full_join(stats_blast) %>% mutate(mismatch_rate = n_mismatching_reads/n_reads_total*100) %>% mutate (contamination_rate = n_nonfelid/n_reads_total*100) 
+
+
+write.table(datos_globales_blast, paste(wd, "general_stats_evaluation.csv"), row.names = F, quote = F, dec =",", sep=";")
+```
+
+
+
+
+I am going to calculate the diversity for the files that were blasted in server A (see script subset_bam_files_intergenic.Rmd in this project and remove_contamination_lynx_lynx.Rmd in remove_contamination project).
+
+Firt I create the folders and move the files. 
+```{bash}
+
+cd grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture/
+mkdir BAM_intergenic_capture_filtered
+
+# Muevo los archivos del A donde se ha hecho el blast al B.
+
+scp mlucena@genomics-a.ebd.csic.es://home/mlucena/remove_contamination_from_lynx_lynx/c_ll_ur*_blast_filtered.bam /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture/BAM_intergenic_capture_filtered
+
+mkdir /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_capture_blasted
+
+# Now I have to calculate the depth. Check 1.Bamlist_&_ANGSD_depth_calculus.Rmd --> Done! So keep going generating the SAF. 
+
+```
+
+# 1. Generating SAF for intergenic data
+
+## Defining variables:
+
+```{r, engine=bash, eval=FALSE}
+
+# Copio el archivo rf porque yo solo tengo esos sitios pero si no le digo nada intenta computarlos sobre todos. 
+
+scp /home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_capture_blasted
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_capture_blasted
+
+# I will launch it in a loop for all the pops:
+
+screen -S diversity_for_blasted_samples
+script diversity_for_blasted_samples2.log
+
+# Lo vamos a lanzar en loop para todas las poblaciones, así que defino el archivo de depth, y hago un while para que vaya leyendo linea a linea. 
+
+THREADS=25                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+RUTA="/home/mlucena/ANGSD_analysis/depth_calculus/depth_calculus_intergenic_captured_blasted_samples"
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+REGIONFILE="no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+
+while read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated; 
+do
+
+N_IND=$(echo ${POP: -3} )
+MIN_IND=$(expr $N_IND / 2)
+
+# Sanity checks:
+
+echo $POP
+echo $N_IND
+echo $MIN_IND
+echo $minDepth
+echo $mean
+echo $REGIONFILE
+
+echo "-------$POP----------SAF (likelihood)-----------------------------------------"
+
+# $ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic_capture_blast_filtered.bamlist -ref $REF  -anc $ANC \
+# -out "$POP".intergenic_capture_blasted.unfolded-lr \
+# $FILTER1 \
+# $FILTER2 \
+# -GL 1 -doSaf 1  \
+# -rf $REGIONFILE \
+# -minInd  $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth
+
+
+#  SFS                  
+# echo "-------$POP----------SFS------------------------------------------------------"
+
+# $NGSTOOLS/realSFS "$POP".intergenic_capture_blasted.unfolded-lr.saf.idx  -P $THREADS > "$POP".intergenic_capture_blasted.unfolded-lr.sfs
+
+
+echo "-------$POP----------SAF (postprob)-----------------------------------------"
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic_capture_blast_filtered.bamlist -ref $REF -anc $ANC \
+-out "$POP".intergenic_capture_blasted.unfolded-lr.postprob \
+$FILTER1 \
+$FILTER2 \
+-GL 1 -doSaf 1  \
+-rf $REGIONFILE \
+-minInd  $MIN_IND -setMaxDepth $maxDepth \
+-doThetas 1 -pest "$POP".intergenic_capture_blasted.unfolded-lr.sfs 
+
+done < <(cat /home/mlucena/ANGSD_analysis/depth_calculus/depth_calculus_intergenic_captured_blasted_samples/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv) 
+
+### OJO! For balcans la he corrido a mano dando minimo de uno!
+
+
+#### For balcans!
+
+
+while read POP mean sd mean_truncated sd_truncated maxDepth kk maxDepth_truncated minDepth_truncated; 
+do
+
+N_IND=$(echo ${POP: -3} )
+MIN_IND=$(expr $N_IND / 2)
+minDepth=1
+
+# Sanity checks:
+
+echo $POP
+echo $N_IND
+echo $MIN_IND
+echo $minDepth
+echo $mean
+
+echo "-------$POP----------SAF (likelihood)-----------------------------------------"
+
+# $ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic_capture_blast_filtered.bamlist -ref $REF -anc $ANC \
+# -out "$POP".intergenic_capture_blasted_noTrans.unfolded-lr \
+# $FILTER1 \
+# $FILTER2 \
+# -GL 1 -doSaf 1  \
+# -rf $REGIONFILE \
+# -minInd  $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth
+
+
+#  SFS                  
+# echo "-------$POP----------SFS------------------------------------------------------"
+
+# $NGSTOOLS/realSFS "$POP".intergenic_capture_blasted_noTrans.unfolded-lr.saf.idx  -P $THREADS > "$POP".intergenic_capture_blasted_noTrans.unfolded-lr.sfs
+
+
+echo "-------$POP----------SAF (postprob)-----------------------------------------"
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic.bamlist -ref $REF -anc $ANC \
+-out "$POP".intergenic_capture_blasted.unfolded-lr.postprob \
+$FILTER1 \
+$FILTER2 \
+-GL 1 -doSaf 1  \
+-rf $REGIONFILE \
+-minInd  $MIN_IND -setMaxDepth $maxDepth \
+-doThetas 1 -pest "$POP".intergenic_capture_blasted.unfolded-lr.sfs 
+
+done < <(cat /home/mlucena/ANGSD_analysis/depth_calculus/depth_calculus_intergenic_captured_blasted_samples/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv | grep "x_ll_ba") 
+
+
+```
+
+##  Make bed theta        
+
+```{r, engine=bash, eval=FALSE}
+
+POPS=($(ls *sfs | cut -d "." -f 1))
+
+THREADS=25                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+RUTA="/home/mlucena/ANGSD_analysis/depth_calculus/depth_calculus_intergenic_captured_blasted_samples"
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+REGIONFILE="no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+
+
+for POP in "${POPS[@]}"
+do
+
+echo "-------$POP----------Make bed theta -----------------------------------------"
+
+$NGSTOOLS/thetaStat print $POP.intergenic_capture_blasted.unfolded-lr.postprob.thetas.idx > $POP.intergenic_capture_blasted.printed.stats
+
+# Transform the coordinates to use 0Based bedtools
+
+awk 'NR>1 {print  $1" "$2-1" "$2}' $POP.intergenic_capture_blasted.printed.stats > $POP.0basedcoordinates.borrar # --> 1, 2, 3
+# log transformation of watterson and pairwise:
+awk 'NR>1 {print  "e("$3")"}' $POP.intergenic_capture_blasted.printed.stats | bc -l > "$POP".watterson.borrar # --> 4
+awk 'NR>1 {print  "e("$4")"}' $POP.intergenic_capture_blasted.printed.stats | bc -l > "$POP".pairwise.borrar # --> 5
+                                                                                  # --> PAIRWISE - WATTERSON
+awk 'NR>1 {print  "e("$5")"}' $POP.intergenic_capture_blasted.printed.stats | bc -l > "$POP".thetaFL.borrar # --> 6
+awk 'NR>1 {print  "e("$6")"}' $POP.intergenic_capture_blasted.printed.stats | bc -l > "$POP".thetaH.borrar # --> 7
+awk 'NR>1 {print  "e("$7")"}' $POP.intergenic_capture_blasted.printed.stats | bc -l > "$POP".thetaL.borrar # --> 8
+
+# Create a header for the "$POP".intergenic_capture_blasted.transformedThetas file
+
+echo "scaffold position1 position2 watterson pairwise pairwise-watterson thetaFL thetaH thetaL" > "$POP".intergenic_capture_blasted.transformedThetas
+
+paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar "$POP".thetaFL.borrar "$POP".thetaH.borrar "$POP".thetaL.borrar | \
+awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP".intergenic_capture_blasted.transformedThetas
+
+rm "$POP".*.borrar
+
+done
+
+```
+
+
+
+<!-- ```{bash} -->
+<!-- nano heterozigosity_calculus.R -->
+<!-- ``` -->
+
+<!-- ```{bash} -->
+<!-- #in R -->
+<!-- library (dplyr) -->
+<!-- args <- commandArgs(TRUE) -->
+<!-- print(args) -->
+<!-- a<-scan(args[1]) -->
+<!-- heterozigosity <- a[2]/sum(a) -->
+<!-- write (heterozigosity,paste0(args[1],"_heterozigosity_borrar.csv")) -->
+
+<!-- ``` -->
+
+<!-- OJO!! estas calculando sólo las posiciones con un alelo distinto! Singleton a nivel poblacional! Lo cual tiene sentido como heterozigosidad a nivel de muestra, pero no a nivel de población.   -->
+
+<!-- ```{bash} -->
+
+<!-- for i in *blasted.unfolded-lr.sfs; -->
+<!-- do -->
+<!-- echo $i -->
+<!-- Rscript heterozigosity_calculus.R $i  -->
+<!-- done -->
+
+<!-- rm heterozigosity_per_pop_blasted.csv -->
+
+<!-- for i in *heterozigosity_borrar.csv -->
+<!-- do -->
+<!-- echo $i -->
+<!-- heterozigosity=$(cat $i) -->
+<!-- echo ${i/.intergenic_capture_blasted.unfolded-lr.sfs_heterozigosity_borrar.csv/} $heterozigosity >> heterozigosity_per_pop_blasted.csv -->
+<!-- done -->
+
+<!-- rm *sfs_heterozigosity_borrar.csv -->
+<!-- ``` -->
+
+
+## Pairwise-Watterson estimation genome wide. 
+
+
+```{bash}
+
+screen -S diveristy_summary_per_pop
+script diveristy_summary_per_pop.log
+
+
+POPS=($(ls *sfs | grep -v noTrans | sed -e "s/.intergenic_capture_blasted.unfolded-lr.sfs//" ))
+
+
+# Create headers for the outfile
+echo -e "pop\tpositions\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > diversity.per.pop.averages.tsv
+
+for POP in "${POPS[@]}"
+do
+echo "---------------------------------------------------$POP---------------------------------------------------"
+
+WATTERSON_AVERAGE=$(cut -f 4 "$POP".intergenic_capture_blasted.transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+WATTERSON_SD=$(cut -f 4 "$POP".intergenic_capture_blasted.transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+PAIRWISE_AVERAGE=$(cut -f 5 "$POP".intergenic_capture_blasted.transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+PAIRWISE_SD=$(cut -f 5 "$POP".intergenic_capture_blasted.transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+DIFFERENCE_PAIRWISE_WATTERSON_SD=$(cut -f 6  "$POP".intergenic_capture_blasted.transformedThetas |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+TAJIMAS_D=$(echo "(($PAIRWISE_AVERAGE) - ($WATTERSON_AVERAGE))/($DIFFERENCE_PAIRWISE_WATTERSON_SD)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+
+NR=$(wc -l  "$POP".intergenic_capture_blasted.transformedThetas  | cut -d" " -f1)
+
+paste \
+<(echo $POP) \
+<(echo $NR) \
+<(echo $WATTERSON_AVERAGE) \
+<(echo $WATTERSON_SD) \
+<(echo $PAIRWISE_AVERAGE) \
+<(echo $PAIRWISE_SD) \
+<(echo $TAJIMAS_D) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  diversity.per.pop.blasted.averages.tsv
+
+done 
+
+```
+
+
+Si lo queremos reportar por bloques:
+
+
+```{bash}
+
+POPS=($(ls *sfs | grep -v noTrans | sed -e "s/.intergenic_capture_blasted.unfolded-lr.sfs//" ))
+
+
+for POP in "${POPS[@]}"
+do
+
+echo "---------------------------------------------------$POP---------------------------------------------------"
+
+# Create headers for the outfile
+echo -e "scaffold\tstart\tend\tlength\tNAs\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > "$POP".per.unit.averages.tsv
+
+
+while read LOCATION METHOD FEATURE START_ONEBASED END POINT STRANDNESS FRAME IDRAW;
+
+do
+
+echo "--------$FEATURE--------"
+
+LENGTH=$(expr $END - $START_ONEBASED) 
+
+if [ "$METHOD" = "PipeR" ] 
+then
+ID_GENE=$(echo $IDRAW | awk -F "_" '{ split ($0, a, "ID="); split (a[2],b,"_"); print b[1]"_"b[2] }')
+else
+ID_GENE=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); split(b[1],c,"T"); print c[1] }') 
+fi
+
+if [ "$FEATURE" = "CDS" ]
+then
+ID=$(echo $IDRAW | awk -F "_" '{split ($0,a,"Target="); split(a[2],b,";"); print b[1]}' |  awk '{print $1"_"$2"_"$3}' )
+else
+ID=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); print b[1] }')
+fi
+
+# Intersect bed of the unit (first remove header)¿¿??
+
+START_CEROBASED=($(echo $START_ONEBASED-1 | bc))
+
+cat "$POP".intergenic_capture_blasted | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_CEROBASED\t$END") > "$POP".iter.transformedThetas.borrar
+
+WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP".iter.transformedThetas.borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_AVERAGE_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+
+NR=$(wc -l "$POP".iter.transformedThetas.borrar | cut -d" " -f1)
+
+NAs=$(expr $LENGTH - $NR)
+
+# Calculate averages, and standatd deviations and paste them
+
+paste \
+<(echo $LOCATION ) \
+<(echo $START_ONEBASED ) \
+<(echo $END ) \
+<(echo $LENGTH ) \
+<(echo $NAs) \
+<(echo $FEATURE ) \
+<(echo $STRANDNESS ) \
+<(echo $FRAME ) \
+<(echo $ID_GENE ) \
+<(echo $ID) \
+<(echo $WATTERSON_AVERAGE_PER_UNIT) \
+<(echo $WATTERSON_SD_PER_UNIT) \
+<(echo $PAIRWISE_AVERAGE_PER_UNIT) \
+<(echo $PAIRWISE_SD_PER_UNIT) \
+<(echo $TAJIMAS_D_PER_UNIT) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  "$POP".per.unit.averages.tsv
+
+done < <(cat /home/mlucena/grupolince/notation/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 | grep "intergenic") 
+
+done &
+done
+
+```
+
+
+
+
+
+
+## SFS graphical representation
+
+
+First we copy the SFS files to our local folder.
+
+
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_capture_blasted/diversity.per.pop.averages.tsv /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs_blasted_samples
+
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_capture_blasted/*sfs /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs_blasted_samples
+
+# I need to change name as R does not like "-lr.sfs"
+
+cd /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs_blasted_samples
+
+
+for i in *sfs
+do 
+#echo $i
+echo $i "--->" ${i/-lr.sfs/_lr.sfs}
+mv $i ${i/-lr.sfs/_lr.sfs}
+rm $i
+done
+
+## OJO!!!!! READMEEEEEE!!!!! #######
+
+# Le he quitado a mano a c_ll_to-c_ll_ka-c_ll_og_n008.unfolded_lr.sfs los guiones medios porque si no, no corre en R!!
+
+```
+
+Now we run the script. 
+
+```{r}
+library(dplyr)
+library(magrittr)
+
+wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs_blasted_samples/"
+
+my_files_unfolded = list.files(path = wd, pattern="*sfs$")    
+for (i in 1:length(my_files_unfolded)) 
+{ assign(my_files_unfolded[i], (scan(paste(wd,my_files_unfolded[i], sep = ""), sep = " ", dec = ".")) %>% .[!is.na(.)])}
+
+norm <- function(x) x/sum(x)
+
+for (i in 1:length (my_files_unfolded))
+{
+  temp1=(eval(parse(text=my_files_unfolded[i])))
+  temp2=norm(temp1[-1])
+  temp3=norm(temp2[-c(length(temp2))])
+  barplot(temp3,xlab="Alleles",
+          names=1:length(temp3),ylab="Proportions",main=my_files_unfolded[i],col='grey')
+  dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs_blasted_samples/",my_files_unfolded[i],".eps", sep=""), onefile=FALSE, horizontal=FALSE)
+  dev.off()
+  rm(temp1)
+  rm(temp2)
+  rm(temp3)
+}
+
+```
+
+
+
+## Plotting diversity
+
+```{r}
+library(dplyr) 
+library(RColorBrewer)
+library(ggplot2)
+
+wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/analysis_sfs_blasted_samples/" 
+diversity <- read.csv(paste(wd, "diversity.per.pop.averages.tsv", sep =""), sep ="\t", dec=".", header=T) %>%  
+ mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                           ifelse (pop == "c_ll_ur_n006", "Urals", 
+                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                           ifelse (pop == "c_ll_la_n006", "Latvia", 
+                           ifelse (pop == "c_ll_no_n008", "Norway", 
+                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
+                           ifelse (pop == "c_ll_to_n002", "Töv",
+                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
+                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
+                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
+                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
+                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
+                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
+                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA)))))))))))))))  %>% 
+filter(Populations!="Balkans") %>% mutate (origen=0)
+  
+diversity$watterson_ave <- as.numeric(gsub("\\*10\\^","e",diversity$watterson_ave))
+diversity$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",diversity$pairwise_ave))
+diversity$tajimaD <- as.numeric(gsub("\\*10\\^","e",diversity$tajimaD))
+diversity$watterson_sd <- as.numeric(gsub("\\*10\\^","e",diversity$watterson_sd))
+diversity$pairwise_sd <- as.numeric(gsub("\\*10\\^","e",diversity$pairwise_sd))
+
+
+
+diversity$Populations <- factor (diversity$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Khentii", "Töv", "Ömnögovi", "Mongolia",  "Yakutia", "Vladivostok"))
+
+ cols <- c("Carpathians"=brewer.pal(12,"Paired")[9], 
+           "Kirov"=brewer.pal(12,"Paired")[1],  
+           "Latvia"=brewer.pal(12,"Paired")[3],  
+           "Norway"=brewer.pal(12,"Paired")[2],  
+           "Bialowieza"=brewer.pal(12,"Paired")[4],  
+           "Mongolia"=brewer.pal(12,"Paired")[12], 
+           "Töv"=brewer.pal(12,"Paired")[12], 
+          "Khentii"=brewer.pal(12,"Paired")[7], 
+          "Ömnögovi"=brewer.pal(12,"Paired")[11], 
+              "Tuva"=brewer.pal(12,"Paired")[8],  
+           "Urals"=brewer.pal(11,"BrBG")[9],  
+           "Vladivostok"=brewer.pal(12,"Paired")[5], 
+           "Yakutia"=brewer.pal(12,"Paired")[6], 
+           "Balkans"=brewer.pal(12,"Paired")[10])  
+
+ ggplot () + 
+   geom_point(data=diversity,aes(x=Populations, y=pairwise_ave, fill=Populations), color="dimgrey", size=5, shape=22) + 
+ #  geom_errorbar(data=diversity, aes(x=Populations, ymin=(pairwise_ave-pairwise_sd), ymax=(pairwise_ave+pairwise_sd))) +
+   scale_fill_manual("Población",labels = c("Noruega","Balkans","Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva","Khentii", "Töv", "Ömnögovi", "Mongolia","Yakutia" ,"Vladivostok"), values = cols) +   xlab ("Populations") + ylab ("Diversidad nucleotidica") +  theme_classic() + 
+theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) 
+
+ggsave(paste(wd,"pi_per_pop_blasted_samples.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") 
+
+
+ ggplot () + 
+   geom_point(data=diversity,aes(x=origen, y=pairwise_ave, fill=Populations), color="dimgrey", size=5, shape=22) + 
+   geom_text(data=diversity,aes(x=origen+0.1, y=pairwise_ave,label=Populations),hjust=0, vjust=0.5) +
+ #  geom_errorbar(data=diversity, aes(x=Populations, ymin=(pairwise_ave-pairwise_sd), ymax=(pairwise_ave+pairwise_sd))) +
+   scale_fill_manual(values = cols)  + ylab ("Diversidad nucleotidica") +  theme_classic() + 
+theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() )+scale_y_continuous(position = "center")
+
+ggsave(paste(wd,"pi_per_pop_blasted_samples_ranking.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") 
+
+
+ggplot (diversity, aes(x=Populations, y=watterson_ave, fill=Populations)) + 
+   geom_point(color="dimgrey", size=5, shape=22) + 
+   scale_fill_manual("Población",labels = c("Noruega","Balkans","Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva","Khentii", "Töv", "Ömnögovi", "Mongolia","Yakutia" ,"Vladivostok"), values = cols) + 
+  xlab ("Populations") + ylab ("Watterson") +  theme_classic() + 
+theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) 
+
+ggsave(paste(wd,"watterson_per_pop_blasted_samples.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") 
+
+```
+
+
+
+<!-- ## Ploting heterozigosity --> No tiene sentido!! -->
+
+
+<!-- ```{r} -->
+
+<!-- library(dplyr) -->
+
+<!-- wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/" -->
+<!-- heterozigosity <- read.csv(paste(wd, "heterozigosity_per_pop.csv", sep =""), sep =" ", dec=".", header=F) %>%  -->
+<!-- mutate (., Populations =  ifelse (V1 == "c_ll_po_n008", "Bialowieza", -->
+<!--                           ifelse (V1 == "c_ll_ur_n006", "Urals", -->
+<!--                           ifelse (V1 == "c_ll_ki_n013", "Kirov", -->
+<!--                           ifelse (V1 == "c_ll_la_n006", "Latvia", -->
+<!--                           ifelse (V1 == "c_ll_no_n008", "Norway", -->
+<!--                           ifelse (V1 == "x_ll_ba_n003", "Balkans" , -->
+<!--                           ifelse (V1 == "c_ll_cr_n006","Carpathians", -->
+<!--                           ifelse (V1 == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", -->
+<!--                           ifelse (V1 == "c_ll_tu_n006", "Tuva", -->
+<!--                           ifelse (V1 == "c_ll_vl_n008", "Vladivostok",  -->
+<!--                           ifelse (V1 == "c_ll_ya_n008", "Yakutia", NA)))))))))))) %>%  -->
+<!--   filter(Populations!="Balkans") -->
+
+<!-- heterozigosity$Populations <- factor (heterozigosity$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Mongolia",  "Yakutia", "Vladivostok")) -->
+
+
+<!-- cols <- c("Carpathians"=brewer.pal(12,"Paired")[9],  -->
+<!--           "Kirov"=brewer.pal(12,"Paired")[1],  -->
+<!--           "Latvia"=brewer.pal(12,"Paired")[3],  -->
+<!--           "Norway"=brewer.pal(12,"Paired")[2],  -->
+<!--           "Bialowieza"=brewer.pal(12,"Paired")[4],  -->
+<!--           "Mongolia"=brewer.pal(12,"Paired")[12],   -->
+<!--           "Tuva"=brewer.pal(12,"Paired")[8],  -->
+<!--           "Urals"=brewer.pal(11,"BrBG")[9],  -->
+<!--           "Vladivostok"=brewer.pal(12,"Paired")[5],  -->
+<!--           "Yakutia"=brewer.pal(12,"Paired")[6], -->
+<!--           "Balkans"=brewer.pal(12,"Paired")[10])  -->
+
+<!-- ggplot (heterozigosity, aes(x=Populations, y= V2, fill=Populations)) + -->
+<!--   geom_point(color="dimgrey", size=5, shape=22) + -->
+<!--   scale_fill_manual("Población",labels = c("Noruega","Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva", "Mongolia","Yakutia" ,"Vladivostok"), values = cols) + -->
+<!--   xlab ("Populations") + ylab ("Heterozigosidad promedio") +  theme_classic() + -->
+<!-- theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) -->
+
+<!-- ggsave(paste(wd,"heterozigosity_per_pop.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") -->
+
+<!-- ``` -->
+
+
+
+
+
+
+##############################################################################################################################
+
+# 2. Generating SAF for intergenic data: NO transitions
+
+I am going to calculate the diversity for the files that were blasted in server A (see script subset_bam_files_intergenic.Rmd in this project and remove_contamination_lynx_lynx.Rmd in remove_contamination project).
+
+Firt I create the folders and move the files. 
+```{bash}
+
+cd grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture/
+mkdir BAM_intergenic_capture_filtered
+
+# Muevo los archivos del A donde se ha hecho el blast al B.
+
+scp mlucena@genomics-a.ebd.csic.es://home/mlucena/remove_contamination_from_lynx_lynx/c_ll_ur*_blast_filtered.bam /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture/BAM_intergenic_capture_filtered
+
+mkdir /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_capture_blasted
+
+# Now I have to calculate the depth. Check 1.Bamlist_&_ANGSD_depth_calculus.Rmd --> Done! So keep going generating the SAF. 
+
+```
+
+
+
+## Defining variables:
+
+```{r, engine=bash, eval=FALSE}
+
+# Copio el archivo rf porque yo solo tengo esos sitios pero si no le digo nada intenta computarlos sobre todos. 
+
+mkdir /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_capture_blasted/intergenic_sfs_intergenic_capture_blasted_noTrans
+
+cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_capture_blasted/intergenic_sfs_intergenic_capture_blasted_noTrans
+
+scp /home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_capture_blasted/intergenic_sfs_intergenic_capture_blasted_noTrans
+
+
+
+# I will launch it in a loop for all the pops:
+
+screen -S diversity_for_blasted_samples_noTrans
+script diversity_for_blasted_samples_noTrans2.log
+
+# Lo vamos a lanzar en loop para todas las poblaciones, así que defino el archivo de depth, y hago un while para que vaya leyendo linea a linea. 
+
+THREADS=25                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+RUTA="/home/mlucena/ANGSD_analysis/depth_calculus/depth_calculus_intergenic_captured_blasted_samples"
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+REGIONFILE="no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+
+while read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated; 
+do
+
+N_IND=$(echo ${POP: -3} )
+MIN_IND=$(expr $N_IND / 2)
+
+# Sanity checks:
+
+echo $POP
+echo $N_IND
+echo $MIN_IND
+echo $minDepth
+echo $mean
+
+echo "-------$POP----------SAF (likelihood)-----------------------------------------"
+
+# $ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic_capture_blast_filtered.bamlist -ref $REF -anc $ANC \
+# -out "$POP".intergenic_capture_blasted_noTrans.unfolded-lr \
+# $FILTER1 \
+# $FILTER2 \
+# -noTrans \
+# -GL 1 -doSaf 1  \
+# -rf $REGIONFILE \
+# -minInd  $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth
+
+
+#  SFS                  
+# echo "-------$POP----------SFS------------------------------------------------------"
+
+$NGSTOOLS/realSFS "$POP".intergenic_capture_blasted_noTrans.unfolded-lr.saf.idx  -P $THREADS > "$POP".intergenic_capture_blasted_noTrans.unfolded-lr.sfs
+
+
+echo "-------$POP----------SAF (postprob)-----------------------------------------"
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic_capture_blast_filtered.bamlist -ref $REF -anc $ANC \
+-out "$POP".intergenic_capture_blasted_noTrans.unfolded-lr.postprob \
+$FILTER1 \
+$FILTER2 \
+-GL 1 -doSaf 1  \
+-noTrans \
+-rf $REGIONFILE \
+-minInd  $MIN_IND -setMaxDepth $maxDepth \
+-doThetas 1 -pest "$POP".intergenic_capture_blasted_noTrans.unfolded-lr.sfs 
+
+done < <(cat /home/mlucena/ANGSD_analysis/depth_calculus/depth_calculus_intergenic_captured_blasted_samples/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv) 
+
+
+
+
+#### For balcans!
+
+
+while read POP mean sd mean_truncated sd_truncated maxDepth kk maxDepth_truncated minDepth_truncated; 
+do
+
+N_IND=$(echo ${POP: -3} )
+MIN_IND=$(expr $N_IND / 2)
+minDepth=1
+
+# Sanity checks:
+
+echo $POP
+echo $N_IND
+echo $MIN_IND
+echo $minDepth
+echo $mean
+
+echo "-------$POP----------SAF (likelihood)-----------------------------------------"
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic_capture_blast_filtered.bamlist -ref $REF -anc $ANC \
+-out "$POP".intergenic_capture_blasted_noTrans.unfolded-lr \
+$FILTER1 \
+$FILTER2 \
+-noTrans \
+-GL 1 -doSaf 1  \
+-rf $REGIONFILE \
+-minInd  $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth
+
+
+#  SFS                  
+echo "-------$POP----------SFS------------------------------------------------------"
+
+$NGSTOOLS/realSFS "$POP".intergenic_capture_blasted_noTrans.unfolded-lr.saf.idx  -P $THREADS > "$POP".intergenic_capture_blasted_noTrans.unfolded-lr.sfs
+
+
+echo "-------$POP----------SAF (postprob)-----------------------------------------"
+
+$ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic.bamlist -ref $REF -anc $ANC \
+-out "$POP".intergenic_capture_blasted_noTrans.unfolded-lr.postprob \
+$FILTER1 \
+$FILTER2 \
+-GL 1 -doSaf 1  \
+-noTrans \
+-rf $REGIONFILE \
+-minInd  $MIN_IND -setMaxDepth $maxDepth \
+-doThetas 1 -pest "$POP".intergenic_capture_blasted_noTrans.unfolded-lr.sfs 
+
+done < <(cat /home/mlucena/ANGSD_analysis/depth_calculus/depth_calculus_intergenic_captured_blasted_samples/mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv | grep "x_ll_ba") 
+
+
+
+```
+
+##  Make bed theta        
+
+```{r, engine=bash, eval=FALSE}
+
+POPS=($(ls *sfs | cut -d "." -f 1))
+
+THREADS=25                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+RUTA="/home/mlucena/ANGSD_analysis/depth_calculus/depth_calculus_intergenic_captured_blasted_samples"
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
+FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+REGIONFILE="no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
+
+
+for POP in "${POPS[@]}"
+do
+
+echo "-------$POP----------Make bed theta -----------------------------------------"
+
+$NGSTOOLS/thetaStat print $POP.intergenic_capture_blasted_noTrans.unfolded-lr.postprob.thetas.idx > $POP.intergenic_capture_blasted_noTrans.printed.stats
+
+# Transform the coordinates to use 0Based bedtools
+
+awk 'NR>1 {print  $1" "$2-1" "$2}' $POP.intergenic_capture_blasted_noTrans.printed.stats > $POP.0basedcoordinates.borrar # --> 1, 2, 3
+# log transformation of watterson and pairwise:
+awk 'NR>1 {print  "e("$3")"}' $POP.intergenic_capture_blasted_noTrans.printed.stats | bc -l > "$POP".watterson.borrar # --> 4
+awk 'NR>1 {print  "e("$4")"}' $POP.intergenic_capture_blasted_noTrans.printed.stats | bc -l > "$POP".pairwise.borrar # --> 5
+                                                                                  # --> PAIRWISE - WATTERSON
+awk 'NR>1 {print  "e("$5")"}' $POP.intergenic_capture_blasted_noTrans.printed.stats | bc -l > "$POP".thetaFL.borrar # --> 6
+awk 'NR>1 {print  "e("$6")"}' $POP.intergenic_capture_blasted_noTrans.printed.stats | bc -l > "$POP".thetaH.borrar # --> 7
+awk 'NR>1 {print  "e("$7")"}' $POP.intergenic_capture_blasted_noTrans.printed.stats | bc -l > "$POP".thetaL.borrar # --> 8
+
+# Create a header for the "$POP".intergenic_capture_blasted_noTrans.transformedThetas file
+
+echo "scaffold position1 position2 watterson pairwise pairwise-watterson thetaFL thetaH thetaL" > "$POP".intergenic_capture_blasted_noTrans.transformedThetas
+
+paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar "$POP".thetaFL.borrar "$POP".thetaH.borrar "$POP".thetaL.borrar | \
+awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP".intergenic_capture_blasted_noTrans.transformedThetas
+
+rm "$POP".*.borrar
+
+done
+
+```
+
+
+## Pairwise-Watterson estimation genome wide. 
+
+
+```{bash}
+
+screen -S diveristy_summary_per_pop_no_TRANS
+script diveristy_summary_per_pop_no_TRANS.log
+
+
+POPS=($(ls *sfs |  sed 's/.intergenic_capture_blasted_noTrans.unfolded-lr.sfs//g' ))
+
+
+# Create headers for the outfile
+echo -e "pop\tpositions\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > diversity.per.pop.blasted.noTrans.averages.tsv
+
+for POP in "${POPS[@]}"
+do
+echo "---------------------------------------------------$POP---------------------------------------------------"
+
+WATTERSON_AVERAGE=$(cut -f 4 "$POP".intergenic_capture_blasted_noTrans.transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+WATTERSON_SD=$(cut -f 4 "$POP".intergenic_capture_blasted_noTrans.transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+PAIRWISE_AVERAGE=$(cut -f 5 "$POP".intergenic_capture_blasted_noTrans.transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+PAIRWISE_SD=$(cut -f 5 "$POP".intergenic_capture_blasted_noTrans.transformedThetas | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+DIFFERENCE_PAIRWISE_WATTERSON_SD=$(cut -f 6  "$POP".intergenic_capture_blasted_noTrans.transformedThetas |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+TAJIMAS_D=$(echo "(($PAIRWISE_AVERAGE) - ($WATTERSON_AVERAGE))/($DIFFERENCE_PAIRWISE_WATTERSON_SD)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+
+NR=$(wc -l  "$POP".intergenic_capture_blasted_noTrans.transformedThetas  | cut -d" " -f1)
+
+paste \
+<(echo $POP) \
+<(echo $NR) \
+<(echo $WATTERSON_AVERAGE) \
+<(echo $WATTERSON_SD) \
+<(echo $PAIRWISE_AVERAGE) \
+<(echo $PAIRWISE_SD) \
+<(echo $TAJIMAS_D) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  diversity.per.pop.blasted.noTrans.averages.tsv
+
+done 
+
+```
+
+
+## SFS graphical representation
+
+
+First we copy the SFS files to our local folder.
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*sfs /Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs
+
+# I need to change name as R does not like "-lr.sfs"
+
+cd /Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs
+
+
+for i in *sfs
+do 
+#echo $i
+echo $i "--->" ${i/-lr.sfs/_lr.sfs}
+mv $i ${i/-lr.sfs/_lr.sfs}
+rm $i
+done
+
+## OJO!!!!! READMEEEEEE!!!!! #######
+
+# Le he quitado a mano a c_ll_to-c_ll_ka-c_ll_og_n008.unfolded_lr.sfs los guiones medios porque si no, no corre en R!!
+
+```
+
+Now we run the script. 
+
+ 
+```{bash}
+nano SFS_graphical_representation
+```
+
+```{r}
+library(dplyr)
+library(magrittr)
+
+wd<-"/Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs/"
+
+my_files_unfolded = list.files(path = wd, pattern="*sfs$")    
+for (i in 1:length(my_files_unfolded)) 
+{ assign(my_files_unfolded[i], (scan(paste(wd,my_files_unfolded[i], sep = ""), sep = " ", dec = ".")) %>% .[!is.na(.)])}
+
+norm <- function(x) x/sum(x)
+
+for (i in 1:length (my_files_unfolded))
+{
+  temp1=(eval(parse(text=my_files_unfolded[i])))
+  temp2=norm(temp1[-1])
+  temp3=norm(temp2[-c(length(temp2))])
+  barplot(temp3,xlab="Alleles",
+          names=1:length(temp3),ylab="Proportions",main=my_files_unfolded[i],col='grey')
+  dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs/",my_files_unfolded[i],".eps", sep=""), onefile=FALSE, horizontal=FALSE)
+  dev.off()
+  rm(temp1)
+  rm(temp2)
+  rm(temp3)
+}
+
+```
+
+
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_capture_blasted/intergenic_sfs_intergenic_capture_blasted_noTrans/diversity.per.pop.blasted.noTrans.averages.tsv /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs_blasted_samples/noTrans
+```
+
+
+
+## Plotting diversity
+
+```{r}
+library(dplyr) 
+library(RColorBrewer)
+library(ggplot2)
+
+wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs_blasted_samples/noTrans/" 
+diversity <- read.csv(paste(wd, "diversity.per.pop.blasted.noTrans.averages.tsv", sep =""), sep ="\t", dec=".", header=T) %>%  
+ mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                           ifelse (pop == "c_ll_ur_n006", "Urals", 
+                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                           ifelse (pop == "c_ll_la_n006", "Latvia", 
+                           ifelse (pop == "c_ll_no_n008", "Norway", 
+                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
+                           ifelse (pop == "c_ll_to_n002", "Töv",
+                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
+                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
+                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
+                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
+                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
+                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
+                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) 
+  # %>% 
+#  filter(Populations!="Balkans") 
+  
+diversity$watterson_ave <- as.numeric(gsub("\\*10\\^","e",diversity$watterson_ave))
+diversity$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",diversity$pairwise_ave))
+diversity$tajimaD <- as.numeric(gsub("\\*10\\^","e",diversity$tajimaD))
+  
+diversity$Populations <- factor (diversity$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Khentii", "Töv", "Ömnögovi", "Mongolia",  "Yakutia", "Vladivostok"))
+
+ cols <- c("Carpathians"=brewer.pal(12,"Paired")[9], 
+           "Kirov"=brewer.pal(12,"Paired")[1],  
+           "Latvia"=brewer.pal(12,"Paired")[3],  
+           "Norway"=brewer.pal(12,"Paired")[2],  
+           "Bialowieza"=brewer.pal(12,"Paired")[4],  
+           "Mongolia"=brewer.pal(12,"Paired")[12], 
+           "Töv"=brewer.pal(12,"Paired")[12], 
+          "Khentii"=brewer.pal(12,"Paired")[7], 
+          "Ömnögovi"=brewer.pal(12,"Paired")[11], 
+              "Tuva"=brewer.pal(12,"Paired")[8],  
+           "Urals"=brewer.pal(11,"BrBG")[9],  
+           "Vladivostok"=brewer.pal(12,"Paired")[5], 
+           "Yakutia"=brewer.pal(12,"Paired")[6], 
+           "Balkans"=brewer.pal(12,"Paired")[10])  
+
+ ggplot (diversity, aes(x=Populations, y= pairwise_ave, fill=Populations)) + 
+   geom_point(color="dimgrey", size=5, shape=22) + 
+   scale_fill_manual("Población",labels = c("Noruega","Balkans","Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva","Khentii", "Töv", "Ömnögovi", "Mongolia","Yakutia" ,"Vladivostok"), values = cols) + 
+  xlab ("Populations") + ylab ("Diversidad nucleotidica") +  theme_classic() + 
+theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) 
+
+ggsave(paste(wd,"pi_per_pop_blasted_samples_noTrans.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") 
+
+ggplot (diversity, aes(x=Populations, y=watterson_ave, fill=Populations)) + 
+   geom_point(color="dimgrey", size=5, shape=22) + 
+   scale_fill_manual("Población",labels = c("Noruega","Balkans","Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva","Khentii", "Töv", "Ömnögovi", "Mongolia","Yakutia" ,"Vladivostok"), values = cols) + 
+  xlab ("Populations") + ylab ("Watterson") +  theme_classic() + 
+theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) 
+
+ggsave(paste(wd,"watterson_per_pop_blasted_samples_noTrans.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") 
+
+```
+
+<!-- ## Ploting heterozigosity --> No tiene sentido!! -->
+
+
+<!-- ```{r} -->
+
+<!-- library(dplyr) -->
+
+<!-- wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/" -->
+<!-- heterozigosity <- read.csv(paste(wd, "heterozigosity_per_pop.csv", sep =""), sep =" ", dec=".", header=F) %>%  -->
+<!-- mutate (., Populations =  ifelse (V1 == "c_ll_po_n008", "Bialowieza", -->
+<!--                           ifelse (V1 == "c_ll_ur_n006", "Urals", -->
+<!--                           ifelse (V1 == "c_ll_ki_n013", "Kirov", -->
+<!--                           ifelse (V1 == "c_ll_la_n006", "Latvia", -->
+<!--                           ifelse (V1 == "c_ll_no_n008", "Norway", -->
+<!--                           ifelse (V1 == "x_ll_ba_n003", "Balkans" , -->
+<!--                           ifelse (V1 == "c_ll_cr_n006","Carpathians", -->
+<!--                           ifelse (V1 == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", -->
+<!--                           ifelse (V1 == "c_ll_tu_n006", "Tuva", -->
+<!--                           ifelse (V1 == "c_ll_vl_n008", "Vladivostok",  -->
+<!--                           ifelse (V1 == "c_ll_ya_n008", "Yakutia", NA)))))))))))) %>%  -->
+<!--   filter(Populations!="Balkans") -->
+
+<!-- heterozigosity$Populations <- factor (heterozigosity$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Mongolia",  "Yakutia", "Vladivostok")) -->
+
+
+<!-- cols <- c("Carpathians"=brewer.pal(12,"Paired")[9],  -->
+<!--           "Kirov"=brewer.pal(12,"Paired")[1],  -->
+<!--           "Latvia"=brewer.pal(12,"Paired")[3],  -->
+<!--           "Norway"=brewer.pal(12,"Paired")[2],  -->
+<!--           "Bialowieza"=brewer.pal(12,"Paired")[4],  -->
+<!--           "Mongolia"=brewer.pal(12,"Paired")[12],   -->
+<!--           "Tuva"=brewer.pal(12,"Paired")[8],  -->
+<!--           "Urals"=brewer.pal(11,"BrBG")[9],  -->
+<!--           "Vladivostok"=brewer.pal(12,"Paired")[5],  -->
+<!--           "Yakutia"=brewer.pal(12,"Paired")[6], -->
+<!--           "Balkans"=brewer.pal(12,"Paired")[10])  -->
+
+<!-- ggplot (heterozigosity, aes(x=Populations, y= V2, fill=Populations)) + -->
+<!--   geom_point(color="dimgrey", size=5, shape=22) + -->
+<!--   scale_fill_manual("Población",labels = c("Noruega","Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva", "Mongolia","Yakutia" ,"Vladivostok"), values = cols) + -->
+<!--   xlab ("Populations") + ylab ("Heterozigosidad promedio") +  theme_classic() + -->
+<!-- theme (legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25), axis.text.x = element_blank() ) -->
+
+<!-- ggsave(paste(wd,"heterozigosity_per_pop.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") -->
+
+<!-- ``` -->
+
+
+
