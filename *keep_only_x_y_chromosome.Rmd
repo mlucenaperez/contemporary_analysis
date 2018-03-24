@@ -13,7 +13,7 @@ We want to have a list with X and Y chromosome to be able to:
 In this script we are going to get X data from BAM files to continue the analysis. 
 
 1) We are obtaining X-sites from synteny with cat genome.
-2) Then we are doing an overlap with intergenic sites from notation (we will create a BED file X intergenic). How many sites does it have? If there are too many, we will reduce it to ~2.5Mb to have a proper compare with our intergenic autosomal sites. 
+2) Then we are doing an overlap with intergenic sites from notation (we will create a BED file X intergenic). How many sites does it have? If there are too many, we will reduce it to ~2.5Mb to have a proper compare with our intergenic autosomal sites, after blast (before blast we will use the whole Xchr intergenic). 
 
 --> This bed file will be used as to filter out all x positions and calculates diversities!: See 2.SFS_contemporary_intergenic_X.
 
