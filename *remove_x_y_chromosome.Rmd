@@ -1,0 +1,126 @@
+---
+title: "Remove_x_chromosome"
+output: html_document
+---
+
+# Lynx lynx MACROGEN samples
+
+Todo esto lo corro desde la cuenta de Elena! 
+
+Elena ha hecho un script para extraer las posiciones del X y del Y del genoma. Tuiene varios pasos, (completar Elena) entre ellos quitar cualquier contig del que el 30% de sus bases dieran señal del cromosoma que fuera teniendo en cuenta que los otros podían ser Ns y que en realidad preferimos filtrar de más que de menos.
+
+Los bed con las posiciones son:
+
+```{bash}
+
+/home/emarmesat/Ychr_coverage/females_males_normalized_ratio.coverage.contig.filteredY.lax.percontig.Ychr-above30.bed
+/home/emarmesat/Ychr_coverage/females_males_normalized_ratio.coverage.contig.filteredX.percontig.Xchr-above30.bed
+
+```
+
+Estos son los bed con las posiciones del X y del Y. Ahora tengo que excluirlos de los BAM que usa Bego. Para ello primero tengo que hacer el complementario ya que bedtools substract solo usa dos beds, y bedtools intersect solo te da la intersección pero no el complementario. Por tanto, lo primero que tengo que hacer es echarles un vistazo:
+
+```{bash}
+
+head /home/emarmesat/Ychr_coverage/females_males_normalized_ratio.coverage.contig.filteredY.lax.percontig.Ychr-above30.bed
+# lp23.s00102     1       9414    lp23.s00102c001 chrY_contig_above30per
+# lp23.s00468     1       1185    lp23.s00468c001 chrY_contig_above30per
+# lp23.s00622     1       1709    lp23.s00622c001 chrY_contig_above30per
+
+
+head /home/emarmesat/Ychr_coverage/females_males_normalized_ratio.coverage.contig.filteredX.percontig.Xchr-above30.bed
+
+# lp23.s00004     1       3239    lp23.s00004c001 chrX_contig_above30per
+# lp23.s00006     1       2056    lp23.s00006c001 chrX_contig_above30per
+# lp23.s00011     1       1187    lp23.s00011c001 chrX_contig_above30per
+
+```
+
+Llama la atención que son one-based y eso no debería ser así para un bed, así que los transformo en 0-based. 
+
+
+```{bash}
+
+cd /home/emarmesat/Ychr_coverage/
+
+awk -v OFS='\t' '{print ($1,$2-1,$3)}' females_males_normalized_ratio.coverage.contig.filteredY.lax.percontig.Ychr-above30.bed > females_males_normalized_ratio.coverage.contig.filteredY.lax.percontig.Ychr-above30.0based.bed
+
+awk -v OFS='\t' '{print ($1,$2-1,$3)}' females_males_normalized_ratio.coverage.contig.filteredX.percontig.Xchr-above30.bed >  females_males_normalized_ratio.coverage.contig.filteredX.percontig.Xchr-above30.0based.bed
+
+```
+
+
+Ahora que ya lo tengo 0 based extraigo todas las posiciones del genoma excepto las X y las Y:
+
+```{bash}
+
+subtractBed -a /home/emarmesat/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome.bed -b /home/emarmesat/Ychr_coverage/females_males_normalized_ratio.coverage.contig.filteredY.lax.percontig.Ychr-above30.0based.bed > /home/emarmesat/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome_without_Y_chr.bed
+
+subtractBed -a /home/emarmesat/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome.bed -b /home/emarmesat/Ychr_coverage/females_males_normalized_ratio.coverage.contig.filteredX.percontig.Xchr-above30.0based.bed > /home/emarmesat/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome_without_X_chr.bed
+
+subtractBed -a /home/emarmesat/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome_without_Y_chr.bed -b /home/emarmesat/Ychr_coverage/females_males_normalized_ratio.coverage.contig.filteredX.percontig.Xchr-above30.0based.bed > /home/emarmesat/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome_without_Y_X_chr.bed
+
+
+# Sanity check: 
+# cat bed_file_all_the_genome_without_Y_X_chr.bed | grep lp23.s00102
+# lp23.s00102	9414	823758
+
+# GREAT!
+
+```
+
+
+Bego está usando los archivos de macrogen así que los quito de ahí. 
+
+```{bash}
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/MACROGEN_samples_25x
+mkdir MACROGEN_samples_25x_without_x_y_chr
+
+cd /home/emarmesat/grupolince/lynx_genomes_5x/BAM_files_final/MACROGEN_samples_25x/
+
+screen -S remove_x_and_y_positions
+
+# Remove x and y chr:
+
+SAMPLES=($(ls *bam))
+
+for SAMPLE in "${SAMPLES[@]}"
+do
+echo "---------------------------------------------------$SAMPLE---------------------------------------------------"
+
+bedtools intersect -a $SAMPLE -b /home/emarmesat/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome_without_Y_X_chr.bed > /home/emarmesat/grupolince/lynx_genomes_5x/BAM_files_final/MACROGEN_samples_25x/MACROGEN_samples_25x_without_x_y_chr/${SAMPLE/.bam/_without_x_y_chr.bam}
+
+done
+
+
+```
+
+
+# Lynx pardinus GENOME PROJECT samples
+
+I will do it with all of them, even thought we then only plot one or two. 
+
+```{bash}
+cd /home/emarmesat/grupolince/lynx_genomes_5x/BAM_files_final/genome_project_samples_25x
+mkdir genome_project_samples_25x_without_x_y_chr
+
+cd /home/emarmesat/grupolince/lynx_genomes_5x/BAM_files_final/genome_project_samples_25x
+
+screen -S remove_x_and_y_positions_genome_project
+
+# Remove x and y chr:
+
+SAMPLES=($(ls *bam))
+
+for SAMPLE in "${SAMPLES[@]}"
+do
+echo "---------------------------------------------------$SAMPLE---------------------------------------------------"
+
+bedtools intersect -a $SAMPLE -b /home/emarmesat/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome_without_Y_X_chr.bed > /home/emarmesat/grupolince/lynx_genomes_5x/BAM_files_final/genome_project_samples_25x/genome_project_samples_25x_without_x_y_chr/${SAMPLE/.bam/_without_x_y_chr.bam}
+
+done
+
+
+```
+
