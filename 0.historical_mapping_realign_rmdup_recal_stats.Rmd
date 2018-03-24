@@ -866,7 +866,7 @@ echo "${i}"
 
 bwa aln -l 999 -t 8 $REF ${i}_merged.fastq.gz > ${i}.sai
 bwa aln -l 999 -t 8 $REF ${i}_R1_trimmed2.fastq.gz > ${i}_1.sai #you can now use a fastq file.
-bwa aln -l 999 -t 8 $REF ${i}_R2_trimmed.fastq.gz > ${i}_2.sai 
+bwa aln -l 999 -t 8 $REF ${i}_R2_trimmed2.fastq.gz > ${i}_2.sai 
 
 ### map reads
 
