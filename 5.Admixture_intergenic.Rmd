@@ -195,6 +195,7 @@ nano Admix_plot.R
 Script que guardo
 
 ```{r}
+
 library(RColorBrewer)
 library (dplyr)
 args <- commandArgs(TRUE)
@@ -220,7 +221,6 @@ pdf(paste0(args[4],"_K",args[3],".pdf"), height=10, width = 30)
 barplot(admix,col=col_vector,space=0,xlab="Individuals",ylab="Admixture")
 text(tapply(1:nrow(pop),pop[,1],mean),-0.1,unique(pop[,1]),xpd=T,srt=60)
 dev.off()
-
 
 ```
 
