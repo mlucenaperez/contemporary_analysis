@@ -439,13 +439,54 @@ print(args)
 admix<-t(as.matrix(read.table(args[1])))
 pop<-read.table(args[2],as.is=T)
 
+<<<<<<< HEAD
+=======
+
+admix <- t(as.matrix(read.table("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Maf1/c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080_K9_run8.qopt")))
+pop <- read.table("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Maf1/c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080.info")
+
+
+>>>>>>> 2fb5332ce231e761c269773c6739838c689be38e
 names(pop) <- c("pop", "ind")
 pop$pop <- as.factor (pop$pop)
 pop$pop <- factor (pop$pop, levels=c("c_ll_no", "h_ll_ba", "c_ll_ba","c_ll_cr",  "c_ll_po", "c_ll_la", "c_ll_ki", "c_ll_ur", "c_ll_vl", "c_ll_ya", "c_ll_tu", "c_ll_og", "c_ll_ka", "c_ll_to"))
 
 admix<-admix[,order(pop[,1])]
+<<<<<<< HEAD
 pop<-pop[order(pop[,1]),]
 n <- args[3]
+=======
+pop <-pop[order(pop[,1]),]
+
+
+pop$Var2 <- seq.int(nrow(pop)) 
+
+pop <- pop %>% mutate (Population =  
+                          ifelse (pop == "c_ll_po", "Bialowieza",
+                          ifelse (pop == "c_ll_ur", "Urals",
+                          ifelse (pop == "c_ll_ki", "Kirov",
+                          ifelse (pop == "c_ll_la", "Latvia",
+                          ifelse (pop == "c_ll_no", "Norway",
+                          ifelse (pop == "c_ll_ba" | pop == "h_ll_ba", "Balkans" ,
+                          ifelse (pop == "c_ll_cr","Carpathians",
+                          ifelse (pop == "c_ll_to", "Töv",
+                          ifelse (pop == "c_ll_tu", "Tuva",
+                          ifelse (pop == "c_ll_ka", "Khentii", 
+                          ifelse (pop == "c_ll_og", "Ömnögovi", 
+                          ifelse (pop == "c_ll_vl", "Vladivostok", 
+                          ifelse (pop == "c_ll_ya", "Yakutia",
+                          ifelse (pop == "c_ll_zz", "Zoo",NA)))))))))))))))  %>% rename(Pop=pop) 
+tmp1 <- melt(admix)  
+
+tmp <- full_join(tmp1, pop, by="Var2")
+
+tmp$ind <- factor (tmp$ind, levels=c("c_ll_no_0075", "c_ll_no_0076", "c_ll_no_0077", "c_ll_no_0078", "c_ll_no_0079", "c_ll_no_0080", "c_ll_no_0081", "c_ll_no_0082", "c_ll_ba_0216", "h_ll_ba_0214", "h_ll_ba_0215", "c_ll_cr_0205", "c_ll_cr_0206", "c_ll_cr_0207", "c_ll_cr_0208", "c_ll_cr_0209", "c_ll_cr_0212", "c_ll_po_0001", "c_ll_po_0002", "c_ll_po_0003", "c_ll_po_0011", "c_ll_po_0014", "c_ll_po_0019", "c_ll_po_0105", "c_ll_po_0106", "c_ll_la_0044", "c_ll_la_0047", "c_ll_la_0048", "c_ll_la_0052", "c_ll_la_0053", "c_ll_la_0054", "c_ll_ki_0090", "c_ll_ki_0091", "c_ll_ki_0092", "c_ll_ki_0093", "c_ll_ki_0094", "c_ll_ki_0095", "c_ll_ki_0096", "c_ll_ki_0097", "c_ll_ki_0098", "c_ll_ki_0099", "c_ll_ki_0100", "c_ll_ki_0101", "c_ll_ki_0102", "c_ll_ur_0194", "c_ll_ur_0195", "c_ll_ur_0196", "c_ll_ur_0199", "c_ll_ur_0200", "c_ll_ur_0203", "c_ll_tu_0153", "c_ll_tu_0157", "c_ll_tu_0158", "c_ll_tu_0159", "c_ll_tu_0165", "c_ll_tu_0166", "c_ll_to_0190", "c_ll_to_0191", "c_ll_ka_0184", "c_ll_ka_0186", "c_ll_ka_0188", "c_ll_ka_0189", "c_ll_og_0181", "c_ll_og_0187", "c_ll_ya_0138", "c_ll_ya_0139", "c_ll_ya_0140", "c_ll_ya_0142", "c_ll_ya_0143", "c_ll_ya_0145", "c_ll_ya_0146", "c_ll_ya_0147", "c_ll_vl_0107", "c_ll_vl_0108", "c_ll_vl_0109", "c_ll_vl_0110", "c_ll_vl_0112", "c_ll_vl_0113", "c_ll_vl_0128", "c_ll_vl_0132"))
+
+
+write.table(pop,"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Maf1/individuals_per_pop.csv", sep=",", row.names = F, quote = F )
+
+# n <- 24 # Esto servía porque aquí venían las k y así hacia una paleta adecuada a la k que tenía, en mi caso, ahora no hace falta. 
+>>>>>>> 2fb5332ce231e761c269773c6739838c689be38e
 # qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',] Antes era así, lo que significa que coje aquellas paletas que son cualitativas. como yo quiero que coja paired la primera para que sea como en el PCA, pongo como condición que tenga maxcolors de 12. 
 twelve_col_pals = brewer.pal.info[brewer.pal.info$maxcolors == '12',] 
 col_vector = unlist(mapply(brewer.pal, twelve_col_pals$maxcolors, rownames(twelve_col_pals)))
@@ -491,5 +532,80 @@ scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_anal
 ```
 
 
+<<<<<<< HEAD
 
+=======
+# Compress file for Distruct
+http://clumpak.tau.ac.il
+
+Necesito que el archivo sea algo parecido a los de Admixture, así que comprimo los archivos de salida .qopt que son parecidos a los de Admixture.Primero lo he intentado usando solo un run y ha salido bien. Voy a probar usar más de un run. 
+
+```{bash}
+
+zip -r all_runs.zip $(ls *qopt | grep -v K13 | sort | uniq)
+
+
+
+
+```
+
+In the example shown in Table 2, NUMINDS=210. Each row shows the membership coefficients for one individual. Column 2 gives a code number for the individual. Column 4 gives the code number for the population to which the individual belongs. Columns 1, 3, and 5 are ignored. Columns 6 to K + 5 show membership coefficients for clusters 1, 2, ..., K. Ideally the numbers in these K columns sum to 1; in case they do not, the program normalizes them by their sum.
+
+
+Código para las poblaciones:
+
+1	Norway
+2	Balkans
+3	Carpathians
+4	Bialowieza
+5	Latvia
+6	Kirov
+7	Urals
+8	Tuva
+9	Omnogovi
+10	Khentii
+11	Tov
+12	Yakutia
+13	Vladivostok
+
+#
+
+8 Norway
+3 Balkans 8+3=11
+6 Carpathians 
+8 Bialowieza
+6 Latvia
+13 Kirov
+6 Urals
+6 Tuva
+2 Omnigovi
+4 Khentii
+2 Tov
+8 Yakutia
+8 Vladivostok
+
+```{bash}
+
+# Toda esta parte en la que modifico el archvio quizas no era necesaria y se hubiese solucionado con cambio de carro!
+
+mkdir test
+scp $(ls *qopt | grep -v run6 | grep -v run7 | grep -v run8) test/
+
+# Tengo que convertir los cambios de carro de unix a mac:
+cat pop.names3.txt |  tr '\r' '\n' > pop.names
+
+for i in *qopt
+do
+echo $i
+awk '{print $1}' pop.names | paste  - $i | awk '{print NR, NR, "(1)",$1,$0}' | awk '{$5=":"; print;}' > ${i/.qopt/.qopt_modif}
+done
+
+zip -r all_runs_no6-7-8_modif.zip *qopt_modif
+
+
+cat pop.codes.csv |  tr '\r' '\n' > pop.codes.unix
+
+
+```
+>>>>>>> 2fb5332ce231e761c269773c6739838c689be38e
 
