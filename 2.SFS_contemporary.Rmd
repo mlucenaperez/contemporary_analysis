@@ -20,7 +20,6 @@ c_lp_sm -->
 
 I checked that all bam files were indexed --> OK
 
-
 ## Global variables:
 
 
@@ -32,34 +31,40 @@ cd $RUTA/whole_genome_analysis/sfs
 
 #To launch one by one
 
-POP="c_lp_do_n012"  # <--CHANGE POP HERE
-
+# POP="c_lp_do_n012"  # <--CHANGE POP HERE
+POP="all pops"
 screen -S "$POP"_sfs_wg
 # screen -S "$POP"_thetas
+#POP="all pops"
+#POP="c_lp_do_n012"  # <--CHANGE POP HERE
 
-POP="c_lp_do_n012"  # <--CHANGE POP HERE
-
-script "$POP"_sfs_wg.log
+#script "$POP"_sfs_wg.log
 # script "$POP"_thetas.log
 
-POP="c_lp_do_n012"  # <--CHANGE POP HERE
+# POP="c_lp_do_n012"  # <--CHANGE POP HERE
 
 THREADS=15                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 
 RUTA=/home/mlucena/ANGSD_analysis/depth_calculus 
-
-read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < $RUTA/"${POP}"_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
-
 ANGSD="/opt/angsd/angsd"
 NGSTOOLS="/opt/angsd/angsd/misc"
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
 ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
 FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
 FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
+RUTA=/home/mlucena/ANGSD_analysis
+
+POPS=(c_lp_sm_n019 c_ll_ki_n013 c_ll_no_n008 c_ll_po_n008 c_lp_do_n012 c_lp_sm_n019)   # <--CHANGE POP HERE
+
+# 6/3/2018 --> Lo he lanzado en un loop que acaba en SAF posprob. 
+
+for POP in  ${POPS[@]}
+do
+
+read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < $RUTA/depth_calculus/"${POP}"_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
+
 N_IND=$(echo ${POP: -3} )
 MIN_IND=$(expr $N_IND / 2)
-RUTA=/home/mlucena/ANGSD_analysis 
-
 
 # Sanity checks:
 
@@ -69,7 +74,9 @@ echo $MIN_IND
 echo $maxDepth_truncated
 echo $minDepth_truncated
 
-POPS=(c_lp_sm_n019 )   # <--CHANGE POP HERE
+
+
+
 
 
 ```
@@ -78,8 +85,6 @@ POPS=(c_lp_sm_n019 )   # <--CHANGE POP HERE
 
 ```{r, engine=bash, eval=FALSE}
 
-for POP in  ${POPS[@]}
-do
 
 ##########################
 #  SAF (likelihood):     
@@ -126,8 +131,9 @@ $FILTER2 \
 -minInd  $MIN_IND -setMaxDepth $maxDepth_truncated -setMinDepth $minDepth_truncated \
 -doThetas 1 -pest "$POP".unfolded-lr.sfs 
 
-```
+done
 
+```
 
 
 ## SFS graphical representation
@@ -189,7 +195,7 @@ for (i in 1:length (my_files_unfolded))
 
 echo "-------$POP----------Make bed theta -----------------------------------------"
 
-# $NGSTOOLS/thetaStat print $POP.unfolded-lr.postprob.thetas.idx > $POP.printed.stats
+$NGSTOOLS/thetaStat print $POP.unfolded-lr.postprob.thetas.idx > $POP.printed.stats
 
 # Transform the coordinates to use 0Based bedtools
 
@@ -212,7 +218,7 @@ awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP".trans
 rm "$POP".*.borrar
 mv $POP.printed.stats /backup/mlucena/intermediate_files_ANGSD/
 
-done
+# done
 
 ```
 
@@ -246,7 +252,7 @@ echo "-------$POP---------- Window analysis ------------------------------------
 $NGSTOOLS/thetaStat do_stat $RUTA/$POP.unfolded-lr.postprob.thetas.idx -win $WINDOWSIZE -step $WINDOWSTEP  -outnames $POP.unfolded-lr.postprob.thetasWindow_$WINDOWSIZE.$WINDOWSTEP.gz
 
 ```
-
+Values in this output file are the sum of the per-site estimates for the whole window.
 
 
 ## Window R representation
@@ -255,7 +261,9 @@ $NGSTOOLS/thetaStat do_stat $RUTA/$POP.unfolded-lr.postprob.thetas.idx -win $WIN
 Download data:
 
 ```{bash}
+
 scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*PG /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/window_analysis/
+
 ```
 
 
@@ -351,7 +359,7 @@ mv "$POP".transformedThetas "$POP"_separated_by_scaffold/
 cd  /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/"$POP"_separated_by_scaffold
 # Create multiple files base on one column: transformedThetas:
 awk '{print >> $1; close($1)}' "$POP".transformedThetas
-# rm scaffold ### no se pq esto?
+rm scaffold # esto borra la primera linea que forma un archivo llamado scaffold.
 # Rename the files: transformedThetas
 
 for file in lp23*
@@ -393,6 +401,7 @@ c_ll_po
 c_lp_sm
 c_lp_do
 
+## OJO! parece que tengo valores de -1 en los NAS, ¿eso por qué? corregir e incorporar directamente el valor de informative sites en el loop.
 
 ```{bash}
 
@@ -409,12 +418,11 @@ c_lp_do
 screen -S Scaffold_per_unit
 script log_screen_Scaffold_per_unit
 
-POPS=("c_ll_ki_n013" "c_ll_no_n008" "c_ll_po_n008" "c_lp_do_n012")
+POPS=("c_ll_ki_n013" "c_ll_no_n008" "c_ll_po_n008" "c_lp_do_n012" "c_lp_sm_n019")
 
-
-SCAFFOLDS_FOLDER=/home/mlucena/grupolince/notation/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3.PerScaffold/
+SCAFFOLDS_FOLDER=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.corrected.PerScaffold/
 cd $SCAFFOLDS_FOLDER
-SCAFFOLDS=($(find /home/mlucena/grupolince/notation/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3.PerScaffold/ -name "LYPA23C*" -exec ls {} \; | awk '{ print substr( $0, length($0) - 10, length($0) ) }'  | LANG=en_EN sort | uniq ))
+SCAFFOLDS=($(find /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.corrected.PerScaffold/ -name "LYPA23C*" -exec ls {} \; | awk '{ print substr( $0, length($0) - 10, length($0) ) }'  | LANG=en_EN sort | uniq ))
 DIVERSITY_PER_UNIT_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
 SFS_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
 
@@ -425,7 +433,7 @@ do
 echo "---------------------------------------------------$POP---------------------------------------------------"
 
 # Create headers for the outfile
-echo -e "scaffold\tstart\tend\tlength\tNAs\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
+echo -e "scaffold\tstart\tend\tlength\tNAs\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop" > $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
 
 for SCAFFOLD in "${SCAFFOLDS[@]}"
 do
@@ -477,7 +485,29 @@ NR=$(wc -l "$POP".iter.transformedThetas.borrar | cut -d" " -f1)
 
 NAs=$(expr $LENGTH - $NR)
 
-# Calculate averages, and standatd deviations and paste them
+INFORMATIVESITES=$(expr $LENGTH - $NAs)
+
+
+#Before printing check all variables are full, if empty use NA
+if [ -z ${LOCATION} ]; then  LOCATION=NA;  fi
+if [ -z ${START_ONEBASED} ]; then  START_ONEBASED=NA;  fi
+if [ -z ${END} ]; then  END=NA;  fi
+if [ -z ${LENGTH} ]; then  LENGTH=NA;  fi
+if [ -z ${NAs} ]; then  NAs=NA;  fi
+if [ -z ${INFORMATIVESITES} ]; then  INFORMATIVESITES=NA;  fi
+if [ -z ${FEATURE} ]; then  FEATURE=NA;  fi
+if [ -z ${STRANDNESS} ]; then  STRANDNESS=NA;  fi
+if [ -z ${FRAME} ]; then  FRAME=NA;  fi
+if [ -z ${ID_GENE} ]; then  ID_GENE=NA;  fi
+if [ -z ${ID} ]; then  ID=NA;  fi
+if [ -z ${WATTERSON_AVERAGE_PER_UNIT} ]; then  WATTERSON_AVERAGE_PER_UNIT=NA;  fi
+if [ -z ${WATTERSON_SD_PER_UNIT} ]; then  WATTERSON_SD_PER_UNIT=NA;  fi
+if [ -z ${PAIRWISE_AVERAGE_PER_UNIT} ]; then  PAIRWISE_AVERAGE_PER_UNIT=NA;  fi
+if [ -z ${PAIRWISE_SD_PER_UNIT} ]; then  PAIRWISE_SD_PER_UNIT=NA;  fi
+if [ -z ${TAJIMAS_D_PER_UNIT} ]; then  TAJIMAS_D_PER_UNIT=NA;  fi
+if [ -z ${POP} ]; then  POP=NA;  fi
+
+#Paste averages, and standatd deviations
 
 paste \
 <(echo $LOCATION ) \
@@ -485,6 +515,7 @@ paste \
 <(echo $END ) \
 <(echo $LENGTH ) \
 <(echo $NAs) \
+<(echo $INFORMATIVESITES) \
 <(echo $FEATURE ) \
 <(echo $STRANDNESS ) \
 <(echo $FRAME ) \
@@ -494,13 +525,32 @@ paste \
 <(echo $WATTERSON_SD_PER_UNIT) \
 <(echo $PAIRWISE_AVERAGE_PER_UNIT) \
 <(echo $PAIRWISE_SD_PER_UNIT) \
-<(echo $TAJIMAS_D_PER_UNIT) |\
-sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
+<(echo $TAJIMAS_D_PER_UNIT) \
+<(echo $POP) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g'  >>  $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
+
+#Reset all (but POP) variables before next iteration
+
+unset LOCATION
+unset START_ONEBASED
+unset END
+unset LENGTH
+unset NAs
+unset INFORMATIVESITES
+unset FEATURE
+unset STRANDNESS
+unset FRAME
+unset ID_GENE
+unset ID
+unset WATTERSON_AVERAGE_PER_UNIT
+unset WATTERSON_SD_PER_UNIT
+unset PAIRWISE_AVERAGE_PER_UNIT
+unset PAIRWISE_SD_PER_UNIT
+unset TAJIMAS_D_PER_UNIT
 
 done < <(cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3_"$SCAFFOLD") 
 
 done &
-done
 
 rm "$POP".iter.transformedThetas.borrar
 
@@ -516,6 +566,8 @@ rm "$POP".iter.transformedThetas.borrar
 FILES_DIVERSITY=("c_ll_ki_n013.per.unit.averages.tsv" "c_ll_po_n008.per.unit.averages.tsv" "c_lp_sm_n019.per.unit.averages.tsv" "c_ll_no_n008.per.unit.averages.tsv" "c_lp_do_n012.per.unit.averages.tsv")
 
 
+## OJO! Que lo está imprimiendo en otro orden!
+
 # Añado una columna con el número de sitios informativos. 
 for i in "${FILES_DIVERSITY[@]}"
 do
@@ -525,22 +577,15 @@ cat <(awk -v OFS='\t' '(NR==1) {print $0,"informative_sites"}' $i ) <(awk -v OFS
 mv ${i/.tsv/_informative_sites.tsv} $i
 done
 
-# Añado una columna con la poblacion
+# Añado una columna en el header con la poblacion
 for i in "${FILES_DIVERSITY[@]}"
 do
 echo $i
 POP=$(echo ${i/.per.unit.averages.tsv/} )
-awk -v OFS='\t' -v POP="$POP" '{print $0, POP}' $i > ${i/.per.unit.averages/_withPOP.per.unit.averages}
+awk -v OFS='\t' 'NR==1{print $0,"pop";next}{print}' $i > ${i/.per.unit.averages/_withPOP.per.unit.averages}
 mv ${i/.per.unit.averages/_withPOP.per.unit.averages} $i
 done
 
-# Se me ha olvidado añadir el cabecero asi que lo modifico aparte. 
-for i in "${FILES_DIVERSITY[@]}"
-do
-echo $i
-cat <(awk -v OFS='\t' '(NR==1) {$17="pop"; print}' $i) <(awk -v OFS='\t' 'NR >= 2 {print $0}' $i) > ${i/.tsv/_corrected.tsv}
-mv ${i/.tsv/_corrected.tsv} $i
-done
 
 # Añado una columna con la specie
 for i in "${FILES_DIVERSITY[@]}"
@@ -603,6 +648,62 @@ awk 'FNR==1 && NR!=1{next;}{print}' c_ll*averages.tsv > c_ll_ki_n013-c_ll_no_n00
 # Perfecto!!
       
 ```
+
+
+
+
+
+# OJO!!
+
+Calcular luego en R medidas pareadas!!! cada unidad con su equivalente en las tres poblaciones!
+
+
+```{bash}
+nota
+
+
+wc -l c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv
+1474888 c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv
+
+
+awk '{if ($18 == "") print $0}' c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv  | wc -l
+134260
+
+# Tengo 134260 lineas que no tienen todos los campos, eso supone un 9,1% de total. 
+# ¿A cuantas les faltan todos los campos y por tanto no ha perjudicados los cálculos? (A todas las que tengas informative sites ($11), igual a cero)
+
+awk '{if ($18 == "") print $0}' c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv  | awk '{if ($11=="0") print $0}' | wc -l
+133589
+
+# Por tanto, de las 134260, a 133589 le faltan todos los datos, por tanto sólo hay 671 lineas con algunos valores sí y otros no. 
+
+133589-134260=671
+
+awk '{if ($18 == "") print $0}' c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv  | awk '{if ($11!="0") print $0}' | wc -l
+671
+
+
+
+# De estos, parece que hay muchos con sitios informativos=1, por lo que asumo que no puede calcular las tajimaD. 
+
+awk '{if ($18 == "") print $0}' c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv  | awk '{if ($11!="0") print $0}' | head
+lp23.s00005	1472211	1472211	0	-1	CDS	-	0	LYPA23C006624	LYPA23C006624P4_1_1	9.1722861064*10^-06	0.0000000000*10^00	3.7772361236*10^-06	0.0000000000*10^00		1	c_ll_ki_n013	c_ll
+lp23.s00006	42798	43028	230	229	intron	+	0	LYPA23C020681	LYPA23C020681T1_intron_13	7.9066451013*10^-06	0.0000000000*10^00	3.1403854839*10^-06	0.0000000000*10^00		1	c_ll_ki_n013	c_ll
+lp23.s00010	215823	215849	26	25	lncRNA	+
+
+# Concretamente encontramos,
+
+ awk '{if ($18 == "") print $0}' c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv  | awk '{if ($11!="0") print $0}' | awk '{if ($15="1") print $0}' | wc -l
+671
+
+# Todo cuadra. 
+
+# 671 supoone un 0.045 del total, así que yo creo que no influye o no mucho en los resultados que tenog. En todo caso, como en algunos casos la coumna de informative site 01 está donde watterson debería estar, ahí si pero en el resto no. 
+
+
+```
+
+
 
 
 #### Representation per pop --> I rm this files, but I keep the script in case is useful. 
@@ -775,6 +876,67 @@ dev.off()
 # Cosas útiles outliers.shape=NA.
 
 ```
+
+# Comparación por pares unidad
+
+
+```{r}
+
+library ("ggplot2")
+library ("plyr")
+library ("RColorBrewer")
+library ("scales")
+library ("magrittr")
+library(dplyr)
+
+# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/Users/marialucenaperez/Desktop/Diversity_per_region"
+
+finsdiversity = list.files(path = wd,pattern="*.per.unit.averages.tsv$")
+
+for (i in 1:length(finsdiversity))
+{
+  infile <- finsdiversity[i]
+  name_diversity <- unlist(strsplit(finsdiversity[i], "[.]"))
+dataframe <- read.csv (paste(wd,infile, sep="/"), header = T, sep = '\t',stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".")
+
+dataframe = dataframe[-1,]
+dataframe$watterson_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$watterson_ave))
+dataframe$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$pairwise_ave))
+dataframe$tajimaD <- as.numeric(gsub("\\*10\\^","e",dataframe$tajimaD))
+
+#### Para que almacene varias dataframe con el nombre correcto
+  dataframename <- paste("data_diversity", name_diversity[1], sep ='_')
+  assign(dataframename, dataframe)
+  
+  
+
+}
+
+
+pair_comparison <- full_join (data_diversity_c_ll_ki_n013, data_diversity_c_ll_no_n008, by=c("row.names"="row.names","scaffold"="scaffold","start"="start", "end"="end",  "feature"="feature", "strandness"="strandness", "frame"="frame", "id_gene"="id_gene", "id"="id")  )
+
+colourCount = length(unique(pair_comparison$feature))
+getPalette = colorRampPalette(brewer.pal(9, "Paired"))
+
+
+ggplot (filter(pair_comparison), aes(x= watterson_ave.x, y=watterson_ave.y , fill=feature, colour=feature)) +
+  geom_point(alpha=1/100) +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_abline(intercept = 0) +
+  scale_fill_manual(values = getPalette(colourCount))+
+  scale_colour_manual(values = getPalette(colourCount)) +
+   theme(legend.position="bottom") +
+  guides(fill=guide_legend(nrow=2))
+
+```
+
+
+
+
+
+
 
 #### Representation per specie
 
@@ -1159,173 +1321,6 @@ ggsave(filename = paste(wd,"/",NAME,"_informative_sites1_Pi_pairwise.eps", sep =
 ```
 
 
-#### Loop Elena.
-
-```{r}
-
-```
-
-
-
-### Diversity per region.
-
-Populations:
-
-c_ll_ki
-c_ll_no
-c_ll_po
-
-c_lp_sm
-c_lp_do
-
-
-```{bash}
-
-<<<<<<< HEAD
-=======
-#### CHANGE PATH!!!!
-
->>>>>>> 52c25fea2f5586eaf72a10bee167de2eb3622f04
-mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region
-
-## WG variables
-
-POPS=("c_ll_ki_n013" "c_ll_no_n008" "c_ll_po_n008" "c_lp_do_n012" "c_lp_sm_n019")
-SFS_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
-SCAFFOLD_FOLDER=/GRUPOS/grupolince/telomers_centromers_definition/
-cd $SCAFFOLD_FOLDER
-REGIONS_PerScaffold=($(ls | grep PerScaffold | grep -v centromers | uniq))
-
-for POP in "${POPS[@]}"
-do
-echo "---------------------------------------------------$POP---------------------------------------------------"
-
-for REGION_PerScaffold in ${REGIONS_PerScaffold[@]}
-do
-cd $SCAFFOLD_FOLDER$REGION_PerScaffold
-SCAFFOLDS=($(ls * | cut -d'_' -f7 | uniq))
-DIVERSITY_PER_REGION_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/${REGION_PerScaffold/.PerScaffold/}/
-
-echo "-------------${REGION_PerScaffold/.PerScaffold/}-------------"
-
-# Create headers for the outfile
-echo -e "scaffold\tstart\tend\tlength\tNAs\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD" > "$DIVERSITY_PER_REGION_FOLDER""$POP"."${REGION_PerScaffold/.PerScaffold/}".averages.tsv
-
-for SCAFFOLD in "${SCAFFOLDS[@]}"
-do
-
-echo "---------------------$SCAFFOLD---------------------"
-
-while read LOCATION START_CEROBASED END CAT_CHR;
-
-do
-
-cd "$SFS_FOLDER""$POP"_separated_by_scaffold
-
-START_ONEBASED=($(echo $START_CEROBASED+1 | bc))
-LENGTH=$(expr $END - $START_ONEBASED) 
-
-#Intersect bed of the unit (first remove header)¿¿??
-
-START_CEROBASED=($(echo $START_ONEBASED-1 | bc))
-
-cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_CEROBASED\t$END") > "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar
-
-WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
-WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
-
-PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5 "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-
-DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-
-TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_AVERAGE_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
-
-NR=$(wc -l "$POP"."${REGION_PerScaffold/.PerScaffold/}".iter.transformedThetas.borrar | cut -d" " -f1)
-
-NAs=$(expr $LENGTH - $NR)
-
-# Calculate averages, and standatd deviations and paste them
-
-paste \
-<(echo $LOCATION ) \
-<(echo $START_ONEBASED ) \
-<(echo $END ) \
-<(echo $LENGTH ) \
-<(echo $NAs) \
-<(echo $WATTERSON_AVERAGE_PER_UNIT) \
-<(echo $WATTERSON_SD_PER_UNIT) \
-<(echo $PAIRWISE_AVERAGE_PER_UNIT) \
-<(echo $PAIRWISE_SD_PER_UNIT) \
-<(echo $TAJIMAS_D_PER_UNIT) |\
-sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  "$DIVERSITY_PER_REGION_FOLDER""$POP"."${REGION_PerScaffold/.PerScaffold/}".averages.tsv
-
-done < <(cat /GRUPOS/grupolince/telomers_centromers_definition/$REGION_PerScaffold/"${REGION_PerScaffold/.PerScaffold/}"_regions_based_on_synteny_1000bp_"$SCAFFOLD") 
-done
-done &
-done 
-
-rm "$POP"*iter.transformedThetas.borrar
-
-
-#############################
-
-
-
-
-
-# Muevo todos los archivos a la carpeta madre
-
-mv /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region/*tsv /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region
-
-# Elimino las carpetas donde estaban que ahora están vacías
- 
-rm -r telomers2m/
-rm -r telomers0-10m/
-rm -r centromers/
-
-
-FILES_DIVERSITY=("c_lp_do_n012.centromers.averages.tsv" "c_ll_ki_n013.centromers.averages.tsv" "c_ll_po_n008.centromers.averages.tsv" "c_ll_no_n008.centromers.averages.tsv" "c_lp_sm_n019.centromers.averages.tsv" "c_lp_do_n012.telomers0-10m.averages.tsv" "c_ll_po_n008.telomers0-10m.averages.tsv" "c_ll_no_n008.telomers0-10m.averages.tsv" "c_ll_ki_n013.telomers0-10m.averages.tsv" "c_lp_sm_n019.telomers0-10m.averages.tsv" "c_lp_do_n012.telomers2m.averages.tsv" "c_ll_po_n008.telomers2m.averages.tsv" "c_ll_ki_n013.telomers2m.averages.tsv" "c_ll_no_n008.telomers2m.averages.tsv" "c_lp_sm_n019.telomers2m.averages.tsv")
-
-
-
-# Añado varias columnas simulando el archivo de per unit por si alguna vez queremos juntarlo en uno, con esto estoy añadiendo numero de sitios informativos, feature (que en este caso es tel, centr), pop, specie, y dejo en blanco pero también añado otras columnas como frame, id_gene. 
-
-for i in "${FILES_DIVERSITY[@]}"
-do
-echo $i
-POP=$(echo ${i} | cut -d "." -f 1 )
-SPECIE=$(echo $POP | cut -d"_" -f 1-2)
-FEATURE=$(echo ${i} | cut -d "." -f 2 )
-cat <(awk -v OFS='\t' '(NR==1) {print $1, $2, $3, $4, $5,"feature","strandness","frame","id_gene","id", $6,$7,$8,$9,$10,"informative_sites","pop","specie"}' $i) <( awk -v OFS='\t' -v POP="$POP" -v SPECIE="$SPECIE" -v FEATURE="$FEATURE" 'NR >= 2 {print $1, $2, $3, $4, $5, FEATURE, "na","na","na","na",$6,$7,$8,$9,$10,$4-$5, POP, SPECIE}' $i) > ${i/.tsv/_corrected.tsv}
-mv ${i/.tsv/_corrected.tsv} $i
-done
-
-
-# Create a unique file with all the information per specie
-# ojo que para per feature he usado otro script, que no se porque no me funcionaba aquí.
-
-awk 'FNR==1 && NR!=1{next;}{print}' c_lp*averages.tsv > c_lp_do_n012-c_lp_sm_n019.per.region.averages.per_specie.tsv
-
-awk 'FNR==1 && NR!=1{next;}{print}' c_ll*averages.tsv > c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.region.averages.per_specie.tsv
-
-# Each pop
-
-awk 'FNR==1 && NR!=1{next;}{print}' c_ll_ki_n013*averages.tsv > c_ll_ki_n013.per.region.averages.tsv
-
-awk 'FNR==1 && NR!=1{next;}{print}' c_ll_no_n008*averages.tsv > c_ll_no_n008.per.region.averages.tsv
-
-awk 'FNR==1 && NR!=1{next;}{print}' c_ll_po_n008*averages.tsv > c_ll_po_n008.per.region.averages.tsv
-
-awk 'FNR==1 && NR!=1{next;}{print}' c_lp_do_n012*averages.tsv > c_lp_do_n012.per.region.averages.tsv
-
-awk 'FNR==1 && NR!=1{next;}{print}' c_lp_sm_n019*averages.tsv > c_lp_sm_n019.per.region.averages.tsv
-
-
-
-```
-
-
 
 #### Representation per pop
 
@@ -1500,6 +1495,14 @@ dev.off()
 # Cosas útiles outliers.shape=NA.
 
 ```
+
+
+
+
+
+
+
+
 
 #### Representation per specie
 
