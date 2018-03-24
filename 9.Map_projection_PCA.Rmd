@@ -3,6 +3,161 @@ title: "PCA projection"
 output: html_document
 ---
 
+
+## First creating funtion:
+
+Modify from:
+
+http://editerna.free.fr/wp/?p=76
+http://egallic.fr/scale-bar-and-north-arrow-on-a-ggplot2-map/
+
+
+```{r}
+#
+# Result #
+#--------#
+# Return a list whose elements are :
+# 	- rectangle : a data.frame containing the coordinates to draw the first rectangle ;
+# 	- rectangle2 : a data.frame containing the coordinates to draw the second rectangle ; 
+
+
+# Yo he eliminado el dos y doble texto.
+
+
+
+
+# 	- legend : a data.frame containing the coordinates of the legend texts, and the texts as well.
+#
+# Arguments : #
+#-------------#
+# lon, lat : longitude and latitude of the bottom left point of the first rectangle to draw ;
+# distanceLon : length of each rectangle ;
+# distanceLat : width of each rectangle ;
+# distanceLegend : distance between rectangles and legend texts ;
+# dist.units : units of distance "km" (kilometers) (default), "nm" (nautical miles), "mi" (statute miles).
+
+createScaleBar <- function(lon,lat,distanceLon,distanceLat,distanceLegend, dist.units = "km"){
+	
+  # First rectangle
+  
+	bottomRight <- gcDestination(lon = lon, lat = lat, bearing = 90, dist = distanceLon, dist.units = dist.units, model = "WGS84")
+	
+	topLeft <- gcDestination(lon = lon, lat = lat, bearing = 0, dist = distanceLat, dist.units = dist.units, model = "WGS84")
+	
+	rectangle <- cbind(lon=c(lon, lon, bottomRight[1,"long"], bottomRight[1,"long"], lon),
+	lat = c(lat, topLeft[1,"lat"], topLeft[1,"lat"],lat, lat))
+	rectangle <- data.frame(rectangle, stringsAsFactors = FALSE)
+	
+
+	# Now let's deal with the text
+	
+max_long <-	rectangle$lon[3]
+	
+	onTop <- gcDestination(lon = (lon+max_long)/2, lat = lat, bearing = 0, dist = distanceLegend, dist.units = dist.units, model = "WGS84")
+
+	legend <- rbind(onTop)
+	legend <- data.frame(cbind(legend, text = c(distanceLon)), stringsAsFactors = FALSE, row.names = NULL)
+	return(list(rectangle = rectangle, legend = legend))
+}
+
+## We also need a function to obtain the coordinates of the North arrow:
+
+#
+# Result #
+#--------#
+# Returns a list containing :
+#	- res : coordinates to draw an arrow ;
+#	- coordinates of the middle of the arrow (where the "N" will be plotted).
+#
+# Arguments : #
+#-------------#
+# scaleBar : result of createScaleBar() ;
+# length : desired length of the arrow ;
+# distance : distance between legend rectangles and the bottom of the arrow ;
+# dist.units : units of distance "km" (kilometers) (default), "nm" (nautical miles), "mi" (statute miles).
+createOrientationArrow <- function(scaleBar, length, distance = 1, dist.units = "km"){
+	
+  lon <- scaleBar$rectangle[1,1]
+	lat <- scaleBar$rectangle[1,2]
+	
+	# Bottom point of the arrow
+	begPoint <- gcDestination(lon = lon, lat = lat, bearing = 0, dist = distance, dist.units = dist.units, model = "WGS84")
+	lon <- begPoint[1,"long"]
+	lat <- begPoint[1,"lat"]
+	
+	# Let us create the endpoint
+	onTop <- gcDestination(lon = lon, lat = lat, bearing = 0, dist = length, dist.units = dist.units, model = "WGS84")
+	
+	leftArrow <- gcDestination(lon = onTop[1,"long"], lat = onTop[1,"lat"], bearing = 225, dist = length/5, dist.units = dist.units, model = "WGS84")
+	
+	rightArrow <- gcDestination(lon = onTop[1,"long"], lat = onTop[1,"lat"], bearing = 135, dist = length/5, dist.units = dist.units, model = "WGS84")
+	
+	res <- rbind(
+			cbind(x = lon, y = lat, xend = onTop[1,"long"], yend = onTop[1,"lat"]),
+			cbind(x = leftArrow[1,"long"], y = leftArrow[1,"lat"], xend = onTop[1,"long"], yend = onTop[1,"lat"]),
+			cbind(x = rightArrow[1,"long"], y = rightArrow[1,"lat"], xend = onTop[1,"long"], yend = onTop[1,"lat"]))
+	
+	res <- as.data.frame(res, stringsAsFactors = FALSE)
+	
+	# Coordinates from which "N" will be plotted
+	coordsN <- cbind(x = lon, y = (lat + onTop[1,"lat"])/2)
+	
+	return(list(res = res, coordsN = coordsN))
+}
+
+## The last function enables the user to draw the elements:
+
+#
+# Result #
+#--------#
+# This function enables to draw a scale bar on a ggplot object, and optionally an orientation arrow #
+# Arguments : #
+#-------------#
+# lon, lat : longitude and latitude of the bottom left point of the first rectangle to draw ;
+# distanceLon : length of each rectangle ;
+# distanceLat : width of each rectangle ;
+# distanceLegend : distance between rectangles and legend texts ;
+# dist.units : units of distance "km" (kilometers) (by default), "nm" (nautical miles), "mi" (statute miles) ;
+# rec.fill, rec2.fill : filling colour of the rectangles (default to white, and black, resp.);
+# rec.colour, rec2.colour : colour of the rectangles (default to black for both);
+# legend.colour : legend colour (default to black);
+# legend.size : legend size (default to 3);
+# orientation : (boolean) if TRUE (default), adds an orientation arrow to the plot ;
+# arrow.length : length of the arrow (default to 500 km) ;
+# arrow.distance : distance between the scale bar and the bottom of the arrow (default to 300 km) ;
+# arrow.North.size : size of the "N" letter (default to 6).
+
+
+# First modify the plot of scale for this particular plot.
+
+scaleBar <- function(lon, lat, distanceLon, distanceLat, distanceLegend, dist.unit = "km", rec.fill = "black", rec.colour = "black", legend.colour = "black", legend.size = 4, orientation = TRUE, arrow.length = 500, arrow.distance = 300, arrow.North.size = 6){
+	laScaleBar <- createScaleBar(lon = lon, lat = lat, distanceLon = distanceLon, distanceLat = distanceLat, distanceLegend = distanceLegend, dist.unit = dist.unit)
+	# First rectangle
+	rectangle1 <- geom_polygon(data = laScaleBar$rectangle, aes(x = lon, y = lat), fill = rec.fill, colour = rec.colour)
+	
+	# Legend
+	scaleBarLegend <- annotate("text", label = paste(laScaleBar$legend[,"text"], dist.unit, sep=""), x = laScaleBar$legend[,"long"], y = laScaleBar$legend[,"lat"], size = legend.size, colour = legend.colour)
+	
+	res <- list(rectangle1, scaleBarLegend)
+	
+	if(orientation){# Add an arrow pointing North
+		coordsArrow <- createOrientationArrow(scaleBar = laScaleBar, length = arrow.length, distance = arrow.distance, dist.unit = dist.unit)
+		arrow <- list(geom_segment(data = coordsArrow$res, aes(x = x, y = y, xend = xend, yend = yend)), annotate("text", label = "N", x = coordsArrow$coordsN[1,"x"], y = coordsArrow$coordsN[1,"y"], size = arrow.North.size, colour = "black"))
+		res <- c(res, arrow)
+	}
+	return(res)
+}
+
+```
+
+
+
+
+
+
+
+
+
 # Whole species:
 
 
@@ -12,12 +167,16 @@ output: html_document
 # PCA projection on map
 
 # http://www.molecularecologist.com/2015/04/procrustes-analyses-in-r/
+
+library(png)
+library(maps)
+library(maptools)
+library(ggplot2)
+library(grid)
 library(ggmap) 
 library(mapr)
-library(ggplot2)
 library(raster)
 library("sp")
- library(maps)
 library(MCMCpack)
 library(rworldmap)
 library("ggmap")
@@ -29,16 +188,30 @@ library(threejs)
 library(RColorBrewer)
 require("knitr")
 library(rgdal)
-library(grid)
 library("ggspatial")
-
 
 
 # Now we load our PCA analysis:
 
 WORKING_DIR="/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_PCA/"
 
-pop=c("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080")
+
+###########################################################################################################################
+#######################################       CHOOSE ONE                   ################################################
+###########################################################################################################################
+
+
+# pop=c("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080")
+
+# pop=c("c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n030")
+
+# pop=c("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur_n050")
+
+
+###########################################################################################################################
+###########################################################################################################################
+###########################################################################################################################
+
 
 
 # Read input file
@@ -46,10 +219,6 @@ covar <- read.table(paste(WORKING_DIR,pop, ".covar", sep=''), stringsAsFact=F);
 
 # Read annot file
 annot <- read.table(paste(WORKING_DIR,pop, ".ALL.clst", sep=""), header=TRUE) 
-
-
-
-
 
 # Parse components to analyze
 
@@ -136,13 +305,51 @@ cols <- c("Bialowieza"=brewer.pal(12,"Paired")[4],
 
 PC_coordinates <- inner_join(PC,coordenadas, by =c("Ind"="id"))
 
-     
+
+# To spanish:
+
+PC_coordinates <- PC_coordinates %>% 
+    mutate (., Población =  ifelse (Populations == "Bialowieza", "Bialowieza", 
+                      ifelse (Populations == "Urals", "Urales", 
+                      ifelse (Populations == "Balkans", "Balcanes", 
+                      ifelse (Populations == "Carpathians", "Carpatos", 
+                      ifelse (Populations == "Kirov", "Kirov", 
+                      ifelse (Populations == "Latvia", "Letonia", 
+                      ifelse (Populations == "Norway", "Noruega", 
+                      ifelse (Populations == "Töv", "Töv", 
+                      ifelse (Populations == "Tuva", "Tuva", 
+                      ifelse (Populations == "Khentii", "Khentii", 
+                      ifelse (Populations == "Ömnögovi", "Ömnögovi", 
+                      ifelse (Populations == "Vladivostok", "Vladivostok", 
+                      ifelse (Populations == "Yakutia", "Yakutia", NA))))))))))))))
+
+
+# Create coordinates per pop:
+
+coordenadas_per_pop <- coordenadas %>% rename (Pop=pop) %>%
+  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Bialowieza",
+                          ifelse (Pop == "c_ll_ur", "Urals",
+                          ifelse (Pop == "c_ll_ki", "Kirov",
+                          ifelse (Pop == "c_ll_la", "Latvia",
+                          ifelse (Pop == "c_ll_no", "Norway",
+                          ifelse (Pop == "c_ll_ba" | Pop == "h_ll_ba", "Balkans" ,
+                          ifelse (Pop == "c_ll_cr","Carpathians",
+                          ifelse (Pop == "c_ll_to", "Töv",
+                          ifelse (Pop == "c_ll_tu", "Tuva",
+                          ifelse (Pop == "c_ll_ka", "Khentii", 
+                          ifelse (Pop == "c_ll_og", "Ömnögovi", 
+                          ifelse (Pop == "c_ll_vl", "Vladivostok", 
+                          ifelse (Pop == "c_ll_ya", "Yakutia",
+                          ifelse (Pop == "c_lp_sm", "Sierra Morena",
+                          ifelse (Pop == "c_lp_do", "Doñana", NA)))))))))))))))) %>%  group_by(Populations) %>%  summarise(latitude = mean(latitude), longitude=mean(longitude))
+
+
 # As matrix for procrustes analysis.
 
 coord_matrix<-as.matrix(cbind(PC_coordinates$longitude,PC_coordinates$latitude))
 PC_matrix<-as.matrix(cbind(PC_coordinates$PC1,PC_coordinates$PC2))
 
-# Do procrustes.
+# Do procrustes analysis.
 
 p <-procrustes(PC_matrix,coord_matrix,translation=TRUE,dilation=TRUE)
 
@@ -150,13 +357,14 @@ p <-procrustes(PC_matrix,coord_matrix,translation=TRUE,dilation=TRUE)
 
 PCA_procrustes <- data.frame(p$X.new) %>% cbind (., dplyr::select(PC,Ind,Populations,color ))
 
+write.csv(PCA_procrustes, "/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/procrustes_map.csv", row.names =F) 
 
+
+# Order factors for legend:
 
 PCA_procrustes$Populations <- factor (PCA_procrustes$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii", "Ömnögovi",  "Yakutia", "Vladivostok"))
-
 PC_coordinates$Populations <- factor (PCA_procrustes$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii", "Ömnögovi",  "Yakutia", "Vladivostok"))
 
-# Get the map borders:
 
 # Fisrt I get the limits of my PCA and my sampling:
 
@@ -173,105 +381,19 @@ min_long_sampling=min(PC_coordinates$longitude)
 max_lat_sampling=max(PC_coordinates$latitude)
 min_lat_sampling=min(PC_coordinates$latitude)
 
-# I need the same maps for PCA and sampling so I select the maximum of both:
-
-max_long=max(max_long_PCA,max_long_sampling )
-min_long=min(min_long_PCA,min_long_sampling)
-max_lat=max(max_lat_PCA,max_lat_sampling )
-min_lat=min(min_lat_PCA,min_lat_sampling )
-
 
 # Get KML layer
 
-distribution_layer <- readOGR("/Users/marialucenaperez/Desktop/Lynx_lynx distribution.kml")
+distribution_layer <- readOGR("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/Lynx_lynx distribution.kml")
+
+# North png file
+
+img <- readPNG("/Users/marialucenaperez/Owncloud/publico/Images_Maps/imagenes/North.png")
+north_image <- rasterGrob(img, interpolate=TRUE)
 
 
 
-# Define the function for the scale bar:
-
-scalebar = function(x,y,w,n,d, units="km"){
-  # x,y = lower left coordinate of bar
-  # w = width of bar
-  # n = number of divisions on bar
-  # d = distance along each division
-
-  bar = data.frame( 
-    xmin = seq(0.0, n*d, by=d) + x,
-    xmax = seq(0.0, n*d, by=d) + x + d,
-    ymin = y,
-    ymax = y+w,
-    z = rep(c(1,0),n)[1:(n+1)],
-    fill.col = rep(c("black","white"),n)[1:(n+1)])
-
-  labs = data.frame(
-    xlab = c(seq(0.0, (n+1)*d, by=d) + x, x), 
-    ylab = c(rep(y-w*1.5, n+2), y-3*w),
-    text = c(as.character(seq(0.0, (n+1)*d, by=d)), units)
-    )
-  list(bar, labs)
-}
-
-
-sb = scalebar(max_long+5, min_lat-20, 1, 2, 10, "Degrees" )
-
-
-
-x_start_arrow=max_long+18
-x_end_arrow=max_long+18
-y_start_arrow=min_lat-18
-y_end_arrow=min_lat-15
-  
-  
-# PLOT PCA:
-
-title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
-
-PCA_map <- ggplot() +
-  borders(database = "world", fill="white", color="grey")+
-  coord_cartesian (xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20)) +
-  geom_spatial(distribution_layer, fill="seashell3", alpha=0.3) +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-panel.background = element_rect(fill="powderblue")) +
-  geom_segment(arrow=arrow(length=unit(4,"mm"), type="closed", angle=40), 
-                aes(x=x_start_arrow,xend=x_end_arrow,y=y_start_arrow,yend=y_end_arrow), colour="black")+
-  geom_label(aes(x=x_start_arrow, y=y_start_arrow+1, label="N"),
-             size=3, label.padding=unit(1,"mm"), label.r=unit(0.4,"lines"))  +
-  geom_rect(data=sb[[1]], aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fill=z), inherit.aes=F,
-            show.legend = F,  color = "black", fill = sb[[1]]$fill.col) +
-  geom_text(data=sb[[2]], aes(x=xlab, y=ylab, label=text), inherit.aes=F, show.legend = F) +
-  geom_point(data = PCA_procrustes, aes (X1, X2,  fill=Populations), color="dimgrey", size=3, shape=23) + 
-  scale_fill_manual(values = cols) + xlab ("Longitude") + ylab ("Latitude") + ggtitle(title) + theme (legend.position="none")
-  
-
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/maps/",pop,"_PCA_map.pdf", sep=""),  PCA_map ,device = pdf)
-
- 
- # Plot sampling points:
-  
-
-sampling_map <- ggplot() +
-  borders(database = "world", fill="white", color="grey", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
-  coord_map (xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20)) +
-  geom_spatial(distribution_layer, fill="seashell3", alpha=0.3) +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-panel.background = element_rect(fill="powderblue")) +
-  geom_segment(arrow=arrow(length=unit(4,"mm"), type="closed", angle=40), 
-                aes(x=x_start_arrow,xend=x_end_arrow,y=y_start_arrow,yend=y_end_arrow), colour="black")+
-  geom_label(aes(x=x_start_arrow, y=y_start_arrow+1, label="N"),
-             size=3, label.padding=unit(1,"mm"), label.r=unit(0.4,"lines"))  +
-  geom_rect(data=sb[[1]], aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fill=z), inherit.aes=F,
-            show.legend = F,  color = "black", fill = sb[[1]]$fill.col) +
-  geom_text(data=sb[[2]], aes(x=xlab, y=ylab, label=text), inherit.aes=F, show.legend = F) +
-  geom_point(data=PC_coordinates, aes(x=longitude, y=latitude, fill=Populations), size=3, shape=21, color="dimgrey", pch=15)+
-  scale_fill_manual("Populations", values = cols) + xlab ("Longitude") + ylab ("Latitude") +
-  ggtitle("Sampling")  + theme (legend.position="left")
-
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/maps/",pop,"_sampling_map_PCA_coordinates.pdf", sep=""), sampling_map, device = pdf)
-
-
-
-
-# Now, because the PCA is a bit crazy here I would like to plot just with the sampling coordinates:
+############################################  GENERAL MAP #######################################
 
 max_long=max_long_sampling
 min_long=min_long_sampling
@@ -279,204 +401,91 @@ max_lat=max_lat_sampling
 min_lat=min_lat_sampling 
 
 
+general_map <- ggplot() +
+  borders(database = "world", fill="gray95", color="gray95", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
+  geom_spatial(distribution_layer, fill="gray85", alpha=0.5, inherit.aes = NULL, show.legend = F) +
+  theme (legend.position="none",panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_rect(fill="white"), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25)) +
+  geom_point(data=coordenadas_per_pop, aes(x=longitude, y=latitude, fill=Populations), size=2, shape=20) + scale_fill_manual(values = cols) +
+ xlab ("Longitude") + ylab ("Latitude") + 
+  # Values for whole world 
+coord_map (xlim = c(min_long-20, max_long+20),ylim = c(min_lat-13, max_lat+13)) +
+scaleBar(lon = 146, lat = 30, distanceLon = 1000, distanceLat = 10, distanceLegend = 230, dist.unit = "km", orientation = FALSE) 
+
+general_map2 <- cowplot::ggdraw(general_map ) + cowplot::draw_grob(north_image ,x=0.95, y=0.28, width=0.05, height=0.05)
+
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/maps/",pop,"_general_map.pdf", sep=""), general_map2, device = pdf, width = 15.1, height =  13.7 )
+
+# Whole world : 15.1 x 13.7 
+
+
+########################################################################################################## 
+########################################################################################################## 
+
+
+
+
+
+
+
+
+
+
+############################################  SAMPLING MAP #######################################
+
+max_long=max_long_sampling
+min_long=min_long_sampling
+max_lat=max_lat_sampling 
+min_lat=min_lat_sampling 
+
+########################################################################################################## 
+########################################################################################################## 
+
 sampling_map <- ggplot() +
-  borders(database = "world", fill="white", color="grey",xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
-  coord_map (xlim = c(min_long-10, max_long+10),ylim = c(min_lat-10, max_lat+10)) +
-  geom_spatial(distribution_layer, fill="seashell3", alpha=0.3) +
-  geom_segment(arrow=arrow(length=unit(4,"mm"), type="closed", angle=40), 
-                aes(x=x_start_arrow,xend=x_end_arrow,y=y_start_arrow,yend=y_end_arrow), colour="black")+
-  geom_label(aes(x=x_start_arrow, y=y_start_arrow+1, label="N"),
-             size=3, label.padding=unit(1,"mm"), label.r=unit(0.4,"lines"))  +
-  geom_rect(data=sb[[1]], aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fill=z), inherit.aes=F,
-            show.legend = F,  color = "black", fill = sb[[1]]$fill.col) +
-  geom_text(data=sb[[2]], aes(x=xlab, y=ylab, label=text), inherit.aes=F, show.legend = F) +
-  geom_point(data=PC_coordinates, aes(x=longitude, y=latitude, fill=Populations), size=5, shape=21, color="dimgrey", pch=15) +
-  scale_fill_manual("Populations", values = cols) + xlab ("Longitude") + ylab ("Latitude") +
-  ggtitle("Sampling") +
-  theme (legend.position="left", panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-panel.background = element_rect(fill="powderblue"), legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25) )
+  borders(database = "world", fill="gray95", color="gray95", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
+  geom_spatial(distribution_layer, fill="gray85", alpha=0.5, inherit.aes = NULL, show.legend = F) +
+  theme (legend.justification="top", panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_rect(fill="white"), legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25),  
+legend.key = element_rect(colour = 'white', fill = 'white', inherit.blank = T)) +
+  geom_point(data=PC_coordinates, aes(x=longitude, y=latitude, fill=Populations), size=5, shape=21, color="dimgrey", pch=15, inherit.aes = F) +
+   scale_fill_manual("Población",
+  labels = c("Noruega","Balcanes", "Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva", "Töv","Khentii","Ömnögovi", "Vladivostok","Yakutia"),
+  values = cols) + xlab ("Longitud") + ylab ("Latitud") + 
+########################################################################################################## 
+#########################################       CHANGE      ##############################################   
+########################################################################################################## 
+# Whole
+# coord_map (xlim = c(min_long-20, max_long+20),ylim = c(min_lat-13, max_lat+13)) +
+# scaleBar(lon = 146, lat = 30, distanceLon = 1000, distanceLat = 10, distanceLegend = 230, dist.unit = "km", orientation = FALSE) 
+# sampling_map2 <- cowplot::ggdraw(sampling_map) + cowplot::draw_grob(north_image ,x=0.95, y=0.28, width=0.05, height=0.05)
 
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/maps/",pop,"_sampling_map.pdf", sep=""), sampling_map, device = pdf,  width = 50, height = 30, units = "cm")
+# East
+# coord_map (xlim = c(min_long-10, max_long+10),ylim = c(min_lat-10, max_lat+10)) +
+# scaleBar(lon = 140, lat = 35, distanceLon = 1000, distanceLat = 10, distanceLegend = 200, dist.unit = "km", orientation = FALSE) 
+# sampling_map2 <- cowplot::ggdraw(sampling_map) + cowplot::draw_grob(north_image ,x=0.85, y=0.13, width=0.05, height=0.05)
 
+# West
+# coord_map (xlim = c(min_long-10, max_long+10),ylim = c(min_lat-10, max_lat+10)) +
+# scaleBar(lon = 58, lat = 35, distanceLon = 1000, distanceLat = 10, distanceLegend = 200, dist.unit = "km", orientation = FALSE) 
+# sampling_map2 <- cowplot::ggdraw(sampling_map) + cowplot::draw_grob(north_image ,x=0.93, y=0.20, width=0.05, height=0.05)
 
+########################################################################################################## 
 
-```
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/maps/",pop,"_sampling_map.pdf", sep=""), sampling_map2, device = pdf)
 
+# Whole world : 15.1 x 13.7 
+# West: Saving 12.9 x 13.7 in image
 
-
-# For east individuals:
-
-
-```{r}
-
-# PCA projection on map
-
-# http://www.molecularecologist.com/2015/04/procrustes-analyses-in-r/
-library(ggmap) 
-library(mapr)
-library(ggplot2)
-library(raster)
-library("sp")
- library(maps)
-library(MCMCpack)
-library(rworldmap)
-library("ggmap")
-library("optparse")
-library(methods)
-library(optparse)
-library(dplyr)
-library(threejs)
-library(RColorBrewer)
-require("knitr")
-library(rgdal)
-library(grid)
-library("ggspatial")
-
-
-
-# Now we load our PCA analysis:
-
-WORKING_DIR="/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_PCA/"
-
-
-pop=c("c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n030")
-
-
-
-# Read input file
-covar <- read.table(paste(WORKING_DIR,pop, ".covar", sep=''), stringsAsFact=F);
-
-# Read annot file
-annot <- read.table(paste(WORKING_DIR,pop, ".ALL.clst", sep=""), header=TRUE) 
+########################################################################################################## 
+########################################################################################################## 
 
 
 
 
 
-# Parse components to analyze
-
-comp <- c(1,2)
-# comp <- c(2,3)
-# comp <- c(1,3)
 
 
-# Eigenvalues
-eig <- eigen(covar, symm=TRUE);
-eig$val <- eig$val/sum(eig$val);
-cat(signif(eig$val, digits=3)*100,"\n");
-eig$values
-
-
-# Plot
-PC <- as.data.frame(eig$vectors)
-colnames(PC) <- gsub("V", "PC", colnames(PC))
-PC$Pop <- factor(annot$CLUSTER)
-PC$Ind <- factor(annot$IID)
-
-coordenadas <- read.csv("/Users/marialucenaperez/Dropbox/tablas_lince/lynxlynx/x_ll_xx_coordinates.csv", sep =";", dec=",")
-
-
-PC <- PC %>%  mutate(., 
-         Subspecies = ifelse (Pop == "c_ll_po" | Pop == "c_ll_ki" | Pop == "c_ll_la" | Pop == "c_ll_no"  | Pop == "c_ll_ur", "L.l.lynx",        
-                          ifelse(Pop == "c_ll_ba" | Pop == "h_ll_ba", "L.l.balcanicus" ,
-                          ifelse(Pop == "c_ll_cr","L.l.carpathicus",
-                          ifelse(Pop == "c_ll_to" | Pop == "c_ll_tu" | Pop == "c_ll_ka", "L.l.kozlovi", 
-                          ifelse(Pop == "c_ll_og", "L.l.isabellinus", 
-                          ifelse(Pop == "c_ll_vl", "L.l.stroganovi", 
-                          ifelse(Pop == "c_ll_ya", "L.l.wrangeli",     
-                                 NA)))))))) %>% 
-  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Bialowieza",
-                          ifelse (Pop == "c_ll_ur", "Urals",
-                          ifelse (Pop == "c_ll_ki", "Kirov",
-                          ifelse (Pop == "c_ll_la", "Latvia",
-                          ifelse (Pop == "c_ll_no", "Norway",
-                          ifelse (Pop == "c_ll_ba" | Pop == "h_ll_ba", "Balkans" ,
-                          ifelse (Pop == "c_ll_cr","Carpathians",
-                          ifelse (Pop == "c_ll_to", "Töv",
-                          ifelse (Pop == "c_ll_tu", "Tuva",
-                          ifelse (Pop == "c_ll_ka", "Khentii", 
-                          ifelse (Pop == "c_ll_og", "Ömnögovi", 
-                          ifelse (Pop == "c_ll_vl", "Vladivostok", 
-                          ifelse (Pop == "c_ll_ya", "Yakutia",
-                          ifelse (Pop == "c_lp_sm", "Sierra Morena",
-                          ifelse (Pop == "c_lp_do", "Doñana", NA)))))))))))))))) %>% 
-    mutate (., color =  ifelse (Populations == "Bialowieza", brewer.pal(12,"Paired")[4], 
-                      ifelse (Populations == "Urals", brewer.pal(9,"RdPu")[6], 
-                      ifelse (Populations == "Balkans", brewer.pal(12,"Paired")[10], 
-                      ifelse (Populations == "Carpathians", brewer.pal(12,"Paired")[9], 
-                      ifelse (Populations == "Kirov", brewer.pal(12,"Paired")[1], 
-                      ifelse (Populations == "Latvia", brewer.pal(12,"Paired")[3], 
-                      ifelse (Populations == "Norway", brewer.pal(12,"Paired")[2], 
-                      ifelse (Populations == "Töv", brewer.pal(12,"Paired")[12], 
-                      ifelse (Populations == "Tuva", brewer.pal(12,"Paired")[8], 
-                      ifelse (Populations == "Khentii", brewer.pal(12,"Paired")[7], 
-                      ifelse (Populations == "Ömnögovi", brewer.pal(12,"Paired")[11], 
-                      ifelse (Populations == "Vladivostok", brewer.pal(12,"Paired")[5], 
-                      ifelse (Populations == "Yakutia", brewer.pal(12,"Paired")[6],
-                      ifelse (Populations == "Sierra Morena", brewer.pal(8, "Greys") [5],
-                      ifelse (Populations == "Doñana", brewer.pal(8, "Greys") [8], NA)))))))))))))))) %>% 
-  mutate (., seq = ifelse (Ind == "c_ll_vl_0112" | Ind == "c_ll_vl_0112" | Ind == "c_ll_ya_0146" | Ind == "c_ll_cr_0212" | Ind == "c_ll_ki_0090" , "MACROGEN", "CNAG")) 
-
-
-
-cols <- c("Bialowieza"=brewer.pal(12,"Paired")[4], 
-          "Urals"=brewer.pal(11,"BrBG")[9], 
-          "Balkans"=brewer.pal(12,"Paired")[10], 
-          "Carpathians"=brewer.pal(12,"Paired")[9], 
-          "Kirov"=brewer.pal(12,"Paired")[1], 
-          "Latvia"=brewer.pal(12,"Paired")[3], 
-          "Norway"=brewer.pal(12,"Paired")[2], 
-          "Töv"=brewer.pal(12,"Paired")[12], 
-          "Tuva"=brewer.pal(12,"Paired")[8], 
-          "Khentii"=brewer.pal(12,"Paired")[7], 
-          "Ömnögovi"=brewer.pal(12,"Paired")[11], 
-          "Vladivostok"=brewer.pal(12,"Paired")[5], 
-          "Yakutia"=brewer.pal(12,"Paired")[6],
-          "Sierra Morena"=brewer.pal(8, "Greys") [5],
-          "Doñana"=brewer.pal(8, "Greys") [8])
-
-# Join PCA with coordinates data:
-
-PC_coordinates <- inner_join(PC,coordenadas, by =c("Ind"="id"))
-
-     
-# As matrix for procrustes analysis.
-
-coord_matrix<-as.matrix(cbind(PC_coordinates$longitude,PC_coordinates$latitude))
-PC_matrix<-as.matrix(cbind(PC_coordinates$PC1,PC_coordinates$PC2))
-
-# Do procrustes.
-
-p <-procrustes(PC_matrix,coord_matrix,translation=TRUE,dilation=TRUE)
-
-# Cbind with all the infor for the plot.
-
-PCA_procrustes <- data.frame(p$X.new) %>% cbind (., dplyr::select(PC,Ind,Populations,color ))
-
-
-PCA_procrustes$Populations <- factor (PCA_procrustes$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii", "Ömnögovi",  "Yakutia", "Vladivostok"))
-
-PC_coordinates$Populations <- factor (PCA_procrustes$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii", "Ömnögovi",  "Yakutia", "Vladivostok"))
-
-
-# Get the map borders:
-
-# Fisrt I get the limits of my PCA and my sampling:
-
-max_long_PCA=max(PCA_procrustes$X1)
-min_long_PCA=min(PCA_procrustes$X1)
-
-max_lat_PCA=max(PCA_procrustes$X2)
-min_lat_PCA=min(PCA_procrustes$X2)
-
-
-max_long_sampling=max(PC_coordinates$longitude)
-min_long_sampling=min(PC_coordinates$longitude)
-
-max_lat_sampling=max(PC_coordinates$latitude)
-min_lat_sampling=min(PC_coordinates$latitude)
-
-# I need the same maps for PCA and sampling so I select the maximum of both:
+############################################  PROCRUSTES MAP #######################################
 
 max_long=max(max_long_PCA,max_long_sampling )
 min_long=min(min_long_PCA,min_long_sampling)
@@ -484,106 +493,44 @@ max_lat=max(max_lat_PCA,max_lat_sampling )
 min_lat=min(min_lat_PCA,min_lat_sampling )
 
 
-# Get KML layer
-
-distribution_layer <- readOGR("/Users/marialucenaperez/Desktop/Lynx_lynx distribution.kml")
-
-
-
-# Define the function for the scale bar:
-
-scalebar = function(x,y,w,n,d, units="km"){
-  # x,y = lower left coordinate of bar
-  # w = width of bar
-  # n = number of divisions on bar
-  # d = distance along each division
-
-  bar = data.frame( 
-    xmin = seq(0.0, n*d, by=d) + x,
-    xmax = seq(0.0, n*d, by=d) + x + d,
-    ymin = y,
-    ymax = y+w,
-    z = rep(c(1,0),n)[1:(n+1)],
-    fill.col = rep(c("black","white"),n)[1:(n+1)])
-
-  labs = data.frame(
-    xlab = c(seq(0.0, (n+1)*d, by=d) + x, x), 
-    ylab = c(rep(y-w*1.5, n+2), y-3*w),
-    text = c(as.character(seq(0.0, (n+1)*d, by=d)), units)
-    )
-  list(bar, labs)
-}
-
-
-sb = scalebar(max_long+5, min_lat-20, 0.5, 2, 5, "Degrees" )
-
-
-
-x_start_arrow=max_long+18
-x_end_arrow=max_long+18
-y_start_arrow=min_lat-18
-y_end_arrow=min_lat-15
-  
-  
-# PLOT PCA:
-
 title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
 
 PCA_map <- ggplot() +
-  borders(database = "world", fill="white", color="grey")+
-  coord_cartesian (xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20)) +
-  geom_spatial(distribution_layer, fill="seashell3", alpha=0.3) +
-  geom_segment(arrow=arrow(length=unit(4,"mm"), type="closed", angle=40), 
-                aes(x=x_start_arrow,xend=x_end_arrow,y=y_start_arrow,yend=y_end_arrow), colour="black")+
-  geom_label(aes(x=x_start_arrow, y=y_start_arrow+1, label="N"),
-             size=3, label.padding=unit(1,"mm"), label.r=unit(0.4,"lines"))  +
-  geom_rect(data=sb[[1]], aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fill=z), inherit.aes=F,
-            show.legend = F,  color = "black", fill = sb[[1]]$fill.col) +
-  geom_text(data=sb[[2]], aes(x=xlab, y=ylab, label=text), inherit.aes=F, show.legend = F) +
+  borders(database = "world", fill="gray95", color="gray95", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
+ geom_spatial(distribution_layer, fill="gray85", alpha=0.5, inherit.aes = NULL, show.legend = F) +
+  theme (legend.position="left", panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_rect(fill="white"), legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25),  
+legend.key = element_rect(colour = 'white', fill = 'white', inherit.blank = T)) +
   geom_point(data = PCA_procrustes, aes (X1, X2,  fill=Populations), color="dimgrey", size=3, shape=23) +
-  scale_fill_manual(values = cols) + xlab ("Longitude") + ylab ("Latitude") + ggtitle(title) + 
-  theme (legend.position="none", panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-panel.background = element_rect(fill="powderblue"), legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=22))
-  
+  ggtitle(title) + 
+  scale_fill_manual("Populations",
+# labels = c("Noruega","Balcanes", "Carpatos", "Bialowieza","Letonia","Kirov","Urales","Tuva", "Töv","Khentii","Ömnögovi", "Vladivostok","Yakutia"),
+  values = cols) + xlab ("Longitude") + ylab ("Latitude") + 
+########################################################################################################## 
+#########################################       CHANGE      ##############################################   
+########################################################################################################## 
+# Whole
+# coord_cartesian (xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20)) +
+# scaleBar(lon = 148, lat = 25, distanceLon = 1000, distanceLat = 10, distanceLegend = 230, dist.unit = "km", orientation = FALSE) 
+# PCA_map2 <- cowplot::ggdraw(PCA_map) + cowplot::draw_grob(north_image ,x=0.95, y=0.28, width=0.05, height=0.05)
 
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/maps/",pop,"_PCA_map.pdf", sep=""),  PCA_map ,device = pdf,   width = 20, height = 30, units = "cm")
+# East  
+# coord_cartesian (xlim = c(min_long-10, max_long+10),ylim = c(min_lat-10, max_lat+10)) +
+# scaleBar(lon = 138, lat = 27, distanceLon = 1000, distanceLat = 10, distanceLegend = 200, dist.unit = "km", orientation = FALSE) 
+# PCA_map2 <- cowplot::ggdraw(PCA_map) + cowplot::draw_grob(north_image ,x=0.89, y=0.13, width=0.05, height=0.05)
 
+# West
+coord_map (xlim = c(min_long-10, max_long+10),ylim = c(min_lat-10, max_lat+10)) +
+scaleBar(lon = 59, lat = 33, distanceLon = 1000, distanceLat = 10, distanceLegend = 100, dist.unit = "km", orientation = FALSE) 
+PCA_map2 <- cowplot::ggdraw(PCA_map) + cowplot::draw_grob(north_image ,x=0.93, y=0.20, width=0.05, height=0.05)
 
+########################################################################################################## 
 
- # Plot sampling points:
-  
-
-sampling_map <- ggplot() +
-  borders(database = "world", fill="white", color="grey", xlim = c(min_long-20, max_long+20), ylim = c(min_lat-20, max_lat+20))+
-  coord_cartesian (xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20)) +
-  geom_spatial(distribution_layer, fill="seashell3", alpha=0.3) +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-panel.background = element_rect(fill="powderblue")) +
-  geom_segment(arrow=arrow(length=unit(4,"mm"), type="closed", angle=40), 
-                aes(x=x_start_arrow,xend=x_end_arrow,y=y_start_arrow,yend=y_end_arrow), colour="black")+
-  geom_label(aes(x=x_start_arrow, y=y_start_arrow+1, label="N"),
-             size=3, label.padding=unit(1,"mm"), label.r=unit(0.4,"lines"))  +
-  geom_rect(data=sb[[1]], aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fill=z), inherit.aes=F,
-            show.legend = F,  color = "black", fill = sb[[1]]$fill.col) +
-  geom_text(data=sb[[2]], aes(x=xlab, y=ylab, label=text), inherit.aes=F, show.legend = F) +
-  geom_point(data=PC_coordinates, aes(x=longitude, y=latitude, fill=Populations), size=3, shape=21, color="dimgrey", pch=15)+
-  scale_fill_manual("Populations", values = cols) + xlab ("Longitude") + ylab ("Latitude") +
-  ggtitle("Sampling")  + 
-  theme (legend.position="none", panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-panel.background = element_rect(fill="powderblue"), legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=22)) 
-  
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/maps/",pop,"_sampling_map.pdf", sep=""), sampling_map, device = pdf, width = 30, height = 30, units = "cm")
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/maps/",pop,"_PCA_map.pdf", sep=""),  PCA_map2  ,device = pdf)
 
 
 
 
-
-
-ggplot() +
-  borders(database = "world",  fill="white", color="grey", xlim = c(min_long-20, max_long+20), ylim = c(min_lat-20, max_lat+20)) +
-  coord_map(xlim = c(min_long-20, max_long+20), ylim = c(min_lat-20, max_lat+20))
 
 ```
-
-
 
