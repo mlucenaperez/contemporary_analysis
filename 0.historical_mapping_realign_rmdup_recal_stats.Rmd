@@ -890,11 +890,30 @@ samtools view -F 4 -q 30 -uS ${i}_unmerged.sam | samtools sort - ${i}_unmerged.s
 
 ### remove duplicates
 
+done
+
+
+# Cuando he lanzado el mapeo ha puesto esto:
+#[bwa_aln] 17bp reads: max_diff = 2
+#[bwa_aln] 38bp reads: max_diff = 3
+#[bwa_aln] 64bp reads: max_diff = 4
+#[bwa_aln] 93bp reads: max_diff = 5
+#[bwa_aln] 124bp reads: max_diff = 6
+#[bwa_aln] 157bp reads: max_diff = 7
+#[bwa_aln] 190bp reads: max_diff = 8
+#[bwa_aln] 225bp reads: max_diff = 9
+
+
+
+
 
 samtools rmdup -S ${i}.sort.bam ${i}.sort.rmdup.bam
 
 samtools rmdup -S ${i}_unmerged.sort.bam ${i}_unmerged.sort.rmdup.bam
 
+
+
+done
 
 ### index bam files
 
