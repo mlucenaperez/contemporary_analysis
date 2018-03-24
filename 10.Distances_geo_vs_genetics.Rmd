@@ -1,0 +1,221 @@
+---
+title: "10.Distances_geo_vs_genetics"
+output: html_document
+---
+
+# Distancias geográficas
+
+Primero cargamos la tabla de distancias geograficas. Esta tabla está un poco modificada para que se pueda leer como un csv. A esta tabla le vamos a tener que hacer modificaciones para poder hacer los análisis. En este script hacemos un heatmap sobre la matriz que creamos en base a esa tabla de distancias geográficas como un sanity check. 
+
+```{r}
+
+library(tidyr)
+library(ggplot2)
+library(gplots)
+library(RColorBrewer)
+library(rlang)
+library(reshape2)
+library(ape)
+library(ade4) # For mantel test
+library(dplyr)
+
+
+# Este archivo tiene en ocasiones una sola entrada que engloba a varios individuos. Para hacer unnest necesito un lista y lo logro con transform. 
+sequence_samples <- read.csv("/Users/marialucenaperez/Dropbox/PhD/2017-08-31_sample_sequenced_sample_information_modif.csv", header=T, sep=";")
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/Geo_distances/"
+geo_distances <- read.csv("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/Geo_distances/distance_winkel_tripel_to_modify_in_R.csv", sep=";") %>% 
+  mutate(Ind1=as.character(Ind1),
+         Ind2=as.character(Ind2)) %>% 
+  transform(Ind2 = strsplit(Ind2,",")) %>%
+  unnest(Ind2) 
+
+# El merging se puede hacer secuencial para ver que todo va saliento                 
+
+geo_distances_proper_names <- dplyr::left_join( geo_distances, sequence_samples, by = c("Ind1"="sample" )) %>% dplyr::select(name,Ind1,Ind2,distances_km_Winkel_Tripel) %>% dplyr::rename(ind1=name) %>% dplyr::left_join(., sequence_samples, by = c("Ind2"="sample")) %>% dplyr::select(name,Ind1,ind1,Ind2,distances_km_Winkel_Tripel) %>% dplyr::rename(ind2=name) %>% dplyr::select(ind1,ind2,distances_km_Winkel_Tripel) %>% .[complete.cases(.), ] %>% mutate(ind1=as.character(ind1),ind2=as.character(ind2)) %>% arrange(.$ind1,.$ind2)
+  
+# I made another dataframe with the inverse values.
+
+geo_distances_proper_names_2 <- geo_distances_proper_names %>% rename(ind2=ind1, ind1=ind2) 
+
+# Merge both
+
+geo_distances_complete <- rbind (geo_distances_proper_names, geo_distances_proper_names_2)
+geo_distances_complete =geo_distances_complete [with(geo_distances_complete ,order(ind1,ind2)),]
+
+# Ojo que hasta aqui faltan los pares de comparción que son 0, ejemplo c_ll_cr_2017 consigo mismo o con c_ll_209 con el que comparte localización. 
+
+
+# Do a matrix
+geo_distances_complete_matrix <- acast(geo_distances_complete, ind1 ~ ind2 , value.var='distances_km_Winkel_Tripel', fun.aggregate=sum, margins=F)
+
+
+#########################################################
+### C) Customizing and plotting the heat map
+#########################################################
+
+# creates a own color palette from red to green
+my_palette <- colorRampPalette(c("red", "yellow", "green"))(n = 299)
+
+# (optional) defines the color breaks manually for a "skewed" color transition
+col_breaks = c(seq(-1,0,length=100),  # for red
+  seq(0.01,0.8,length=100),           # for yellow
+  seq(0.81,1,length=100))             # for green
+
+# creates a 5 x 5 inch image
+png(paste (wd, "geographic_distances_heat_map", ".png", sep=""),    # create PNG for the heat map        
+  width = 20,        # 5 x 300 pixels
+  height =20,
+  units = "cm",
+  res = 300,            # 300 pixels per inch
+  pointsize = 10)        # smaller font size
+
+heatmap.2(geo_distances_complete_matrix ,
+  symm = T,
+  trace="none",         # turns off trace lines inside the heat map
+  main = "Geographical distance matrix", # heat map title
+  density.info="none",  # turns off density plot inside color legend
+  col=my_palette,     # use on color palette defined earlier
+  Colv="NA", # turn off column clustering
+  Rowv="NA", 
+  dendrogram="none",labCol=unique(geo_distances_complete$ind1))
+
+dev.off()
+
+
+# distance_nj_matrix <- nj(as.dist(geo_distances_complete_matrix))
+# plot.phylo(distance_nj_matrix, type = "u" ,  rotate.tree = -110, lab4ut="axial", edge.width=1)
+
+
+```
+
+# Comparison of the two matrix
+
+Now I will load and compare the two matrix. 
+
+```{r}
+
+genetic_distances <- read.table("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_genetic_distance/c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080.dist", sep ="\t", header=F, dec=".",skip = 2) 
+
+
+
+ind_names <- genetic_distances[,1]                            # assign labels in column 1 to "rnames"
+genetic_distances_matrix  <- data.matrix(genetic_distances[,2:ncol(genetic_distances)])  # transform column 2-5 into a matrix
+rownames(genetic_distances_matrix) <- ind_names    
+colnames(genetic_distances_matrix) <- ind_names
+
+# Useful info(https://stackoverflow.com/questions/25015788/correlation-matrix-in-r)
+
+mantel.rtest(as.dist(geo_distances_complete_matrix), as.dist(genetic_distances_matrix), nrepet = 99)
+
+
+
+cor(geo_distances_complete_matrix, genetic_distances_matrix)
+cor(c(geo_distances_complete_matrix), c(genetic_distances_matrix))
+cor(c(as.matrix(geo_distances_complete_matrix)), c(as.matrix(genetic_distances_matrix)))
+
+
+# Removing poland and norway to do the mantel test
+
+library(tibble)
+
+# First I remove them from the geographical distance matrix. 
+geo_distances_complete_matrix_no_drift <- geo_distances_complete_matrix %>% 
+  as.data.frame (.) %>%  
+dplyr:: select(-starts_with("c_ll_no")) %>% 
+  dplyr::select(-starts_with("c_ll_po")) %>% 
+  dplyr::select(-starts_with("c_ll_ba")) %>% 
+  dplyr::select(-starts_with("h_ll_ba")) %>% 
+    rownames_to_column('id') %>%
+    filter(., !grepl("c_ll_po", .$id)) %>%
+    filter(., !grepl("c_ll_no", .$id)) %>% 
+    filter(., !grepl("c_ll_ba", .$id)) %>% 
+    filter(., !grepl("h_ll_ba", .$id)) %>% 
+    column_to_rownames('id') %>% data.matrix(.)
+  
+
+  
+genetic_distances_matrix_no_drift <- genetic_distances_matrix %>% 
+  as.data.frame (.) %>% 
+  dplyr:: select(-starts_with("c_ll_no")) %>% 
+  dplyr::select(-starts_with("c_ll_po")) %>% 
+  dplyr::select(-starts_with("c_ll_ba")) %>% 
+  dplyr::select(-starts_with("h_ll_ba")) %>% 
+    rownames_to_column('id') %>%
+    filter(., !grepl("c_ll_po", .$id)) %>%
+    filter(., !grepl("c_ll_no", .$id)) %>% 
+    filter(., !grepl("c_ll_ba", .$id)) %>% 
+    filter(., !grepl("h_ll_ba", .$id)) %>% 
+    column_to_rownames('id') %>% data.matrix(.)
+  
+
+mantel(as.dist(geo_distances_complete_matrix_no_drift), as.dist(genetic_distances_matrix_no_drift))
+mantel(as.dist(geo_distances_complete_matrix), as.dist(genetic_distances_matrix))
+
+
+
+# Useful paper: http://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1006911#pgen-1006911-g001
+
+```
+
+# Now I will try to draw the correlation. First I will need to create a table. 
+
+```{r}
+ 
+ geo_genetic_distances <- melt(geo_distances_complete_matrix)  %>% 
+  rename(ind1=Var1, ind2=Var2, distances_km_Winkel_Tripel=value) %>% 
+  mutate (pair_ind=paste(ind1,ind2, sep="-")) %>% 
+  full_join ((melt(genetic_distances_matrix) %>%   mutate (pair_ind=paste(Var1,Var2, sep="-"))),., by ="pair_ind" ) %>% 
+  rename (genetic_distance=value, geographic_distance=distances_km_Winkel_Tripel) %>% 
+  filter(complete.cases(.)) %>% 
+  mutate (pop1=substr(ind1, 0, 7)) %>% 
+  mutate (pop2=substr(ind2, 0, 7)) %>% 
+  mutate (area_pop1 =  ifelse (pop1 == "c_ll_po" | pop1 == "c_ll_ur" | pop1 == "c_ll_ki" | pop1 == "c_ll_la" | pop1 == "c_ll_no" | pop1 == "c_ll_ba" | pop1 == "h_ll_ba" | 
+                                     pop1 == "c_ll_cr" , "West" , 
+                           ifelse (pop1 == "c_ll_to" | pop1 == "c_ll_tu" | pop1 == "c_ll_ka" | pop1 == "c_ll_og" | pop1 == "c_ll_vl" | pop1 == "c_ll_ya", "East", NA))) %>% 
+  mutate (area_pop2 =  ifelse (pop2 == "c_ll_po" | pop2 == "c_ll_ur" | pop2 == "c_ll_ki" | pop2 == "c_ll_la" | pop2 == "c_ll_no" | pop2 == "c_ll_ba" | pop2 == "h_ll_ba" | 
+                                     pop2 == "c_ll_cr" , "West" , 
+                           ifelse (pop2 == "c_ll_to" | pop2 == "c_ll_tu" | pop2 == "c_ll_ka" | pop2 == "c_ll_og" | pop2 == "c_ll_vl" | pop2 == "c_ll_ya", "East", NA))) %>% 
+  mutate (comparison = ifelse (area_pop1 == "West" & area_pop2 =="West", "West-West",
+                       ifelse (area_pop1=="West" & area_pop2 =="East", "West-East",
+                       ifelse (area_pop1=="East" & area_pop2 =="West", "West-East",
+                       ifelse (area_pop1=="East" & area_pop2 =="East", "East-East", NA))))) %>% 
+  mutate (self_comparison =ifelse (ind1==ind2, "SELF", "DISTINCT")) %>% 
+  filter(self_comparison!="SELF") %>% 
+  filter(geographic_distance!=0) %>% 
+ filter(pop1 != "c_ll_ba" , pop1!="h_ll_ba", pop2 != "c_ll_ba" , pop2!="h_ll_ba")  %>% 
+ filter(pop1 != "c_ll_no" , pop1!="c_ll_po", pop2 != "c_ll_no" , pop2!="c_ll_po") %>% 
+filter(pop1 != "c_ll_cr" , pop2 != "c_ll_cr") 
+
+
+
+ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, fill=comparison, color=comparison)) +
+  geom_point(alpha = 0.01) +
+  theme_classic() +
+  geom_smooth(method='lm') 
+  
+
+ggsave("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/plot_comparison_distances_no_balcans_poland_norway-carpathians.png")
+
+mod1 <- aov (geo_genetic_distances$genetic_distance ~ geo_genetic_distances$geographic_distance * geo_genetic_distances$comparison) 
+
+summary(mod1) 
+ 
+ 
+```
+
+```{r}
+# Now I will create a matrix with west-west east-west east-east comparisons.
+
+geo_genetic_distances_yes_no_matrix_no_drift <- geo_genetic_distances %>% mutate(west_east= ifelse (comparison == "West-East", "1", "0")) %>% select (ind1, ind2, west_east) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1') %>% data.matrix(.)
+
+mantel.partial(as.dist(genetic_distances_matrix_no_drift), as.dist(geo_distances_complete_matrix_no_drift), geo_genetic_distances_yes_no_matrix, method = "pearson", permutations = 999)
+
+geo_genetic_distances_cualitative_matrix_no_drift <- geo_genetic_distances %>% select (ind1, ind2, comparison) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1')
+
+geo_genetic_distances_cualitative_matrix_no_drift
+
+```
+
+
+
