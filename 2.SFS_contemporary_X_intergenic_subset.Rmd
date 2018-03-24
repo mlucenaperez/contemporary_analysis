@@ -3,7 +3,12 @@ title: "2.SFS_contemporary_intergenic_X_subset"
 output: html_document
 ---
 
+This file computes the diversity of the blasted Bam files from intergenic_capture files. This files originates as follow:
 
+WG_BAM -- subset_intergenic\*1 --> BAM_INTERGENIC -- subset_capture\*1 --> BAM_INTERGENIC_CAPTURE -- blast filter\*2 --> BAM_INTERGENIC_CAPTURE_FILTERED
+
+*1 - This subset is compute in script named: subset_bam_files_intergenic.
+*2 - This blast is compute in the script named: remove_contamination_from_contemporary_balkans (although we did it with all lynx lynx samples) in remove_contamination repository. 
 
 # 0. Coverage of blasted samples
 
