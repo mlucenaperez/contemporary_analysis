@@ -181,7 +181,7 @@ library(magrittr)
 library(ggplot2)
 library(ape)
 
-wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_fst/"
+wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_fst/"
 
 #Look for all global fts table 
 
@@ -191,24 +191,32 @@ fst_table = list.files(path = wd, pattern="*fsts.csv")
 # Define function to plot trees
 
 plot_FST_nj_weighted_unrooted_tree <- function(wd,df,filter_pattern,subset_name ){
-first.pop <- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%
-    mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
-    filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
-    select(POP1) %>% slice(c(1))%>% as.character()
-  last.pop<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%
-    mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
-    filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
+
+  first.pop <- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%     filter (POP1!="x_ll_ba_n003") %>% 
+    filter (POP2!="x_ll_ba_n003") %>% 
+    # Esta parte es para quitar poblaciones grandes en caso de que tuviera valores para toda la distribución por ejemplo. Yo no lo quiero porque tengo mongolia junto y no me interesa quitarlo. 
+    # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
+    # filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
+    select(POP1) %>% slice(c(1)) %>% as.character()
+  
+  last.pop<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%  filter (POP1!="x_ll_ba_n003") %>% 
+    filter (POP2!="x_ll_ba_n003") %>% 
+    # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
+    # filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
     select(POP2) %>% slice(n())%>% as.character()
  
-  fst.w_matrix<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%
+  fst.w_matrix<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>% filter (POP1!="x_ll_ba_n003") %>% 
+    filter (POP2!="x_ll_ba_n003") %>% 
     rbind(c(first.pop,first.pop,NA,NA),
           c(last.pop,last.pop,NA,NA)) %>%
-    mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
-    filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
+   # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
+   #  filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
     select(POP1,POP2,FSTweight)%>% 
     spread(POP2,FSTweight)%>%
-    tibble::remove_rownames() %>% tibble::column_to_rownames("POP1")
-  
+    tibble::remove_rownames() %>% tibble::column_to_rownames("POP1")  
+    
+    
+    
   ## plot Neighbouring-Joining Tree
  
     pdf(paste0(wd,subset_name, gsub(".fsts.csv", "_weighted.pdf",df)), paper =  "a4" )
