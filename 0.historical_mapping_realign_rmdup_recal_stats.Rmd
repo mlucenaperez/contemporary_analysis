@@ -808,6 +808,7 @@ Aparently there's no read left.
 
 After talking with Johanna, we are going to map using BWA-aln y BWA-sampe.
 
+# -------------------
 
 # Mapping again
 
@@ -826,10 +827,6 @@ declare -A BARCODEID=(["C9KH6ANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KN6ANXX_
 
 
 ```
-
-# OJO! 
-Hay dos fastq que se llaman igual! C9KNWANXX_2_LYNX7-709ii5-4 en LYNX_14 y en LYNX_17.
-
 
 
 ## 	Aligment BWA-MEM	
@@ -864,16 +861,37 @@ echo "${i}"
 # -l 999 = seeding disabled
 # -t 8 = number of threads
 
-bwa aln -l 999 -t 8 $REF ${i}_merged.fastq.gz > ${i}.sai
-bwa aln -l 999 -t 8 $REF ${i}_R1_trimmed2.fastq.gz > ${i}_1.sai #you can now use a fastq file.
-bwa aln -l 999 -t 8 $REF ${i}_R2_trimmed2.fastq.gz > ${i}_2.sai 
+bwa aln -l 999 -t 10 $REF ${i}_merged.fastq.gz > ${i}.sai
 
+done
+
+for i in ${ARRAY[@]}
+do
+echo "${i}"
+
+bwa aln -l 999 -t 4 $REF ${i}_R1_trimmed2.fastq.gz > ${i}_1.sai #you can now use a fastq file.
+done
+
+
+for i in ${ARRAY[@]}
+do
+echo "${i}"
+bwa aln -l 999 -t 4 $REF ${i}_R2_trimmed2.fastq.gz > ${i}_2.sai 
+done
+
+for i in ${ARRAY[@]}
+do
+echo "${i}"
 ### map reads
 
-bwa samse /raid6/mlucena/lynx_genome/lp23.fa ${i}.sai ${i}_merged.fastq.gz > ${i}.sam
-bwa sampe /raid6/mlucena/lynx_genome/lp23.fa ${i}_1.sai ${i}_2.sai ${i}_R1_trimmed2.fastq.gz  ${i}_R2_trimmed.fastq.gz > ${i}_unmerged.sam 
+bwa samse $REF ${i}.sai ${i}_merged.fastq.gz > ${i}.sam
+bwa sampe $REF ${i}_1.sai ${i}_2.sai ${i}_R1_trimmed2.fastq.gz  ${i}_R2_trimmed.fastq.gz > ${i}_unmerged.sam 
+done
 
 
+for i in ${ARRAY[@]}
+do
+echo "${i}"
 #########################
 # 	samtools	#
 #########################
@@ -1046,4 +1064,77 @@ samtools depth $sample > $sample.covpersite
 done
 ```
 
+
+# -------------------
+# Filtering small reads
+
+I observed that the reads I am using have a representation of small size reads, so I will remove those. They are already in /home/GRUPOS/grupolince/filtering_contaminant_reads/
+
+```{bash}
+
+cd /home/GRUPOS/grupolince/filtering_contaminant_reads/BAM_files/
+
+
+for sample in h_lp_mt_*_intergenic_capture.bam
+do 
+echo $sample
+samtools view -h $sample | awk 'length($10) > 30 || $1 ~ /^@/' | samtools view -bS - > ${sample/capture.bam/capture_nosmallreads.bam}
+done
+
+
+# Calculating the new read depth.
+
+for sample in *capture_nosmallreads.bam 
+do
+samtools view $sample | cut -f 10 | perl -ne 'chomp;print length($_) . "\n"' | sort | uniq -c > ${sample/.bam/.lengthdistribution}
+done
+
+
+# Now I would like to plot the results, so I download them:
+
+scp mlucena@genomics-b.ebd.csic.es:/home/GRUPOS/grupolince/filtering_contaminant_reads/BAM_files/*lengthdistribution /Users/marialucenaperez/Dropbox/PhD/ancient_historical/diario/historico/20180324_length_distribution_insert_size
+
+
+```
+
+Now I plot them:
+
+```{r}
+library(dplyr)
+library(plyr)
+library(ggplot2)
+library(gridExtra)
+library(stringr)
+
+
+wd <- ("/Users/marialucenaperez/Dropbox/PhD/ancient_historical/diario/historico/20180324_length_distribution_insert_size/")
+my_files_lengthdistribution = list.files(path = wd, pattern="*lengthdistribution$") 
+datalist = list()
+
+for (i in 1:length(my_files_lengthdistribution)){
+dat <- read.table(paste(wd,my_files_lengthdistribution[i], sep=""),head=F, stringsAsFactors=F)
+# dat$i <- i  # maybe you want to keep track of which iteration produced it?
+names(dat)[names(dat) == "V1"] <- my_files_lengthdistribution[i] # replacing name of the first column by name of the dataframe so that latter I could join and keep track of the sample 
+datalist[[i]]<- dat # add it to your list
+ggplot (data = dat, aes (x=dat$V2, y = select(dat,contains(".lengthdistribution")))) +
+  geom_bar(stat = "identity") +
+  scale_x_continuous(breaks=seq(0,1000,10))
+ggsave(paste (wd,names(select(dat,contains(".lengthdistribution"))), ".barplot.pdf", sep =""))
+}
+
+
+
+# big_data = do.call(rbind, datalist) -> If you want to join all the column. 
+
+length_distribution_all <- join_all(datalist, by=names(datalist[[2]][2])) %>% arrange (., V2) %>% 
+  mutate (., groups = if_else (V2 < 126, "A", if_else(V2==126, "B", "C")))
+
+ggplot (length_distribution_all, aes())
+
+collapsed <- data.frame(rbind(colSums(filter(length_distribution_all, groups=="A")%>%select(-groups, -V2)), colSums(filter(length_distribution_all, groups=="B")%>%select(-groups, -V2)))) 
+final <- as.data.frame(t(collapsed))
+colnames(final) <- c("less_126","equal_126") 
+final_ratio <- final %>% mutate (final, ratio_less_divided_equal = less_126/equal_126)
+
+```
 
