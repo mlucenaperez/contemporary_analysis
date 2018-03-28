@@ -29,11 +29,6 @@ Lynx lynx, oriental populations:
 c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n030
 
 
-Lynx lynx, west:
-
-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur_n050
-
-
 ```{bash}
 
 # We are now performing a principal component analyses (PCA) without relying on called genotypes, but rather by taking their uncertainty into account. 
@@ -51,10 +46,10 @@ cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_PCA
 #To launch one by one ( because otherwise it's too slow I'll launch single pops in a and groups in b)
 #Lanzo cada uno en una sesión de screen diferente y con un log distinto ( mediante script). lanzo el script conpleto dandole como input el csv que acabo de crear. Ejemplo:
 
-screen -S pca_lynx_lynx_west
-script pca_lynx_lynx_west.log
+screen -S pca_lynx_lynx_oriental
+script pca_lynx_lynx_oriental.log
 
-POP="c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur"  # <--CHANGE POP HERE
+POP="c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl"  # <--CHANGE POP HERE
 
 
 read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < /home/mlucena/ANGSD_analysis/depth_calculus/"$POP"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
@@ -212,7 +207,7 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analy
 ## R representation
 
 ```{r "setup", include=FALSE}
-library("optparse")
+install.packages("optparse")
 library(methods)
 library(optparse)
 library(ggplot2)
@@ -281,51 +276,57 @@ PC <- PC %>%  mutate(.,
                           ifelse(Pop == "c_ll_vl", "L.l.stroganovi", 
                           ifelse(Pop == "c_ll_ya", "L.l.wrangeli",     
                                  NA)))))))) %>% 
-  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Bialowieza",
+  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Poland",
                           ifelse (Pop == "c_ll_ur", "Urals",
                           ifelse (Pop == "c_ll_ki", "Kirov",
                           ifelse (Pop == "c_ll_la", "Latvia",
                           ifelse (Pop == "c_ll_no", "Norway",
                           ifelse (Pop == "c_ll_ba" | Pop == "h_ll_ba", "Balkans" ,
                           ifelse (Pop == "c_ll_cr","Carpathians",
-                          ifelse (Pop == "c_ll_to", "Töv",
+                          ifelse (Pop == "c_ll_to", "Tov",
                           ifelse (Pop == "c_ll_tu", "Tuva",
-                          ifelse (Pop == "c_ll_ka", "Khentii", 
-                          ifelse (Pop == "c_ll_og", "Ömnögovi", 
+                          ifelse (Pop == "c_ll_ka", "Khentii-Aimag", 
+                          ifelse (Pop == "c_ll_og", "Omnogovi", 
                           ifelse (Pop == "c_ll_vl", "Vladivostok", 
                           ifelse (Pop == "c_ll_ya", "Yakutia",
                           ifelse (Pop == "c_lp_sm", "Sierra Morena",
                           ifelse (Pop == "c_lp_do", "Doñana", NA)))))))))))))))) %>% 
+<<<<<<< HEAD
+    mutate (., color =  ifelse (Populations == "Poland", brewer.pal(12,"Paired")[4], 
+                      ifelse (Populations == "Urals", brewer.pal(9,"RdPu")[6], 
+=======
     mutate (., color =  ifelse (Populations == "Bialowieza", brewer.pal(12,"Paired")[4], 
                       ifelse (Populations == "Urals", brewer.pal(11,"BrBG")[9], 
+>>>>>>> fffcaa59ba6b1a711d0220af8c72dd218ffaa19b
                       ifelse (Populations == "Balkans", brewer.pal(12,"Paired")[10], 
                       ifelse (Populations == "Carpathians", brewer.pal(12,"Paired")[9], 
                       ifelse (Populations == "Kirov", brewer.pal(12,"Paired")[1], 
                       ifelse (Populations == "Latvia", brewer.pal(12,"Paired")[3], 
                       ifelse (Populations == "Norway", brewer.pal(12,"Paired")[2], 
-                      ifelse (Populations == "Töv", brewer.pal(12,"Paired")[12], 
+                      ifelse (Populations == "Tov", brewer.pal(12,"Paired")[12], 
                       ifelse (Populations == "Tuva", brewer.pal(12,"Paired")[8], 
-                      ifelse (Populations == "Khentii", brewer.pal(12,"Paired")[7], 
-                      ifelse (Populations == "Ömnögovi", brewer.pal(12,"Paired")[11], 
+                      ifelse (Populations == "Khentii-Aimag", brewer.pal(12,"Paired")[7], 
+                      ifelse (Populations == "Omnogovi", brewer.pal(12,"Paired")[11], 
                       ifelse (Populations == "Vladivostok", brewer.pal(12,"Paired")[5], 
                       ifelse (Populations == "Yakutia", brewer.pal(12,"Paired")[6],
                       ifelse (Populations == "Sierra Morena", brewer.pal(8, "Greys") [5],
                       ifelse (Populations == "Doñana", brewer.pal(8, "Greys") [8], NA)))))))))))))))) %>% 
   mutate (., seq = ifelse (Ind == "c_ll_vl_0112" | Ind == "c_ll_vl_0112" | Ind == "c_ll_ya_0146" | Ind == "c_ll_cr_0212" | Ind == "c_ll_ki_0090" , "MACROGEN", "CNAG"))
 
-
-
-cols <- c("Bialowieza"=brewer.pal(12,"Paired")[4], 
-          "Urals"=brewer.pal(11,"BrBG")[9], 
+                           
+                           
+                           
+cols <- c("Poland"=brewer.pal(12,"Paired")[4], 
+          "Urals"=brewer.pal(9,"RdPu")[6], 
           "Balkans"=brewer.pal(12,"Paired")[10], 
           "Carpathians"=brewer.pal(12,"Paired")[9], 
           "Kirov"=brewer.pal(12,"Paired")[1], 
           "Latvia"=brewer.pal(12,"Paired")[3], 
           "Norway"=brewer.pal(12,"Paired")[2], 
-          "Töv"=brewer.pal(12,"Paired")[12], 
+          "Tov"=brewer.pal(12,"Paired")[12], 
           "Tuva"=brewer.pal(12,"Paired")[8], 
-          "Khentii"=brewer.pal(12,"Paired")[7], 
-          "Ömnögovi"=brewer.pal(12,"Paired")[11], 
+          "Khentii-Aimag"=brewer.pal(12,"Paired")[7], 
+          "Omnogovi"=brewer.pal(12,"Paired")[11], 
           "Vladivostok"=brewer.pal(12,"Paired")[5], 
           "Yakutia"=brewer.pal(12,"Paired")[6],
           "Sierra Morena"=brewer.pal(8, "Greys") [5],
@@ -355,6 +356,12 @@ y_axis = paste("PC",comp[2],sep="")
 #   scale_shape_manual(values=1:7)
 
 ggplot() + 
+<<<<<<< HEAD
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations"), size = 5) + 
+  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic() + theme(text = element_text(size=20)) 
+ ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
+
+=======
   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Populations"), size = 5) + 
 scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic() +
  ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
@@ -392,6 +399,7 @@ ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2_reverse_axis_spanish.pdf", sep="
 
  
  
+>>>>>>> fffcaa59ba6b1a711d0220af8c72dd218ffaa19b
 #ggplot() + 
 #  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations", shape="seq"), size = 5) + 
 #  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
@@ -402,7 +410,7 @@ ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2_reverse_axis_spanish.pdf", sep="
 
 ggplot() + 
   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Subspecies"), size = 5)  +
-  ggtitle(title) + theme_classic()
+  ggtitle(title) + theme_classic() + theme(text = element_text(size=20)) 
   ggsave(paste(WORKING_DIR,pop, "_pca_subspecies_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
 
   
@@ -423,24 +431,19 @@ ggplot() +
 
 scatterplot3js(PC$PC1, PC$PC2, PC$PC3, 
                 col=PC$color,  labels=PC$Ind,
-               size=0.8, grid=FALSE, renderer = "canvas", axis =F)
+               size=0.7, grid=FALSE, renderer = "canvas", axis =F)
 
 scatterplot3js(PC$PC1, PC$PC2, PC$PC3, 
                 col=PC$color,  labels=PC$Ind,
-               size=0.5)
+               size=0.7)
 
 
 
 ```
 
-
-
-# Adding lynx lynx form genome project to know procedence.
+## Adding lynx lynx form genome project to know procedence.
 
 Hago el bamlist a mano y no corro la cobertura porque no voy a aplicar ningún filtro. Es sólo para tener esta información.
-
-¡Ojo! No tiene hecho el intergenic y corrió con los intergenic!
-
 
 ```{bash}
 
@@ -734,48 +737,50 @@ PC <- PC %>%  mutate(.,
                           ifelse(Pop == "c_ll_vl", "L.l.stroganovi", 
                           ifelse(Pop == "c_ll_ya", "L.l.wrangeli",     
                                  NA)))))))) %>% 
-  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Bialowieza",
+  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Poland",
                           ifelse (Pop == "c_ll_ur", "Urals",
                           ifelse (Pop == "c_ll_ki", "Kirov",
                           ifelse (Pop == "c_ll_la", "Latvia",
                           ifelse (Pop == "c_ll_no", "Norway",
                           ifelse (Pop == "c_ll_ba" | Pop == "h_ll_ba", "Balkans" ,
                           ifelse (Pop == "c_ll_cr","Carpathians",
-                          ifelse (Pop == "c_ll_to", "Töv",
+                          ifelse (Pop == "c_ll_to", "Tov",
                           ifelse (Pop == "c_ll_tu", "Tuva",
-                          ifelse (Pop == "c_ll_ka", "Khentii", 
-                          ifelse (Pop == "c_ll_og", "Ömnögovi", 
+                          ifelse (Pop == "c_ll_ka", "Khentii-Aimag", 
+                          ifelse (Pop == "c_ll_og", "Omnogovi", 
                           ifelse (Pop == "c_ll_vl", "Vladivostok", 
                           ifelse (Pop == "c_ll_ya", "Yakutia",
                           ifelse (Pop == "c_ll_zz", "Zoo",NA))))))))))))))) %>% 
-    mutate (., color =  ifelse (Populations == "Bialowieza", brewer.pal(12,"Paired")[4], 
+    mutate (., color =  ifelse (Populations == "Poland", brewer.pal(12,"Paired")[4], 
                       ifelse (Populations == "Urals", brewer.pal(9,"RdPu")[6], 
                       ifelse (Populations == "Balkans", brewer.pal(12,"Paired")[10], 
                       ifelse (Populations == "Carpathians", brewer.pal(12,"Paired")[9], 
                       ifelse (Populations == "Kirov", brewer.pal(12,"Paired")[1], 
                       ifelse (Populations == "Latvia", brewer.pal(12,"Paired")[3], 
                       ifelse (Populations == "Norway", brewer.pal(12,"Paired")[2], 
-                      ifelse (Populations == "Töv", brewer.pal(12,"Paired")[12], 
+                      ifelse (Populations == "Tov", brewer.pal(12,"Paired")[12], 
                       ifelse (Populations == "Tuva", brewer.pal(12,"Paired")[8], 
-                      ifelse (Populations == "Khentii", brewer.pal(12,"Paired")[7], 
-                      ifelse (Populations == "Ömnögovi", brewer.pal(12,"Paired")[11], 
+                      ifelse (Populations == "Khentii-Aimag", brewer.pal(12,"Paired")[7], 
+                      ifelse (Populations == "Omnogovi", brewer.pal(12,"Paired")[11], 
                       ifelse (Populations == "Vladivostok", brewer.pal(12,"Paired")[5], 
                       ifelse (Populations == "Yakutia", brewer.pal(12,"Paired")[6],
                       ifelse (Populations == "Zoo", brewer.pal(8, "Greys") [5], NA))))))))))))))) %>% 
   mutate (., seq = ifelse (Ind == "c_ll_vl_0112" | Ind == "c_ll_vl_0112" | Ind == "c_ll_ya_0146" | Ind == "c_ll_cr_0212" | Ind == "c_ll_ki_0090" , "MACROGEN", "CNAG"))
 
                            
-cols <- c("Bialowieza"=brewer.pal(12,"Paired")[4], 
+                           
+                           
+cols <- c("Poland"=brewer.pal(12,"Paired")[4], 
           "Urals"=brewer.pal(9,"RdPu")[6], 
           "Balkans"=brewer.pal(12,"Paired")[10], 
           "Carpathians"=brewer.pal(12,"Paired")[9], 
           "Kirov"=brewer.pal(12,"Paired")[1], 
           "Latvia"=brewer.pal(12,"Paired")[3], 
           "Norway"=brewer.pal(12,"Paired")[2], 
-          "Töv"=brewer.pal(12,"Paired")[12], 
+          "Tov"=brewer.pal(12,"Paired")[12], 
           "Tuva"=brewer.pal(12,"Paired")[8], 
-          "Khentii"=brewer.pal(12,"Paired")[7], 
-          "Ömnögovi"=brewer.pal(12,"Paired")[11], 
+          "Khentii-Aimag"=brewer.pal(12,"Paired")[7], 
+          "Omnogovi"=brewer.pal(12,"Paired")[11], 
           "Vladivostok"=brewer.pal(12,"Paired")[5], 
           "Yakutia"=brewer.pal(12,"Paired")[6],
           "Zoo"=brewer.pal(8, "Greys") [5])
@@ -839,5 +844,7 @@ scatterplot3js(PC$PC1, PC$PC2, PC$PC3,
 
 ```
 
+
+```
 
 
