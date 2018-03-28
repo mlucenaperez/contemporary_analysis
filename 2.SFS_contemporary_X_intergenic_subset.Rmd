@@ -22,9 +22,7 @@ cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_i
 
 scp /home/mlucena/ANGSD_analysis/depth_calculus/no_genes_Lypa_10000longest_center_final_slop20_dot.rf /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/BAM_intergenic_capture/BAM_intergenic_capture_filtered
 
-
 sed 's/:/ /g' no_genes_Lypa_10000longest_center_final_slop20_dot.rf | sed 's/-/ /g' | awk '{print $1"\t"$2-1"\t"$3}' > no_genes_Lypa_10000longest_center_final_slop20_dot.bed
-
 
 # How many bases do I have?
 
@@ -35,8 +33,6 @@ cat no_genes_Lypa_10000longest_center_final_slop20_dot.bed | awk '{for(i=$2;i<$3
 # For all bases:
 cat no_genes_Lypa_10000longest_center_final_slop20_dot.bed | awk '{for(i=$2;i<$3;i++) print $1"\t"i}' | wc -l
 #1674784
-
-
 
 SAMPLELIST=($(ls *_intergenic_capture_blast_filtered.bam | uniq ))
 rm global_coverage_blasted_samples.tsv
