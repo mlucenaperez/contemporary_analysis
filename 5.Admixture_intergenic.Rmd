@@ -423,64 +423,39 @@ rm *borrar
 
 ### Creating a plot
 
-
-He creado este script fancy de R pero por alguna razónno me ha ce el merge en el servidor, ni con full_join ni con merge. Por tanto me voy a copiar los archivos *.qopt en dropbox y lo voy a correr ahí, y luego los borro. 
-
-#### Copy to dropbox
-```{bash}
-
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/*qopt /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Maf1/
-
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/*info /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Maf1 
-
-```
-
-De camino ya guardo también la tabla para correr CLUMPAK
-
-http://clumpak.tau.ac.il/bestK.html
-
-```{bash}
-
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/Ks_log_prob_table.txt /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Maf1/
-
-```
-
-
 Guardo este script para lanzarlo en secuencial para cada una de las ks:
 
 ```{bash}
-nano Admix_plot_fancy.R
+nano Admix_plot.R
 ```
 
-
-#### Final graphical script FANCY (the first one used is before)
-
+Script que guardo
 
 ```{r}
-
 library(RColorBrewer)
-library(dplyr)
-library(reshape2)
-library(ggplot2)
-library(lemon)
-library(grid)
-library(data.table) # 1.8.10
-
+library (dplyr)
 args <- commandArgs(TRUE)
 print(args)
 admix<-t(as.matrix(read.table(args[1])))
 pop<-read.table(args[2],as.is=T)
 
+<<<<<<< HEAD
+=======
 
 admix <- t(as.matrix(read.table("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Maf1/c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080_K9_run8.qopt")))
 pop <- read.table("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Maf1/c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080.info")
 
 
+>>>>>>> 2fb5332ce231e761c269773c6739838c689be38e
 names(pop) <- c("pop", "ind")
 pop$pop <- as.factor (pop$pop)
-pop$pop <- factor (pop$pop, levels=c("c_ll_no", "h_ll_ba", "c_ll_ba","c_ll_cr",  "c_ll_po", "c_ll_la", "c_ll_ki", "c_ll_ur", "c_ll_tu", "c_ll_og", "c_ll_ka", "c_ll_to", "c_ll_ya", "c_ll_vl"))
+pop$pop <- factor (pop$pop, levels=c("c_ll_no", "h_ll_ba", "c_ll_ba","c_ll_cr",  "c_ll_po", "c_ll_la", "c_ll_ki", "c_ll_ur", "c_ll_vl", "c_ll_ya", "c_ll_tu", "c_ll_og", "c_ll_ka", "c_ll_to"))
 
 admix<-admix[,order(pop[,1])]
+<<<<<<< HEAD
+pop<-pop[order(pop[,1]),]
+n <- args[3]
+=======
 pop <-pop[order(pop[,1]),]
 
 
@@ -511,76 +486,21 @@ tmp$ind <- factor (tmp$ind, levels=c("c_ll_no_0075", "c_ll_no_0076", "c_ll_no_00
 write.table(pop,"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-26_Maf1/individuals_per_pop.csv", sep=",", row.names = F, quote = F )
 
 # n <- 24 # Esto servía porque aquí venían las k y así hacia una paleta adecuada a la k que tenía, en mi caso, ahora no hace falta. 
+>>>>>>> 2fb5332ce231e761c269773c6739838c689be38e
 # qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',] Antes era así, lo que significa que coje aquellas paletas que son cualitativas. como yo quiero que coja paired la primera para que sea como en el PCA, pongo como condición que tenga maxcolors de 12. 
 twelve_col_pals = brewer.pal.info[brewer.pal.info$maxcolors == '12',] 
 col_vector = unlist(mapply(brewer.pal, twelve_col_pals$maxcolors, rownames(twelve_col_pals)))
-# pie(rep(1,n), col=sample(col_vector, n))
-my_paired_colours <- as.vector(col_vector)
-
-x_breaks <-tapply(1:nrow(pop),pop[,4],mean)
-x_breaks_to_dataframe <- data.frame(Population=names(x_breaks), breaks=x_breaks) %>% mutate ()
-x_breaks_to_dataframe$Population <- as.character(x_breaks_to_dataframe$Population) 
-
-
-# Here I try to get when the pop changes to add vertical lines. 
-
-count_changes_in_pop <- pop %>% select (Population) %>% mutate (Population2 = Population)
-end <- nrow(count_changes_in_pop)
-values_to_change <- data.table:::uniqlist(count_changes_in_pop[, 1:2])  # De esta manera me quedo con los numeros donde hay un cambio. 
-values_to_change <- append(values_to_change , end)
-
-###
-
-
-
+pie(rep(1,n), col=sample(col_vector, n))
 #setEPS()
 # postscript(paste0(args[4],"_K",args[3],".eps"))
 
-# pdf(paste0("K_8.pdf"), height=10, width = 30)
+pdf(paste0(args[4],"_K",args[3],".pdf"), height=10, width = 30)
+barplot(admix,col=col_vector,space=0,xlab="Individuals",ylab="Admixture")
+text(tapply(1:nrow(pop),pop[,1],mean),-0.1,unique(pop[,1]),xpd=T,srt=60)
+dev.off()
 
-admix_plot <- ggplot() + 
-   geom_bar (data = tmp, (aes(x=ind, y=value, fill=Var1)), stat = "identity", position = "fill",  width=1) +
-   scale_fill_manual(values=my_paired_colours) +
-   scale_y_continuous(breaks = seq(0, 1, by = 0.2)) +
-   theme_classic() +
-   labs(y="Admixture proportion") +
-   coord_cartesian(ylim = c(0, 1.2), xlim = c(0, nrow(pop)+10)) +
-   theme(plot.margin=unit(c(1,1,1,1),"cm"), # top, right, bottom, and left margins
-        axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        axis.line = element_blank(),
-        # axis.title.y = element_blank(),
-        legend.position="none",
-        axis.text.y=element_text(size=18),
-        axis.title.y =  element_text(size=15,color="grey30", hjust = 0.4)) 
 
-admix_plot <- admix_plot + annotation_custom(
-      grob = linesGrob(y = c(0, 1),x = c(0,0), gp = gpar(col = "black", lwd = 2)),
-      ymin = 0,      # Vertical position of the textGrob
-      ymax = 1)
-
-for (i in 1:length(x_breaks_to_dataframe$breaks)) {
-admix_plot <- admix_plot + annotation_custom(
-      grob = textGrob(label = x_breaks_to_dataframe$Population[i], rot =50, vjust = 1.05, hjust=0.1,
-                      gp = gpar(col = "grey30",fontsize = 15, face="plain")),
-      xmin = x_breaks_to_dataframe$breaks[i],         
-      xmax = x_breaks_to_dataframe$breaks[i],
-      ymin = 1,      # Vertical position of the textGrob
-      ymax = 1.15)
-
-admix_plot <- admix_plot + annotation_custom(
-      grob = grid.lines(y = c(0,1), gp = gpar(col = "grey30", lwd = 1)),
-      ymin = 0,      # Vertical position of the textGrob
-      ymax = 1.02,
-      xmin = values_to_change[i]-0.5,      # Vertical position of the textGrob
-      xmax = values_to_change[i]-0.5)
-}
-   
-ggsave (paste0(args[4],"_K",args[3],".pdf"), admix_plot, width = 25, height = 15, units = "cm", device="pdf")
- 
 ```
-
 
 Lo lanzo de manera secuencial.
 
@@ -592,16 +512,29 @@ do
 for i in `seq 1 13`;
 do
 echo $i
-Rscript Admix_plot_fancy.R "$POP"_K"$i"_run$run.qopt "$POP".info $i $POP"_run"$run
+Rscript Admix_plot.R "$POP"_K"$i"_run$run.qopt "$POP".info $i $POP"_run"$run
 done
 
 done
 
-rm *.qopt
+```
+
+Copiar tabla para correr CLUMPAK
+
+http://clumpak.tau.ac.il/bestK.html
+
+```{bash}
+
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/Ks_log_prob_table.txt /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-16_Snp-pval_/
+
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_ADMIXTURE/*pdf /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_ADMIXTURE/2017-10-16_Snp-pval_/
 
 ```
 
 
+<<<<<<< HEAD
+
+=======
 # Compress file for Distruct
 http://clumpak.tau.ac.il
 
@@ -674,4 +607,5 @@ cat pop.codes.csv |  tr '\r' '\n' > pop.codes.unix
 
 
 ```
+>>>>>>> 2fb5332ce231e761c269773c6739838c689be38e
 
