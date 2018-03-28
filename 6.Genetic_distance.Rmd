@@ -96,14 +96,6 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analy
 
 ```{r}
 
-
-library(dplyr)
-library(tidyr)
-library(magrittr)
-library(ggplot2)
-library(ape)
-
-
 wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_genetic_distance/"
 POP="c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080"
 
@@ -164,6 +156,8 @@ heatmap.2(mat_data,
   Rowv="NA", 
   dendrogram="none",labCol=data$V1)
 
+<<<<<<< HEAD
+=======
 
 distance_nj_matrix <- nj(as.dist(t(mat_data)))
 
@@ -181,6 +175,7 @@ plot.phylo(distance_nj_matrix, type = "u" ,  rotate.tree = -110, lab4ut="axial",
 dev.print(dev = pdf, "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_genetic_distance/phylo_genetic_distances.pdf")
 
 dev.off()
+>>>>>>> 2fb5332ce231e761c269773c6739838c689be38e
 ```
 
 ## Intergenic data blast filtered.
