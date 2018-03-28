@@ -402,14 +402,14 @@ paste \
 <(echo $PAIRWISE_AVERAGE) \
 <(echo $PAIRWISE_SD) \
 <(echo $TAJIMAS_D) |\
-sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  diversity.per.pop.averages.tsv
+sed 's/ /\t/g'| sed 's/\t\+/\t/g' >>  diversity.per.pop.blasted.averages.tsv
 
 done 
 
 ```
 
 
-
+Si lo queremos reportar por bloques:
 
 
 ```{bash}
