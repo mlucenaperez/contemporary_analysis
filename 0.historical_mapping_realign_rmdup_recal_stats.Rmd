@@ -808,6 +808,7 @@ Aparently there's no read left.
 
 After talking with Johanna, we are going to map using BWA-aln y BWA-sampe.
 
+# -------------------
 
 # Mapping again
 
@@ -826,10 +827,6 @@ declare -A BARCODEID=(["C9KH6ANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KN6ANXX_
 
 
 ```
-
-# OJO! 
-Hay dos fastq que se llaman igual! C9KNWANXX_2_LYNX7-709ii5-4 en LYNX_14 y en LYNX_17.
-
 
 
 ## 	Aligment BWA-MEM	
@@ -864,16 +861,41 @@ echo "${i}"
 # -l 999 = seeding disabled
 # -t 8 = number of threads
 
-bwa aln -l 999 -t 8 $REF ${i}_merged.fastq.gz > ${i}.sai
-bwa aln -l 999 -t 8 $REF ${i}_R1_trimmed2.fastq.gz > ${i}_1.sai #you can now use a fastq file.
-bwa aln -l 999 -t 8 $REF ${i}_R2_trimmed.fastq.gz > ${i}_2.sai 
+bwa aln -l 999 -t 10 $REF ${i}_merged.fastq.gz > ${i}.sai
 
+done
+
+for i in ${ARRAY[@]}
+do
+echo "${i}"
+
+bwa aln -l 999 -t 4 $REF ${i}_R1_trimmed2.fastq.gz > ${i}_1.sai #you can now use a fastq file.
+done
+
+
+for i in ${ARRAY[@]}
+do
+echo "${i}"
+bwa aln -l 999 -t 4 $REF ${i}_R2_trimmed2.fastq.gz > ${i}_2.sai 
+done
+
+for i in ${ARRAY[@]}
+do
+echo "${i}"
 ### map reads
 
 bwa samse $REF ${i}.sai ${i}_merged.fastq.gz > ${i}.sam
 bwa sampe $REF ${i}_1.sai ${i}_2.sai ${i}_R1_trimmed2.fastq.gz  ${i}_R2_trimmed.fastq.gz > ${i}_unmerged.sam 
+<<<<<<< HEAD
+=======
+done
+>>>>>>> 5a9e015c9cccd18925c0ad782c14a7d15e2df5f3
 
 
+
+for i in ${ARRAY[@]}
+do
+echo "${i}"
 #########################
 # 	samtools	#
 #########################
@@ -890,11 +912,30 @@ samtools view -F 4 -q 30 -uS ${i}_unmerged.sam | samtools sort - ${i}_unmerged.s
 
 ### remove duplicates
 
+done
+
+
+# Cuando he lanzado el mapeo ha puesto esto:
+#[bwa_aln] 17bp reads: max_diff = 2
+#[bwa_aln] 38bp reads: max_diff = 3
+#[bwa_aln] 64bp reads: max_diff = 4
+#[bwa_aln] 93bp reads: max_diff = 5
+#[bwa_aln] 124bp reads: max_diff = 6
+#[bwa_aln] 157bp reads: max_diff = 7
+#[bwa_aln] 190bp reads: max_diff = 8
+#[bwa_aln] 225bp reads: max_diff = 9
+
+
+
+
 
 samtools rmdup -S ${i}.sort.bam ${i}.sort.rmdup.bam
 
 samtools rmdup -S ${i}_unmerged.sort.bam ${i}_unmerged.sort.rmdup.bam
 
+
+
+done
 
 ### index bam files
 
@@ -1027,4 +1068,375 @@ samtools depth $sample > $sample.covpersite
 done
 ```
 
+# -------------------
 
+# Recal
+
+
+```{bash}
+# Run Estimation of postmorten damage:
+
+samtools index ${i}_sorted_marked_rg_sorted_indelrealigner.bam
+
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=${i}_sorted_marked_rg_sorted_indelrealigner.bam  MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000
+
+
+screen -S atlas_ancient
+i=/home/mlucena/grupolince/lynx_genomes_5x/raw_data/ancient_data/a_lp_ca_1309
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa				
+
+./atlas task=estimatePMD bam=${i}_sorted_marked_rg_sorted_indelrealigner.bam fasta=$REF verbose
+
+
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+
+mapDamage -i a_lp_ca_1309_sorted_marked_rg_sorted_indelrealigner.bam  -r $REF --rescale
+
+
+```
+
+# -------------------
+# Filtering small reads
+
+I observed that the reads I am using have a representation of small size reads, so I will remove those. They are already in /home/GRUPOS/grupolince/filtering_contaminant_reads/
+
+```{bash}
+
+cd /home/GRUPOS/grupolince/filtering_contaminant_reads/BAM_files/
+
+
+for sample in h_lp_mt_*_intergenic_capture.bam
+do 
+echo $sample
+samtools view -h $sample | awk 'length($10) > 30 || $1 ~ /^@/' | samtools view -bS - > ${sample/capture.bam/capture_nosmallreads.bam}
+done
+
+
+# Calculating the new read depth.
+
+for sample in *capture_nosmallreads.bam 
+do
+samtools view $sample | cut -f 10 | perl -ne 'chomp;print length($_) . "\n"' | sort | uniq -c > ${sample/.bam/.lengthdistribution}
+done
+
+
+# Now I would like to plot the results, so I download them:
+
+scp mlucena@genomics-b.ebd.csic.es:/home/GRUPOS/grupolince/filtering_contaminant_reads/BAM_files/*lengthdistribution /Users/marialucenaperez/Dropbox/PhD/ancient_historical/diario/historico/20180324_length_distribution_insert_size
+
+
+```
+
+Now I plot them:
+
+```{r}
+library(dplyr)
+library(plyr)
+library(ggplot2)
+library(gridExtra)
+library(stringr)
+
+
+wd <- ("/Users/marialucenaperez/Dropbox/PhD/ancient_historical/diario/historico/20180324_length_distribution_insert_size/")
+my_files_lengthdistribution = list.files(path = wd, pattern="*lengthdistribution$") 
+datalist = list()
+
+for (i in 1:length(my_files_lengthdistribution)){
+dat <- read.table(paste(wd,my_files_lengthdistribution[i], sep=""),head=F, stringsAsFactors=F)
+# dat$i <- i  # maybe you want to keep track of which iteration produced it?
+names(dat)[names(dat) == "V1"] <- my_files_lengthdistribution[i] # replacing name of the first column by name of the dataframe so that latter I could join and keep track of the sample 
+datalist[[i]]<- dat # add it to your list
+ggplot (data = dat, aes (x=dat$V2, y = select(dat,contains(".lengthdistribution")))) +
+  geom_bar(stat = "identity") +
+  scale_x_continuous(breaks=seq(0,1000,10))
+ggsave(paste (wd,names(select(dat,contains(".lengthdistribution"))), ".barplot.pdf", sep =""))
+}
+
+
+
+# big_data = do.call(rbind, datalist) -> If you want to join all the column. 
+
+length_distribution_all <- join_all(datalist, by=names(datalist[[2]][2])) %>% arrange (., V2) %>% 
+  mutate (., groups = if_else (V2 < 126, "A", if_else(V2==126, "B", "C")))
+
+ggplot (length_distribution_all, aes())
+
+collapsed <- data.frame(rbind(colSums(filter(length_distribution_all, groups=="A")%>%select(-groups, -V2)), colSums(filter(length_distribution_all, groups=="B")%>%select(-groups, -V2)))) 
+final <- as.data.frame(t(collapsed))
+colnames(final) <- c("less_126","equal_126") 
+final_ratio <- final %>% mutate (final, ratio_less_divided_equal = less_126/equal_126)
+
+```
+
+
+
+# -------------------
+
+# Mapping again
+
+Como ATLAS necesita que hayas mapeado por su cuenta R1 y R2, voy a hacer ese procedimiento con mis lecturas de histórico. 
+
+```{r, engine=bash, eval=FALSE}
+# VARIABLES:
+
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+THREADS=10   # No. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq)) # The array will contain the names of all the samples and we'll loop through it to process all the samples. 
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/hcal_BAM_files_final/BAM_files_LYNX_14_LYNX_17_BWA-aln
+ARRAY=($(ls *.fastq.gz |  cut -d'_' -f1-3 | uniq))
+
+# BARCODE LYNX_14 & LYNX_17:
+declare -A BARCODEID=(["C9KH6ANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KN6ANXX_7_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_1_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_2_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_3_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_4_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KH6ANXX_5_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KN6ANXX_7_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_1_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_2_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_3_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_4_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KNWANXX_5_LYNX7-710ii5-4"]="h_lp_mt_0885" ["C9KH6ANXX_5_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KN6ANXX_7_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_1_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_2_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_3_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_4_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_5_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KH6ANXX_5_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KN6ANXX_7_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_1_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_2_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_3_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_4_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_5_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KH6ANXX_5_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KN6ANXX_7_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_1_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_2_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_3_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_4_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_5_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KH6ANXX_5_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KN6ANXX_7_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_1_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_2_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_3_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_4_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_5_LYNX7-706ii5-4"]="h_lp_mt_1025" ["CA3D2ANXX_3_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KH6ANXX_5_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KN6ANXX_7_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_1_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_2_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_3_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_4_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KNWANXX_5_LYNX7-687ii5-4"]="h_lp_mt_1087" ["CA3D2ANXX_3_LYNX7-687ii5-4"]="h_lp_mt_1087" ["C9KH6ANXX_5_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KN6ANXX_7_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_1_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_2_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_3_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_4_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_5_LYNX7-700ii5-4"]="h_lp_mt_1117" ["CA3D2ANXX_3_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KH6ANXX_5_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KN6ANXX_7_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_1_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_2_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_3_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_4_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_5_LYNX7-693ii5-4"]="h_lp_mt_1141" ["CA3D2ANXX_3_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KH6ANXX_5_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KN6ANXX_7_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_1_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_2_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_3_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_4_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KNWANXX_5_LYNX7-686ii5-4"]="h_lp_mt_1272" ["C9KH6ANXX_5_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KN6ANXX_7_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_1_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_2_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_3_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_4_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_5_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KH6ANXX_5_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KN6ANXX_7_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_1_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_2_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_3_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_4_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_5_LYNX7-708ii5-4"]="h_lp_mt_1305" ["CA3D2ANXX_3_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KH6ANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KH6ANXX_5_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KH6ANXX_5_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KH6ANXX_5_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KH6ANXX_5_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KH6ANXX_5_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KH6ANXX_5_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KH6ANXX_5_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KH6ANXX_5_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KN6ANXX_7_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KN6ANXX_7_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KN6ANXX_7_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KN6ANXX_7_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KN6ANXX_7_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KN6ANXX_7_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KN6ANXX_7_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KN6ANXX_7_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KN6ANXX_7_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_1_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_1_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_1_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_1_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_1_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_1_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_1_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_1_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_1_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_2_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_2_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_2_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_2_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_2_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_2_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_2_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_2_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_2_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_3_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_3_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_3_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_3_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_3_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_3_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_3_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_3_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_3_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_4_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_4_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_4_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_4_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_4_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_4_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_4_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_4_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_4_LYNX7-708ii5-4"]="h_lp_mt_1305" ["C9KNWANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KNWANXX_5_LYNX7-625ii5-2"]="h_lp_mt_0976" ["C9KNWANXX_5_LYNX7-709ii5-4"]="h_lp_mt_0978" ["C9KNWANXX_5_LYNX7-604ii5-2"]="h_lp_mt_0979" ["C9KNWANXX_5_LYNX7-706ii5-4"]="h_lp_mt_1025" ["C9KNWANXX_5_LYNX7-700ii5-4"]="h_lp_mt_1117" ["C9KNWANXX_5_LYNX7-693ii5-4"]="h_lp_mt_1141" ["C9KNWANXX_5_LYNX7-695ii5-4"]="h_lp_mt_1295" ["C9KNWANXX_5_LYNX7-708ii5-4"]="h_lp_mt_1305" ["CA3D2ANXX_3_LYNX7-706ii5-4"]="h_lp_mt_1025" ["CA3D2ANXX_3_LYNX7-700ii5-4"]="h_lp_mt_1117" ["CA3D2ANXX_3_LYNX7-693ii5-4"]="h_lp_mt_1141" ["CA3D2ANXX_3_LYNX7-708ii5-4"]="h_lp_mt_1305" ["CALHGANXX_6_LYNX7-702ii5-4"]="h_lp_mt_0884" ["CALHGANXX_6_LYNX7-625ii5-2"]="h_lp_mt_0976" ["CALHGANXX_6_LYNX7-709ii5-4"]="h_lp_mt_0978" ["CALHGANXX_6_LYNX7-604ii5-2"]="h_lp_mt_0979" ["CALHGANXX_6_LYNX7-706ii5-4"]="h_lp_mt_1025" ["CALHGANXX_6_LYNX7-700ii5-4"]="h_lp_mt_1117" ["CALHGANXX_6_LYNX7-693ii5-4"]="h_lp_mt_1141" ["CALHGANXX_6_LYNX7-695ii5-4"]="h_lp_mt_1295" ["CALHGANXX_6_LYNX7-708ii5-4"]="h_lp_mt_1305" ["CALHGANXX_7_LYNX7-702ii5-4"]="h_lp_mt_0884" ["CALHGANXX_7_LYNX7-625ii5-2"]="h_lp_mt_0976" ["CALHGANXX_7_LYNX7-709ii5-4"]="h_lp_mt_0978" ["CALHGANXX_7_LYNX7-604ii5-2"]="h_lp_mt_0979" ["CALHGANXX_7_LYNX7-706ii5-4"]="h_lp_mt_1025" ["CALHGANXX_7_LYNX7-700ii5-4"]="h_lp_mt_1117" ["CALHGANXX_7_LYNX7-693ii5-4"]="h_lp_mt_1141" ["CALHGANXX_7_LYNX7-695ii5-4"]="h_lp_mt_1295" ["CALHGANXX_7_LYNX7-708ii5-4"]="h_lp_mt_1305" ["CALHGANXX_8_LYNX7-702ii5-4"]="h_lp_mt_0884" ["CALHGANXX_8_LYNX7-625ii5-2"]="h_lp_mt_0976" ["CALHGANXX_8_LYNX7-709ii5-4"]="h_lp_mt_0978" ["CALHGANXX_8_LYNX7-604ii5-2"]="h_lp_mt_0979" ["CALHGANXX_8_LYNX7-706ii5-4"]="h_lp_mt_1025" ["CALHGANXX_8_LYNX7-700ii5-4"]="h_lp_mt_1117" ["CALHGANXX_8_LYNX7-693ii5-4"]="h_lp_mt_1141" ["CALHGANXX_8_LYNX7-695ii5-4"]="h_lp_mt_1295" ["CALHGANXX_8_LYNX7-708ii5-4"]="h_lp_mt_1305")
+
+
+```
+
+
+## 	Aligment BWA-MEM	
+
+Checked whether you are using trimmed or untrimmed data.
+
+```{r, engine=bash, eval=FALSE}
+cd /home/mlucena/grupolince/lynx_genomes_5x/hcal_BAM_files_final/BAM_files_LYNX_14_LYNX_17_BWA-aln
+# Mapeo las R1 y las R2 por su cuenta sin hacer merged. 
+
+#################
+# 	bwa	#
+#################
+
+### align reads
+# -l 999 = seeding disabled
+# -t 8 = number of threads
+
+for i in ${ARRAY[@]}
+do
+echo "${i}"
+bwa aln -l 999 -t 10 $REF ${i}_R1_trimmed.fastq.gz > ${i}_1.sai #you can now use a fastq file.
+bwa samse $REF ${i}_1.sai  ${i}_R1_trimmed.fastq.gz > ${i}_1.sam
+done
+
+
+for i in ${ARRAY[@]}
+do
+echo "${i}"
+bwa aln -l 999 -t 4 $REF ${i}_R2_trimmed.fastq.gz > ${i}_2.sai 
+bwa samse $REF ${i}_2.sai  ${i}_R2_trimmed.fastq.gz > ${i}_2.sam
+done
+
+# Ahora tenddría que pasar de sam a bam, hacer sort y por último añadir el readgroup y hacer el index. 
+
+
+# Estimate damage
+# cd /home/mlucena/grupolince/lynx_genomes_5x/hcal_BAM_files_final/BAM_files_LYNX_14_LYNX_17_BWA-aln
+
+# test cutre.
+# cojo una lectura cualquiera y la paso a bam. 
+
+bwa samse $REF C9KH6ANXX_5_LYNX7-604ii5-2.sai already_done_fastq/C9KH6ANXX_5_LYNX7-604ii5-2_merged.fastq.gz > C9KH6ANXX_5_LYNX7-604ii5-2.sam
+samtools view -Sb C9KH6ANXX_5_LYNX7-604ii5-2.sam > test.bam
+samtools sort test.bam > test_sorted.bam
+java -jar /opt/picard-tools/picard.jar AddOrReplaceReadGroups I=test_sorted.bam O=test_sorted_rg.bam RGID=test RGLB=test_lib RGPL=Illumina RGPU=test RGSM=test VALIDATION_STRINGENCY=SILENT 
+samtools index test_sorted_rg.bam
+
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa				
+/home/mlucena/atlas/atlas task=estimatePMD bam=test_sorted_rg.bam fasta=$REF length=25 verbose
+
+
+
+
+
+
+
+###
+
+
+for i in ${ARRAY[@]}
+do
+echo "${i}"
+### map reads
+
+bwa samse $REF ${i}.sai ${i}_merged.fastq.gz > ${i}.sam
+bwa sampe $REF ${i}_1.sai ${i}_2.sai ${i}_R1_trimmed2.fastq.gz  ${i}_R2_trimmed.fastq.gz > ${i}_unmerged.sam 
+<<<<<<< HEAD
+=======
+done
+>>>>>>> 5a9e015c9cccd18925c0ad782c14a7d15e2df5f3
+
+
+for i in ${ARRAY[@]}
+do
+echo "${i}"
+#########################
+# 	samtools	#
+#########################
+
+
+### parse
+# -F 4 = remove reads from BAM file that did not map
+# -q 30 = quality cut-off 30
+
+
+samtools view -F 4 -q 30 -uS ${i}.sam | samtools sort - ${i}.sort
+
+samtools view -F 4 -q 30 -uS ${i}_unmerged.sam | samtools sort - ${i}_unmerged.sort
+
+### remove duplicates
+
+done
+
+
+# Cuando he lanzado el mapeo ha puesto esto:
+#[bwa_aln] 17bp reads: max_diff = 2
+#[bwa_aln] 38bp reads: max_diff = 3
+#[bwa_aln] 64bp reads: max_diff = 4
+#[bwa_aln] 93bp reads: max_diff = 5
+#[bwa_aln] 124bp reads: max_diff = 6
+#[bwa_aln] 157bp reads: max_diff = 7
+#[bwa_aln] 190bp reads: max_diff = 8
+#[bwa_aln] 225bp reads: max_diff = 9
+
+
+
+
+
+samtools rmdup -S ${i}.sort.bam ${i}.sort.rmdup.bam
+
+samtools rmdup -S ${i}_unmerged.sort.bam ${i}_unmerged.sort.rmdup.bam
+
+
+
+done
+
+### index bam files
+
+
+samtools index ${i}.sort.rmdup.bam
+
+samtools index ${i}_unmerged.sort.rmdup.bam
+
+
+#################################
+# 	quick overview of data	#
+#################################
+
+### flagstat (some basic stats)
+
+samtools flagstat ${i}.sort.bam > ${i}_merged_stats.txt
+
+samtools flagstat ${i}_unmerged.sort.bam > ${i}_unmerged_stats.txt
+
+
+
+samtools flagstat ${i}.sort.rmdup.bam > ${i}_merged_rmdup_stats.txt
+
+samtools flagstat ${i}_unmerged.sort.rmdup.bam > ${i}_unmerged_rmdup_stats.txt
+
+
+```
+
+
+
+## 	Adding read groups
+
+```{r, engine=bash, eval=FALSE}
+
+for i in ${ARRAY[@]}
+do
+echo $i
+
+run=($(echo $i | cut -d"_" -f 1))  #Sacar el run de i
+
+java -jar /opt/picard-tools/picard.jar AddOrReplaceReadGroups I=${i}_sorted.bam O=${BARCODEID["${i}"]}_${i}_sorted_rg.bam RGID=${i} RGLB=${BARCODEID["${i}"]}_lib RGPL=Illumina RGPU=${run} RGSM=${BARCODEID["${i}"]} VALIDATION_STRINGENCY=SILENT \
+&& rm ${i}_sorted.bam
+
+done
+
+```
+
+## 	Merge BAM	
+
+```{r, engine=bash, eval=FALSE}
+
+SAMPLESLIST=($(echo ${BARCODEID[@]} | tr ' ' '\n' | sort | uniq | tr ' ' '\n'))
+
+for sample in "${SAMPLESLIST[@]}"
+do
+echo "${sample}"
+ls ./"${sample}"_*_sorted_rg.bam  > "${sample}".bam.list
+echo;echo
+echo `wc -l "${sample}".bam.list`;
+lines=`wc -l "${sample}".bam.list | cut -f 1 -d " " `
+if [ "$lines" -eq "1" ]; 
+then echo "ONE";
+cp `cat "${sample}".bam.list`  "${sample}".bam;
+fi
+if [ "$lines" -gt "1" ]; 
+then echo "more than ONE";
+/opt/samtools/samtools merge -@ 10 -r  "${sample}".bam `cat "${sample}".bam.list`;
+fi
+samtools flagstat "${sample}".bam > "${sample}".stats;
+/opt/samtools/samtools sort -@ 10 "${sample}".bam -o "${sample}"_sorted.bam && rm "${sample}".bam ;
+done
+
+```
+
+* Error:
+[bam_translate] RG tag "c_ll_ka_0189_CA2W6ANXX_2_5nf_sorted_rg" on read "7001450:317:CA2W6ANXX:2:1114:8454:72372" encountered with no corresponding entry in header, tag lost. Unknown tags are only reported once per input file for each tag ID.
+---> se debía a la versión de samtools merge, para solucionarlo lo he cambiado por /opt/samtools/samtools merge.
+
+
+## 	Remove duplicates	
+
+```{r, engine=bash, eval=FALSE}
+
+ARRAY_MERGED_BAM_SAMPLE_NAME=($(ls *_sorted.bam |  cut -d'_' -f1,2,3,4 | uniq))
+
+for i in ${ARRAY_MERGED_BAM_SAMPLE_NAME[@]}
+do
+echo "${i}"
+java -jar /opt/picard-tools/picard.jar MarkDuplicates METRICS_FILE=${i}_rmdup.txt I=${i}_sorted.bam O=${i}_sorted_rmdup.bam MAX_FILE_HANDLES_FOR_READ_ENDS_MAP=2000 
+/opt/samtools/samtools sort ${i}_sorted_rmdup.bam -@ 30 -o ${i}_sorted_rmdup_sorted.bam
+samtools index ${i}_sorted_rmdup_sorted.bam
+samtools flagstat ${i}_sorted_rmdup_sorted.bam > ${i}_sorted_rmdup_sorted.stats
+
+done
+
+```
+
+## 	Realignment with GATK	
+
+Requirement:
+Coordinate-sorted and indexed BAM alignment data
+This two-step indel realignment process:
+A) first identifies such regions where alignments may potentially be improved 
+B) then realigns the reads in these regions using a consensus model that takes all reads in the alignment context together.
+
+
+```{r, engine=bash, eval=FALSE}
+
+for i in ${ARRAY_MERGED_BAM_SAMPLE_NAME[@]}
+do
+echo "${i}"
+# RealignerTargetCreator
+rm ${i}_sorted.bam
+rm ${i}_sorted_rmdup.bam
+# RealignerTargetCreator
+java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T RealignerTargetCreator -nt 24 -R $REF -I ${i}_sorted_rmdup_sorted.bam -o ${i}_realignertargetcreator.intervals
+# IndelRealigner
+java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T IndelRealigner -R $REF -targetIntervals ${i}_realignertargetcreator.intervals -I ${i}_sorted_rmdup_sorted.bam -o ${i}_sorted_rmdup_sorted_indelrealigner.bam
+done
+```
+
+# Cobertura
+
+```{bash}
+
+for sample in *_sorted_rmdup_sorted_indelrealigner.bam
+do
+echo $sample
+samtools depth $sample > $sample.covpersite
+done
+```
+
+# -------------------
