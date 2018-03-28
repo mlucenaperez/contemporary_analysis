@@ -64,63 +64,40 @@ cd $FST_FOLDER
 #Get all possible pairwise combinations
 POP_PAIRS=($(echo ${POPS[@]} | Rscript pops_combinations.R))
 
-# I have:
+# I have 28 combinations:
 
 c_ll_cr_n006/c_ll_ki_n013
 c_ll_cr_n006/c_ll_la_n006
 c_ll_cr_n006/c_ll_no_n008
 c_ll_cr_n006/c_ll_po_n008
-c_ll_cr_n006/c_ll_to-c_ll_ka-c_ll_og_n008
-c_ll_cr_n006/c_ll_tu_n006
-c_ll_cr_n006/c_ll_ur_n006
 c_ll_cr_n006/c_ll_vl_n008
 c_ll_cr_n006/c_ll_ya_n008
 c_ll_cr_n006/x_ll_ba_n003
 c_ll_ki_n013/c_ll_la_n006
 c_ll_ki_n013/c_ll_no_n008
 c_ll_ki_n013/c_ll_po_n008
-c_ll_ki_n013/c_ll_to-c_ll_ka-c_ll_og_n008
-c_ll_ki_n013/c_ll_tu_n006
-c_ll_ki_n013/c_ll_ur_n006
 c_ll_ki_n013/c_ll_vl_n008
 c_ll_ki_n013/c_ll_ya_n008
 c_ll_ki_n013/x_ll_ba_n003
 c_ll_la_n006/c_ll_no_n008
 c_ll_la_n006/c_ll_po_n008
-c_ll_la_n006/c_ll_to-c_ll_ka-c_ll_og_n008
-c_ll_la_n006/c_ll_tu_n006
-c_ll_la_n006/c_ll_ur_n006
 c_ll_la_n006/c_ll_vl_n008
 c_ll_la_n006/c_ll_ya_n008
 c_ll_la_n006/x_ll_ba_n003
 c_ll_no_n008/c_ll_po_n008
-c_ll_no_n008/c_ll_to-c_ll_ka-c_ll_og_n008
-c_ll_no_n008/c_ll_tu_n006
-c_ll_no_n008/c_ll_ur_n006
 c_ll_no_n008/c_ll_vl_n008
 c_ll_no_n008/c_ll_ya_n008
 c_ll_no_n008/x_ll_ba_n003
-c_ll_po_n008/c_ll_to-c_ll_ka-c_ll_og_n008
-c_ll_po_n008/c_ll_tu_n006
-c_ll_po_n008/c_ll_ur_n006
 c_ll_po_n008/c_ll_vl_n008
 c_ll_po_n008/c_ll_ya_n008
 c_ll_po_n008/x_ll_ba_n003
-c_ll_to-c_ll_ka-c_ll_og_n008/c_ll_tu_n006
-c_ll_to-c_ll_ka-c_ll_og_n008/c_ll_ur_n006
-c_ll_to-c_ll_ka-c_ll_og_n008/c_ll_vl_n008
-c_ll_to-c_ll_ka-c_ll_og_n008/c_ll_ya_n008
-c_ll_to-c_ll_ka-c_ll_og_n008/x_ll_ba_n003
-c_ll_tu_n006/c_ll_ur_n006
-c_ll_tu_n006/c_ll_vl_n008
-c_ll_tu_n006/c_ll_ya_n008
-c_ll_tu_n006/x_ll_ba_n003
-c_ll_ur_n006/c_ll_vl_n008
-c_ll_ur_n006/c_ll_ya_n008
-c_ll_ur_n006/x_ll_ba_n003
 c_ll_vl_n008/c_ll_ya_n008
 c_ll_vl_n008/x_ll_ba_n003
 c_ll_ya_n008/x_ll_ba_n003
+
+
+
+
 
 #Iterate over combinations
 for POP_PAIR in  "${POP_PAIRS[@]}"
@@ -145,7 +122,7 @@ $NGSTOOLS/realSFS -P $THREADS $SFS_FOLDER/$POP1.unfolded-lr.saf.idx $SFS_FOLDER/
 echo "-------------------->FST  $POP1 and $POP2"
 $NGSTOOLS/realSFS fst index -P $THREADS $SFS_FOLDER/$POP1.unfolded-lr.saf.idx $SFS_FOLDER/$POP2.unfolded-lr.saf.idx  -sfs $POP1.$POP2.unfolded-lr.saf.idx.ml -fstout $POP1.$POP2.unfolded-lr
 echo "--------------------------------->FST  $POP1 and $POP2 printing"
-# $NGSTOOLS/realSFS fst print $POP1.$POP2.unfolded-lr.fst.idx > $POP1.$POP2.unfolded-lr.fst.print
+$NGSTOOLS/realSFS fst print $POP1.$POP2.unfolded-lr.fst.idx > $POP1.$POP2.unfolded-lr.fst.print
 # Ojo!!! el archivo print ocupa muchísimo!!!!!!
 done
 
@@ -154,7 +131,6 @@ done
 
 
 ```{r, engine=bash, eval=FALSE}
-
 #Get the global estimate
 
 echo "POP1,POP2,FSTunweight,FSTweight" > global.fsts.csv
@@ -166,11 +142,14 @@ FST=($( $NGSTOOLS/realSFS fst stats $POP1.$POP2.unfolded-lr.fst.idx | tr ' ' ','
 echo "$POP1,$POP2,$FST" >> global.fsts.csv
 done
 
+
+
 # you can have a look at their values:
 #$NGSTOOLS/realSFS fst print KIR.NOR.BIA.unfolded.pbs.fst.idx | less -S
 
 # where columns are: chromosome, postisition, (a), (a+b) values for the three FST comparisons, where FST is defined as a/(a+b).
 # Note that FST on multiple SNPs is calculated as sum(a)/sum(a+b).
+
 
 # Now, you could do an sliding-window analysis.
 # * If you give only 2 pop in input, only the FST will be calculated. 
@@ -184,13 +163,12 @@ done
 # 5. ANGSD can compute a ML estimate of the 2D-SFS which should be preferred when many sites are available. 
 # 	 However, ANGSD output file should be transformed (from log to un-log and from space-separated to tab-separated) before being used in ngsFST.
 
+
 ```
 
  # Copying to local
 ```{bash}
-
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_fst/*.fsts.csv /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_fst
-
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_fst/*.fsts.csv /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_fst/
 ```
 
 
@@ -209,41 +187,39 @@ wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/
 
 fst_table = list.files(path = wd, pattern="*fsts.csv")    
 
-# fst_table[i]
-# df="global.fsts.csv"
-# filter_pattern="_ll_"
-
 
 # Define function to plot trees
 
-
 plot_FST_nj_weighted_unrooted_tree <- function(wd,df,filter_pattern,subset_name ){
 
-  first.pop <- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%
-   # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
-   # filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>%     
-    select(POP1) %>% 
-    slice(c(1)) %>% as.character()
-  
-  last.pop<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%
-   # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
-   # filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
-    select(POP2) %>% 
-    slice(n()) %>% as.character()
- 
-  fst.w_matrix<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%
-    rbind(c(first.pop,first.pop,NA,NA),
-          c(last.pop,last.pop,NA,NA)) %>%
+  first.pop <- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%     filter (POP1!="x_ll_ba_n003") %>% 
+    filter (POP2!="x_ll_ba_n003") %>% 
+    # Esta parte es para quitar poblaciones grandes en caso de que tuviera valores para toda la distribución por ejemplo. Yo no lo quiero porque tengo mongolia junto y no me interesa quitarlo. 
     # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
     # filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
-    select(POP1,POP2,FSTweight) %>% 
-    spread(POP2,FSTweight) %>%
-    tibble::remove_rownames() %>% tibble::column_to_rownames("POP1")
+    select(POP1) %>% slice(c(1)) %>% as.character()
   
+  last.pop<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%  filter (POP1!="x_ll_ba_n003") %>% 
+    filter (POP2!="x_ll_ba_n003") %>% 
+    # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
+    # filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
+    select(POP2) %>% slice(n())%>% as.character()
+ 
+  fst.w_matrix<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>% filter (POP1!="x_ll_ba_n003") %>% 
+    filter (POP2!="x_ll_ba_n003") %>% 
+    rbind(c(first.pop,first.pop,NA,NA),
+          c(last.pop,last.pop,NA,NA)) %>%
+   # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
+   #  filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
+    select(POP1,POP2,FSTweight)%>% 
+    spread(POP2,FSTweight)%>%
+    tibble::remove_rownames() %>% tibble::column_to_rownames("POP1")  
+    
+    
+    
   ## plot Neighbouring-Joining Tree
  
-    pdf(paste0(wd,subset_name, gsub(".fsts.csv", "_weighted.pdf",df)))
-    
+    pdf(paste0(wd,subset_name, gsub(".fsts.csv", "_weighted.pdf",df)), paper =  "a4" )
     plot(nj(as.dist(t(fst.w_matrix))), main=gsub(".csv", "_Fst_w", df),sub="neighbor joining",type="unrooted")
     dev.off()
 }
@@ -253,97 +229,11 @@ plot_FST_nj_weighted_unrooted_tree <- function(wd,df,filter_pattern,subset_name 
 
 
 for (i in 1:length (fst_table)){
-  #Load table,  keep only the values of single populations (NOT NOW! because I have Mongolia, if you want to do that only remove the # in the function).
+  #Load table,  keep only the values of single populations 
+  #(I migth be interested in the other comparissons but later)
   plot_FST_nj_weighted_unrooted_tree(wd,fst_table[i],"_ll_","lynx_lynx_fst_test") 
 }
 
 
 ```
-
-
-# Nice plot
-
-```{r}
-
-library(dplyr)
-library(tidyr)
-library(magrittr)
-library(ggplot2)
-library(ape)
-
-
-
-fst_table = list.files(path = wd, pattern="*fsts.csv")    
-
-wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_fst/"
-df <- fst_table
-filter_pattern <- "_ll_"
-subset_name <- "lynx_lynx_fst_test"
-
-
-
-first.pop <- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%
-   # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
-   # filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>%     
-    select(POP1) %>% 
-    slice(c(1)) %>% as.character()
-  
-  last.pop<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%
-   # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
-   # filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
-    select(POP2) %>% 
-    slice(n()) %>% as.character()
- 
-  fst.w_matrix<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%
-    rbind(c(first.pop,first.pop,NA,NA),
-          c(last.pop,last.pop,NA,NA)) %>%
-    # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
-    # filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
-    select(POP1,POP2,FSTweight) %>% 
-    spread(POP2,FSTweight) %>%
-    tibble::remove_rownames() %>% tibble::column_to_rownames("POP1")
-  
-  
-fst.w_matrix_fancy <- fst.w_matrix %>%  plyr::rename(c( "c_ll_po_n008"= "Bialowieza",
-                          "c_ll_ur_n006"= "Urals",
-                          "c_ll_ki_n013"= "Kirov",
-                          "c_ll_la_n006"= "Latvia",
-                          "c_ll_no_n008"= "Norway",
-                          "x_ll_ba_n003"= "Balkans" ,
-                          "c_ll_cr_n006"= "Carpathians",
-                          "c_ll_to-c_ll_ka-c_ll_og_n008"= "Mongolia",
-                          "c_ll_tu_n006"= "Tuva",
-                          "c_ll_vl_n008"= "Vladivostok", 
-                          "c_ll_ya_n008"= "Yakutia") )
-
-
-
-# You have to give the vector in the correct order check it doing : distance_nj_matrix$tip.label
-
-cols <- c("Carpathians"=brewer.pal(12,"Paired")[9], 
-          "Kirov"=brewer.pal(12,"Paired")[1], 
-          "Latvia"=brewer.pal(12,"Paired")[3], 
-          "Norway"=brewer.pal(12,"Paired")[2], 
-          "Bialowieza"=brewer.pal(12,"Paired")[4], 
-          "Mongolia"=brewer.pal(12,"Paired")[12],  
-          "Tuva"=brewer.pal(12,"Paired")[8], 
-          "Urals"=brewer.pal(11,"BrBG")[9], 
-          "Vladivostok"=brewer.pal(12,"Paired")[5], 
-          "Yakutia"=brewer.pal(12,"Paired")[6],
-          "Balkans"=brewer.pal(12,"Paired")[10]) 
-
-  ## plot Neighbouring-Joining Tree
- 
-distance_nj_matrix <- nj(as.dist(t(fst.w_matrix_fancy)))
-
-pdf(paste0(wd,subset_name, gsub(".fsts.csv", "_weighted_fancy.pdf",df)))
-plot.phylo(distance_nj_matrix, type = "u" , tip.col = cols, rotate.tree = -110, lab4ut="axial", edge.width=3)
-dev.off()
-
-
-
-```
-
-
-
 
