@@ -870,8 +870,8 @@ bwa aln -l 999 -t 8 $REF ${i}_R2_trimmed.fastq.gz > ${i}_2.sai
 
 ### map reads
 
-bwa samse /raid6/mlucena/lynx_genome/lp23.fa ${i}.sai ${i}_merged.fastq.gz > ${i}.sam
-bwa sampe /raid6/mlucena/lynx_genome/lp23.fa ${i}_1.sai ${i}_2.sai ${i}_R1_trimmed2.fastq.gz  ${i}_R2_trimmed.fastq.gz > ${i}_unmerged.sam 
+bwa samse $REF ${i}.sai ${i}_merged.fastq.gz > ${i}.sam
+bwa sampe $REF ${i}_1.sai ${i}_2.sai ${i}_R1_trimmed2.fastq.gz  ${i}_R2_trimmed.fastq.gz > ${i}_unmerged.sam 
 
 
 #########################
