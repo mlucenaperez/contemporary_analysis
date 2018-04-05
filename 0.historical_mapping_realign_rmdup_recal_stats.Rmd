@@ -810,7 +810,7 @@ After talking with Johanna, we are going to map using BWA-aln y BWA-sampe.
 
 # -------------------
 
-# Mapping again
+# Mapping again ALN
 
 ```{r, engine=bash, eval=FALSE}
 # VARIABLES:
@@ -835,63 +835,129 @@ Checked whether you are using trimmed or untrimmed data.
 
 ```{r, engine=bash, eval=FALSE}
 
-# Para los de LYNX_14: Lanzado!
-
-# Trimming (ya estaba hecho) y merging.
-
-for i in ${ARRAY[@]}
-do
-echo "${i}"
-
-SeqPrep -f ${i}_R1_trimmed.fastq.gz -r ${i}_R2_trimmed.fastq.gz  -1 ${i}_R1_trimmed2.fastq.gz -2 ${i}_R2_trimmed2.fastq.gz -L 30  -s ${i}_merged.fastq.gz
-
-done
-
+# Trimming (ya estaba hecho) y merging (no lo hago).
+#for i in ${ARRAY[@]}
+#do
+#echo "${i}"
+#SeqPrep -f ${i}_R1_trimmed.fastq.gz -r ${i}_R2_trimmed.fastq.gz  -1 ${i}_R1_trimmed2.fastq.gz -2 ${i}_R2_trimmed2.fastq.gz -L 30  -s ${i}_merged.fastq.gz
+#done
 
 
 for i in ${ARRAY[@]}
 do
 echo "${i}"
-
-#################
-# 	bwa	#
-#################
-
-### align reads
-# -l 999 = seeding disabled
-# -t 8 = number of threads
-
-bwa aln -l 999 -t 10 $REF ${i}_merged.fastq.gz > ${i}.sai
-
-done
-
-for i in ${ARRAY[@]}
-do
-echo "${i}"
-
-bwa aln -l 999 -t 4 $REF ${i}_R1_trimmed2.fastq.gz > ${i}_1.sai #you can now use a fastq file.
+bwa aln -l 999 -t 10 $REF ${i}_R1_trimmed.fastq.gz > ${i}_1.sai #you can now use a fastq file.
+bwa samse $REF ${i}_1.sai  ${i}_R1_trimmed.fastq.gz > ${i}_1.sam
 done
 
 
 for i in ${ARRAY[@]}
 do
 echo "${i}"
-bwa aln -l 999 -t 4 $REF ${i}_R2_trimmed2.fastq.gz > ${i}_2.sai 
+bwa aln -l 999 -t 10 $REF ${i}_R2_trimmed.fastq.gz > ${i}_2.sai 
+bwa samse $REF ${i}_2.sai  ${i}_R2_trimmed.fastq.gz > ${i}_2.sam
+done
+
+
+```
+
+Como tarda mucho voy a intetnar lanzarlo más eficientemente. 
+
+He visto que los que ya están hechos son:
+
+C9KH6ANXX_5_LYNX7-687ii5-4 --> FOUND
+C9KH6ANXX_5_LYNX7-687ii5-4 --> FOUND
+C9KH6ANXX_5_LYNX7-695ii5-4 --> FOUND only one!
+C9KH6ANXX_5_LYNX7-700ii5-4 --> FOUND only one!
+C9KH6ANXX_5_LYNX7-686ii5-4 --> FOUND
+C9KH6ANXX_5_LYNX7-686ii5-4 --> FOUND
+C9KH6ANXX_5_LYNX7-625ii5-2 --> FOUND
+C9KH6ANXX_5_LYNX7-625ii5-2 --> FOUND
+C9KH6ANXX_5_LYNX7-604ii5-2 --> FOUND
+C9KH6ANXX_5_LYNX7-604ii5-2 --> FOUND
+C9KH6ANXX_5_LYNX7-693ii5-4 --> FOUND
+C9KH6ANXX_5_LYNX7-693ii5-4 --> FOUND
+
+Los dos que son FOUND only one! solo se han hecho para R1. Lanzo los R2:
+
+```{bash}
+
+i="C9KH6ANXX_5_LYNX7-695ii5-4"
+i="C9KH6ANXX_5_LYNX7-700ii5-4"
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+
+bwa aln -l 999 -t 10 $REF ${i}_R2_trimmed.fastq.gz > ${i}_2.sai 
+bwa samse $REF ${i}_2.sai  ${i}_R2_trimmed.fastq.gz > ${i}_2.sam
+
+```
+
+Lanzado! 2018/04/02
+
+El resto lo voy lanzando de la siguiente manera. Primero voy a dividir todo lo que nos queda en 4 tandas. Cada una de estas tandas iría en el screen ARRAY_1 y a su vez cada una iría dividida en dos: R1 y R2. 
+
+```{bash}
+
+# 1 --> Lanzado!
+# R1 --> Lanzado!
+# R2 --> Lanzado!
+declare -a ARRAY=(C9KH6ANXX_5_LYNX7-702ii5-4 C9KH6ANXX_5_LYNX7-706ii5-4 C9KH6ANXX_5_LYNX7-708ii5-4 C9KH6ANXX_5_LYNX7-709ii5-4 C9KH6ANXX_5_LYNX7-710ii5-4 C9KN6ANXX_7_LYNX7-604ii5-2 C9KN6ANXX_7_LYNX7-625ii5-2 C9KN6ANXX_7_LYNX7-686ii5-4 C9KN6ANXX_7_LYNX7-687ii5-4 C9KN6ANXX_7_LYNX7-693ii5-4 C9KN6ANXX_7_LYNX7-695ii5-4 C9KN6ANXX_7_LYNX7-700ii5-4 C9KN6ANXX_7_LYNX7-702ii5-4 C9KN6ANXX_7_LYNX7-706ii5-4 C9KN6ANXX_7_LYNX7-708ii5-4 C9KN6ANXX_7_LYNX7-709ii5-4 C9KN6ANXX_7_LYNX7-710ii5-4 C9KNWANXX_1_LYNX7-604ii5-2 C9KNWANXX_1_LYNX7-625ii5-2 C9KNWANXX_1_LYNX7-686ii5-4 C9KNWANXX_1_LYNX7-687ii5-4 C9KNWANXX_1_LYNX7-693ii5-4 C9KNWANXX_1_LYNX7-695ii5-4 C9KNWANXX_1_LYNX7-700ii5-4 C9KNWANXX_1_LYNX7-702ii5-4 C9KNWANXX_1_LYNX7-706ii5-4 C9KNWANXX_1_LYNX7-708ii5-4 C9KNWANXX_1_LYNX7-709ii5-4 C9KNWANXX_1_LYNX7-710ii5-4 C9KNWANXX_2_LYNX7-604ii5-2)
+
+# 2 --> Lanzado!
+# R1 --> Lanzado!
+# R2 --> Lanzado!
+declare -a ARRAY=(C9KNWANXX_2_LYNX7-625ii5-2 C9KNWANXX_2_LYNX7-686ii5-4 C9KNWANXX_2_LYNX7-687ii5-4 C9KNWANXX_2_LYNX7-693ii5-4 C9KNWANXX_2_LYNX7-695ii5-4 C9KNWANXX_2_LYNX7-700ii5-4 C9KNWANXX_2_LYNX7-702ii5-4 C9KNWANXX_2_LYNX7-706ii5-4 C9KNWANXX_2_LYNX7-708ii5-4 C9KNWANXX_2_LYNX7-709ii5-4 C9KNWANXX_2_LYNX7-710ii5-4 C9KNWANXX_3_LYNX7-604ii5-2 C9KNWANXX_3_LYNX7-625ii5-2 C9KNWANXX_3_LYNX7-686ii5-4 C9KNWANXX_3_LYNX7-687ii5-4 C9KNWANXX_3_LYNX7-693ii5-4 C9KNWANXX_3_LYNX7-695ii5-4 C9KNWANXX_3_LYNX7-700ii5-4 C9KNWANXX_3_LYNX7-702ii5-4 C9KNWANXX_3_LYNX7-706ii5-4 C9KNWANXX_3_LYNX7-708ii5-4 C9KNWANXX_3_LYNX7-709ii5-4 C9KNWANXX_3_LYNX7-710ii5-4 C9KNWANXX_4_LYNX7-604ii5-2 C9KNWANXX_4_LYNX7-625ii5-2 C9KNWANXX_4_LYNX7-686ii5-4 C9KNWANXX_4_LYNX7-687ii5-4 C9KNWANXX_4_LYNX7-693ii5-4 C9KNWANXX_4_LYNX7-695ii5-4 C9KNWANXX_4_LYNX7-700ii5-4)
+
+# 3
+# R1
+# R2
+declare -a ARRAY=(C9KNWANXX_4_LYNX7-702ii5-4 C9KNWANXX_4_LYNX7-706ii5-4 C9KNWANXX_4_LYNX7-708ii5-4 C9KNWANXX_4_LYNX7-709ii5-4 C9KNWANXX_4_LYNX7-710ii5-4 C9KNWANXX_5_LYNX7-604ii5-2 C9KNWANXX_5_LYNX7-625ii5-2 C9KNWANXX_5_LYNX7-686ii5-4 C9KNWANXX_5_LYNX7-687ii5-4 C9KNWANXX_5_LYNX7-693ii5-4 C9KNWANXX_5_LYNX7-695ii5-4 C9KNWANXX_5_LYNX7-700ii5-4 C9KNWANXX_5_LYNX7-702ii5-4 C9KNWANXX_5_LYNX7-706ii5-4 C9KNWANXX_5_LYNX7-708ii5-4 C9KNWANXX_5_LYNX7-709ii5-4 C9KNWANXX_5_LYNX7-710ii5-4 CA3D2ANXX_3_LYNX7-687ii5-4 CA3D2ANXX_3_LYNX7-693ii5-4 CA3D2ANXX_3_LYNX7-700ii5-4 CA3D2ANXX_3_LYNX7-706ii5-4 CA3D2ANXX_3_LYNX7-708ii5-4 CALHGANXX_6_LYNX7-604ii5-2 CALHGANXX_6_LYNX7-625ii5-2 CALHGANXX_6_LYNX7-693ii5-4 CALHGANXX_6_LYNX7-695ii5-4 CALHGANXX_6_LYNX7-700ii5-4 CALHGANXX_6_LYNX7-702ii5-4 CALHGANXX_6_LYNX7-706ii5-4 CALHGANXX_6_LYNX7-708ii5-4)
+
+# 4
+# R1
+# R2
+declare -a ARRAY=(CALHGANXX_6_LYNX7-709ii5-4 CALHGANXX_7_LYNX7-604ii5-2 CALHGANXX_7_LYNX7-625ii5-2 CALHGANXX_7_LYNX7-693ii5-4 CALHGANXX_7_LYNX7-695ii5-4 CALHGANXX_7_LYNX7-700ii5-4 CALHGANXX_7_LYNX7-702ii5-4 CALHGANXX_7_LYNX7-706ii5-4 CALHGANXX_7_LYNX7-708ii5-4 CALHGANXX_7_LYNX7-709ii5-4 CALHGANXX_8_LYNX7-604ii5-2 CALHGANXX_8_LYNX7-625ii5-2 CALHGANXX_8_LYNX7-693ii5-4 CALHGANXX_8_LYNX7-695ii5-4 CALHGANXX_8_LYNX7-700ii5-4 CALHGANXX_8_LYNX7-702ii5-4 CALHGANXX_8_LYNX7-706ii5-4 CALHGANXX_8_LYNX7-708ii5-4 CALHGANXX_8_LYNX7-709ii5-4)
+```
+
+## 	Aligment BWA-MEM	
+
+Checked whether you are using trimmed or untrimmed data.
+
+```{r, engine=bash, eval=FALSE}
+
+for i in ${ARRAY[@]}
+do
+echo "${i}"
+bwa aln -l 999 -t 10 $REF ${i}_R1_trimmed.fastq.gz > ${i}_1.sai #you can now use a fastq file.
+bwa samse $REF ${i}_1.sai  ${i}_R1_trimmed.fastq.gz > ${i}_1.sam
 done
 
 for i in ${ARRAY[@]}
 do
 echo "${i}"
-### map reads
-
-bwa samse $REF ${i}.sai ${i}_merged.fastq.gz > ${i}.sam
-bwa sampe $REF ${i}_1.sai ${i}_2.sai ${i}_R1_trimmed2.fastq.gz  ${i}_R2_trimmed.fastq.gz > ${i}_unmerged.sam 
-<<<<<<< HEAD
-=======
+bwa aln -l 999 -t 10 $REF ${i}_R2_trimmed.fastq.gz > ${i}_2.sai 
+bwa samse $REF ${i}_2.sai  ${i}_R2_trimmed.fastq.gz > ${i}_2.sam
 done
->>>>>>> 5a9e015c9cccd18925c0ad782c14a7d15e2df5f3
 
 
+```
+
+move the files to server A.
+
+```{bash}
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/grupolince/lynx_genomes_5x/hcal_BAM_files_final/BAM_files_LYNX_14_LYNX_17_BWA-aln/ /home/mlucena/hca_data_array_3_4
+
+```
+
+
+
+Primero tengo que juntar R1 y R2 y luego podría hacer merged bam, porque ATLAS reconoce el RG. 
+
+
+
+
+
+```{r, engine=bash, eval=FALSE}
 
 for i in ${ARRAY[@]}
 do
@@ -1068,32 +1134,7 @@ samtools depth $sample > $sample.covpersite
 done
 ```
 
-# -------------------
 
-# Recal
-
-
-```{bash}
-# Run Estimation of postmorten damage:
-
-samtools index ${i}_sorted_marked_rg_sorted_indelrealigner.bam
-
-java -jar /opt/picard-tools/picard.jar ValidateSamFile I=${i}_sorted_marked_rg_sorted_indelrealigner.bam  MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000
-
-
-screen -S atlas_ancient
-i=/home/mlucena/grupolince/lynx_genomes_5x/raw_data/ancient_data/a_lp_ca_1309
-REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa				
-
-./atlas task=estimatePMD bam=${i}_sorted_marked_rg_sorted_indelrealigner.bam fasta=$REF verbose
-
-
-REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
-
-mapDamage -i a_lp_ca_1309_sorted_marked_rg_sorted_indelrealigner.bam  -r $REF --rescale
-
-
-```
 
 # -------------------
 # Filtering small reads
@@ -1172,7 +1213,8 @@ final_ratio <- final %>% mutate (final, ratio_less_divided_equal = less_126/equa
 
 # -------------------
 
-# Mapping again
+# ATLAS Test:
+# Mapping again only one sample to test with ATLAS
 
 Como ATLAS necesita que hayas mapeado por su cuenta R1 y R2, voy a hacer ese procedimiento con mis lecturas de histórico. 
 
@@ -1233,14 +1275,59 @@ done
 # test cutre.
 # cojo una lectura cualquiera y la paso a bam. 
 
-bwa samse $REF C9KH6ANXX_5_LYNX7-604ii5-2.sai already_done_fastq/C9KH6ANXX_5_LYNX7-604ii5-2_merged.fastq.gz > C9KH6ANXX_5_LYNX7-604ii5-2.sam
-samtools view -Sb C9KH6ANXX_5_LYNX7-604ii5-2.sam > test.bam
+
+samtools view -Sb C9KH6ANXX_5_LYNX7-604ii5-2_1.sam > test.bam
 samtools sort test.bam > test_sorted.bam
 java -jar /opt/picard-tools/picard.jar AddOrReplaceReadGroups I=test_sorted.bam O=test_sorted_rg.bam RGID=test RGLB=test_lib RGPL=Illumina RGPU=test RGSM=test VALIDATION_STRINGENCY=SILENT 
 samtools index test_sorted_rg.bam
 
-REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa				
-/home/mlucena/atlas/atlas task=estimatePMD bam=test_sorted_rg.bam fasta=$REF length=25 verbose
+
+## 	Realignment with GATK	
+# RealignerTargetCreator
+java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T RealignerTargetCreator -nt 24 -R $REF -I test_sorted_rg.bam -o test_sorted_rg_realignertargetcreator.intervals
+# IndelRealigner
+java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T IndelRealigner -R $REF -targetIntervals test_sorted_rg_realignertargetcreator.intervals -I test_sorted_rg.bam -o test_sorted_rg_indelrealigner.bam
+
+
+# Now we validate SAM file. 
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=test_sorted_rg_indelrealigner.bam MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000 IGNORE=INVALID_MAPPING_QUALITY IGNORE=INVALID_CIGAR
+
+
+# ATLAS: Pipeline for BAM files with paired-end data:
+
+# Estimate the post-mortem damage patterns with estimatePMD
+
+/home/mlucena/atlas/atlas task=estimatePMD bam=test_sorted_rg_indelrealigner.bam fasta=$REF  verbose 
+
+# If the genome is male, use X recal to recalibrate the base quality scores. If the genome is female, use BQSR or recal based on invariant sites to recalibrate.
+# We are doing recal using invariants.
+
+/home/mlucena/atlas/atlas task=recal bam=test_sorted_rg_indelrealigner.bam pmdFile=test_sorted_rg_indelrealigner_PMD_input_Empiric.txt regions=/home/mlucena/grupolince/ultra_conserved_regions/lynx_coordinates_UCNE.bed equalBaseFreq verbose
+
+# --> DONE!
+#      -> No improvement even with lambda = 9.31323e-10, aborting Newton-Raphson.
+#                   -> max(F) = 0.00049551
+#       17) EM Iteration:
+#          - Calculating P(g|d, beta') ... done!
+#             -> Current Log Likelihood = -6.10727e+07
+#             -> Epsilon = 0
+#             -> EM has converged (tmpEpsilon < 1e-06)
+#       - Writing final estimates to file 'test_sorted_rg_indelrealigner_recalibrationEM.txt' ... done!
+# - Program terminated in 226.617 min!
+
+# Create a BAM file with recalibrated quality scores with recalBAM, use this file in subsequent steps
+
+# After recalibration of the base quality scores with either BQSR or recal, it is possible to print a BAM file with the newly estimated quality scores with recalBAM. By default, if a recalibrated quality is higher than 93 or lower than 0 it will be replaced by the respective limit. This is the range of ASCII characters. However, some tools such as GATK do not accept quality scores higher than 42 (this is the maximum quality that illumina will output). If you plan to use the recalibrated BAM file with GATK, use the option maxOutQuality=42.
+# This task does not filter for PCR duplicates, secondary alignment or proper pairs.
+
+# Specific Arguments
+# withPMD : pass this argument if the PMD should be reflected in the new quality scores. If the called base is a T or an A and the reference is a C or G, respectively, the recalibrated error rate minQual : minimum qual of base in original BAM file required for it to be taken into account. If the original quality score is smaller than this, it will not be recalibrated and output as is.
+# maxQual : same thing for maximum original quality score
+# minOutQuality : if recalibrated quality score is smaller than this threshold, the quality output in the recalibrated BAM file will be set to the given threshold
+# maxOutQuality : same as above for upper threshold
+
+
+/home/mlucena/atlas/atlas task=recalBAM bam=test_sorted_rg_indelrealigner.bam  recal=test_sorted_rg_indelrealigner_recalibrationEM.txt pmdFile=test_sorted_rg_indelrealigner_PMD_input_Empiric.txt fasta=$REF withPMD maxOutQuality=42 verbose
 
 
 
@@ -1248,20 +1335,19 @@ REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa
 
 
 
-###
 
 
-for i in ${ARRAY[@]}
-do
-echo "${i}"
-### map reads
 
-bwa samse $REF ${i}.sai ${i}_merged.fastq.gz > ${i}.sam
-bwa sampe $REF ${i}_1.sai ${i}_2.sai ${i}_R1_trimmed2.fastq.gz  ${i}_R2_trimmed.fastq.gz > ${i}_unmerged.sam 
-<<<<<<< HEAD
-=======
-done
->>>>>>> 5a9e015c9cccd18925c0ad782c14a7d15e2df5f3
+
+
+# Merge read pairs using mergeReads, use output file in subsequent steps
+
+
+
+# Re-estimate PMD patterns for the merged reads
+
+
+# Use one of the variant discovery tools, one of the population genetics tools, or qualityTransformation. Take the second PMD patterns into account by providing the corresponding file.
 
 
 for i in ${ARRAY[@]}
