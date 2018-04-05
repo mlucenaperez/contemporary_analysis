@@ -74,20 +74,6 @@ chmod 777 Script_SFS.py
 
 ```
 
-# Corro el script
-
-```{bash}
-
-python Script_SFS.py c_ll_cr-c_ll_ki-c_ll_ya_n027.popfile 6,13,8 c_ll_cr-c_ll_ki-c_ll_ya_n027_SFS ll_species_SNPs.vcf 5
-
-
-
-python Script_SFS.py c_ll_cr-c_ll_ki-c_ll_ya_n027.popfile 6,13,8 c_ll_cr-c_ll_ki-c_ll_ya_n027_SFS /home/mlucena/grupolince/lynx_genomes_5x/VCFs_Dani/c_ll_lp_plus_h_ll_renamed.vcf 5
-
-```
-
-
-
 
 ```{bash}
 # Los campos que nos interesan son estos:
@@ -134,15 +120,101 @@ java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC -XX:+UseStringDeduplication -Xms16g -X
   -o ll_species_SNPs_no_balcans_tagged_filtered.vcf
 
 
-
+## Exclude sites on the basis of the proportion of missing data (defined to be between 0 and 1, where 0 allows sites that are completely missing and 1 indicates no missing data allowed).
+# No funciona #
 /opt/vcftools_0.1.13/bin/vcftools --vcf ll_species_SNPs_no_balcans_tagged_filtered.vcf --max-missing 1 --out ll_species_SNPs_no_balcans_tagged_filtered_no_missing.vcf
+## 
+
+python Script_SFS_from_VCF_maria.py c_ll_cr-c_ll_ki-c_ll_ya_n027.popfile 6,13,8 c_ll_cr-c_ll_ki-c_ll_ya_n027_SFS ll_species_SNPs_no_balcans_tagged_filtered.vcf 5
 
 
-python Script_SFS_from_VCF_maria.py c_ll_cr-c_ll_ki-c_ll_ya_n027.popfile 6,13,8 ll_species_SNPs_no_balcans_tagged_filtered.vcf 5
-
-
-# Exclude sites on the basis of the proportion of missing data (defined to be between 0 and 1, where 0 allows sites that are completely missing and 1 indicates no missing data allowed).
 ```
+
+
+# SFS calculus based on ANGSD:
+
+```{bash}
+# The populations I am interested in are:
+
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+
+$NGSTOOLS/realSFS c_ll_cr_n006.unfolded-lr.saf.idx c_ll_ya_n008.unfolded-lr.saf.idx c_ll_ki_n013.unfolded-lr.saf.idx -P 5 > c_ll_cr-c_ll_ki-c_ll_ya_n027.sfs
+```
+
+
+
+
+# Very relevant link: http://homeweb.unifr.ch/wegmannd/pub/BAG2018/exercise3.html
+
+## Step 3: Infer the SFS using ANGSD
+
+We will now use ANGSD to infer the SFS from this data. For this we will first have to generate the SAF files (the site allele frequency likelihoods) from the bam file. This is done by providing ANGSD with a list of all bam files to be used.
+
+```{bash}
+ ls bottleneck_*.bam > bamfiles.list
+ module load angsd
+ touch bottleneck.fasta.fai
+ angsd -bam bamfiles.list -anc bottleneck.fasta -dosaf 1 -out bottleneck.saf -GL 2
+ realSFS bottleneck.saf.saf.idx > bottleneck_observed.sfs
+```
+Note that the touch command only updates the timestamp of the fasta index as ANGSD otherwise complains it to be too old.
+Look at the SFS file. Do you understand what the numbers mean?
+Optional: plot the SFS in R and compare it to the shape of neutral (=constant size) SFS. Does the SFS contain information about the bottleneck?
+
+## Step 4: Running fastsimcoal to estimate the parameters of a simple model
+
+fastsimcoal (we are using version 2.6 = executable fsc26) offers a way to infer demographic parameters using the method first introduced by Nielsen (2001).
+To used it, we need to prepare two files: i) a fastsimcoal input file with the specified model, ii) a file listing search ranges for the parameters to be estimated. Note that the first file (the model) need to contain tags for the parameters to link them with the search ranges (similar to what we have seen with ABCtoolbox). The files constsize.tpl and constsize.est are already ready to be used. Have a close look at them to understand how the model is specified.
+fastsimcoal also wants the SFS to be provided in a particular format and in a file with a specific name (same as tpl file plus some info on the SFS. Check the manual for more details). We can generate that file using awk as follows:
+ 
+```{bash}
+ awk 'BEGIN{print "1 observations"; s=""}{for(i=1;i<=NF;i++){printf "%s\t","d0_" i;}; print "\n" $0;}' bottleneck_observed.sfs > constsize_DAFpop0.obs
+```
+
+To run the parameter estimation, launch fastsimcoal as follows (check manual page 35 for details. Yes, it is complicated...):
+
+```{bash}
+fsc26 -t constsize.tpl -n100000 -N100000 -d -e constsize.est -M 0.001 -l 5 -L 25 -c 1 -q
+```
+ 
+Several output files will be written to the folder constsize. Check for the file constsize.bestlhoods, which contains the maximum likelihood estimate as well as the likelihood at that parameter and the highest likelihood that can be obtained for this data. If the MaxEstLhood is much lower than the ME.bestlhoods, the model may not fit the data well (which is probably the case here!).
+Run the inference a second and third time. Do you always get the same MLE parameters? Why not?
+One way to evaluate the fit of your model is to compare the observed to the expected SFS (you find the expected SFS in the file constsize_DAFpop0.txt). How do they compare?
+
+## Step 5: Running fastsimcoal to estimate the parameters of a size change model
+
+Let us now try to see if we get better estimates under a population size change model. For this, first copy est and tpl files to be modifed.
+
+```{bash}
+ cp constsize.tpl sizechange.tpl
+ cp constsize.est sizechange.est
+```
+
+Modify the files such that you can estimate the parameters of a size change model. Note that for this you need to add two addition parameters to the est file: i) the ancestral size and ii) the time in the past the size change happened. Then, you will need to calculate the relative ancestral size as a complex parameter. Your est file should then contain these parameters:
+
+```{bash}
+ [PARAMETERS]
+ 1 POPSIZE logunif 100 100000 output
+ 1 ANCESTRAL_SIZE logunif 100 100000 output
+ 1 TEXP logunif 1 10000 output
+ [COMPLEX PARAMETERS]
+ 0 REL_SIZE = ANCESTRAL_SIZE / POPSIZE
+
+```
+
+Then, you will need to modify the tpl file by adding a historical event:
+
+```{bash}
+ 1 historical event
+ TEXP 0 0 1 REL_SIZE 0 0
+
+```
+ 
+And then you need to rerun the estimation. Don't forget to also rename the observed sfs file ...)! Does the best likelihood improve?
+Also remember to compare the observed and expected SFS. Is there a better fit?
 
 
 
