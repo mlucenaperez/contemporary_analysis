@@ -3,7 +3,7 @@ title: "pipeline_contemporary_sfs"
 output: html_document
 ---
 
-# Generating SAF 
+# Generating SAF,SFS & thetas per site.
 
 ## Introduction and populations:
 
@@ -11,12 +11,12 @@ I am going to run SAF in my target populations.
 
 Populations:
 
-c_ll_no -->
-c_ll_po -->
-c_ll_ki -->
+c_ll_no 
+c_ll_po 
+c_ll_ki 
 
-c_lp_do -->
-c_lp_sm -->
+c_lp_do 
+c_lp_sm 
 
 I checked that all bam files were indexed --> OK
 
@@ -73,11 +73,6 @@ echo $N_IND
 echo $MIN_IND
 echo $maxDepth_truncated
 echo $minDepth_truncated
-
-
-
-
-
 
 ```
 
@@ -136,6 +131,43 @@ done
 ```
 
 
+##  Make bed theta        
+
+```{r, engine=bash, eval=FALSE}
+
+echo "-------$POP----------Make bed theta -----------------------------------------"
+
+$NGSTOOLS/thetaStat print $POP.unfolded-lr.postprob.thetas.idx > $POP.printed.stats
+
+# Transform the coordinates to use 0Based bedtools
+
+awk 'NR>1 {print  $1" "$2-1" "$2}' $POP.printed.stats > $POP.0basedcoordinates.borrar # --> 1, 2, 3
+# log transformation of watterson and pairwise:
+awk 'NR>1 {print  "e("$3")"}' $POP.printed.stats | bc -l > "$POP".watterson.borrar # --> 4
+awk 'NR>1 {print  "e("$4")"}' $POP.printed.stats | bc -l > "$POP".pairwise.borrar # --> 5
+                                                                                  # --> PAIRWISE - WATTERSON
+awk 'NR>1 {print  "e("$5")"}' $POP.printed.stats | bc -l > "$POP".thetaFL.borrar # --> 6
+awk 'NR>1 {print  "e("$6")"}' $POP.printed.stats | bc -l > "$POP".thetaH.borrar # --> 7
+awk 'NR>1 {print  "e("$7")"}' $POP.printed.stats | bc -l > "$POP".thetaL.borrar # --> 8
+
+# Create a header for the "$POP".transformedThetas file
+
+echo "scaffold position1 position2 watterson pairwise pairwise-watterson thetaFL thetaH thetaL" > "$POP".transformedThetas
+
+paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar "$POP".thetaFL.borrar "$POP".thetaH.borrar "$POP".thetaL.borrar | \
+awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP".transformedThetas
+
+rm "$POP".*.borrar
+mv $POP.printed.stats /backup/mlucena/intermediate_files_ANGSD/
+
+# done
+
+```
+
+
+
+# ----------------------------------
+
 ## SFS graphical representation
 
 
@@ -188,136 +220,7 @@ for (i in 1:length (my_files_unfolded))
 
 ```
 
-
-##  Make bed theta        
-
-```{r, engine=bash, eval=FALSE}
-
-echo "-------$POP----------Make bed theta -----------------------------------------"
-
-$NGSTOOLS/thetaStat print $POP.unfolded-lr.postprob.thetas.idx > $POP.printed.stats
-
-# Transform the coordinates to use 0Based bedtools
-
-awk 'NR>1 {print  $1" "$2-1" "$2}' $POP.printed.stats > $POP.0basedcoordinates.borrar # --> 1, 2, 3
-# log transformation of watterson and pairwise:
-awk 'NR>1 {print  "e("$3")"}' $POP.printed.stats | bc -l > "$POP".watterson.borrar # --> 4
-awk 'NR>1 {print  "e("$4")"}' $POP.printed.stats | bc -l > "$POP".pairwise.borrar # --> 5
-                                                                                  # --> PAIRWISE - WATTERSON
-awk 'NR>1 {print  "e("$5")"}' $POP.printed.stats | bc -l > "$POP".thetaFL.borrar # --> 6
-awk 'NR>1 {print  "e("$6")"}' $POP.printed.stats | bc -l > "$POP".thetaH.borrar # --> 7
-awk 'NR>1 {print  "e("$7")"}' $POP.printed.stats | bc -l > "$POP".thetaL.borrar # --> 8
-
-# Create a header for the "$POP".transformedThetas file
-
-echo "scaffold position1 position2 watterson pairwise pairwise-watterson thetaFL thetaH thetaL" > "$POP".transformedThetas
-
-paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar "$POP".thetaFL.borrar "$POP".thetaH.borrar "$POP".thetaL.borrar | \
-awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP".transformedThetas
-
-rm "$POP".*.borrar
-mv $POP.printed.stats /backup/mlucena/intermediate_files_ANGSD/
-
-# done
-
-```
-
-
-## Window analysis
-
-
-```{bash}
-
-RUTA=/home/mlucena/ANGSD_analysis 
-cd $RUTA/whole_genome_analysis/sfs/window_analysis
-
-#To launch one by one
-POP="c_lp_sm_n019"  # <--CHANGE POP HERE
-screen -S "$POP"_sfs_window
-POP="c_lp_sm_n019"  # <--CHANGE POP HERE
-script "$POP"_sfs_window.log
-POP="c_lp_sm_n019"  # <--CHANGE POP HERE
-
-THREADS=10                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
-
-NGSTOOLS="/opt/angsd/angsd/misc"
-
-WINDOWSIZE=50000
-WINDOWSTEP=10000 
-
-RUTA=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
-
-echo "-------$POP---------- Window analysis -----------------------------------------"
-
-$NGSTOOLS/thetaStat do_stat $RUTA/$POP.unfolded-lr.postprob.thetas.idx -win $WINDOWSIZE -step $WINDOWSTEP  -outnames $POP.unfolded-lr.postprob.thetasWindow_$WINDOWSIZE.$WINDOWSTEP.gz
-
-```
-Values in this output file are the sum of the per-site estimates for the whole window.
-
-
-## Window R representation
-
-
-Download data:
-
-```{bash}
-
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*PG /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/window_analysis/
-
-```
-
-
-```{r}
-
-# Representación de las ventanas en manhattan plots. 
-
-library(dplyr)
-library(qqman)
-library(ggplot2)
-library ("GGally")
-
-# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/window_analysis/" 
-wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/"
-
-finsThetas = list.files(path = wd, pattern="*.pestPG$")
-
-for (i in 1:length(finsThetas))
-{
-  datThetas <- read.csv (paste(wd,finsThetas[i],sep=""), header = T, sep = '\t')  
-  name_thetas <- unlist(strsplit(finsThetas[i], "[.]"))
-  datThetas$CHR <- as.numeric(gsub('^.{6}', '', datThetas$Chr))
-  datThetas$Nsites <- as.numeric(datThetas$nSites)
-  datThetas$SNPS_window = paste(datThetas$Chr, datThetas$WinCenter, sep='_')
-  datThetas[,-c(1,2)][datThetas[, -c(1,2)] < 0] <- 0
-  # Manhattan plot Theta Waterson
-  max_thetas <- max (datThetas$tW)
-  min_thetas <- min(datThetas$tW)
-  setEPS()
-  postscript(file=paste(wd,name_thetas[1], '_watterson_manhattan.eps', sep=''))
-  manhattan(datThetas, chr = "CHR", bp = "WinCenter", p = "tW", snp = "SNPS_window", ylim = c(0 , max_thetas+10), ylab = "tW", xlab = "Scaffold", logp=F, genomewideline = F, suggestiveline = F, main = paste ("Manhattan plot of tW ",name_thetas[1], sep =''))
-  dev.off() 
-  # Correlation between diversity indixes
-  setEPS()
-  postscript(file=paste(wd,name_thetas[1], '_diversity_correlation.eps', sep=''), horizontal = FALSE, onefile = FALSE, paper = "special")
-  print(ggpairs(datThetas, columns=4:8, title=paste("Theta correlations ", name_thetas[1], sep='')))
-  dev.off()
-  # Correlation between neutrality indixes
-  setEPS()
-  postscript(file=paste(wd,name_thetas[1], '_neutrality_correlation.eps', sep=''), horizontal = FALSE, onefile = FALSE, paper = "special")
-  print(ggpairs(datThetas, columns=9:13, title=paste("Neutrality indexes correlations ", name_thetas[1], sep='')))
-  dev.off()
-}
-
-
-```
-
-
-```{bash}
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*eps /Users/marialucenaperez/Desktop
-
-```
-
-
+# ------------------------------------------------
 
 ## Global diversity per feature
 
@@ -325,9 +228,9 @@ I made a gff3 file with all the characteristics that we want to evaluate.
 Now that I have the file to run over the calculus per unit. To do it in a efficient way I will split this file into as many files as scaffolds. I will do the same with my thetas file. 
 That way I will just have to search over the file that contains the scaffold, and bedtools will be faster.  
 
-ESTE ES EL ARCHIVO: 
+ESTE ES EL ARCHIVO (2018/04/03): 
 
-/home/mlucena/grupolince/notation/LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3
+/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.gff3
 
 ### First I separate transformedThetas per scaffold. 
 
@@ -344,9 +247,7 @@ mkdir $FOLDER;
 done
  
  
-POPS=("c_ll_no_n008" "c_ll_po_n008"  "c_lp_do_n012")
-
-
+POPS=("c_ll_no_n008" "c_ll_po_n008"  "c_lp_do_n012" "c_lp_sm_n019" "c_ll_ki_n013")
 
 ########################
 
@@ -371,69 +272,52 @@ done
 
 ```
 
-### Change folder name: Esta es una corrección ya aplicada que no tendría que aplicarse puesto que el script de arriba está bien. 
-
-Prefiero añadir un nombre con el número de individuos (que aunque estaba así arriba porque lo he corregido para sm no lo había hecho así), así que lo cambio.
-
-```{bash}
-
-mv c_lp_sm_separated_by_scaffold c_lp_sm_n019_separated_by_scaffold
-cd c_lp_do_n012_separated_by_scaffold
-
-for file in c_lp_do.*
-do
-echo $file 
-mv $file ${file/c_lp_do/c_lp_do_n012}
-done
-
-```
-
-
 
 ### Diversity per feature.
 
 Populations:
 
-c_ll_ki_n013
-c_ll_no
-c_ll_po
+c_ll_no_n008
+c_ll_po_n008 
+c_lp_do_n012
+c_lp_sm_n019
+c_ll_ki_n013 --> PI: 53143
 
-c_lp_sm
-c_lp_do
 
 ## OJO! parece que tengo valores de -1 en los NAS, ¿eso por qué? corregir e incorporar directamente el valor de informative sites en el loop.
 
 ```{bash}
 
-### Change location!
+# Run pop by pop:
 
-# POP=c_ll_ki_n013 # check if I need to include n_013 <--- Change pop here!
-# screen -S "$POP"_scaffold_per_unit
-# POP=c_ll_ki_n013 # check if I need to include n_013 <--- Change pop here!
-# script log_screen_"$POP"_scaffold_per_unit.log
-# POP=c_ll_ki_n013 # check if I need to include n_013 <--- Change pop here!
+POP=c_lp_sm_n019 # <--- Change pop here!
+screen -S "$POP"_scaffold_per_unit
+POP=c_lp_sm_n019 # <--- Change pop here!
+script log_screen_"$POP"_scaffold_per_unit.log
+POP=c_lp_sm_n019 # <--- Change pop here!
 
-## WG variables
+# Run a loop: 
 
-screen -S Scaffold_per_unit
-script log_screen_Scaffold_per_unit
+# screen -S Scaffold_per_unit
+# script log_screen_Scaffold_per_unit
+# POPS=("c_ll_ki_n013" "c_ll_no_n008" "c_ll_po_n008" "c_lp_do_n012" "c_lp_sm_n019")
 
-POPS=("c_ll_ki_n013" "c_ll_no_n008" "c_ll_po_n008" "c_lp_do_n012" "c_lp_sm_n019")
 
-SCAFFOLDS_FOLDER=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.corrected.PerScaffold/
+## Variables
+SCAFFOLDS_FOLDER=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.PerScaffold/
 cd $SCAFFOLDS_FOLDER
-SCAFFOLDS=($(find /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.corrected.PerScaffold/ -name "LYPA23C*" -exec ls {} \; | awk '{ print substr( $0, length($0) - 10, length($0) ) }'  | LANG=en_EN sort | uniq ))
+SCAFFOLDS=($(find /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.PerScaffold/ -name "LYPA23C*" -exec ls {} \; | awk '{ print substr( $0, length($0) - 10, length($0) ) }'  | LANG=en_EN sort | uniq ))
 DIVERSITY_PER_UNIT_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
 SFS_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
 
 
-for POP in "${POPS[@]}"
-do
+# for POP in "${POPS[@]}"
+# do
 
 echo "---------------------------------------------------$POP---------------------------------------------------"
 
 # Create headers for the outfile
-echo -e "scaffold\tstart\tend\tlength\tNAs\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop" > $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
+echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch" > $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
 
 for SCAFFOLD in "${SCAFFOLDS[@]}"
 do
@@ -449,8 +333,6 @@ do
 
 echo "--------$SCAFFOLD:$FEATURE--------"
 
-LENGTH=$(expr $END - $START_ONEBASED) 
-
 if [ "$METHOD" = "PipeR" ] 
 then
 ID_GENE=$(echo $IDRAW | awk -F "_" '{ split ($0, a, "ID="); split (a[2],b,"_"); print b[1]"_"b[2] }')
@@ -465,11 +347,15 @@ else
 ID=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); print b[1] }')
 fi
 
-# Intersect bed of the unit (first remove header)¿¿??
-
 START_CEROBASED=($(echo $START_ONEBASED-1 | bc))
+LENGTH=($(echo $END-$START_CEROBASED | bc)) 
+SPECIE=$(echo $POP | cut -d"_" -f 2)
+EPOCH=$(echo $POP | cut -d"_" -f 1)
+
 
 cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_CEROBASED\t$END") > "$POP".iter.transformedThetas.borrar
+# He comprobado que en el archivo de Thetas hay por lo menos 4 posiciones que empieza en 0. por tanto asumo que este archivo es 0-based.
+
 
 WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
 WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
@@ -481,16 +367,13 @@ DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP".iter.transformedThe
 
 TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_AVERAGE_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
 
-NR=$(wc -l "$POP".iter.transformedThetas.borrar | cut -d" " -f1)
+INFORMATIVESITES=$(wc -l "$POP".iter.transformedThetas.borrar | cut -d" " -f1)
 
-NAs=$(expr $LENGTH - $NR)
-
-INFORMATIVESITES=$(expr $LENGTH - $NAs)
-
+NAs=($(echo $LENGTH - $INFORMATIVESITES | bc)) 
 
 #Before printing check all variables are full, if empty use NA
 if [ -z ${LOCATION} ]; then  LOCATION=NA;  fi
-if [ -z ${START_ONEBASED} ]; then  START_ONEBASED=NA;  fi
+if [ -z ${START_CEROBASED} ]; then  START_CEROBASED=NA;  fi
 if [ -z ${END} ]; then  END=NA;  fi
 if [ -z ${LENGTH} ]; then  LENGTH=NA;  fi
 if [ -z ${NAs} ]; then  NAs=NA;  fi
@@ -506,12 +389,15 @@ if [ -z ${PAIRWISE_AVERAGE_PER_UNIT} ]; then  PAIRWISE_AVERAGE_PER_UNIT=NA;  fi
 if [ -z ${PAIRWISE_SD_PER_UNIT} ]; then  PAIRWISE_SD_PER_UNIT=NA;  fi
 if [ -z ${TAJIMAS_D_PER_UNIT} ]; then  TAJIMAS_D_PER_UNIT=NA;  fi
 if [ -z ${POP} ]; then  POP=NA;  fi
+if [ -z ${SPECIE} ]; then  SPECIE=NA;  fi
+if [ -z ${EPOCH} ]; then  EPOCH=NA;  fi
+
 
 #Paste averages, and standatd deviations
 
 paste \
 <(echo $LOCATION ) \
-<(echo $START_ONEBASED ) \
+<(echo $START_CEROBASED ) \
 <(echo $END ) \
 <(echo $LENGTH ) \
 <(echo $NAs) \
@@ -526,13 +412,16 @@ paste \
 <(echo $PAIRWISE_AVERAGE_PER_UNIT) \
 <(echo $PAIRWISE_SD_PER_UNIT) \
 <(echo $TAJIMAS_D_PER_UNIT) \
-<(echo $POP) |\
+<(echo $POP) \
+<(echo $SPECIE) \
+<(echo $EPOCH) |\
 sed 's/ /\t/g'| sed 's/\t\+/\t/g'  >>  $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
 
-#Reset all (but POP) variables before next iteration
+
+#Reset all (but POP,SPECIE or EPOCH (those should be the same during the whole iteration and if you remove POP the loop won't work)) variables before next iteration
 
 unset LOCATION
-unset START_ONEBASED
+unset START_CEROBASED
 unset END
 unset LENGTH
 unset NAs
@@ -548,56 +437,17 @@ unset PAIRWISE_AVERAGE_PER_UNIT
 unset PAIRWISE_SD_PER_UNIT
 unset TAJIMAS_D_PER_UNIT
 
-done < <(cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3_"$SCAFFOLD") 
+done < <(cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.gff3_"$SCAFFOLD") 
 
 done &
 
 rm "$POP".iter.transformedThetas.borrar
-
 
 ```
 
 #### Correcciones diversity per feature!!
 
 ```{bash}
-
-# Calculo el número de sitios informativos, para todos los archivos:
-
-FILES_DIVERSITY=("c_ll_ki_n013.per.unit.averages.tsv" "c_ll_po_n008.per.unit.averages.tsv" "c_lp_sm_n019.per.unit.averages.tsv" "c_ll_no_n008.per.unit.averages.tsv" "c_lp_do_n012.per.unit.averages.tsv")
-
-
-## OJO! Que lo está imprimiendo en otro orden!
-
-# Añado una columna con el número de sitios informativos. 
-for i in "${FILES_DIVERSITY[@]}"
-do
-echo $i
-echo ${i/.tsv/_informative_sites.tsv}
-cat <(awk -v OFS='\t' '(NR==1) {print $0,"informative_sites"}' $i ) <(awk -v OFS='\t' 'NR >= 2 {print $0,$4-$5}' $i) > ${i/.tsv/_informative_sites.tsv}
-mv ${i/.tsv/_informative_sites.tsv} $i
-done
-
-# Añado una columna en el header con la poblacion
-for i in "${FILES_DIVERSITY[@]}"
-do
-echo $i
-POP=$(echo ${i/.per.unit.averages.tsv/} )
-awk -v OFS='\t' 'NR==1{print $0,"pop";next}{print}' $i > ${i/.per.unit.averages/_withPOP.per.unit.averages}
-mv ${i/.per.unit.averages/_withPOP.per.unit.averages} $i
-done
-
-
-# Añado una columna con la specie
-for i in "${FILES_DIVERSITY[@]}"
-do
-echo $i
-POP=$(echo ${i/.per.unit.averages.tsv/} )
-SPECIE=$(echo $POP | cut -d"_" -f 1-2)
-echo $SPECIE
-cat <(awk -v OFS='\t' '(NR==1) {$18="specie"; print}' $i) <(awk -v OFS='\t' -v SPECIE="$SPECIE" 'NR >= 2 {print $0, SPECIE}' $i) > ${i/.tsv/_corrected.tsv}
-mv ${i/.tsv/_corrected.tsv} $i
-done
-
 
 # 8/9/2017: Haciendo un plot me he dado cuenta que hay algunas filas duplicadas en el archivo original .gff3, corresponden a UTR. 
 # En la carpeta /home/mlucena/grupolince/notation, están especificadas cuales son. He corregido el gff3, pero como no voy a volver a correr mis archivos para sacar los números, voy a corregir todos los originales para tenerlo todo bien desde el principio. 
@@ -1797,5 +1647,99 @@ Así que ordeno antes:
 
 ```
 
+# --------------------------------
+## Window analysis
+
+
+```{bash}
+
+RUTA=/home/mlucena/ANGSD_analysis 
+cd $RUTA/whole_genome_analysis/sfs/window_analysis
+
+#To launch one by one
+POP="c_lp_sm_n019"  # <--CHANGE POP HERE
+screen -S "$POP"_sfs_window
+POP="c_lp_sm_n019"  # <--CHANGE POP HERE
+script "$POP"_sfs_window.log
+POP="c_lp_sm_n019"  # <--CHANGE POP HERE
+
+THREADS=10                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
+
+NGSTOOLS="/opt/angsd/angsd/misc"
+
+WINDOWSIZE=50000
+WINDOWSTEP=10000 
+
+RUTA=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+
+echo "-------$POP---------- Window analysis -----------------------------------------"
+
+$NGSTOOLS/thetaStat do_stat $RUTA/$POP.unfolded-lr.postprob.thetas.idx -win $WINDOWSIZE -step $WINDOWSTEP  -outnames $POP.unfolded-lr.postprob.thetasWindow_$WINDOWSIZE.$WINDOWSTEP.gz
+
+```
+Values in this output file are the sum of the per-site estimates for the whole window.
+
+
+## Window R representation
+
+
+Download data:
+
+```{bash}
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*PG /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/window_analysis/
+
+```
+
+
+```{r}
+
+# Representación de las ventanas en manhattan plots. 
+
+library(dplyr)
+library(qqman)
+library(ggplot2)
+library ("GGally")
+
+# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/window_analysis/" 
+wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/"
+
+finsThetas = list.files(path = wd, pattern="*.pestPG$")
+
+for (i in 1:length(finsThetas))
+{
+  datThetas <- read.csv (paste(wd,finsThetas[i],sep=""), header = T, sep = '\t')  
+  name_thetas <- unlist(strsplit(finsThetas[i], "[.]"))
+  datThetas$CHR <- as.numeric(gsub('^.{6}', '', datThetas$Chr))
+  datThetas$Nsites <- as.numeric(datThetas$nSites)
+  datThetas$SNPS_window = paste(datThetas$Chr, datThetas$WinCenter, sep='_')
+  datThetas[,-c(1,2)][datThetas[, -c(1,2)] < 0] <- 0
+  # Manhattan plot Theta Waterson
+  max_thetas <- max (datThetas$tW)
+  min_thetas <- min(datThetas$tW)
+  setEPS()
+  postscript(file=paste(wd,name_thetas[1], '_watterson_manhattan.eps', sep=''))
+  manhattan(datThetas, chr = "CHR", bp = "WinCenter", p = "tW", snp = "SNPS_window", ylim = c(0 , max_thetas+10), ylab = "tW", xlab = "Scaffold", logp=F, genomewideline = F, suggestiveline = F, main = paste ("Manhattan plot of tW ",name_thetas[1], sep =''))
+  dev.off() 
+  # Correlation between diversity indixes
+  setEPS()
+  postscript(file=paste(wd,name_thetas[1], '_diversity_correlation.eps', sep=''), horizontal = FALSE, onefile = FALSE, paper = "special")
+  print(ggpairs(datThetas, columns=4:8, title=paste("Theta correlations ", name_thetas[1], sep='')))
+  dev.off()
+  # Correlation between neutrality indixes
+  setEPS()
+  postscript(file=paste(wd,name_thetas[1], '_neutrality_correlation.eps', sep=''), horizontal = FALSE, onefile = FALSE, paper = "special")
+  print(ggpairs(datThetas, columns=9:13, title=paste("Neutrality indexes correlations ", name_thetas[1], sep='')))
+  dev.off()
+}
+
+
+```
+
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*eps /Users/marialucenaperez/Desktop
+
+```
 
 
