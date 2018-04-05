@@ -1,0 +1,172 @@
+---
+title: "Ultraconserved-regions"
+output: html_document
+---
+
+# Download website coordinates human UCR.
+
+
+En primer lugar he acudido a la página web https://ccg.vital-it.ch/UCNEbase/.
+En esta página web me he descargado las coordenadas genómicas de los UCNEs en humano (Download-->Download UCNEbase -->Human UCNEs (hg19 assembly)). 
+
+
+# Convert to cat human UCR coordinates.
+
+Estas coordenadas en formato bed las he introducido en la página web http://rohsdb.cmb.usc.edu/GBshape/cgi-bin/hgLiftOver como input. Como output he seleccionado las coordenadas de FelisCatus_v.6.2 que es el genoma de gato con el que nosotros hemos trabajado para hacer la sintenia. 
+
+Los resultados encontrados en la traducción de las coordenadas son los siguientes:
+
+Successfully converted 4332 records: View Conversions
+
+Conversion failed on 19 records.    Display failure file    Explain failure messages
+
+Failed input regions:
+
+Parameters Used
+ 	
+Minimum ratio of bases that must remap:	0.10
+ 
+BED 4 to BED 6 Options
+Allow multiple output regions:	off
+  Minimum hit size in query:	0
+  Minimum chain size in target:	0
+ 
+BED 12 Options
+Min ratio of alignment blocks or exons that must map:	1.00
+If thickStart/thickEnd is not mapped, use the closest mapped base:	off
+
+
+Cuando observamos las regiones que han fallado estas son:
+
+#Duplicated in new
+chr1	21755033	21755299	chr1_Aida	3475
+#Deleted in new
+chr10	114885151	114885863	VTI1A_Silvester	7565
+#Deleted in new
+chr14	29365344	29366029	FOXG1_Chao	11789
+#Deleted in new
+chr14	29859148	29859387	FOXG1_Naomi_1	11817
+#Duplicated in new
+chr14	79115459	79115716	NRXN3_Amadeus	12698
+#Deleted in new
+chr17	35559174	35559419	LHX1_Violet	16182
+#Deleted in new
+chr18	22931939	22932182	ZNF521_Robert	17073
+#Deleted in new
+chr18	72936173	72936456	TSHZ1_Oberon	17764
+#Deleted in new
+chr2	50148180	50148410	NRXN1_Abraham	19028
+#Deleted in new
+chr2	146426340	146426762	ZEB2_Santiago	20578
+#Deleted in new
+chr2	171571542	171571838	SP5_Violet	21103
+#Duplicated in new
+chr2	176435853	176436189	HOXD_Eduardo	21272
+#Deleted in new
+chr20	51056068	51056300	TSHZ2_Vivien	22366
+#Deleted in new
+chr21	34350507	34350710	OLIG2_Laura	22678
+#Deleted in new
+chr3	71357320	71357632	FOXP1_Boris	23958
+#Duplicated in new
+chr5	2112526	2112743	IRXA_Vivien_1	26757
+#Deleted in new
+chr5	76941157	76941363	OTP_Faust	27386
+#Deleted in new
+chr7	1271947	1272147	MICALL2_Frodo	30678
+#Deleted in new
+chr8	61496197	61496529	CHD7_Boris	32948
+
+
+La explicación del mensage de error es:
+
+Deleted in new:
+    Sequence intersects no chains
+Partially deleted in new:
+    Sequence insufficiently intersects one chain
+Split in new:
+    Sequence insufficiently intersects multiple chains
+Duplicated in new:
+    Sequence sufficiently intersects multiple chains
+Boundary problem:
+    Missing start or end base in an exon
+    
+El resto de secuencias nos han dado un hit a gato que podemos intentar buscar en lince. 
+
+# Convert to lynx cat UCR coordinates.
+  
+Para ello hemos usado el archivo que tienen en común las coordenadas de gato y de lince
+
+```{bash}
+/home/mlucena/datos/translation_cat_to_lynx_viceversa/cat2lynx_wTiger.bed
+```
+  
+Lo primero que hemos hecho ha sido ordenar el bed de gato con las coordenadas que nos ha escupido el liftover:
+
+```{bash}
+sort -k1,1 -k2,2n /home/mlucena/cat_conversion_UCNE_coord_from_hg19.txt > /home/mlucena/cat_conversion_UCNE_coord_from_hg19_sorted.bed
+
+intersectBed -sorted -wo -a /home/mlucena/cat_conversion_UCNE_coord_from_hg19_sorted.bed -b cat2lynx_wTiger.bed > lynx_coordinates_cat_conversion_UCNE_coord_from_hg19_sorted.bed
+
+```
+
+Ahora este archivo tiene todas las posiciones de lince que son Ultra conserved regions, pero es horrible.
+
+chrA1	7037674	7038179	GSX1_Abraham	10734	chrA1	7037674	7037675	TCL=GGG:lp23.s31309:902783-902784:NO	1
+chrA1	7037674	7038179	GSX1_Abraham	10734	chrA1	7037675	7037676	TCL=GGG:lp23.s31309:902784-902785:NO	1
+chrA1	7037674	7038179	GSX1_Abraham	10734	chrA1	7037676	7037677	TCL=AAA:lp23.s31309:902785-902786:NO	1
+chrA1	7037674	7038179	GSX1_Abraham	10734	chrA1	7037677	7037678	TCL=AAA lp23.s31309 902786-902787 NO	1
+
+
+# Convert to notation file lynx UCR coordinates.
+
+Primero voy a eliminar la referencias a gato. Por tanto, me quedo solo con el nombre de la región y con sus coordenadas en lince. 
+
+```{bash}
+
+awk -v OFS='\t' '{split ($9, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2], $4 }' lynx_coordinates_cat_conversion_UCNE_coord_from_hg19_sorted.bed | sort -k1,1 -k2,2n | bedtools merge -i stdin -c 4 -o distinct -delim ";" > lynx_coordinates_UCNE.bed
+
+```
+
+¿Cuantas regiones tengo?
+
+
+```{bash}
+awk '{sum+=$3-$2} END {print sum}' lynx_coordinates_UCNE.bed 
+# 1357904
+# YUHU!!!!
+```
+
+# Move to definitive folder
+
+Hasta ahora estaba trabajando en datos, pero voy a crearme una carpeta en grupo lince que tenga esta información 
+
+```{bash}
+
+mkdir grupolince/ultra_conserved_regions
+mv datos/translation_cat_to_lynx_viceversa/lynx* grupolince/ultra_conserved_regions/
+
+```
+
+
+A partir de aquí lo incorporo al archivo de notación, así que para hacer cualquier comprobación de estos archivos en análisis posteriores, mirad el script curation_notation_file. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
