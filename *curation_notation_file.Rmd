@@ -1018,7 +1018,128 @@ He copiado los archivos correctos en backup.
 
 De todas formas para que quede constancia hemos observado que hay varios ncRNA y esto se debe a que estos se seleccionaron en base a un evalue, así que dos secuencias a podido dar hit al mismo ncRNA con un evalue relativamente alto y por tanto las dos han pasado el filtro. 
 
+# Ultra-conserved-regions
+
+Voy a añadir a mi archivo de notación las ultraconserved regions. Estas UCR se han sacado basandonos en una base de datos online con coordenadas para humano que hemos traducido a gato y posteriormente a lince. Para más información, leer el script: ultra_conserved_regions. 
+
+Ahora voy a pasar a añadirlas en mi último archivo de notación.
+Primero copio el archivo a mi carpeta de notación. 
+
+¡OJO! no se la pauta de lectura verdadera ni la hebra, así que estoy rellenando por defecto con ".", "-", ".". En caso de que se supiese se debería modificar esto. 
+
+```{bash}
+# Mi archivo es: /home/mlucena/grupolince/ultra_conserved_regions/lynx_coordinates_UCNE.bed
+
+cd /GRUPOS/grupolince/Lyp_annotation_Apr14_final
+
+awk -v OFS='\t' '{print $1,"manual","UCR",$2+1,$3,".", "-", ".", "ID="$4 }' /home/mlucena/grupolince/ultra_conserved_regions/lynx_coordinates_UCNE.bed > lynx_coordinates_UCNE.gff3
+
+cat LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 lynx_coordinates_UCNE.gff3 > LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.gff3
+
+mkdir LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.PerScaffold 
+cd LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.PerScaffold 
+
+awk '{print >> $1; close($1)}' ../LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.gff3
+
+
+# Rename gff3.
+for file in lp23*
+do
+echo $file
+mv $file ${file/lp23/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.gff3_lp23}
+done
+
+
+```
 
 
       
+
+# Some sanity
+
+```{bash}
+
+# Compruebo que está todo:
+
+ awk '{print $3}'  LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.gff3 | sort | uniq -c
+# 5613 3UTR -->
+#   5300 5UTR -->
+# 182546 CDS -->
+#  65795 intergenic -->
+# 167874 intron -->
+#   7823 intron_lncRNA -->
+#  12141 lncRNA -->
+#  12842 ncRNA -->
+#   7389 promoter_gene_1000 -->
+#   7389 promoter_gene_250 -->
+#   7389 promoter_gene_500 -->
+#   3174 promoter_lncRNA_1000 -->
+#   3174 promoter_lncRNA_250 -->
+#   3174 promoter_lncRNA_500 -->
+#   5539 UCR -->
+   
+# Compruebo qu eno hay ninguna fila duplicada por completo:
+
+sort LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.gff3  | uniq -c | head
+# 1 lp23.s00001	EVM_PASA	3UTR	10029244	10030485	.	-	.	ID=LYPA23C013663 -->
+# 1 lp23.s00001	EVM_PASA	3UTR	10163213	10170531	.	+	.	ID=LYPA23C013777 -->
+# 1 lp23.s00001	EVM_PASA	3UTR	10202693	10203508	.	+	.	ID=LYPA23C013856 -->
+# 1 lp23.s00001	EVM_PASA	3UTR	102526	102823	.	+	.	ID=LYPA23C013712 -->
+# 1 lp23.s00001	EVM_PASA	3UTR	10467000	10467605	.	+	.	ID=LYPA23C013816 -->
+# 1 lp23.s00001	EVM_PASA	3UTR	10529811	10529946	.	-	.	ID=LYPA23C013675 -->
+# 1 lp23.s00001	EVM_PASA	3UTR	10901088	10903936	.	-	.	ID=LYPA23C013674 -->
+# 1 lp23.s00001	EVM_PASA	3UTR	1132661	1136959	.	+	.	ID=LYPA23C013667 -->
+# 1 lp23.s00001	EVM_PASA	3UTR	11334610	11338061	.	-	.	ID=LYPA23C013747 -->
+# 1 lp23.s00001	EVM_PASA	3UTR	11441195	11447165	.	+	.	ID=LYPA23C013724 -->
+
+
+# Compruebo que están todas las bases que había definido como UCR:
+
+grep UCR LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.gff3 | awk '{sum+= $5-$4} END {print sum}'
+# 1357904
+
+
+# Comrpobamos que son todas las features uno based:
+
+ awk '{print $4,NR}' LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.gff3 | sort | head
+ 
+# 1000009 252807
+# 1000021 93511
+# 1000025 320917
+# 1000036 74215
+# 1000046 314660
+# 100005 199246
+
+# Todo correcto!
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   
