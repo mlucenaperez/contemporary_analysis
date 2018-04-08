@@ -179,7 +179,7 @@ echo $file
 mv $file ${file/lp23/"$POP".transformedThetas_lp23}
 done
 
-##Diversity x Chomosome.
+##Diversity X Chomosome.
 
 ## WG variables
 
