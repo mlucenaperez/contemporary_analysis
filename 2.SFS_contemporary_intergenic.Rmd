@@ -725,6 +725,7 @@ scp /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/*.unfolded-l
 
 ```
 
+
 # Window analysis
 
 Para tener una medida de dispersión de la diversidad vamos a hacer ventanas, para ello vamos a trabajar en datos que es donde están los archivos brutos. 
@@ -938,6 +939,8 @@ index="tP"
 
 
 window_diversity <- read.table("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/analysis_diversity_window/c_ll_no_n008-c_ll_po_n008-c_ll_ki_n013-c_ll_to-c_ll_ka-c_ll_og_n008-c_ll_ya_n008-c_ll_vl_n008-c_ll_la_n006-c_ll_cr_n006-c_ll_tu_n006-c_ll_ur_n006.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions", sep="\t", dec=".", header=T, na.strings = "-nan") %>% mutate (XvsTOTAL= Xpositions/(Xpositions+AUTOSOMICpositions))
+
+window_divergence <- 
 
 ggplot(data = window_diversity, aes(window_diversity$XvsTOTAL)) +
   geom_histogram() #+
