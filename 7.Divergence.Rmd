@@ -377,7 +377,7 @@ lp23.s00001	8	T	.	0/0	0/0	 Invariable
 lp23.s00001	9	T	.	0/0	0/0	 Invariable
 lp23.s00001	10	G	.	0/0	0/0	 Invariable
 
-
+# OJO! si lo quieres volver a correr lo suyo es general unas ventanas con todas las posibles y correrlo sobre eso en lugar de sobre el de una población concreta. Nosotros lo hicimos sobre carpatos y kirov, pero como faltaban 4 ventanas las hemos añadido. Ver adding new windows al final. 
 
 
 ```{bash}
@@ -422,6 +422,9 @@ cd $WD
 echo $POP
 rm $POP.divergence_with_rufus
 
+
+# Lo que en awk llamo sum son los callable sites y los que llamos count son las substituciones.
+
 while read CHR WinStart WinStop WinCenter tW tP tF tH tL Tajima fuf fud fayh zeng nSites WinNumber AUTOSOMICpositions Xpositions
 
 do
@@ -448,5 +451,177 @@ diff c_ll_ki_n013.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x
 
 
 ```
+
+Copio a local
+
+```{bash}
+mkdir /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/divergence_window
+
+scp  mlucena@genomics-b.ebd.csic.es:/home/mlucena/divergence/intergenic_analysis/*divergence_with_rufus /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/divergence_window
+```
+
+### R comprobaciones
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library (tidyr)
+
+wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/divergence_window/"
+
+
+divergence_cr <- read.table(paste (wd,"c_ll_cr_n006.divergence_with_rufus", sep =""), sep=" ", dec=".", header=F) 
+
+divergence_ki <- read.table(paste (wd,"c_ll_ki_n013.divergence_with_rufus", sep =""), sep=" ", dec=".", header=F) 
+
+
+full_join_divergence <- full_join(divergence_cr, divergence_ki, by =c("V1","V2","V3"))
+
+```
+
+### How I should have done it
+
+Observamos que cuando hay datos, los valores son los mismo, pero inesperadamente hay ventanas que no están cubiertas en kirov con respecto a carpatos y al contrario. 
+La he cagado y tendría que haber sacado un archivo con todas las ventanas de este modo:
+
+```{bash}
+cd /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
+
+cat *.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions | awk '{print $1,$2,$3}' | sort -k1,1 -k2,2n -k3,3n | uniq 
+
+```
+
+
+
+De todas formas voy a ver si juntando kirov y carpatos tengo todas o casi todas las ventanas posibles:
+
+¿Cuantas ventanas tendría si junto todo?
+
+```{bash}
+cat *.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions | awk '{print $1,$2,$3}' | sort -k1,1 -k2,2n -k3,3n | uniq | wc -l
+#41440
+```
+
+¿Y si junto kirov y carpatos?
+
+```{bash}
+ cat c_ll_ki_n013.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions c_ll_cr_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions | awk '{print $1,$2,$3}' | sort -k1,1 -k2,2n -k3,3n | uniq | wc -l
+# 41436
+```
+
+Me faltan 4 ventanas. ¿cuales son?
+
+```{bash}
+diff <(cat *.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions | awk '{print $1,$2,$3}' | sort -k1,1 -k2,2n -k3,3n | uniq) <(cat c_ll_ki_n013.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions c_ll_cr_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions | awk '{print $1,$2,$3}' | sort -k1,1 -k2,2n -k3,3n | uniq)
+
+5097d5096
+< lp23.s00280 100000 150000
+15341d15339
+< lp23.s10659 200000 250000
+35673d35670
+< lp23.s31439 400000 450000
+36171d36167
+< lp23.s31555 100000 150000
+
+
+```
+
+Puedo calcular la divergencia en estas ventanas y añadirlo a posteriori.
+
+Primero voy a crear un archivo en comun con las ventanas de carpatos y kirov sobre el que añadir esta información. Lo voy a hacer en R que me parece más facil y luego lo llevo al servidor.
+
+### Divergence both kirov and carpathians.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library (tidyr)
+
+wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/divergence_window/"
+
+
+divergence_cr <- read.table(paste (wd,"c_ll_cr_n006.divergence_with_rufus", sep =""), sep=" ", dec=".", header=F) 
+
+divergence_ki <- read.table(paste (wd,"c_ll_ki_n013.divergence_with_rufus", sep =""), sep=" ", dec=".", header=F) 
+
+
+full_join_divergence <- full_join(divergence_cr, divergence_ki, by =c("V1","V2","V3"))
+
+# Esto de pmax coge el valor máximo. Como yo quiero hacer un merged y en ambas columnnas el valor simpre es el mismo excepto cuando en alguna de las dos no hay valor, me valdría esta aproximación.
+
+c_ll_ki_n013_c_ll_cr_n006_divergence <- full_join_divergence %>%  mutate (callable_sites = pmax(V4.y, V4.x, na.rm=TRUE)) %>% mutate (substitutions = pmax(V5.y, V5.x, na.rm=TRUE)) %>% mutate (divergence = pmax(V6.y, V6.x, na.rm=TRUE)) %>% rename(scaffold=V1,winstart=V2,winend=V3) %>% select(scaffold, winstart, winend, callable_sites, substitutions, divergence)
+
+
+write.table(c_ll_ki_n013_c_ll_cr_n006_divergence, paste(wd, "c_ll_ki_n013-c_ll_cr_n006.divergence_with_rufus", sep=""),quote=F, row.names = F, sep=' ')
+
+
+```
+
+
+La copio al servidor:
+
+```{bash}
+
+scp /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/divergence_window/c_ll_ki_n013-c_ll_cr_n006.divergence_with_rufus mlucena@genomics-b.ebd.csic.es://home/mlucena/divergence/intergenic_analysis/
+
+
+
+
+```
+
+
+
+# Adding new windows.
+
+```{bash}
+
+cd /home/mlucena/divergence/intergenic_analysis
+scp c_ll_ki_n013-c_ll_cr_n006.divergence_with_rufus c_ll.divergence_with_rufus
+
+screen -S ventana_1
+FILE_DANI_MODIF="c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized"
+POP=c_ll
+CHR=lp23.s00280
+WinStart=100000
+WinStop=150000
+
+screen -S ventana_2
+FILE_DANI_MODIF="c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized"
+POP=c_ll
+CHR=lp23.s10659
+WinStart=200000
+WinStop=250000
+
+screen -S ventana_3
+FILE_DANI_MODIF="c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized"
+POP=c_ll
+CHR=lp23.s31439 
+WinStart=400000
+WinStop=450000
+
+screen -S ventana_4
+FILE_DANI_MODIF="c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized"
+POP=c_ll
+CHR=lp23.s31555
+WinStart=100000
+WinStop=150000
+
+
+grep $CHR $FILE_DANI_MODIF | awk -v CHR="$CHR" -v WinStart="$WinStart" -v WinStop="$WinStop" '$2>WinStop { exit } $2>=WinStart && $2<=WinStop{sum+=$3;count++;}END{print CHR, WinStart, WinStop, count, sum, sum/count} ' >> $POP.divergence_with_rufus
+
+```
+
+Ahora podria eliminar los otros archivos.
+
+```{bash}
+cd /home/mlucena/divergence/intergenic_analysis
+
+rm c_ll_cr_n006.divergence_with_rufus
+rm c_ll_ki_n013.divergence_with_rufus
+rm c_ll_ki_n013-c_ll_cr_n006.divergence_with_rufus
+
+```
+
+
 
 
