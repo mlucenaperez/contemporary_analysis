@@ -45,7 +45,7 @@ screen -S "$POP"_sfs_wg
 
 THREADS=15                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 
-RUTA=/home/mlucena/ANGSD_analysis/depth_calculus 
+RUTA=/home/mlucena/ANGSD_analysis/depth_calculus
 ANGSD="/opt/angsd/angsd"
 NGSTOOLS="/opt/angsd/angsd/misc"
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
@@ -277,24 +277,23 @@ done
 
 Populations:
 
-c_ll_no_n008
-c_ll_po_n008 
-c_lp_do_n012
-c_lp_sm_n019
-c_ll_ki_n013 --> PI: 53143
+c_ll_no_n008 --> lanzado
+c_ll_po_n008 --> lanzado
+c_lp_do_n012 [1] 60786
+c_lp_sm_n019 [1] 15192
+c_ll_ki_n013 --> lanzado
 
 
-## OJO! parece que tengo valores de -1 en los NAS, ¿eso por qué? corregir e incorporar directamente el valor de informative sites en el loop.
 
 ```{bash}
 
 # Run pop by pop:
 
-POP=c_lp_sm_n019 # <--- Change pop here!
+POP=c_ll_ki_n013 # <--- Change pop here!
 screen -S "$POP"_scaffold_per_unit
-POP=c_lp_sm_n019 # <--- Change pop here!
+POP=c_ll_ki_n013 # <--- Change pop here!
 script log_screen_"$POP"_scaffold_per_unit.log
-POP=c_lp_sm_n019 # <--- Change pop here!
+POP=c_ll_ki_n013 # <--- Change pop here!
 
 # Run a loop: 
 
@@ -444,6 +443,97 @@ done &
 rm "$POP".iter.transformedThetas.borrar
 
 ```
+
+
+
+### Anotación de las unidades: cromosoma y regiones tel y centr. 
+
+Ahora vamos a anotar esas unidades según pertenezcan o no a distintos cromosomas, y según sean teloméricas, centromérica o no. 
+
+#### Cromosomas 
+
+Para ello hemos usado el archivo que tienen en común las coordenadas de gato y de lince
+
+```{bash}
+head /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed
+```
+  
+Creo una carpeta donde voy a guardar los archivos:
+```{bash}
+mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+```
+
+Los archivos de los que parto estén en:
+```{bash}
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+```
+
+Empiezo a unirlos. 
+
+El primer Bed te devolvería un archivo con una línea por cada posición de sintenia tal que así:
+
+lp23.s00001	0	15011	15011	11950	3061	intergenic	-	.	intergenic_region_1	intergenic_region_1	2.4096547746*10^-06	1.3458559263*10^-05	1.1416658651*10^-06	6.2801913098*10^-06	-1.7606196687*10^-01	c_ll_no_n008	ll	c	lp23.s00001	4071	4072	TCL=TTT:chrA3:15104518-15104519:NO	1
+
+Como no queremos pasar por ahí ni guardar tanto, vamos a intentar usar awk directamente para quedarnos con lo que nos interese. 
+
+```{bash}
+FILE=prueba_para_anotar.per.unit.averages.tsv
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$FILE) -b /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed | awk -v OFS='\t' '{split ($23, a, ":"); split(a[3],b, "-"); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,a[2] }' | awk '!a[$0]++' > ${FILE/per.unit.averages.tsv/chr.tsv}
+
+# De esta manera estamos eliminando filas duplicadas. Si queremos comprobar cuantos cromosomas habría en cada unidad tenemos que postprocesar en R. El merge de abajo va a juntarnos todo auqnue sean distintas unidades si les separa una base, así que no nos interesa.
+# bedtools merge -i stdin -c 11,20 -o distinct,distinct -delim ";" > ${FILE/per.unit.averages.tsv/per.unit.averages.chr.tsv}
+
+```
+
+Esto me devuelve algo como así:
+lp23.s00001	0	15011	15011	11950	3061	intergenic	-	.	intergenic_region_1	intergenic_region_1	2.4096547746*10^-06	1.3458559263*10^-05	1.1416658651*10^-06	6.2801913098*10^-06	-1.7606196687*10^-01	c_ll_no_n008	ll	c	chrA3
+
+
+
+#### Telomeros2m
+
+El archivo de interés, es: 
+```{bash}
+/GRUPOS/grupolince/telomers_centromers_definitiontel2m_regions_based_on_synteny_1000bp.bed
+```
+
+Creo una carpeta donde voy a guardar los archivos:
+```{bash}
+mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
+```
+
+Los archivos de los que parto estén en:
+```{bash}
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+```
+
+Empiezo a unirlos. 
+
+```{bash}
+FILE=prueba_para_anotar.per.unit.averages.chr.tsv
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
+intersectBed -sorted -wo -a /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation/$FILE) -b /GRUPOS/grupolince/telomers_centromers_definition/tel2m_regions_based_on_synteny_1000bp.bed | head
+
+awk -v OFS='\t' '{split ($23, a, ":"); split(a[3],b, "-"); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,a[2] }' | awk '!a[$0]++' > ${FILE/per.unit.averages.tsv/chr.tsv}
+
+# De esta manera estamos eliminando filas duplicadas. Si queremos comprobar cuantos cromosomas habría en cada unidad tenemos que postprocesar en R. El merge de abajo va a juntarnos todo auqnue sean distintas unidades si les separa una base, así que no nos interesa.
+# bedtools merge -i stdin -c 11,20 -o distinct,distinct -delim ";" > ${FILE/per.unit.averages.tsv/chr.tsv}
+
+```
+
+Esto me devuelve algo como así:
+lp23.s00001	0	15011	15011	11950	3061	intergenic	-	.	intergenic_region_1	intergenic_region_1	2.4096547746*10^-06	1.3458559263*10^-05	1.1416658651*10^-06	6.2801913098*10^-06	-1.7606196687*10^-01	c_ll_no_n008	ll	c	chrA3
+
+
+
+
+
+# ------------------------------------------
+
+
+
+
 
 #### Correcciones diversity per feature!!
 
@@ -1741,5 +1831,142 @@ for (i in 1:length(finsThetas))
 scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*eps /Users/marialucenaperez/Desktop
 
 ```
+
+# ----------------------------------
+
+# ATLAS on contemporary data
+
+
+
+```{bash}
+
+mkdir mkdir /home/mlucena/ATLAS_contemporary_data
+cd /home/mlucena/ATLAS_contemporary_data
+
+
+# Cuando he probado a Validate samtools me dice que Value was put into PairInfoMap more than once.
+
+java -jar /opt/picard-tools/picard.jar FixMateInformation I=c_lp_sm_0325_recal_round-1.bam O=/home/mlucena/ATLAS_contemporary_data/test_sorted_rg_solved.bam VALIDATION_STRINGENCY=LENIENT
+
+
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=test_sorted_rg_solved.bam MAX_OPEN_TEMP_FILES=1000  IGNORE_WARNINGS=true MODE=VERBOSE
+
+samtools index test_sorted_rg_solved.bam
+
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+bam_to_test=test_sorted_rg_solved.bam
+
+
+/home/mlucena/atlas/atlas task=mergeReads bam=$bam_to_test fasta=$REF chr=lp23.s00001 verbose
+#WARNING: read HWI-ST858:204:C5RR4ACXX:5:1311:13192:36371 was filtered out because it was longer than the insert size
+#ERROR: One read of 'HWI-ST0857:233:C5T3DACXX:2:2201:5181:65649' is reverse mate, but forward one has not been read!
+
+
+# Vuelvo a correr validate samtools
+
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=test_sorted_rg_solved.bam MAX_OPEN_TEMP_FILES=1000  IGNORE_WARNINGS=true MODE=VERBOSE
+# No errors found
+
+# Preubo a correr estimateTheta:
+/home/mlucena/atlas/atlas task=estimateTheta bam=$bam_to_test fasta=$REF chr=lp23.s00001 verbose
+# WARNING: The following alignment is longer than its insert size: HWI-ST858:204:C5RR4ACXX:5:1311:15377:69596
+# WARNING: The following alignment is longer than its insert size: HWI-ST858:204:C5RR4ACXX:5:1311:15377:69596
+
+# aun así me devuelve output.
+# Ya tengo el archivo con los valores theta.
+
+
+# ¿qué pasaría si estimo el PMD?
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+/home/mlucena/atlas/atlas task=estimatePMD bam=test_sorted_rg_solved.bam fasta=$REF  verbose 
+# ERROR: position in TPMDTable add function is < 0!
+# El mismo error que ccon las antiguas mapeadas con BWA-mem
+
+
+
+
+
+
+```
+
+
+## R representation
+
+Lo represento
+
+```{r}
+
+wd <- "/Users/marialucenaperez/Dropbox/PhD/ancient_historical/ATLAS/contemporary_data/"
+
+thetas_file <- read.table(paste (wd, "test_sorted_rg_solved_theta_estimates.txt", sep =""), header = T)
+
+
+c="lp23.s00001"
+colors=c("#000000",rainbow(tot-2))
+    plot('', type="n", xlim=c(0, 2.5e+8), ylim=c(1e-5,0.025),log='y',xlab="Chromosome position",main=paste("Chr=",c,sep=''), yaxt='n') #ylab=expression("Estimated "*theta)
+    labelsY1=parse(text=paste(c(1,1,1,1),"%*%","10^",c(-5,-4,-3,-2), sep=""))
+    axis(2, at=c(10^-5, 10^-4, 10^-3, 10^-2), labels=labelsY1, las=2)
+
+    for (i in (2:tot)){
+            a0<-read.delim(paste(args[i], "_theta_estimates.txt", sep=''))
+            a0<-na.omit(a0)
+            a0.1<-subset(a0,Chr==c|Chr==paste("chr",c,sep=''))
+            lines(a0.1$start,a0.1$theta_MLE,type='l',col=colors[i-1])
+            abline(h=median(subset(a0.1,theta_MLE>0)$theta_MLE),lty=2,col=colors[i-1])
+            base=basename(args[i])
+            legendvec[i-1]=strsplit(base,split="[_.]+")[[1]][1]
+    }
+
+
+
+
+
+
+
+eval(parse(text=args[thetas_file]))
+
+
+
+
+
+# El script que suben ellos:
+args <- commandArgs(TRUE)
+tot=length(args)
+legendvec=vector(length=tot-1)
+chr=eval(parse(text=args[1]))
+
+pdf(paste(args[2], "_theta_plot.pdf", sep=""),height=50,width=15)
+par(mfrow=c(22,1))
+for(c in chr){
+    colors=c("#000000",rainbow(tot-2))
+    plot('', type="n", xlim=c(0, 2.5e+8), ylim=c(1e-5,0.025),log='y',xlab="Chromosome position",main=paste("Chr=",c,sep=''), yaxt='n') #ylab=expression("Estimated "*theta)
+    labelsY1=parse(text=paste(c(1,1,1,1),"%*%","10^",c(-5,-4,-3,-2), sep=""))
+    axis(2, at=c(10^-5, 10^-4, 10^-3, 10^-2), labels=labelsY1, las=2)
+
+    for (i in (2:tot)){
+            a0<-read.delim(paste(args[i], "_theta_estimates.txt", sep=''))
+            a0<-na.omit(a0)
+            a0.1<-subset(a0,Chr==c|Chr==paste("chr",c,sep=''))
+            lines(a0.1$start,a0.1$theta_MLE,type='l',col=colors[i-1])
+            abline(h=median(subset(a0.1,theta_MLE>0)$theta_MLE),lty=2,col=colors[i-1])
+            base=basename(args[i])
+            legendvec[i-1]=strsplit(base,split="[_.]+")[[1]][1]
+    }
+
+    legend("bottomleft",legend=legendvec,col=colors,lty=rep(1,tot-1),lwd=rep(1.5,tot-1),horiz=T)
+}
+dev.off()
+
+
+
+```
+
+
+
+
+
+
+
+
 
 
