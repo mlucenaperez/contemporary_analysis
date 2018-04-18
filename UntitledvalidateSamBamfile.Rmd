@@ -1,0 +1,176 @@
+---
+title: "Validation_sam_file"
+output: html_document
+---
+
+# Historical data
+
+```{bash}
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/hcal_BAM_files_final/BAM_files_LYNX_14_LYNX_17_BWA-aln
+
+Estoy testando el siguiente archivo: C9KH6ANXX_5_LYNX7-604ii5-2
+
+# Lo primero que he hecho ha sido comprobar que tiene todos los pares de lecturas:
+gunzip C9KH6ANXX_5_LYNX7-604ii5-2_R1_trimmed.fastq.gz
+gunzip C9KH6ANXX_5_LYNX7-604ii5-2_R2_trimmed.fastq.gz
+
+# ¿Que lecturas tiene los archivos originales?
+
+awk -v n=4 'NR%n==1' C9KH6ANXX_5_LYNX7-604ii5-2_R1_trimmed.fastq | cut -d' ' -f 1 > read_list_1
+awk -v n=4 'NR%n==1' C9KH6ANXX_5_LYNX7-604ii5-2_R2_trimmed.fastq | cut -d' ' -f 1 > read_list_2
+
+# Presentan diferencias esas lecturas en el archivo R1 y R2
+
+diff read_list_1 read_list_2 # Ninguna!
+
+# Vuelvo a comprimir mis archivos:
+
+gzip C9KH6ANXX_5_LYNX7-604ii5-2_R1_trimmed.fastq
+gzip C9KH6ANXX_5_LYNX7-604ii5-2_R2_trimmed.fastq
+
+# Compruebo ahora mi archivo generado de unir ambos archivos:
+
+bwa sampe $REF C9KH6ANXX_5_LYNX7-604ii5-2_1.sai C9KH6ANXX_5_LYNX7-604ii5-2_1.sai C9KH6ANXX_5_LYNX7-604ii5-2_R1_trimmed.fastq.gz C9KH6ANXX_5_LYNX7-604ii5-2_R2_trimmed.fastq.gz > test_paired.sam
+
+grep -v @ test_paired.sam | cut -f 1 > reads_test_paired.txt
+
+wc -l reads_test_paired.txt # 29436806
+uniq -c reads_test_paired.txt | wc -l # 14718403
+
+uniq -c reads_test_paired.txt | sort -k 1,1n | head
+
+# 2 7001450:310:C9KH6ANXX:5:1101:10000:13032
+# 2 7001450:310:C9KH6ANXX:5:1101:10000:38458
+  
+# Este archivo también tiene todos los pares.
+# Seguimos:
+
+# ¿Que pasa si elimino los no mapeados de este archivo?
+
+samtools view -S -F 4  test_paired.sam > test_no_unmapped.sam
+grep -v @ test_no_unmapped.sam | uniq -c | sort -k 1,1n | head
+
+
+# El problema parece que al quitar las que no mapean hay algunas que una de la pareja si mapea
+samtools view -Sb test_paired.sam > test.bam
+
+java -jar /opt/picard-tools/picard.jar AddOrReplaceReadGroups I=test.bam O=test_rg.bam RGID=test RGLB=test_lib RGPL=Illumina RGPU=test RGSM=test VALIDATION_STRINGENCY=LENIENT 
+samtools sort test.bam > test_sorted.bam
+
+java -jar /opt/picard-tools/picard.jar AddOrReplaceReadGroups I=test_sorted.bam O=test_sorted_rg.bam RGID=test RGLB=test_lib RGPL=Illumina RGPU=test RGSM=test VALIDATION_STRINGENCY=LENIENT 
+
+# Now we validate SAM file. 
+
+java -jar /opt/picard-tools/picard.jar FixMateInformation I=test_sorted_rg.bam O=test_sorted_rg_solved.bam VALIDATION_STRINGENCY=LENIENT
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=test_sorted_rg_solved.bam MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000 IGNORE=INVALID_MAPPING_QUALITY IGNORE=INVALID_CIGAR
+# No errors found
+
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+
+/home/mlucena/atlas/atlas task=estimatePMD bam=test_sorted_rg_solved.bam fasta=$REF  verbose 
+
+# Corre hasta el final pero te da esta advertencia:
+# WARNING: The following alignment is longer than its insert size: 7001450:310:C9KH6ANXX:5:2106:3885:25415
+# WARNING: The following alignment is longer than its insert size: 7001450:310:C9KH6ANXX:5:2316:9994:49343
+
+
+/home/mlucena/atlas/atlas task=recal bam=test_sorted_rg_solved.bam pmdFile=test_sorted_rg_solved_PMD_input_Empiric.txt regions=/home/mlucena/grupolince/ultra_conserved_regions/lynx_coordinates_UCNE.bed equalBaseFreq verbose
+
+# Corre hasta el final pero te da esta advertencia:
+# WARNING: The following alignment is longer than its insert size: 7001450:310:C9KH6ANXX:5:2106:3885:25415
+# WARNING: The following alignment is longer than its insert size: 7001450:310:C9KH6ANXX:5:2316:9994:49343
+
+# --> DONE!
+#      -> No improvement even with lambda = 9.31323e-10, aborting Newton-Raphson.
+#                   -> max(F) = 0.00049551
+#       17) EM Iteration:
+#          - Calculating P(g|d, beta') ... done!
+#             -> Current Log Likelihood = -6.10727e+07
+#             -> Epsilon = 0
+#             -> EM has converged (tmpEpsilon < 1e-06)
+#       - Writing final estimates to file 'test_sorted_rg_indelrealigner_recalibrationEM.txt' ... done!
+# - Program terminated in 226.617 min!
+
+# Create a BAM file with recalibrated quality scores with recalBAM, use this file in subsequent steps
+
+# After recalibration of the base quality scores with either BQSR or recal, it is possible to print a BAM file with the newly estimated quality scores with recalBAM. By default, if a recalibrated quality is higher than 93 or lower than 0 it will be replaced by the respective limit. This is the range of ASCII characters. However, some tools such as GATK do not accept quality scores higher than 42 (this is the maximum quality that illumina will output). If you plan to use the recalibrated BAM file with GATK, use the option maxOutQuality=42.
+# This task does not filter for PCR duplicates, secondary alignment or proper pairs.
+
+# Specific Arguments
+# withPMD : pass this argument if the PMD should be reflected in the new quality scores. If the called base is a T or an A and the reference is a C or G, respectively, the recalibrated error rate minQual : minimum qual of base in original BAM file required for it to be taken into account. If the original quality score is smaller than this, it will not be recalibrated and output as is.
+# maxQual : same thing for maximum original quality score
+# minOutQuality : if recalibrated quality score is smaller than this threshold, the quality output in the recalibrated BAM file will be set to the given threshold
+# maxOutQuality : same as above for upper threshold
+
+
+/home/mlucena/atlas/atlas task=recalBAM bam=test_sorted_rg_solved.bam  recal=test_sorted_rg_solved_recalibrationEM.txt pmdFile=test_sorted_rg_solved_PMD_input_Empiric.txt fasta=$REF withPMD maxOutQuality=42 verbose
+
+
+
+```
+
+
+
+
+# Con BWA-mem
+
+```{bash}
+
+java -jar /opt/picard-tools/picard.jar FixMateInformation I=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner.bam O=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam VALIDATION_STRINGENCY=LENIENT
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000 IGNORE=INVALID_MAPPING_QUALITY IGNORE=INVALID_CIGAR
+# No errors found
+
+samtools index h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam
+
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+/home/mlucena/atlas/atlas task=estimatePMD bam=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam fasta=$REF  verbose 
+# ERROR: position in TPMDTable add function is < 0!
+
+
+
+
+# Lanzo esto ahora:
+
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner.bam MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000 IGNORE=INVALID_MAPPING_QUALITY IGNORE=INVALID_CIGAR
+
+/home/mlucena/atlas/atlas task=estimatePMD bam=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner.bam fasta=$REF  verbose 
+
+
+
+
+
+
+
+
+
+
+# Voy a probar a pasarlo a bam y ver que pasa con esa lectura:
+samtools view -h -o test_sorted_rg_solved.sam test_sorted_rg_solved.bam
+
+grep "7001450:310:C9KH6ANXX:5:2106:3885:25415" test_sorted_rg_solved.sam
+
+
+
+#java -jar /opt/picard-tools/picard.jar CleanSam I=test_sorted.bam O=test_sorted_clean.bam
+
+## 	Realignment with GATK	
+# RealignerTargetCreator
+java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T RealignerTargetCreator -nt 24 -R $REF -I test_sorted_rg.bam -o test_sorted_rg_realignertargetcreator.intervals
+# IndelRealigner
+java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T IndelRealigner -R $REF -targetIntervals test_sorted_rg_realignertargetcreator.intervals -I test_sorted_rg.bam -o test_sorted_rg_indelrealigner.bam
+
+
+# Ahora he hecho muchas cosas con este archivo --> acabo en 
+
+samtools view -h -o test_sorted_rg_indelrealigner_only_mapped.sam test_sorted_rg_indelrealigner_only_mapped.bam
+
+grep -v @ test_sorted_rg_indelrealigner_only_mapped.bam | cut -f 1
+
+
+
+samtools view -S -F 4  test_paired.sam > test_no_unmapped.bam
+
+
+```
+
