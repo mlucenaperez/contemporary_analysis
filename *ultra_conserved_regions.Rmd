@@ -98,15 +98,23 @@ El resto de secuencias nos han dado un hit a gato que podemos intentar buscar en
 Para ello hemos usado el archivo que tienen en común las coordenadas de gato y de lince
 
 ```{bash}
-/home/mlucena/datos/translation_cat_to_lynx_viceversa/cat2lynx_wTiger.bed
+/GRUPOS/grupolince/copia_fabascal/MAPPINGS/cat2lynx_wTiger.bed
 ```
+  
+# Creo la carpeta donde voy a trabajar:
+
+```{bash}
+mdkir  /home/mlucena/grupolince/ultra_conserved_regions/
+cd /home/mlucena/grupolince/ultra_conserved_regions/
+```
+
   
 Lo primero que hemos hecho ha sido ordenar el bed de gato con las coordenadas que nos ha escupido el liftover:
 
 ```{bash}
-sort -k1,1 -k2,2n /home/mlucena/cat_conversion_UCNE_coord_from_hg19.txt > /home/mlucena/cat_conversion_UCNE_coord_from_hg19_sorted.bed
+sort -k1,1 -k2,2n /home/mlucena/grupolince/ultra_conserved_regions/cat_conversion_UCNE_coord_from_hg19.txt > /home/mlucena/grupolince/ultra_conserved_regions/cat_conversion_UCNE_coord_from_hg19_sorted.bed
 
-intersectBed -sorted -wo -a /home/mlucena/cat_conversion_UCNE_coord_from_hg19_sorted.bed -b cat2lynx_wTiger.bed > lynx_coordinates_cat_conversion_UCNE_coord_from_hg19_sorted.bed
+intersectBed -sorted -wo -a /home/mlucena/grupolince/ultra_conserved_regions/cat_conversion_UCNE_coord_from_hg19_sorted.bed -b /GRUPOS/grupolince/copia_fabascal/MAPPINGS/cat2lynx_wTiger.bed > /home/mlucena/grupolince/ultra_conserved_regions/lynx_coordinates_cat_conversion_UCNE_coord_from_hg19_sorted.bed
 
 ```
 
@@ -137,15 +145,16 @@ awk '{sum+=$3-$2} END {print sum}' lynx_coordinates_UCNE.bed
 # YUHU!!!!
 ```
 
-# Move to definitive folder
+# Definitive folder
 
-Hasta ahora estaba trabajando en datos, pero voy a crearme una carpeta en grupo lince que tenga esta información 
-
+La carpeta donde están todos estos datos es:
 ```{bash}
+ /home/mlucena/grupolince/ultra_conserved_regions/
+```
 
-mkdir grupolince/ultra_conserved_regions
-mv datos/translation_cat_to_lynx_viceversa/lynx* grupolince/ultra_conserved_regions/
-
+La carpeta de donde he cogido la información para hacer la traducción es:
+```{bash}
+/GRUPOS/grupolince/copia_fabascal/MAPPINGS/cat2lynx_wTiger.bed
 ```
 
 
