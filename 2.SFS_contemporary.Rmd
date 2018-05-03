@@ -444,11 +444,39 @@ rm "$POP".iter.transformedThetas.borrar
 
 ```
 
+# --> POR AQUI VOY
+
+### Copia de seguridad:
+
+Hace falta copiar también lo demás que lo había lanzado de nuevo, el printed.stats y el transformedThetas:
+
+```{bash}
+# Dentro del servidor B:
+scp /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*per.unit.averages.tsv /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis/
+```
+
 
 
 ### Anotación de las unidades: cromosoma y regiones tel y centr. 
 
 Ahora vamos a anotar esas unidades según pertenezcan o no a distintos cromosomas, y según sean teloméricas, centromérica o no. 
+
+
+#### Ordenar los archivos:
+
+Tenemos que ordenar los archivos puesto que las UCR están al final:
+
+```{bash}
+
+# Hay que hacerlo para cada población:
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+
+# OJO ! comprobar que no aplasto y que funciona
+
+FILE=
+LANG=en_EN sort -k 1,1 -k 2,2n -k 3,3n $FILE  > ${}.per.unit.averages.sorted.tsv
+```
+
 
 #### Cromosomas 
 
@@ -477,12 +505,13 @@ lp23.s00001	0	15011	15011	11950	3061	intergenic	-	.	intergenic_region_1	intergen
 Como no queremos pasar por ahí ni guardar tanto, vamos a intentar usar awk directamente para quedarnos con lo que nos interese. 
 
 ```{bash}
-FILE=prueba_para_anotar.per.unit.averages.tsv
+FILE=prueba_para_anotar.per.unit.averages.sorted.tsv
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
-intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$FILE) -b /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed | awk -v OFS='\t' '{split ($23, a, ":"); split(a[3],b, "-"); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,a[2] }' | awk '!a[$0]++' > ${FILE/per.unit.averages.tsv/chr.tsv}
+intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$FILE) -b /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed | awk -v OFS='\t' '{split ($23, a, ":"); split(a[3],b, "-"); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,a[2] }' | awk '!a[$0]++' > ${FILE/per.unit.averages.sorted.tsv/per.unit.averages.chr.tsv}
 
 # De esta manera estamos eliminando filas duplicadas. Si queremos comprobar cuantos cromosomas habría en cada unidad tenemos que postprocesar en R. El merge de abajo va a juntarnos todo auqnue sean distintas unidades si les separa una base, así que no nos interesa.
 # bedtools merge -i stdin -c 11,20 -o distinct,distinct -delim ";" > ${FILE/per.unit.averages.tsv/per.unit.averages.chr.tsv}
+
 
 ```
 
@@ -495,7 +524,7 @@ lp23.s00001	0	15011	15011	11950	3061	intergenic	-	.	intergenic_region_1	intergen
 
 El archivo de interés, es: 
 ```{bash}
-/GRUPOS/grupolince/telomers_centromers_definitiontel2m_regions_based_on_synteny_1000bp.bed
+/GRUPOS/grupolince/telomers_centromers_definition/tel2m_regions_based_on_synteny_1000bp.bed
 ```
 
 Creo una carpeta donde voy a guardar los archivos:
@@ -505,25 +534,234 @@ mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
 
 Los archivos de los que parto estén en:
 ```{bash}
-/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
 ```
 
 Empiezo a unirlos. 
 
 ```{bash}
-FILE=prueba_para_anotar.per.unit.averages.chr.tsv
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+
+files_per_pop=($(ls *per.unit.averages.sorted.tsv))
+
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
-intersectBed -sorted -wo -a /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation/$FILE) -b /GRUPOS/grupolince/telomers_centromers_definition/tel2m_regions_based_on_synteny_1000bp.bed | head
 
-awk -v OFS='\t' '{split ($23, a, ":"); split(a[3],b, "-"); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,a[2] }' | awk '!a[$0]++' > ${FILE/per.unit.averages.tsv/chr.tsv}
+echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch\tchr\ttel2m_bases" > header.region.tel2m.tsv
 
-# De esta manera estamos eliminando filas duplicadas. Si queremos comprobar cuantos cromosomas habría en cada unidad tenemos que postprocesar en R. El merge de abajo va a juntarnos todo auqnue sean distintas unidades si les separa una base, así que no nos interesa.
-# bedtools merge -i stdin -c 11,20 -o distinct,distinct -delim ";" > ${FILE/per.unit.averages.tsv/chr.tsv}
+
+for file_pop in ${files_per_pop[@]}
+do
+echo $file_pop
+# FILE=prueba_para_anotar.per.unit.averages.sorted.tsv
+intersectBed -sorted -wo -a /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$FILE -b /GRUPOS/grupolince/telomers_centromers_definition/tel2m_regions_based_on_synteny_1000bp.bed | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$23,$24 }' | awk '!a[$0]++' | cat - header.region.tel2m.tsv > ${FILE/per.unit.averages.sorted.tsv/per.unit.averages.sorted.region.tel2m.tsv}
 
 ```
 
 Esto me devuelve algo como así:
-lp23.s00001	0	15011	15011	11950	3061	intergenic	-	.	intergenic_region_1	intergenic_region_1	2.4096547746*10^-06	1.3458559263*10^-05	1.1416658651*10^-06	6.2801913098*10^-06	-1.7606196687*10^-01	c_ll_no_n008	ll	c	chrA3
+lp23.s00006	14749	29606	14857	8272	6585	intergenic	-	.	intergenic_region_445	intergenic_region_445	6.8371515163*10^-04	1.2551611729*10^-02	1.1155938889*10^-03	2.1427002344*10^-02	4.4628203002*10^-02	c_lp_sm_n019	lp	c	ChrB2 485
+
+donde el último número representa las bases que solapan. 
+
+
+
+#### Telomeros10m
+
+El archivo de interés, es: 
+```{bash}
+/GRUPOS/grupolince/telomers_centromers_definition/tel0-10m_regions_based_on_synteny_1000bp.bed
+```
+
+Voy a guardar los archivos en la carpeta anteriormente creada:
+```{bash}
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
+```
+
+Los archivos de los que parto estén en:
+```{bash}
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+```
+
+Empiezo a unirlos. 
+
+```{bash}
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+
+files_per_pop=($(ls *per.unit.averages.sorted.tsv))
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
+
+echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch\tchr\ttel10m_bases" > header.region.tel10m.tsv
+
+
+for file_pop in ${files_per_pop[@]}
+do
+echo $file_pop
+#FILE=prueba_para_anotar.per.unit.averages.sorted.tsv
+intersectBed -sorted -wo -a /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$FILE -b /GRUPOS/grupolince/telomers_centromers_definition/tel0-10m_regions_based_on_synteny_1000bp.bed | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$23,$24 }' | awk '!a[$0]++' | cat - header.region.tel10m.tsv > ${FILE/per.unit.averages.sorted.tsv/per.unit.averages.sorted.region.tel10m.tsv}
+done
+
+```
+
+
+Y por último los centrómeros:
+
+#### Centrómeros:
+
+El archivo de interés, es: 
+```{bash}
+/GRUPOS/grupolince/telomers_centromers_definition/centr_regions_based_on_synteny_1000bp.bed
+```
+
+Voy a guardar los archivos en la carpeta anteriormente creada:
+```{bash}
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
+```
+
+Los archivos de los que parto estén en:
+```{bash}
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+```
+
+Empiezo a unirlos. 
+
+```{bash}
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+
+files_per_pop=($(ls *per.unit.averages.sorted.tsv))
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
+
+echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch\tchr\tcentr_bases" > header.region.centr.tsv
+
+
+for file_pop in ${files_per_pop[@]}
+do
+echo $file_pop
+# FILE=prueba_para_anotar.per.unit.averages.sorted.tsv
+intersectBed -sorted -wo -a /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$file_pop -b /GRUPOS/grupolince/telomers_centromers_definition/centr_regions_based_on_synteny_1000bp.bed | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$23,$24 }' | awk '!a[$0]++' | cat - header.region.centr.tsv > ${file_pop/per.unit.averages.sorted.tsv/per.unit.averages.sorted.region.centr.tsv}
+done
+
+
+
+
+```
+
+
+
+# ------------------------------------------
+
+
+# Postprocesado en R
+
+Ahora necesito hacer varias cositas con estos archivos que acabo de crear. En primer lugar tengo que colapsar aquellos que tienen tel o centr, ya que si este centr estaba definido en base a varias regiones pertenecientes a la misma unidad aparece varias veces. Ejemplo:
+
+scaffold1 1 3000 genA
+
+telómeros:
+
+scaffold1 2 200
+scaffold1 500 1000
+scaffold1 1500  3000
+
+Esto apareceria así:
+
+scaffold1 1 3000 genA scaffold1 2 200 198
+scaffold1 1 3000 genA scaffold1 500 1000  500
+scaffold1 1 3000 genA scaffold1 1500  3000  1500
+
+Siendo la tercera columna el número de posiciones que solapan.
+
+Por tanto yo lo que querría obtener sería:
+scaffold1 1 3000 genA 2198
+
+Con una columna que recoja el número de posiciones que solapan, para que despues yo pueda hacer un porcentaje de cuantas bases están cubiertas. 
+
+
+Primero me bajo las tablas.
+
+
+```{bash}
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*tsv /Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation/*tsv /Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation/*tsv /Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit
+
+```
+
+
+Procesamiento de la tabla con region annotation. Esto sólo se hace una vez!
+Comprobamos que el archivo tiene información y añadimos un porcentaje con las bases que tiene que son teloméricas / centroméricas.
+
+```{r}
+
+library(dplyr)
+
+wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
+files_with_region_annotated <- list.files(path = wd, pattern = "region")
+
+# Esto saca el porcentaje de bases anotadas como de una región determinada para cada población
+for (file_with_region_annotated in files_with_region_annotated){
+dataframe <- tryCatch({
+        if (file.size(paste(wd, file_with_region_annotated, sep="")) > 0){
+    read.table(file=paste(wd, file_with_region_annotated, sep=""), header=F) %>% mutate (V22=V20/V4)}
+}, error =function(err) {
+            # error handler picks up where error was generated
+            print(paste("Read.table didn't work!:  ",err))
+        })
+# Hasta aquí bien, ahora guardo estos archivos en la carpeta de interes.
+write.table(dataframe, paste(wd, file_with_region_annotated, sep=""), row.names = F, quote = F)
+}
+
+
+```
+
+
+# ------------------------------------------
+
+# Postprocesado2
+
+Ahora tengo que descargarme todos los archivos de cada población y despues hacer un super-join para cada población para acabar haciendo una unica tabla con rbind con todas las poblaciones. 
+
+```{r}
+
+# Ahora hago un join de la tabla principal de diversidad con las de telómeros, centrómeros y cromosoma. 
+
+poplist <- c("sm","do","po","no","ki")
+
+
+for (pop in poplist){
+  
+files_for_given_pop <- list.files(path = wd, pattern = pop)
+
+for (file_for_given_pop in files_for_given_pop){
+       
+  # if the merged dataset doesn't exist, create it
+  if (!exists("dataset")){
+    dataset <- read.table(file_for_given_pop, header=TRUE, sep="\t")
+  }
+   
+  # if the merged dataset does exist, append to it
+  if (exists("dataset")){
+    temp_dataset <-read.table(file_for_given_pop, header=TRUE, sep="\t")
+    dataset<-full_join(dataset, temp_dataset, by = c("scaffold", "start_cero_based", "end", "length", "NAs", "informative_sites", "feature", "strandness", "frame", "id_gene", "id", "watterson_ave", "watterson_sd", "pairwise_ave", "pairwise_sd", "tajimaD", "pop", "specie", "epoch"))
+    rm(temp_dataset)
+    assign(pop, dataset) # Con esto quiero ponerle el nombre de la población a la dataframe. 
+  }
+ 
+}    
+   
+}
+
+
+data_diversity <-rbind(do, sm, ki, no, po)
+# Esta tabla la debería de guardar. 
+
+  
+
+```
+
+
+
 
 
 
@@ -532,8 +770,7 @@ lp23.s00001	0	15011	15011	11950	3061	intergenic	-	.	intergenic_region_1	intergen
 # ------------------------------------------
 
 
-
-
+# Cosas antiguas!
 
 #### Correcciones diversity per feature!!
 
@@ -593,7 +830,7 @@ awk 'FNR==1 && NR!=1{next;}{print}' c_ll*averages.tsv > c_ll_ki_n013-c_ll_no_n00
 
 
 
-# OJO!!
+## OJO!!
 
 Calcular luego en R medidas pareadas!!! cada unidad con su equivalente en las tres poblaciones!
 
