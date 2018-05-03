@@ -126,18 +126,23 @@ samtools index h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
 /home/mlucena/atlas/atlas task=estimatePMD bam=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam fasta=$REF  verbose 
 # ERROR: position in TPMDTable add function is < 0!
+# estimatePMD: Gives the error “ERROR: position in TPMDTable add function is < 0!"
+# Parece ser que es porque no tiene el TLEN (o longitud de inserto), así que voy a comprobarlo. 
+
+
+samtools view -h -o  h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.sam h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam
 
 
 
 
-# Lanzo esto ahora:
-
-java -jar /opt/picard-tools/picard.jar ValidateSamFile I=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner.bam MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000 IGNORE=INVALID_MAPPING_QUALITY IGNORE=INVALID_CIGAR
-
-/home/mlucena/atlas/atlas task=estimatePMD bam=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner.bam fasta=$REF  verbose 
 
 
 
+
+
+
+
+/home/mlucena/atlas/atlas task=estimateTheta bam=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam fasta=$REF chr=lp23.s00001 verbose
 
 
 
