@@ -179,3 +179,16 @@ samtools view -S -F 4  test_paired.sam > test_no_unmapped.bam
 
 ```
 
+
+# NEW ISSUE
+
+```{bash}
+
+samtools view -s 0.05 -b test_sorted_rg_solved.bam > test_sorted_rg_solved_subsampled.bam
+samtools index test_sorted_rg_solved_subsampled.bam
+
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+/home/mlucena/atlas/atlas task=estimatePMD bam=test_sorted_rg_solved_subsampled.bam fasta=$REF  verbose 
+
+```
+
