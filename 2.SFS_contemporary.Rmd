@@ -131,7 +131,11 @@ done
 ```
 
 
+
+
 ##  Make bed theta        
+
+La población de sierra morena se volvió a lanzar desde aquí en abril/mayo de 2018 porque me di cuenta de que los archivos que había creado se habína corrompido por el camino. Antes de esto (archivos saf, sfs, etc) sí están bien. 
 
 ```{r, engine=bash, eval=FALSE}
 
@@ -152,13 +156,16 @@ awk 'NR>1 {print  "e("$7")"}' $POP.printed.stats | bc -l > "$POP".thetaL.borrar 
 
 # Create a header for the "$POP".transformedThetas file
 
+# ---> HASTA AQUI HE LANZADO $$$ POR AQUI VOY!
+
 echo "scaffold position1 position2 watterson pairwise pairwise-watterson thetaFL thetaH thetaL" > "$POP".transformedThetas
 
 paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar "$POP".thetaFL.borrar "$POP".thetaH.borrar "$POP".thetaL.borrar | \
 awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP".transformedThetas
 
 rm "$POP".*.borrar
-mv $POP.printed.stats /backup/mlucena/intermediate_files_ANGSD/
+mv $POP.printed.stats /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis/
+scp *.transformedThetas /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis/
 
 # done
 
@@ -275,13 +282,14 @@ done
 
 ### Diversity per feature.
 
-Populations:
+14/05/2018 --> Este script es válido, el problema es que en su momento tiraba de un archivo de notaciónq que no estaba bien 100% (ya si coge el archivo adecuado) y por eso tuve que hacer todas las modificaciones que explico abajo, pero funciona bien. 
 
-c_ll_no_n008 --> lanzado
-c_ll_po_n008 --> lanzado
-c_lp_do_n012 [1] 60786
-c_lp_sm_n019 [1] 15192
-c_ll_ki_n013 --> lanzado
+De hecho, para las poblaciones de kirov, noruega, polonia y doñana, los archivos de notación que aparecían en este script y con el que se lanzaron estas poblaciones eran otros. Estos archivos era:
+el archivo original de notación + los UCR.
+
+A partir de mayo, cuando nos dimos cuenta del fallo (UCR solapaban con intergenic) lo que hicimos fue reemplazar este archivo de notación, por otro en el que intergenic se definiera como todo lo que no es funcional, incluidas las UCR. Este proceso está explicado en el script de notación. En este script también he cambiado el archivo al que se llama (/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3), porque lo he necesitado relanzar para sierra morena. 
+
+Aun así quiero que quede constancia de que aunque sierra morena se ha lanzado usando este archivo, las otras pobalciones no, si no usando otro antiguo sobre el que despues tuvimos que eliminar las zonas intergénicas y volverlas a correr como explico más abajo. 
 
 
 
@@ -289,11 +297,11 @@ c_ll_ki_n013 --> lanzado
 
 # Run pop by pop:
 
-POP=c_ll_ki_n013 # <--- Change pop here!
+POP=c_lp_sm_n019 # <--- Change pop here!
 screen -S "$POP"_scaffold_per_unit
-POP=c_ll_ki_n013 # <--- Change pop here!
+POP=c_lp_sm_n019 # <--- Change pop here!
 script log_screen_"$POP"_scaffold_per_unit.log
-POP=c_ll_ki_n013 # <--- Change pop here!
+POP=c_lp_sm_n019 # <--- Change pop here!
 
 # Run a loop: 
 
@@ -303,9 +311,9 @@ POP=c_ll_ki_n013 # <--- Change pop here!
 
 
 ## Variables
-SCAFFOLDS_FOLDER=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.PerScaffold/
+SCAFFOLDS_FOLDER=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3.PerScaffold/
 cd $SCAFFOLDS_FOLDER
-SCAFFOLDS=($(find /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.PerScaffold/ -name "LYPA23C*" -exec ls {} \; | awk '{ print substr( $0, length($0) - 10, length($0) ) }'  | LANG=en_EN sort | uniq ))
+SCAFFOLDS=($(find /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3.PerScaffold/ -name "LYPA23C*" -exec ls {} \; | awk '{ print substr( $0, length($0) - 10, length($0) ) }'  | LANG=en_EN sort | uniq ))
 DIVERSITY_PER_UNIT_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
 SFS_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
 
@@ -436,7 +444,7 @@ unset PAIRWISE_AVERAGE_PER_UNIT
 unset PAIRWISE_SD_PER_UNIT
 unset TAJIMAS_D_PER_UNIT
 
-done < <(cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.gff3_"$SCAFFOLD") 
+done < <(cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3_"$SCAFFOLD" ) 
 
 done &
 
@@ -444,9 +452,240 @@ rm "$POP".iter.transformedThetas.borrar
 
 ```
 
-# --> POR AQUI VOY
+### Copia de seguridad
 
-### Copia de seguridad:
+Hace falta copiar también lo demás que lo había lanzado de nuevo, el printed.stats y el transformedThetas:
+
+```{bash}
+# Dentro del servidor B:
+scp /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*per.unit.averages.tsv /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis/
+```
+
+
+# -----------
+
+10/05/2018
+
+# OJO! Me he dado cuenta que al menos hay un UCR dentro de una región que se considera intergénico!
+# Modificación de mis archivos y vuelta a correr lo que está mal. 
+
+Lo que ocurre es que UCR están dentro de intergénico, por tanto lo que hemos considerado intergénico estaría mal. 
+La forma de proceder va a ser la siguiente:
+
+1. Borrar intergenic del archivo de diversidad.
+2. Lanzar el cálculo de diversidad sobre el intergénico unicamente.
+3. Pegar los nuevos cálculos a nuestro archivo original de diversidad.
+4. Ordenar por scaffold y posición.
+
+
+#### ---> 1. Borrar intergenic del archivo de diversidad.
+
+```{bash}
+
+for DIVERSITY_FILE in *.per.unit.averages.tsv
+do
+echo $DIVERSITY_FILE
+grep -v intergenic $DIVERSITY_FILE > ${DIVERSITY_FILE/per.unit.averages.tsv/per.unit.averages.no_intergenic.tsv}
+done
+
+grep -v intergenic c_lp_do_n012.per.unit.averages.tsv
+
+```
+
+
+#### ---> 2. Lanzar el cálculo de diversidad sobre el intergénico únicamente.
+
+```{bash}
+
+# Run pop by pop:
+
+POP=c_ll_no_n008 # <--- Change pop here!
+screen -S "$POP"_scaffold_per_unit
+POP=c_ll_no_n008 # <--- Change pop here!
+script log_screen_"$POP"_scaffold_per_unit.log
+POP=c_ll_no_n008 # <--- Change pop here!
+
+
+## Variables
+SCAFFOLDS_FOLDER=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3.PerScaffold/
+cd $SCAFFOLDS_FOLDER
+SCAFFOLDS=($(find /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3.PerScaffold/ -name "LYPA23C*" -exec ls {} \; | awk '{ print substr( $0, length($0) - 10, length($0) ) }'  | LANG=en_EN sort | uniq ))
+DIVERSITY_PER_UNIT_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+SFS_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
+
+
+
+# for POP in "${POPS[@]}"
+# do
+
+echo "---------------------------------------------------$POP---------------------------------------------------"
+
+# Create headers for the outfile
+# echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch" > $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
+
+for SCAFFOLD in "${SCAFFOLDS[@]}"
+do
+echo "---------------------$SCAFFOLD---------------------"
+
+#For each unit
+
+cd "$SFS_FOLDER""$POP"_separated_by_scaffold
+
+while read LOCATION METHOD FEATURE START_ONEBASED END POINT STRANDNESS FRAME IDRAW;
+
+do
+
+echo "--------$SCAFFOLD:$FEATURE--------"
+
+if [ "$METHOD" = "PipeR" ] 
+then
+ID_GENE=$(echo $IDRAW | awk -F "_" '{ split ($0, a, "ID="); split (a[2],b,"_"); print b[1]"_"b[2] }')
+else
+ID_GENE=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); split(b[1],c,"T"); print c[1] }') 
+fi
+
+if [ "$FEATURE" = "CDS" ]
+then
+ID=$(echo $IDRAW | awk -F "_" '{split ($0,a,"Target="); split(a[2],b,";"); print b[1]}' |  awk '{print $1"_"$2"_"$3}' )
+else
+ID=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); print b[1] }')
+fi
+
+START_CEROBASED=($(echo $START_ONEBASED-1 | bc))
+LENGTH=($(echo $END-$START_CEROBASED | bc)) 
+SPECIE=$(echo $POP | cut -d"_" -f 2)
+EPOCH=$(echo $POP | cut -d"_" -f 1)
+
+
+cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_CEROBASED\t$END") > "$POP".iter.transformedThetas.borrar
+# He comprobado que en el archivo de Thetas hay por lo menos 4 posiciones que empieza en 0. por tanto asumo que este archivo es 0-based.
+
+
+WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP".iter.transformedThetas.borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_AVERAGE_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+
+INFORMATIVESITES=$(wc -l "$POP".iter.transformedThetas.borrar | cut -d" " -f1)
+
+NAs=($(echo $LENGTH - $INFORMATIVESITES | bc)) 
+
+#Before printing check all variables are full, if empty use NA
+if [ -z ${LOCATION} ]; then  LOCATION=NA;  fi
+if [ -z ${START_CEROBASED} ]; then  START_CEROBASED=NA;  fi
+if [ -z ${END} ]; then  END=NA;  fi
+if [ -z ${LENGTH} ]; then  LENGTH=NA;  fi
+if [ -z ${NAs} ]; then  NAs=NA;  fi
+if [ -z ${INFORMATIVESITES} ]; then  INFORMATIVESITES=NA;  fi
+if [ -z ${FEATURE} ]; then  FEATURE=NA;  fi
+if [ -z ${STRANDNESS} ]; then  STRANDNESS=NA;  fi
+if [ -z ${FRAME} ]; then  FRAME=NA;  fi
+if [ -z ${ID_GENE} ]; then  ID_GENE=NA;  fi
+if [ -z ${ID} ]; then  ID=NA;  fi
+if [ -z ${WATTERSON_AVERAGE_PER_UNIT} ]; then  WATTERSON_AVERAGE_PER_UNIT=NA;  fi
+if [ -z ${WATTERSON_SD_PER_UNIT} ]; then  WATTERSON_SD_PER_UNIT=NA;  fi
+if [ -z ${PAIRWISE_AVERAGE_PER_UNIT} ]; then  PAIRWISE_AVERAGE_PER_UNIT=NA;  fi
+if [ -z ${PAIRWISE_SD_PER_UNIT} ]; then  PAIRWISE_SD_PER_UNIT=NA;  fi
+if [ -z ${TAJIMAS_D_PER_UNIT} ]; then  TAJIMAS_D_PER_UNIT=NA;  fi
+if [ -z ${POP} ]; then  POP=NA;  fi
+if [ -z ${SPECIE} ]; then  SPECIE=NA;  fi
+if [ -z ${EPOCH} ]; then  EPOCH=NA;  fi
+
+
+#Paste averages, and standatd deviations
+
+paste \
+<(echo $LOCATION ) \
+<(echo $START_CEROBASED ) \
+<(echo $END ) \
+<(echo $LENGTH ) \
+<(echo $NAs) \
+<(echo $INFORMATIVESITES) \
+<(echo $FEATURE ) \
+<(echo $STRANDNESS ) \
+<(echo $FRAME ) \
+<(echo $ID_GENE ) \
+<(echo $ID) \
+<(echo $WATTERSON_AVERAGE_PER_UNIT) \
+<(echo $WATTERSON_SD_PER_UNIT) \
+<(echo $PAIRWISE_AVERAGE_PER_UNIT) \
+<(echo $PAIRWISE_SD_PER_UNIT) \
+<(echo $TAJIMAS_D_PER_UNIT) \
+<(echo $POP) \
+<(echo $SPECIE) \
+<(echo $EPOCH) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g'  >>  $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.no_intergenic.tsv
+
+
+
+#Reset all (but POP,SPECIE or EPOCH (those should be the same during the whole iteration and if you remove POP the loop won't work)) variables before next iteration
+
+unset LOCATION
+unset START_CEROBASED
+unset END
+unset LENGTH
+unset NAs
+unset INFORMATIVESITES
+unset FEATURE
+unset STRANDNESS
+unset FRAME
+unset ID_GENE
+unset ID
+unset WATTERSON_AVERAGE_PER_UNIT
+unset WATTERSON_SD_PER_UNIT
+unset PAIRWISE_AVERAGE_PER_UNIT
+unset PAIRWISE_SD_PER_UNIT
+unset TAJIMAS_D_PER_UNIT
+
+done < <(cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3_"$SCAFFOLD" | grep intergenic) 
+
+done &
+
+rm "$POP".iter.transformedThetas.borrar
+
+```
+
+## ---> 4. Muevo los archivos recien creados al nombre inicial.
+
+
+```{bash}
+
+for diversity_file in *.no_intergenic.tsv
+do
+echo $diversity_file
+mv $diversity_file ${diversity_file/.per.unit.averages.no_intergenic.tsv/.per.unit.averages.tsv}
+done
+
+```
+
+## ---> 5. Ordeno
+
+
+```{bash}
+
+for file_diversity in *per.unit.averages.tsv
+do
+echo $file_diversity
+echo ${file_diversity/.per.unit.averages.tsv/.per.unit.averages.sorted.tsv}
+LANG=en_EN sort -k 1,1 -k 2,2n -k 3,3n $file_diversity  > ${file_diversity/.per.unit.averages.tsv/.per.unit.averages.sorted.tsv}
+done
+
+
+mv c_lp_do_n012.per.unit.averages.sorted.tsv c_lp_do_n012.per.unit.averages.tsv
+mv c_ll_po_n008.per.unit.averages.sorted.tsv c_ll_po_n008.per.unit.averages.tsv
+mv c_ll_ki_n013.per.unit.averages.sorted.tsv c_ll_ki_n013.per.unit.averages.tsv
+mv c_ll_no_n008.per.unit.averages.sorted.tsv c_ll_no_n008.per.unit.averages.tsv
+mv c_lp_sm_n019.per.unit.averages.sorted.tsv c_lp_sm_n019.per.unit.averages.tsv
+
+```
+
+
+## Copia de seguridad
 
 Hace falta copiar también lo demás que lo había lanzado de nuevo, el printed.stats y el transformedThetas:
 
@@ -457,25 +696,11 @@ scp /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*p
 
 
 
+# -----------
+
 ### Anotación de las unidades: cromosoma y regiones tel y centr. 
 
 Ahora vamos a anotar esas unidades según pertenezcan o no a distintos cromosomas, y según sean teloméricas, centromérica o no. 
-
-
-#### Ordenar los archivos:
-
-Tenemos que ordenar los archivos puesto que las UCR están al final:
-
-```{bash}
-
-# Hay que hacerlo para cada población:
-cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
-
-# OJO ! comprobar que no aplasto y que funciona
-
-FILE=
-LANG=en_EN sort -k 1,1 -k 2,2n -k 3,3n $FILE  > ${}.per.unit.averages.sorted.tsv
-```
 
 
 #### Cromosomas 
@@ -505,6 +730,7 @@ lp23.s00001	0	15011	15011	11950	3061	intergenic	-	.	intergenic_region_1	intergen
 Como no queremos pasar por ahí ni guardar tanto, vamos a intentar usar awk directamente para quedarnos con lo que nos interese. 
 
 ```{bash}
+
 FILE=prueba_para_anotar.per.unit.averages.sorted.tsv
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
 intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$FILE) -b /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed | awk -v OFS='\t' '{split ($23, a, ":"); split(a[3],b, "-"); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,a[2] }' | awk '!a[$0]++' > ${FILE/per.unit.averages.sorted.tsv/per.unit.averages.chr.tsv}
@@ -512,13 +738,10 @@ intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_geno
 # De esta manera estamos eliminando filas duplicadas. Si queremos comprobar cuantos cromosomas habría en cada unidad tenemos que postprocesar en R. El merge de abajo va a juntarnos todo auqnue sean distintas unidades si les separa una base, así que no nos interesa.
 # bedtools merge -i stdin -c 11,20 -o distinct,distinct -delim ";" > ${FILE/per.unit.averages.tsv/per.unit.averages.chr.tsv}
 
-
 ```
 
 Esto me devuelve algo como así:
 lp23.s00001	0	15011	15011	11950	3061	intergenic	-	.	intergenic_region_1	intergenic_region_1	2.4096547746*10^-06	1.3458559263*10^-05	1.1416658651*10^-06	6.2801913098*10^-06	-1.7606196687*10^-01	c_ll_no_n008	ll	c	chrA3
-
-
 
 #### Telomeros2m
 
@@ -561,8 +784,6 @@ Esto me devuelve algo como así:
 lp23.s00006	14749	29606	14857	8272	6585	intergenic	-	.	intergenic_region_445	intergenic_region_445	6.8371515163*10^-04	1.2551611729*10^-02	1.1155938889*10^-03	2.1427002344*10^-02	4.4628203002*10^-02	c_lp_sm_n019	lp	c	ChrB2 485
 
 donde el último número representa las bases que solapan. 
-
-
 
 #### Telomeros10m
 
