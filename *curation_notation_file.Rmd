@@ -1554,19 +1554,18 @@ done
 
 Carpeta:
 
-
 Archivos definitivos:
 
-Hay dos archivos, uno:
-LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 creado antes de definir las UCR y usado para el paper de filogeografía
+Hay tres archivos, 
 
-Y otro:
-LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3 usado y creado para el paper de diversidad por unidad. 
+1:
+LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.nr.gff3 --> Creado antes de definir las UCR y usado para el paper de filogeografía
 
+2:
+LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3 --> Usado y creado para el paper de diversidad por unidad y con el que lancé los valores de diversidad que despues corregí para modificar el intergénico.
 
-
-
-
+3: 
+LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3 --> Este es el archivo definitivo bueno. Con el he corregido los valores de diversidad para UCNE e intergenic que había calculado usando el anterior. Las demás unidades no las volví a correr porque en principio están bien. 
 
 
 
