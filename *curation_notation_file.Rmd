@@ -637,11 +637,243 @@ done
 
 ```
 
-#----------------------
+NEW:
+17/05/2018
+
+A partir de aquí defino las UCR teninedo en cuenta solo unas coordenadas por UCR (para más información mirar el script de UCR), redefino lo que es funcional y lo que es intergénico y logro un archivo definitivo. 
+
+Ya voy a aprovechar y voy 
+
+
+### 3.h. UCNE
+
+```{bash}
+# Mi archivo es: /home/mlucena/grupolince/ultra_conserved_regions/lynx_coordinates_UCNE_merged_coordinates_filtered.bed
+
+awk -v OFS='\t' '{print $1,"manual","UCNE",$2+1,$3,".", "-", ".", "ID="$4 }' /home/mlucena/grupolince/ultra_conserved_regions/lynx_coordinates_UCNE_merged_coordinates_filtered.bed > LYPA23C.UCNE.gff3
+
+
+```
+
+
+## 4. Merging functional part of the genome 
+
+Fusiono todo lo funcional creado hasta ahora.
+
+
+```{bash}
+
+cat LYPA23C.GENE.mRNA.CDS.fix.nr.gff3 LYPA23C.promoters_full_length_genes.nr.250bp.gff3 LYPA23C.promoters_full_length_genes.nr.500bp.gff3 LYPA23C.promoters_full_length_genes.nr.1000bp.gff3 LYPA23C.introns.nr.gff3 LYPA23C.UTRs_gene-cds.nr.gff3 LYPA23C.infernal_1e6_fixed.gff3 LYPA23C.lncRNAs_fixed_sorted.gff3 LYPA23C.introns_lncRNA.gff3 LYPA23C.promoters_lncRNA.250bp.gff3 LYPA23C.promoters_lncRNA.500bp.gff3 LYPA23C.promoters_lncRNA.1000bp.gff3 LYPA23C.UCNE.gff3 | LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.gff3
+
+
+
+# Sanity check:
+
+cut -f 3 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.gff3 | sort | uniq
+
+# 3UTR
+# 5UTR
+# CDS
+# gene
+# intron
+# intron_lncRNA
+# lncRNA
+# mRNA
+# ncRNA
+# promoter_gene_1000
+# promoter_gene_250
+# promoter_gene_500
+# promoter_lncRNA_1000
+# promoter_lncRNA_250
+# promoter_lncRNA_500
+# UCNE
+
+#Sanity check para comprobar que cada archivo tiene lo que se espera de él. 
+
+
+
+cut -f 3 LYPA23C.GENE.mRNA.CDS.fix.nr.gff3  | sort | uniq
+cut -f 3 LYPA23C.promoters_full_length_genes.nr.250bp.gff3  | sort | uniq
+cut -f 3 LYPA23C.promoters_full_length_genes.nr.500bp.gff3  | sort | uniq
+cut -f 3 LYPA23C.promoters_full_length_genes.nr.1000bp.gff3  | sort | uniq
+cut -f 3 LYPA23C.introns.nr.gff3  | sort | uniq
+cut -f 3 LYPA23C.UTRs_gene-cds.nr.gff3  | sort | uniq
+cut -f 3 LYPA23C.infernal_1e6_fixed.gff3  | sort | uniq
+cut -f 3 LYPA23C.lncRNAs_fixed_sorted.gff3  | sort | uniq
+cut -f 3 LYPA23C.introns_lncRNA.gff3  | sort | uniq
+cut -f 3 LYPA23C.promoters_lncRNA.250bp.gff3  | sort | uniq
+cut -f 3 LYPA23C.promoters_lncRNA.500bp.gff3  | sort | uniq
+cut -f 3 LYPA23C.promoters_lncRNA.1000bp.gff3 | sort | uniq
+cut -f 3 LYPA23C.UCNE.gff3 | sort | uniq
+
+# Salen todas bien!
+
+# Correcto!
+
+```
+
+
+---> Sanity check para comprobar que cada archivo tiene lo que se espera de él. 
+
+```{r, engine=bash, eval=FALSE}
+
+# Miro a ver si nuestras construcciones ha provocado que algo se vaya más allá de cero. 
+
+sort -nk 4,4 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.nr.gff3 | awk '($4<0){print $3}' | sort | uniq -c 
+ 
+# OK!!! NADA! Esto es porque ya lo hemos solucionado con modificaciones del script arriba!!!
+
+
+```
+
+     
+## 5. Defining intergenic regions
+
+Fede tiene un bed de intergénico, pero dado que nosotros hemos:
+
+1. Corregido los promotores que no estaban bien definidos para los genes -.
+2. Añadido lncRNA (con promotores e intrones) y sncRNA
+
+Por tanto, voy a usar mi file de funcional y restarle al genoma todas esas regiones. 
+
+Vamos a construir dos tipos de regiones intergénicas:
+1. Por un lado, tendríamos las regiones intergénicas que salen directamente de la resta del genoma menos la región funcional.
+2. Por otro vamos a crear un intergénico que recoja las regiones que estén al menos a 1000pb de cualquier zona funcional. 
+
+
+```{r, engine=bash, eval=FALSE}
+
+# 1. 
+
+# Por un lado, tendríamos las regiones intergénicas que salen directamente de la resta del genoma menos la región funcional.
+
+# First create bed file based on the previous file. Como es un bed lo pasamos a es 0-based.
+
+awk -v OFS='\t' '{print $1, $4-1, $5}' LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.gff3 | bedtools merge -i stdin -d 1 > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.bed
+
+#### ---> Sanity check:
+# wc -l LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.gff3
+# 472357 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.gff3
+
+# wc -l LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.bed
+# 32054 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.bed
+
+##### 
+
+# Define intergenic region 1-based!!
+
+bedtools subtract -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome.bed -b LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.bed > LYPA23C.intergenic.bed
+
+# 2. 
+
+# Por otro vamos a crear un intergénico que recoja las regiones que estén al menos a 1000pb de cualquier zona funcional. 
+# First create bed file based on the previous file. Como es un bed lo pasamos a es 0-based.
+
+# con este awk sustituyo la columna que yo quiero por un valor concreto y el resto lo dejo igual. 
+
+awk -v OFS='\t' '{$4=$4-1000; $5=$5+1000; print}' LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.gff3 > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.PLUS1000bp.DO_NOT_USE.gff3
+
+# Ojo! Este archivo es completamente artificial! Porque las unidades empiezan mil pares de bases antes de lo q deberían y acaban mil pares de bases despues, así que lo borro en cuanto lo use para no crear confusión. 
+
+join -1 1 -2 1 <(cat /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23)  <(LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.PLUS1000bp.DO_NOT_USE.gff3) | awk -v OFS='\t' '{if ($5<0) {$5="1"} else {$5=$5}; print}' | awk -v OFS='\t' '{if ($6>$2) {$6=$2} else {$6=$6}; print $1,$5-1,$6}' | bedtools merge -i stdin -d 1 > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.PLUS1000bp.DO_NOT_USE.bed
+
+## Nota:Con este awk:
+# awk -v OFS='\t' '{if ($5<0) {$5="1"} else {$5=$5}; print}' | awk -v OFS='\t' '{if ($6>$2) {$6=$2} else {$6=$6}; print $1,$5-1,$6}'
+ # Lo que hago es mirar que nada se escape por debajo de 0 y si es así lo sustituyo por 1, lo que no se escapa se imprime igualmente. Además mira que nada sea más grande que el scaffold, y si es así, lo sustituyo por el valor de la longitud del scaffold, si no es más grande deja el mismo valor. En ambos casos, elimino del archivo el valor longitud de scaffold que está en columna 2 porque ya hemos hecho las comprobaciones que queremos. 
+# También he guardado este archivito resultante de hacer estos awk e hice algunas comprobaciones. Concretamente miré que nada se escapaba por debajo de 0 en el límite superior y que nada se escapaba por encima de la longitud del scaffold. En definitiva, que el script funcionaba bien. 
+# Este script además te imprime solo las columnas de las coordenadas en formato 0-based. 
+# Si quisieras eliminar una columna, por ejemplo la 6: awk -v OFS='\t' '{if ($5<0) {$5="1"; $6=""} else {$5=$5; $6=""}; print}'
+
+# Define strict intergenic region 1-based!!
+
+bedtools subtract -a /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/bed_file_all_the_genome.bed -b LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.PLUS1000bp.DO_NOT_USE.bed > LYPA23C.intergenic.PLUS1000.bed
+
+# I need to create also a gff3 file with the intergenic, even thought it can be contraintuitive to have so (as gff3 have only functional features), but I need it to do all the numbers. I will used LYPA23C.intergenic.PLUS1000.bed to be sure of using intergenic regions (therefore there should be 1000pb between any functional category and the intergenic region for each individual feature).
+
+awk -v OFS='\t' '{print $1,"manual","intergenic",$2+1,$3,".", "-", ".", "ID=intergenic_region_" }' LYPA23C.intergenic.PLUS1000.bed | awk -v OFS='\t' '{if ($3==prev) counter++; else counter=1; print ($1,$2,$3,$4,$5,$6,$7,$8,$9counter); prev=$3}'  > LYPA23C.intergenic.PLUS1000.gff3
+
+# Nota! solo para que no nos sorprenda, en el tail de este archivo me he dado cuenta que hay un montón de scaffolds que no tienen ninguna anotación y por tanto son completamente intergénicos:
+# lp23.s41697	manual	intergenic	1	200	.	-	.	ID=intergenic_region_65792
+# lp23.s41698	manual	intergenic	1	200	.	-	.	ID=intergenic_region_65793
+# lp23.s41699	manual	intergenic	1	200	.	-	.	ID=intergenic_region_65794
+# lp23.s41700	manual	intergenic	1	200	.	-	.	ID=intergenic_region_65795
+
+rm *.DO_NOT_USE.*
+```
+
+
+## 6. Merging functional categories with intergenic gff3.
+
+
+```{r, engine=bash, eval=FALSE}
+
+
+# Now I merge it with the gff3 file.
+
+cat LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.nr.gff3 LYPA23C.intergenic.PLUS1000.gff3 | LANG=en_EN sort -k 1,1 -k 4,4n -k 5,5n > LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3 
+
+```
+
+  
+## 7. Creating the DATASET for diversity and folder per scaffold to speed up the process when calculating diversity per unit. 
+
+```{bash}
+
+# First I create the dataset to do diversity calculus. I remove Gene and mRNA.
+
+wc -l LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3
+539982 LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3
+
+# ¡Cuidado con los tabs!
+
+grep -v "EVM_PASA      gene" LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3 | grep -v "EVM_PASA        mRNA" | wc -l
+497482
+
+# I will compute way less sites, so I will use this file with no genes or mRNA. 
+grep -v "EVM_PASA      gene" LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3 | grep -v "EVM_PASA  mRNA" > LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3
+
+wc -l LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3
+497482 # Correcto!
+
+
+# Now I will separate it by scaffolds. 
+mkdir LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3.PerScaffold
+cd LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3.PerScaffold
+
+# Create multiple files base on one column: gff3:
+awk '{print >> $1; close($1)}' ../LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3
+
+# Rename gff3.
+for file in lp23*
+do
+echo $file
+mv $file ${file/lp23/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3_lp23}
+done
+
+
+
+```
+
+
+
+
+
+
+
+#----------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
+
+# OLD: 
+17/05/2018
+
+Esta parte del script se corría desde 3.g, obviando lo que hay a partir de ahí que es todo nuevo. 
+
+Estos archivos tienen algunos errores puesto que los UCNE (UCR) están duplicados en algunos casos (ya que la sintenia no era contigua), y por tanto el intergenic que sale a partir de estos también estaría mal. De hecho con el intergenci tuve que hacer dos correcciones porque primero no estaban incluidos las UCR como funcional y por tanto también estas bases contaban como intergenic, y despues ya si las incluí. Independientemente, en mi script new tengo en cuenta todos estos asuntos. 
 
 ## 4. Merging functional part of the genome 
 
 Estos archivos los generé en sud ía y estan bien, pero como he añadido una nueva categoría funcional que son UCR lo he repetido y estos archivos los borré, aunque estaban bien. 
+
 ```{r, engine=bash, eval=FALSE}
 
 
@@ -1116,7 +1348,7 @@ grep UCR LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_intron
 ```
 
 
-#----------------------
+##----------------------
 
 #### Ojo!!!! Corrección
 
@@ -1296,8 +1528,6 @@ grep -v "EVM_PASA      gene" LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.U
 
 # I will compute way less sites, so I will use this file with no genes or mRNA. 
 grep -v "EVM_PASA      gene" LYPA23C.GENE.mRNA.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3 | grep -v "EVM_PASA  mRNA" > LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3
-
-
 
 # Now I will separate it by scaffolds. 
 mkdir LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3.PerScaffold
