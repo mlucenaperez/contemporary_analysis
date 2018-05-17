@@ -465,6 +465,10 @@ scp /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*p
 # -----------
 
 10/05/2018
+y repetido con nuevo archivo el día 17/05/2018
+
+Este script lo corrí en su momento con el archivo: /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3.PerScaffold/ que no es el definitivo y que ha sido sustituido por: LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3.PerScaffold. Con este corro mi script de nuevo el día 17. 
+
 
 # OJO! Me he dado cuenta que al menos hay un UCR dentro de una región que se considera intergénico!
 # Modificación de mis archivos y vuelta a correr lo que está mal. 
@@ -482,13 +486,35 @@ La forma de proceder va a ser la siguiente:
 
 ```{bash}
 
-for DIVERSITY_FILE in *.per.unit.averages.tsv
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit
+
+for DIVERSITY_FILE in c_lp_do*.per.unit.averages.tsv
 do
 echo $DIVERSITY_FILE
-grep -v intergenic $DIVERSITY_FILE > ${DIVERSITY_FILE/per.unit.averages.tsv/per.unit.averages.no_intergenic.tsv}
+wc -l $DIVERSITY_FILE
+grep -v intergenic $DIVERSITY_FILE | grep -v UCR  > ${DIVERSITY_FILE/per.unit.averages.tsv/per.unit.averages.no_intergenic_no_UCR.tsv}
+wc -l ${DIVERSITY_FILE/per.unit.averages.tsv/per.unit.averages.no_intergenic_no_UCR.tsv}
 done
 
-grep -v intergenic c_lp_do_n012.per.unit.averages.tsv
+
+# Sanity
+wc -l 
+
+c_ll_ki_n013.per.unit.averages.tsv
+# 499065 c_ll_ki_n013.per.unit.averages.tsv
+# 425829 c_ll_ki_n013.per.unit.averages.no_intergenic_no_UCR.tsv
+
+c_ll_no_n008.per.unit.averages.tsv
+# 499065 c_ll_no_n008.per.unit.averages.tsv
+# 425829 c_ll_no_n008.per.unit.averages.no_intergenic_no_UCR.tsv
+
+c_ll_po_n008.per.unit.averages.tsv
+# 499065 c_ll_po_n008.per.unit.averages.tsv
+# 425829 c_ll_po_n008.per.unit.averages.no_intergenic_no_UCR.tsv
+
+c_lp_do_n012.per.unit.averages.tsv
+# 499065 c_lp_do_n012.per.unit.averages.tsv
+# 425829 c_lp_do_n012.per.unit.averages.no_intergenic_no_UCR.tsv
 
 ```
 
@@ -499,17 +525,17 @@ grep -v intergenic c_lp_do_n012.per.unit.averages.tsv
 
 # Run pop by pop:
 
-POP=c_ll_no_n008 # <--- Change pop here!
+POP=c_lp_do_n012 # <--- Change pop here!
 screen -S "$POP"_scaffold_per_unit
-POP=c_ll_no_n008 # <--- Change pop here!
+POP=c_lp_do_n012 # <--- Change pop here!
 script log_screen_"$POP"_scaffold_per_unit.log
-POP=c_ll_no_n008 # <--- Change pop here!
+POP=c_lp_do_n012 # <--- Change pop here!
 
 
 ## Variables
-SCAFFOLDS_FOLDER=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3.PerScaffold/
+SCAFFOLDS_FOLDER=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3.PerScaffold/
 cd $SCAFFOLDS_FOLDER
-SCAFFOLDS=($(find /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3.PerScaffold/ -name "LYPA23C*" -exec ls {} \; | awk '{ print substr( $0, length($0) - 10, length($0) ) }'  | LANG=en_EN sort | uniq ))
+SCAFFOLDS=($(find /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3.PerScaffold/ -name "LYPA23C*" -exec ls {} \; | awk '{ print substr( $0, length($0) - 10, length($0) ) }'  | LANG=en_EN sort | uniq ))
 DIVERSITY_PER_UNIT_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
 SFS_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
 
@@ -619,9 +645,7 @@ paste \
 <(echo $POP) \
 <(echo $SPECIE) \
 <(echo $EPOCH) |\
-sed 's/ /\t/g'| sed 's/\t\+/\t/g'  >>  $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.no_intergenic.tsv
-
-
+sed 's/ /\t/g'| sed 's/\t\+/\t/g'  >>  $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.no_intergenic_no_UCR.tsv
 
 #Reset all (but POP,SPECIE or EPOCH (those should be the same during the whole iteration and if you remove POP the loop won't work)) variables before next iteration
 
@@ -642,7 +666,7 @@ unset PAIRWISE_AVERAGE_PER_UNIT
 unset PAIRWISE_SD_PER_UNIT
 unset TAJIMAS_D_PER_UNIT
 
-done < <(cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3_"$SCAFFOLD" | grep intergenic) 
+done < <(cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3_"$SCAFFOLD" | grep 'intergenic\|UCNE' ) 
 
 done &
 
