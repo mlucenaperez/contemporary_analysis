@@ -625,3 +625,13 @@ rm c_ll_ki_n013-c_ll_cr_n006.divergence_with_rufus
 
 
 
+
+
+
+# Download last divergence file
+
+```{bash}
+scp  mlucena@genomics-b.ebd.csic.es://home/mlucena/divergence/intergenic_analysis/c_ll.divergence_with_rufus /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/divergence_window/
+```
+
+

@@ -923,19 +923,21 @@ declare -a ARRAY=(CALHGANXX_6_LYNX7-709ii5-4 CALHGANXX_7_LYNX7-604ii5-2 CALHGANX
 Checked whether you are using trimmed or untrimmed data.
 
 ```{r, engine=bash, eval=FALSE}
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa					
+
 
 for i in ${ARRAY[@]}
 do
 echo "${i}"
 bwa aln -l 999 -t 10 $REF ${i}_R1_trimmed.fastq.gz > ${i}_1.sai #you can now use a fastq file.
-bwa samse $REF ${i}_1.sai  ${i}_R1_trimmed.fastq.gz > ${i}_1.sam
+#bwa samse $REF ${i}_1.sai  ${i}_R1_trimmed.fastq.gz > ${i}_1.sam
 done
 
 for i in ${ARRAY[@]}
 do
 echo "${i}"
 bwa aln -l 999 -t 10 $REF ${i}_R2_trimmed.fastq.gz > ${i}_2.sai 
-bwa samse $REF ${i}_2.sai  ${i}_R2_trimmed.fastq.gz > ${i}_2.sam
+#bwa samse $REF ${i}_2.sai  ${i}_R2_trimmed.fastq.gz > ${i}_2.sam
 done
 
 
@@ -1275,7 +1277,43 @@ done
 # test cutre.
 # cojo una lectura cualquiera y la paso a bam. 
 
+# Paired:
+bwa sampe $REF C9KH6ANXX_5_LYNX7-604ii5-2_1.sai C9KH6ANXX_5_LYNX7-604ii5-2_1.sai C9KH6ANXX_5_LYNX7-604ii5-2_R1_trimmed.fastq.gz C9KH6ANXX_5_LYNX7-604ii5-2_R2_trimmed.fastq.gz> test_paired.sam
 
+samtools view -Sb test_paired.sam > test.bam
+
+samtools sort test.bam > test_sorted.bam
+
+java -jar /opt/picard-tools/picard.jar AddOrReplaceReadGroups I=test_sorted.bam O=test_sorted_rg.bam RGID=test RGLB=test_lib RGPL=Illumina RGPU=test RGSM=test VALIDATION_STRINGENCY=SILENT 
+samtools index test_sorted_rg.bam
+## 	Realignment with GATK	
+# RealignerTargetCreator
+java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T RealignerTargetCreator -nt 24 -R $REF -I test_sorted_rg.bam -o test_sorted_rg_realignertargetcreator.intervals
+# IndelRealigner
+java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T IndelRealigner -R $REF -targetIntervals test_sorted_rg_realignertargetcreator.intervals -I test_sorted_rg.bam -o test_sorted_rg_indelrealigner.bam
+# Now we validate SAM file. 
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=test_sorted_rg_indelrealigner.bam MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000 IGNORE=INVALID_MAPPING_QUALITY IGNORE=INVALID_CIGAR
+
+
+# ATLAS: Pipeline for BAM files with paired-end data:
+
+# Estimate the post-mortem damage patterns with estimatePMD
+
+/home/mlucena/atlas/atlas task=estimatePMD bam=test_sorted_rg_indelrealigner.bam fasta=$REF  verbose 
+
+# If the genome is male, use X recal to recalibrate the base quality scores. If the genome is female, use BQSR or recal based on invariant sites to recalibrate.
+# We are doing recal using invariants.
+
+/home/mlucena/atlas/atlas task=recal bam=test_sorted_rg_indelrealigner.bam pmdFile=test_sorted_rg_indelrealigner_PMD_input_Empiric.txt regions=/home/mlucena/grupolince/ultra_conserved_regions/lynx_coordinates_UCNE.bed equalBaseFreq verbose
+
+
+samtools view -b -F 4 test_sorted_rg_indelrealigner.bam > test_sorted_rg_indelrealigner_only_mapped.bam
+
+
+
+samtools view -h -o test_sorted_rg_indelrealigner_only_mapped.sam test_sorted_rg_indelrealigner_only_mapped.bam
+
+# Single:
 samtools view -Sb C9KH6ANXX_5_LYNX7-604ii5-2_1.sam > test.bam
 samtools sort test.bam > test_sorted.bam
 java -jar /opt/picard-tools/picard.jar AddOrReplaceReadGroups I=test_sorted.bam O=test_sorted_rg.bam RGID=test RGLB=test_lib RGPL=Illumina RGPU=test RGSM=test VALIDATION_STRINGENCY=SILENT 
@@ -1293,6 +1331,13 @@ java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T IndelRealigner -R 
 java -jar /opt/picard-tools/picard.jar ValidateSamFile I=test_sorted_rg_indelrealigner.bam MODE=SUMMARY MAX_OPEN_TEMP_FILES=1000 IGNORE=INVALID_MAPPING_QUALITY IGNORE=INVALID_CIGAR
 
 
+
+java -jar /opt/picard-tools/picard.jar ValidateSamFile I=test_sorted_rg_indelrealigner_only_mapped.bam IGNORE_WARNINGS=true MODE=VERBOSE MAX_OPEN_TEMP_FILES=1000 IGNORE=INVALID_MAPPING_QUALITY IGNORE=INVALID_CIGAR
+
+
+
+
+# Error 
 # ATLAS: Pipeline for BAM files with paired-end data:
 
 # Estimate the post-mortem damage patterns with estimatePMD
@@ -1328,17 +1373,15 @@ java -jar /opt/picard-tools/picard.jar ValidateSamFile I=test_sorted_rg_indelrea
 
 
 /home/mlucena/atlas/atlas task=recalBAM bam=test_sorted_rg_indelrealigner.bam  recal=test_sorted_rg_indelrealigner_recalibrationEM.txt pmdFile=test_sorted_rg_indelrealigner_PMD_input_Empiric.txt fasta=$REF withPMD maxOutQuality=42 verbose
+# “The following alignment is longer than its insert size!”, a new error: "Error: The lengths of the alignment and the quality scores of read ‘….’ do not match!"
 
+samtools index test_sorted_rg_solved_recalibrated.bam  
 
+/home/mlucena/atlas/atlas task=mergeReads bam=test_sorted_rg_solved_recalibrated.bam verbose 
 
+/home/mlucena/atlas/atlas task=estimatePMD bam=test_sorted_rg_solved_recalibrated_mergedReads.bam fasta=$REF  verbose 
 
-
-
-
-
-
-
-
+# ERROR: Not sufficient data for PMD estimation in read group 'test': less than the ten first positions have > 100 data points!
 
 # Merge read pairs using mergeReads, use output file in subsequent steps
 
@@ -1526,3 +1569,5 @@ done
 ```
 
 # -------------------
+
+

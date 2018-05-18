@@ -38,43 +38,43 @@ If thickStart/thickEnd is not mapped, use the closest mapped base:	off
 
 Cuando observamos las regiones que han fallado estas son:
 
-#Duplicated in new
+Duplicated in new
 chr1	21755033	21755299	chr1_Aida	3475
-#Deleted in new
+Deleted in new
 chr10	114885151	114885863	VTI1A_Silvester	7565
-#Deleted in new
+Deleted in new
 chr14	29365344	29366029	FOXG1_Chao	11789
-#Deleted in new
+Deleted in new
 chr14	29859148	29859387	FOXG1_Naomi_1	11817
-#Duplicated in new
+Duplicated in new
 chr14	79115459	79115716	NRXN3_Amadeus	12698
-#Deleted in new
+Deleted in new
 chr17	35559174	35559419	LHX1_Violet	16182
-#Deleted in new
+Deleted in new
 chr18	22931939	22932182	ZNF521_Robert	17073
-#Deleted in new
+Deleted in new
 chr18	72936173	72936456	TSHZ1_Oberon	17764
-#Deleted in new
+Deleted in new
 chr2	50148180	50148410	NRXN1_Abraham	19028
-#Deleted in new
+Deleted in new
 chr2	146426340	146426762	ZEB2_Santiago	20578
-#Deleted in new
+Deleted in new
 chr2	171571542	171571838	SP5_Violet	21103
-#Duplicated in new
+Duplicated in new
 chr2	176435853	176436189	HOXD_Eduardo	21272
-#Deleted in new
+Deleted in new
 chr20	51056068	51056300	TSHZ2_Vivien	22366
-#Deleted in new
+Deleted in new
 chr21	34350507	34350710	OLIG2_Laura	22678
-#Deleted in new
+Deleted in new
 chr3	71357320	71357632	FOXP1_Boris	23958
-#Duplicated in new
+Duplicated in new
 chr5	2112526	2112743	IRXA_Vivien_1	26757
-#Deleted in new
+Deleted in new
 chr5	76941157	76941363	OTP_Faust	27386
-#Deleted in new
+Deleted in new
 chr7	1271947	1272147	MICALL2_Frodo	30678
-#Deleted in new
+Deleted in new
 chr8	61496197	61496529	CHD7_Boris	32948
 
 
@@ -98,15 +98,23 @@ El resto de secuencias nos han dado un hit a gato que podemos intentar buscar en
 Para ello hemos usado el archivo que tienen en común las coordenadas de gato y de lince
 
 ```{bash}
-/home/mlucena/datos/translation_cat_to_lynx_viceversa/cat2lynx_wTiger.bed
+/GRUPOS/grupolince/copia_fabascal/MAPPINGS/cat2lynx_wTiger.bed
 ```
+  
+# Creo la carpeta donde voy a trabajar:
+
+```{bash}
+mdkir  /home/mlucena/grupolince/ultra_conserved_regions/
+cd /home/mlucena/grupolince/ultra_conserved_regions/
+```
+
   
 Lo primero que hemos hecho ha sido ordenar el bed de gato con las coordenadas que nos ha escupido el liftover:
 
 ```{bash}
-sort -k1,1 -k2,2n /home/mlucena/cat_conversion_UCNE_coord_from_hg19.txt > /home/mlucena/cat_conversion_UCNE_coord_from_hg19_sorted.bed
+sort -k1,1 -k2,2n /home/mlucena/grupolince/ultra_conserved_regions/cat_conversion_UCNE_coord_from_hg19.txt > /home/mlucena/grupolince/ultra_conserved_regions/cat_conversion_UCNE_coord_from_hg19_sorted.bed
 
-intersectBed -sorted -wo -a /home/mlucena/cat_conversion_UCNE_coord_from_hg19_sorted.bed -b cat2lynx_wTiger.bed > lynx_coordinates_cat_conversion_UCNE_coord_from_hg19_sorted.bed
+intersectBed -sorted -wo -a /home/mlucena/grupolince/ultra_conserved_regions/cat_conversion_UCNE_coord_from_hg19_sorted.bed -b /GRUPOS/grupolince/copia_fabascal/MAPPINGS/cat2lynx_wTiger.bed > /home/mlucena/grupolince/ultra_conserved_regions/lynx_coordinates_cat_conversion_UCNE_coord_from_hg19_sorted.bed
 
 ```
 
@@ -137,15 +145,219 @@ awk '{sum+=$3-$2} END {print sum}' lynx_coordinates_UCNE.bed
 # YUHU!!!!
 ```
 
-# Move to definitive folder
+# Merge
 
-Hasta ahora estaba trabajando en datos, pero voy a crearme una carpeta en grupo lince que tenga esta información 
+Voy a fusionar todas las UCR que ahora están separadas en un par de trozos porque la sintenia no es contigua.
+
+```{bash}
+ cat lynx_coordinates_UCNE.bed | groupBy -i stdin -g 1,4 -c 2,3 -o min,max | awk -v OFS='\t' '{print $1,$3,$4,$2}' > lynx_coordinates_UCNE_merged_coordinates.bed
+```
+
+Esto es lo que voy a usar. 
+
+# Sanity checks
+
+
+¿Qué regiones estaban divididas antes?
+
+```{bash}
+awk '{print $4}'  lynx_coordinates_UCNE.bed  | sort | uniq -c | sed -e 's/^[ \t]*//'| grep -v "^1" | cut -d" " -f 2  > UCR_more_than_one.list
+
+```
+
+¿Cuantas son?
+
+```{bash}
+ wc -l UCR_more_than_one.list
+1040 UCR_more_than_one.list
+```
+
+
+¿Que longitud tienen en gato?
 
 ```{bash}
 
-mkdir grupolince/ultra_conserved_regions
-mv datos/translation_cat_to_lynx_viceversa/lynx* grupolince/ultra_conserved_regions/
+grep -f UCR_more_than_one.list cat_conversion_UCNE_coord_from_hg19_sorted.bed | awk -v OFS='\t' '{print $4, $3-$2}' | sort -k1,1 > UCR_more_than_one_in_cat_lenght.list
 
+```
+
+¿Y cuanto ocupan en lince cuando fusiono?
+
+```{bash}
+
+grep -f UCR_more_than_one.list lynx_coordinates_UCNE_merged_coordinates.bed | awk -v OFS='\t' '{print $4, $3-$2}' | sort -k1,1 > UCR_more_than_one_in_lynx_lenght.list
+
+```
+
+¿Como comparan?
+
+```{bash}
+
+join -1 1 -2 1 UCR_more_than_one_in_cat_lenght.list UCR_more_than_one_in_lynx_lenght.list  | awk '{print $3-$2}' | sort -g | uniq -c
+
+```
+
+      1 -54
+      1 -53
+      1 -50
+      2 -49
+      1 -45
+      1 -41
+      1 -39
+      1 -35
+      1 -34
+      1 -31
+      1 -29
+      1 -28
+      1 -26
+      1 -25
+      2 -23
+      3 -22
+      2 -21
+      1 -20
+      2 -19
+      1 -18
+      2 -17
+      4 -16
+      3 -15
+      2 -14
+      6 -12
+      3 -11
+      6 -10
+      7 -9
+      7 -8
+      8 -7
+      7 -6
+     10 -5
+     12 -4
+     13 -3
+     20 -2
+     58 -1
+    611 0
+    154 1
+     40 2
+     12 3
+     10 4
+      6 5
+      4 6
+      3 7
+      1 8
+      1 10
+      1 12
+      1 13
+      1 18
+      1 22
+      1 39
+      1 80
+      1 205
+      1 246
+
+El que más diferencia tiene es:
+
+```{bash}
+join -1 1 -2 1 UCR_more_than_one_in_cat_lenght.list UCR_more_than_one_in_lynx_lenght.list  | awk '{print $3-$2, $1}' | grep 246
+# 246 ZFHX3_Joshua
+```
+
+Lo busco en ambas carpetas
+
+```{bash}
+
+grep ZFHX3_Joshua lynx_coordinates_UCNE.bed
+lp23.s00064	727305	727531	ZFHX3_Joshua
+lp23.s00064	727789	727812	ZFHX3_Joshua
+
+grep ZFHX3_Joshua cat_conversion_UCNE_coord_from_hg19_sorted.bed
+chrE2	48133013	48133274	ZFHX3_Joshua	15473
+
+
+```
+
+Parece que se debe a inserciones y por eso la sintenia falla. Respecto a los números negativos coincidirían con posibles delecciones (he comprobado que las cuentas están bien y es correcto coger el más pequeño de la primera columna y el más grande de la segunda puesto que están bien ordenados). 
+
+¿Y hay alguno que está en más de un scaffold?
+
+```{bash}
+
+cat lynx_coordinates_UCNE_merged_coordinates.bed | awk '{print $4}' | sort | uniq -c | sort -k1,1n 
+
+
+grep chr2_Ming lynx_coordinates_UCNE.bed
+
+lp23.s26065	4596923	4597158	chr2_Ming
+lp23.s31425	343908	344121	chr2_Ming
+
+
+```
+
+Me he dado cuenta de que esta unidad está en dos posiciones en le mismo cromosoma de gato
+
+```{bash}
+grep chr2_Ming cat_conversion_UCNE_coord_from_hg19_sorted.bed
+chrA3	76529919	76530132	chr2_Ming	19080
+chrA3	91723677	91723912	chr2_Ming	19727
+```
+
+Por eso aparece en dos sitios distintos con la sintenia. De todas maneras esto puede ser un fallo al pasar de humano a gato, o puede ser que efectivamente la misma unidad aparezca dos veces y se llame igual. En cualquier caso, por simplificar, vamos a eliminarla. 
+
+# Creación archivo definitivo
+
+Visto esto, voy a crear un archivo definitivo donde estén incluidos:
+
+1. Aquellos UCR que estén solo presentes en un mismo scaffold --> eliminamos el único caso de un UCR que aparecía en más de un scaffold.
+
+2. Aquellos UCR cuya longitud sea igual o +/-1 la longitud de ese UCR en gato --> eliminamos aquellos que presentan una longitud mayor a estos valores debida posiblemente a inserciones / delecciones u otro tipo de errores que se han podido producir al hacer la sintenia. 
+
+Creo una lista con los UCR a excluir que me va a servir para filtrar la original nuestra.
+Con el cat añado los que están en más de un cromosoma. Al final filtro para aquellas que estén repetidas, que puede ser el caso de UCR que estén en más de un cromosoma y además no encajen en tamaño. 
+
+```{bash}
+
+join -1 1 -2 1 UCR_more_than_one_in_cat_lenght.list UCR_more_than_one_in_lynx_lenght.list | awk '{print $0, $3-$2}' | grep -v  " 0$" | grep -v " -1$" | grep -v " 1$" | awk '{print $1}' | cat - <(awk '{print $4}' lynx_coordinates_UCNE_merged_coordinates.bed | sort | uniq -c | sort -k1,1n | sed -e 's/^[ \t]*//'| grep -v "^1" | awk '{print $2}') | sort | uniq > UCR_with_more_than_one_base_lenght_differnce_between_cat_vs_lynx.list
+
+```
+
+¿Cuantas UCR son?
+
+```{bash}
+wc -l UCR_with_more_than_one_base_lenght_differnce_between_cat_vs_lynx.list
+220 UCR_with_more_than_one_base_lenght_differnce_between_cat_vs_lynx.list
+```
+
+Las quito
+
+```{bash}
+grep -v -f UCR_with_more_than_one_base_lenght_differnce_between_cat_vs_lynx.list lynx_coordinates_UCNE_merged_coordinates.bed > lynx_coordinates_UCNE_merged_coordinates_filtered.bed
+```
+
+Algunas comprobaciones
+
+```{bash}
+wc -l UCR_with_more_than_one_base_lenght_differnce_between_cat_vs_lynx.list
+220 UCR_with_more_than_one_base_lenght_differnce_between_cat_vs_lynx.list
+
+wc -l lynx_coordinates_UCNE_merged_coordinates.bed
+4250 lynx_coordinates_UCNE_merged_coordinates.bed
+
+wc -l lynx_coordinates_UCNE_merged_coordinates_filtered.bed
+4029 lynx_coordinates_UCNE_merged_coordinates_filtered.bed
+
+# 4029 es una menos de las que debían de quitarse basandonos en la resta (4250-220), pero tiene sentido porque una de las UCR (chr2_Ming) se quita dos veces al estar en dos scaffolds distintos. 
+```
+
+
+# Archivo y carpeta definitivo
+
+El archivo definitivo es:
+
+```{bash}
+/home/mlucena/grupolince/ultra_conserved_regions/lynx_coordinates_UCNE_merged_coordinates_filtered.bed
+```
+
+Elimino los archivos intermedios y hago un README para dejar claro que archivo es el bueno. 
+
+```{bash}
+rm *list
 ```
 
 

@@ -1043,3 +1043,207 @@ https://stats.stackexchange.com/questions/204264/interpreting-standard-deviation
 
 
 
+
+# First I will create a file that contain only windows in common in all pops.
+
+
+```{bash}
+
+cd /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
+
+
+for file in *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions
+do
+echo $file
+awk '{print $1"_"$2"_"$3, $0}' $file > ${file/mic_positions/mic_positions_borrar}
+done
+
+
+LANG=en_EN join -t'  ' -11 -21 <(LANG=en_EN sort -k 1,1 c_ll_cr_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) <(LANG=en_EN sort -k 1,1 c_ll_ki_n013.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <(LANG=en_EN sort -k 1,1 c_ll_la_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_no_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_po_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_to-c_ll_ka-c_ll_og_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_tu_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_ur_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_vl_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_ya_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) > c_ll_no_n008-c_ll_po_n008-c_ll_ki_n013-c_ll_to-c_ll_ka-c_ll_og_n008-c_ll_ya_n008-c_ll_vl_n008-c_ll_la_n006-c_ll_cr_n006-c_ll_tu_n006-c_ll_ur_n006.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_only_window_in_common
+
+
+
+awk '{print $1}' c_ll_no_n008-c_ll_po_n008-c_ll_ki_n013-c_ll_to-c_ll_ka-c_ll_og_n008-c_ll_ya_n008-c_ll_vl_n008-c_ll_la_n006-c_ll_cr_n006-c_ll_tu_n006-c_ll_ur_n006.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_only_window_in_common > windows_in_common_list.txt 
+
+rm *borrar
+
+# El que tiene todo ocupa 414283 lineas pero esto se debe a que están concatenadas una tras otra. 
+
+
+# Salgo del servidor:
+
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs/windows_in_common_list.txt /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/analysis_diversity_window
+
+```
+
+
+## Diversity vs divergence
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library (tidyr)
+
+wd_diversity <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/analysis_diversity_window/"
+index="tP_per_site"
+
+# Bajasmos los archivos de diversidad y seleccionamos solo aquellas ventanas que estén en común para todas las poblaciones. 
+
+diversity <- read.table(paste (wd_diversity, "c_ll_no_n008-c_ll_po_n008-c_ll_ki_n013-c_ll_to-c_ll_ka-c_ll_og_n008-c_ll_ya_n008-c_ll_vl_n008-c_ll_la_n006-c_ll_cr_n006-c_ll_tu_n006-c_ll_ur_n006.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions", sep=""), sep="\t", dec=".", header=T, na.strings = "-nan")  %>% 
+mutate (XvsTOTAL= Xpositions/(Xpositions+AUTOSOMICpositions)) %>% 
+mutate (windows_identity = paste(Chr,"_",WinStart,"_", WinStop, sep ="")) %>% 
+filter(nSites>10000) %>% 
+filter(XvsTOTAL=="1" | XvsTOTAL=="0" ) %>% 
+mutate(window_type=ifelse(XvsTOTAL==1 , "Xchr", "Autosomic")) %>% # Lo que hago es quedarme con las posiciones que son solo X o sólo autosomicas.
+mutate(tP_per_site=tP/nSites) %>% 
+mutate(tW_per_site=tW/nSites)
+  
+  
+# Esto me convierte el dataframe de una variable en un vector sobre el que filtrar. 
+windows_in_common <- read.table(paste(wd_diversity, "windows_in_common_list.txt", sep =""), header = T)  [[1]]
+
+
+diversity_only_in_common <- filter(diversity, windows_identity %in% windows_in_common) 
+# Tiene 414180 lineas, lo que encaja puesto que anteriormente tenía: 414283
+
+
+
+hist(diversity_only_in_common$nSites)
+
+
+####
+
+# Ahora bajamos divergencia
+
+wd_divergence <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_divergence_window/"
+
+divergence <- read.table(paste (wd_divergence,"c_ll.divergence_with_rufus", sep =""), sep=" ", dec=".", header=T) %>% mutate (windows_identity = paste(scaffold,"_",winstart,"_", winend, sep =""))
+
+
+####
+
+## Hacemos un join.
+# Aquí tenemos la divergencia y la diversidad.
+
+diversity_divergence <- inner_join(diversity_only_in_common,divergence, by="windows_identity" )  %>% 
+  mutate(tW_per_site_corrected=tW_per_site/divergence) %>% mutate(tP_per_site_corrected=tP_per_site/divergence) %>% 
+  mutate(tW_per_site_corrected_ratio=tW_per_site_corrected/)
+  
+index_corrected=paste0(index,"_corrected")
+
+
+# Autosomico:
+
+diversity_divergence_autosomic <- diversity_divergence %>%  filter(XvsTOTAL=="0")
+
+## Some summary results:
+# By pop, average and standard deviation
+
+summary_diversity_autosomic <- diversity_divergence_autosomic %>% group_by(population) %>% summarise_at(vars(tW_per_site_corrected,tP_per_site_corrected),funs(mean, sd, n()))
+
+
+## Violin plot:
+
+ggplot(data=diversity_divergence_autosomic, aes_string(x="population", y=index_corrected))+
+ geom_violin() +
+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# Este grafico es interesante. Ahora computo un boxplot sobre estos datos.
+
+ggplot(data=diversity_divergence_autosomic, aes_string(x="population", y=index_corrected))+
+ geom_boxplot( outlier.shape = NA) +#outlier.alpha = 0.5) +
+ theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+ coord_cartesian(ylim = quantile(diversity_divergence_autosomic[,which(colnames(diversity_divergence_autosomic)==index_corrected)], c(0.1, 0.9))) +
+ scale_y_continuous(limits = quantile(diversity_divergence_autosomic[,which(colnames(diversity_divergence_autosomic)==index_corrected)], c(0.1, 0.9))) +
+ stat_summary(fun.y = mean, geom="point", colour="darkred", size=3) +
+ stat_summary(fun.y = mean, geom="text", vjust=-0.7, aes( label=round(..y.., digits=5)))
+
+
+# X
+
+diversity_divergence_X <- diversity_divergence %>%  filter(XvsTOTAL=="1")
+
+## Some summary results:
+# By pop, average and standard deviation
+
+summary_diversity_X <- diversity_divergence_X %>% group_by(population) %>% summarise_at(vars(tW_per_site_corrected,tP_per_site_corrected),funs(mean, sd, n()))
+
+
+## Violin plot:
+
+ggplot(data=diversity_divergence_X, aes_string(x="population", y=index_corrected))+
+ geom_violin() +
+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# Este grafico es interesante. Ahora computo un boxplot sobre estos datos.
+
+ggplot(data=diversity_divergence_X, aes_string(x="population", y=index_corrected))+
+ geom_boxplot( outlier.shape = NA) +#outlier.alpha = 0.5) +
+ theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+ coord_cartesian(ylim = quantile(diversity_divergence_X[,which(colnames(diversity_divergence_X)==index_corrected)], c(0.1, 0.9))) +
+ scale_y_continuous(limits = quantile(diversity_divergence_X[,which(colnames(diversity_divergence_X)==index_corrected)], c(0.1, 0.9))) +
+ stat_summary(fun.y = mean, geom="point", colour="darkred", size=3) +
+ stat_summary(fun.y = mean, geom="text", vjust=-0.7, aes( label=round(..y.., digits=5)))
+
+
+
+
+# Autosomic vs X chromosome. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Ahora pruebo la misma funcion eliminando outliers.
+# 
+# remove_outliers <- function(x, na.rm = TRUE, ...) {
+#   qnt <- quantile(x, probs=c(.25, .75), na.rm = na.rm, ...)
+#   H <- 1.5 * IQR(x, na.rm = na.rm)
+#   y <- x
+#   y[x < (qnt[1] - H)] <- NA
+#   y[x > (qnt[2] + H)] <- NA
+#   y
+# }
+# 
+# diversity_divergence_autosomic$tW_noOutliers <- remove_outliers(diversity_divergence_autosomic$tW)
+# diversity_divergence_autosomic$tP_noOutliers <- remove_outliers(diversity_divergence_autosomic$tP)
+# 
+# summary_diversity_no_outliers <- diversity_divergence_autosomic %>% group_by(population) %>% summarise_at(vars(tW_noOutliers,tP_noOutliers),funs(mean(.,na.rm=TRUE), sd(.,na.rm=TRUE)))
+# 
+# 
+# ggplot (data = summary_diversity_no_outliers, aes_string(x="population", y=paste0(index,"_noOutliers_mean")))+
+#   geom_point() +
+#   geom_errorbar(aes_string(ymin=paste(index,"_noOutliers_mean - ",index,"_noOutliers_sd", sep =""),ymax=paste(index,"_noOutliers_mean + ",index,"_noOutliers_sd", sep ="")), colour="black", width=.1) 
+# 
+# 
+# summary_diversity_ratio_autosome_XChr <- window_diversity_filtered %>% group_by(population, window_type) %>% summarise_at(vars(tW,tP),funs(mean, sd)) %>% select (population, window_type, paste0(index,"_mean")) %>% spread(., window_type, paste0(index,"_mean")) %>% mutate (ratio=Xchr/Autosomic)
+# 
+# 
+# ggplot (data = summary_diversity_no_outliers, aes_string(x="population", y=paste0(index,"_noOutliers_mean")))+
+#   geom_point() +
+#   geom_errorbar(aes_string(ymin=paste(index,"_noOutliers_mean - ",index,"_noOutliers_sd", sep =""),ymax=paste(index,"_noOutliers_mean + ",index,"_noOutliers_sd", sep ="")), colour="black", width=.1) 
+# 
+# # u_f^2  = ((u_a^2 / a^2) + (u_b^2 / b^2)) * f^2
+# # u_f=sqrt(((u_a^2 / a^2) + (u_b^2 / b^2)) * f^2)
+# 
+# # Del artículo esta es la versión naif: CVratio~ sqrt(CVx^2 + CVy^2)
+
+
+```
+  
+  
+  

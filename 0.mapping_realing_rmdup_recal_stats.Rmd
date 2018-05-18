@@ -1,6 +1,8 @@
 ---
 title: "pipeline"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 # Pipeline for contemporary samples
@@ -269,6 +271,10 @@ LYNX_06 y LYNX_08_09 venían trimados. No los hemos trimado.
 LYNX_13, LYNX_15 y LYNX_16 también venían trimados. 
 Los del proyecto genómca concluimos que no merece la pena trimarlos, porque aunque tienen adaptadores la proporción es muy poca, y el tiempo de computación es mucho. 
 LYNX_18 tiene un 0.1% de adaptadores, así que tampoco lo trimo. 
+
+14/05/2018
+Me he dado cuenta gracias al mapeo de LYNX_13 a gato (para el artíuculo del admixture) que LYNX_13, LYNX_14, LYNX_15 y LYNX_16 sí que los trimé. He encontrado dos notas que así lo confirman, y que son estos archivos trimados los que usé en todos los pasos posteriores. En el caso de LYNX_15 y LYNX_16 estos archivos no están en backup porque los borré por error, si están los no trimados. 
+En el caso de LYNX_06_08 y LYNX_09 no existen y nunca existieron archivos trimados. 
 
 ```{r, engine=bash, eval=FALSE}
 
