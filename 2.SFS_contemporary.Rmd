@@ -228,7 +228,110 @@ for (i in 1:length (my_files_unfolded))
 ```
 
 # ------------------------------------------------
+# 18/05/2018
+## Global diversity per feaure
 
+Este archivo generado hasta ahora contiene todos los sitios, incluyendo los repetitivos. Hasta ahora he corrido todo usando este archivo pero el 17/05/2018 me di cuenta de que incluía las repeticiones, así que voy a repetir el proceso hasta aquí dejando fuera estas low complexity and repetitive regions. 
+
+Para ello primero filtro el archivo
+
+### Filter repetitive regions
+
+Mi archivo de interés es el archivo Theta. 
+
+```{bash}
+
+mv c_ll_no_n008_separated_by_scaffold/*transformedThetas .
+mv c_ll_ki_n013_separated_by_scaffold/*transformedThetas .
+mv c_lp_do_n012_separated_by_scaffold/*transformedThetas .
+mv c_ll_po_n008_separated_by_scaffold/*transformedThetas .
+mv c_lp_sm_n019_separated_by_scaffold/*transformedThetas .
+
+head -n1 c_ll_ki_n013.transformedThetas > header_thetas_file
+for theta_file in *transformedThetas
+do
+echo $theta_file
+bedtools subtract -a <(tail -n +2 $theta_file) -b /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/repeats_and_lowcomp_no_redundant.bed | cat header_thetas_file - > ${theta_file/transformedThetas/transformedThetas_filtered}
+done
+
+
+```
+
+
+#$ OJO!
+```{bash}
+
+for iteration in {1..10}
+
+do
+start=$( echo '1 + 4170 * ('$iteration' - 1)' | bc)
+end=$( echo '4170 * '$iteration | bc )
+for SCAFFOLD_NUMBER in $(seq -s " " -f %05g $start $end)
+
+do
+SCAFFOLD=$(echo "lp23.s"$SCAFFOLD_NUMBER)
+echo $SCAFFOLD
+done
+
+done
+
+```
+
+
+
+```{bash}
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit
+
+NEW_FOLDER=("c_ll_ki_separated_by_scaffold" "c_ll_po_separated_by_scaffold" "c_ll_no_separated_by_scaffold" "c_lp_do_separated_by_scaffold" "c_lp_sm_separated_by_scaffold")
+
+for FOLDER in "${NEW_FOLDER[@]}"
+do
+echo "---------------------------------------------------$FOLDER---------------------------------------------------"
+mkdir $FOLDER;
+done
+ 
+ 
+POPS=("c_ll_no_n008" "c_ll_po_n008"  "c_lp_do_n012" "c_lp_sm_n019" "c_ll_ki_n013")
+
+########################
+
+
+for POP in "${POPS[@]}"
+do
+echo $POP
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
+mv "$POP".transformedThetas "$POP"_separated_by_scaffold/
+cd  /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/"$POP"_separated_by_scaffold
+# Create multiple files base on one column: transformedThetas:
+awk '{print >> $1; close($1)}' "$POP".transformedThetas
+rm scaffold # esto borra la primera linea que forma un archivo llamado scaffold.
+# Rename the files: transformedThetas
+
+for file in lp23*
+do
+echo $file
+mv $file ${file/lp23/"$POP".transformedThetas_lp23}
+done
+done
+
+```
+
+
+
+
+
+
+
+
+
+
+
+#. 
+# ------------------------------------------------
+# . 
+# ------------------------------------------------
+# OLD (before 18/05/2018)
 ## Global diversity per feature
 
 I made a gff3 file with all the characteristics that we want to evaluate. 
@@ -461,7 +564,6 @@ Hace falta copiar también lo demás que lo había lanzado de nuevo, el printed.
 scp /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*per.unit.averages.tsv /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis/
 ```
 
-
 # -----------
 
 10/05/2018
@@ -476,8 +578,8 @@ Este script lo corrí en su momento con el archivo: /GRUPOS/grupolince/Lyp_annot
 Lo que ocurre es que UCR están dentro de intergénico, por tanto lo que hemos considerado intergénico estaría mal. 
 La forma de proceder va a ser la siguiente:
 
-1. Borrar intergenic del archivo de diversidad.
-2. Lanzar el cálculo de diversidad sobre el intergénico unicamente.
+1. Borrar intergenic y los UCR del archivo de diversidad.
+2. Lanzar el cálculo de diversidad sobre el intergénico y los UCNE unicamente.
 3. Pegar los nuevos cálculos a nuestro archivo original de diversidad.
 4. Ordenar por scaffold y posición.
 
