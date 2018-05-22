@@ -156,12 +156,16 @@ awk 'NR>1 {print  "e("$7")"}' $POP.printed.stats | bc -l > "$POP".thetaL.borrar 
 
 # Create a header for the "$POP".transformedThetas file
 
-# ---> HASTA AQUI HE LANZADO $$$ POR AQUI VOY!
-
 echo "scaffold position1 position2 watterson pairwise pairwise-watterson thetaFL thetaH thetaL" > "$POP".transformedThetas
 
+# ¿Tengo las mismas posiciones?
+
+wc -l $POP*borrar
+
+
+
 paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar "$POP".thetaFL.borrar "$POP".thetaH.borrar "$POP".thetaL.borrar | \
-awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP".transformedThetas
+awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-4, $6, $7, $8}' >> "$POP".transformedThetas
 
 rm "$POP".*.borrar
 mv $POP.printed.stats /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis/
@@ -228,14 +232,17 @@ for (i in 1:length (my_files_unfolded))
 ```
 
 # ------------------------------------------------
-# 18/05/2018
+# 18/05/2018 PROBLEMA NO Y DO
+
+Quería hacer un filtrado y me di cuenta de un problema que solucioné por el camino. En el script real esta parte se puede obviar e irías directamente al siguiente apartado. 
+
 ## Global diversity per feaure
 
 Este archivo generado hasta ahora contiene todos los sitios, incluyendo los repetitivos. Hasta ahora he corrido todo usando este archivo pero el 17/05/2018 me di cuenta de que incluía las repeticiones, así que voy a repetir el proceso hasta aquí dejando fuera estas low complexity and repetitive regions. 
 
 Para ello primero filtro el archivo
 
-### Filter repetitive regions
+### Filtering repetitive regions 
 
 Mi archivo de interés es el archivo Theta. 
 
@@ -257,33 +264,365 @@ done
 
 ```
 
+Esto me devuelve un mensaje de error para dos poblaciones Noruega y Doñana.
 
-#$ OJO!
+## Sanity check -- > Problema detectado
+
+Nos hemos dado cuenta al hacer el filtrado que bedtools cantaba porque decía que había archivos que tenían 8 columnas en vez de 9. Hemos ido a /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis y nos hemos dado cuenta que la columna que falta es watterson. Esto es grave porque es la primera columna, así que pasaría desapercibido.
+
+¿Cómo lo he sabido?
+
+```{bash}
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+
+awk 'NF == 8' < c_ll_no_n008.transformedThetas | head
+
+# Me sale a partir de lp23.s37389. Así que busco ese scaffold en printed.stats para ver si está bien.  
+
+cd
+
+grep lp23.s37390  c_ll_no_n008.printed.stats | head > kk
+
+# Efectivamente tiene todas las columnas, así que vamos a comprobar cual es la que luego falta comparando con el c_ll_no_n008.transformedThetas para ese scaffold. 
+
+# Lo hago así:
+
+awk '{print  "e("$3")"}' kk  | bc -l  # ¡AUSENTE!
+awk '{print  "e("$4")"}' kk  | bc -l  # --> Presente
+awk '{print  "e("$5")"}' kk  | bc -l  # --> Presente
+awk '{print  "e("$6")"}' kk  | bc -l  # --> Presente
+awk '{print  "e("$7")"}' kk  | bc -l  # --> Presente
+
+```
+
+Dada la gravedad del descubrimiento voy a comprobar si hay más archivos que les falten columnas: 
+
 ```{bash}
 
-for iteration in {1..10}
+awk 'NF !=9' < c_ll_po_n008.transformedThetas | head # --> Perfecto!
+awk 'NF !=9' < c_ll_no_n008.transformedThetas | head # PROBLEMA
+awk 'NF !=9'< c_lp_do_n012.transformedThetas | head # PROBLEMA
+awk 'NF !=9' < c_lp_sm_n019.transformedThetas | head # --> Perfecto!
+awk 'NF !=9' c_ll_ki_n013.transformedThetas | head # --> Perfecto!
 
-do
-start=$( echo '1 + 4170 * ('$iteration' - 1)' | bc)
-end=$( echo '4170 * '$iteration | bc )
-for SCAFFOLD_NUMBER in $(seq -s " " -f %05g $start $end)
+```
 
-do
-SCAFFOLD=$(echo "lp23.s"$SCAFFOLD_NUMBER)
-echo $SCAFFOLD
-done
+¿Qué poblaciones tienen este problema?
 
-done
+Efectivamente las que dieron el mensaje de aviso:
+
+Noruega
+Doñana
+
+¿A partir de qué scaffold?
+```{bash}
+awk 'NF == 8' < c_ll_no_n008.transformedThetas | head
+
+# lp23.s37389	1704	1705	.00000210987258195238	.00001016749185751371	8.05762e-06	.00000022186028500950	.00000116586646570892
+
+# A partir del scaffold lp23.s37389 para noruega.
+
+
+ awk 'NF == 8' < c_lp_do_n012.transformedThetas | head
+
+# lp23.s37350	1364	1365	.00000006491013903094	.00000059407990881920	5.2917e-07	.00000000363581697066	.00000003427293024659	
+
+# A partir del scaffold lp23.s37350 para doñana. 
+
+# Para ambos:
+# Cuando hago el tail me doy cuenta de que es hasta el final 
+
+
+# Empiezo con doñana.
+
+# Qué linea es esa?
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+grep -nr lp23.s37350 c_lp_do_n012.transformedThetas | head
+
+# 1369623421:lp23.s37350	84	85	.00000160262764124604	.00000100177412987377	-6.00854e-07.00000266362654746090	.00000011972073675458	.00000056074756833874
+
+cd /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis
+grep -nr lp23.s37350 c_lp_do_n012.printed.stats | head
+
+# 1369623421:lp23.s37350	85	-13.257177	-13.813738	-12.835822	-15.938104	-14.393995
+
+# Para Doñana, ¡coinciden! El problema es a partir de la linea 1369623421
+
+
+# ¿Y en Noruega?
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+grep -nr lp23.s37389 c_ll_no_n008.transformedThetas | head
+
+# 1368906858:lp23.s37389	57	58	.00000280538155921492	.00000887284561212872	6.06746e-06	.00002134658039437027	.00000149690337555105	.00000518486890558351
+
+cd /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis
+grep -nr lp23.s37389 c_ll_no_n008.printed.stats | head
+
+# 1368906858:lp23.s37389	58	-11.239233	-11.632515	-10.754619-13.412112	-12.169766
+
+# Para Noruega, ¡coincide! El problema es a partir de la linea 1368906858
+
+```
+
+Corro desde el scaffold que va mal para cada una de las poblaciones. 
+
+### Norway: Thetas file
+
+```{bash}
+
+# Población: c_ll_no_n008
+
+#Corro todo para lo que sea mayor que 1368906857, por lo que debe empezar en el 1368906858 
+
+# Me voy a backup que es donde tengo mis archivos:
+
+cd /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis
+
+# Transform the coordinates to use 0Based bedtools
+
+awk 'NR>1368906857 {print  $1" "$2-1" "$2}' c_ll_no_n008.printed.stats > c_ll_no_n008.0basedcoordinates.borrar # --> 1, 2, 3
+# log transformation of watterson and pairwise:
+awk 'NR>1368906857 {print  "e("$3")"}' c_ll_no_n008.printed.stats | bc -l > c_ll_no_n008.watterson.borrar # --> 4
+awk 'NR>1368906857 {print  "e("$4")"}' c_ll_no_n008.printed.stats | bc -l > c_ll_no_n008.pairwise.borrar # --> 5
+                                                                                  # --> PAIRWISE - WATTERSON
+awk 'NR>1368906857 {print  "e("$5")"}' c_ll_no_n008.printed.stats | bc -l > c_ll_no_n008.thetaFL.borrar # --> 6
+awk 'NR>1368906857 {print  "e("$6")"}' c_ll_no_n008.printed.stats | bc -l > c_ll_no_n008.thetaH.borrar # --> 7
+awk 'NR>1368906857 {print  "e("$7")"}' c_ll_no_n008.printed.stats | bc -l > c_ll_no_n008.thetaL.borrar # --> 8
+
+# Create a header for the "$POP".transformedThetas file
+
+# Sanity check:
+
+wc -l *borrar
+# 283248 c_ll_no_n008.0basedcoordinates.borrar
+# 283248 c_ll_no_n008.pairwise.borrar
+# 283248 c_ll_no_n008.thetaFL.borrar
+# 283248 c_ll_no_n008.thetaH.borrar
+# 283248 c_ll_no_n008.thetaL.borrar
+# 283248 c_ll_no_n008.watterson.borrar
+
+# ¡Bien!
+
+# Ahora hago elimino a partir de esa linea en mi archivo de Thetas:
+
+# Sanity:
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+wc -l c_ll_no_n008.transformedThetas
+# 1369190105
+awk 'NR>1368906857 {print $0}' c_ll_no_n008.transformedThetas | wc -l 
+# 283248
+awk 'NR<=1368906857 { print }' c_ll_no_n008.transformedThetas | wc -l 
+# 1368906857
+
+# 1368906857 + 283248 =  1369190105 --> ¡Bien!
+
+# Ahora podría pegar los resultantes de *.borrar, eliminar las filas NR<=1368906857 en mi archivo Theta y pegarles estas. 
+
+# Creo mi archivo con theta nuevo:
+
+cd /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis
+
+awk 'NR<=1368906857 { print }' c_ll_no_n008.transformedThetas > c_ll_no_n008.transformedThetas_subset
+
+wc -l c_ll_no_n008.transformedThetas_subset
+# 1368906857 c_ll_no_n008.transformedThetas_subset
+
+# Ahora junto estas columnas y las añado a nuestro archivo subset. 
+
+paste c_ll_no_n008.0basedcoordinates.borrar c_ll_no_n008.watterson.borrar c_ll_no_n008.pairwise.borrar c_ll_no_n008.thetaFL.borrar c_ll_no_n008.thetaH.borrar c_ll_no_n008.thetaL.borrar | awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-4, $6, $7, $8}' >> c_ll_no_n008.transformedThetas_subset
+
+# ¿Y ahora cuanto mide?
+
+wc -l c_ll_no_n008.transformedThetas_subset
+# 1369190105 c_ll_no_n008.transformedThetas_subset
+#Perfecto.
+
+awk 'NF != 9' < c_ll_no_n008.transformedThetas_subset
+# Nada! Perfecto!
+
+mv c_ll_no_n008.transformedThetas_subset c_ll_no_n008.transformedThetas
 
 ```
 
 
+### Doñana: Thetas file
 
 ```{bash}
 
-cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit
+# Población: c_lp_do_n012
 
-NEW_FOLDER=("c_ll_ki_separated_by_scaffold" "c_ll_po_separated_by_scaffold" "c_ll_no_separated_by_scaffold" "c_lp_do_separated_by_scaffold" "c_lp_sm_separated_by_scaffold")
+#Corro todo para lo que sea mayor que 1369623420, por lo que debe empezar en el 1369623421 
+
+# Me voy a backup que es donde tengo mis archivos:
+
+cd /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis
+
+# Transform the coordinates to use 0Based bedtools
+
+awk 'NR>1369623420 {print  $1" "$2-1" "$2}' c_lp_do_n012.printed.stats > c_lp_do_n012.0basedcoordinates.borrar # --> 1, 2, 3
+# log transformation of watterson and pairwise:
+awk 'NR>1369623420 {print  "e("$3")"}' c_lp_do_n012.printed.stats | bc -l > c_lp_do_n012.watterson.borrar # --> 4
+awk 'NR>1369623420 {print  "e("$4")"}' c_lp_do_n012.printed.stats | bc -l > c_lp_do_n012.pairwise.borrar # --> 5
+                                                                                  # --> PAIRWISE - WATTERSON
+awk 'NR>1369623420 {print  "e("$5")"}' c_lp_do_n012.printed.stats | bc -l > c_lp_do_n012.thetaFL.borrar # --> 6
+awk 'NR>1369623420 {print  "e("$6")"}' c_lp_do_n012.printed.stats | bc -l > c_lp_do_n012.thetaH.borrar # --> 7
+awk 'NR>1369623420 {print  "e("$7")"}' c_lp_do_n012.printed.stats | bc -l > c_lp_do_n012.thetaL.borrar # --> 8
+
+# Create a header for the "$POP".transformedThetas file
+
+# Sanity check:
+
+wc -l c_lp*borrar
+#  282955 c_lp_do_n012.0basedcoordinates.borrar
+#  282955 c_lp_do_n012.pairwise.borrar
+#  282955 c_lp_do_n012.thetaFL.borrar
+#  282955 c_lp_do_n012.thetaH.borrar
+#  282955 c_lp_do_n012.thetaL.borrar
+#  282955 c_lp_do_n012.watterson.borrar
+
+# ¡Bien!
+
+# Ahora hago elimino a partir de esa linea en mi archivo de Thetas:
+
+# Sanity:
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+wc -l c_lp_do_n012.transformedThetas
+# 1369906375
+
+awk 'NR>1369623420 {print $0}' c_lp_do_n012.transformedThetas | wc -l 
+# 282955
+
+awk 'NR<=1369623420 { print }' c_lp_do_n012.transformedThetas | wc -l 
+# 1369623420
+
+# 1369623420 + 282955 = 1369906375 --> ¡Bien!
+
+# Ahora podría pegar los resultantes de *.borrar, eliminar las filas NR<=1369623420 en mi archivo Theta y pegarles estas. 
+
+# Creo mi archivo con theta nuevo:
+
+cd /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis
+
+awk 'NR<=1369623420 { print }' c_lp_do_n012.transformedThetas > c_lp_do_n012.transformedThetas_subset
+
+# Ahora junto estas columnas y las añado a nuestro archivo subset. 
+
+paste c_lp_do_n012.0basedcoordinates.borrar c_lp_do_n012.watterson.borrar c_lp_do_n012.pairwise.borrar c_lp_do_n012.thetaFL.borrar c_lp_do_n012.thetaH.borrar c_lp_do_n012.thetaL.borrar | awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-4, $6, $7, $8}' >> c_lp_do_n012.transformedThetas_subset
+
+wc -l c_lp_do_n012.transformedThetas_subset
+# 1369906375 c_lp_do_n012.transformedThetas_subset
+# Perfecto!
+
+awk 'NF != 9' < c_lp_do_n012.transformedThetas_subset
+# Nada, perfecto!
+
+mv c_lp_do_n012.transformedThetas_subset c_lp_do_n012.transformedThetas
+
+```
+
+Como ha ido bien en principio, elimino los archivos *borrar.
+
+```{bash}
+rm *borrar
+```
+
+Elimino todos los filtrados, porque durante este tiempo que hemos solucionado este problema hemos decidido filtrar también los que tienen baja mappability (script mappability).
+
+```{bash}
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+rm *transformedThetas_filtered
+```
+
+Copiar a mi ruta ANGSD/wholegenome/sfs
+
+```{bash}
+cd /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis/
+scp c_lp_do_n012.transformedThetas /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+scp c_ll_no_n008.transformedThetas /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+```
+
+Hago sanity checks en mi carpeta donde los he movido, por segunda vez.
+
+```{bash}
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+
+awk 'NF != 9' < c_lp_do_n012.transformedThetas | head # Ya están comprobados cuando los generé.
+awk 'NF != 9' < c_ll_no_n008.transformedThetas | head # Ya están comprobados cuando los generé.
+
+awk 'NF != 9' < c_lp_sm_n019.transformedThetas | head # --> Bien!
+awk 'NF != 9' < c_ll_ki_n013.transformedThetas | head # --> Bien!
+awk 'NF != 9' < c_ll_po_n008.transformedThetas | head # --> Bien!
+
+
+tail c_lp_do_n012.transformedThetas
+tail c_ll_no_n008.transformedThetas
+
+tail c_lp_sm_n019.transformedThetas # --> Buena pinta
+tail c_ll_ki_n013.transformedThetas # --> Buena pinta
+tail c_ll_po_n008.transformedThetas # --> Buena pinta
+
+ 
+```
+
+
+# ---------------------------------------------
+
+# Filtering & separate by scaffold.
+
+Normalmente ahora pasaríamos a separar las carpetas de theta por scaffold. Como vamos a usar unos archivos filtrados (sin regiones de baja mappability ni de low complexity o repetitivo), voy a crearlos y despues hacemos las carpetas para esos archivos filtrados. 
+
+### Filtering repetitive regions
+
+Mi archivo de interés es el archivo Theta. 
+
+```{bash}
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+head -n1 c_ll_ki_n013.transformedThetas > header_thetas_file
+for theta_file in *transformedThetas
+do
+echo $theta_file
+bedtools subtract -a <(tail -n +2 $theta_file) -b /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/repeats_and_lowcomp_no_redundant_mappability.k75_lessthan90.bed | cat header_thetas_file - > ${theta_file/transformedThetas/transformedThetas_filtered}
+done
+
+# ¿Cuanto ocupaban sin filtrar y filtrados?
+
+# Not filtered
+
+# 1369113172 c_ll_ki_n013.transformedThetas
+# 1369400768 c_ll_po_n008.transformedThetas
+# 1383676766 c_lp_sm_n019.transformedThetas
+# 1369906375 c_lp_do_n012.transformedThetas
+# 1369190105 c_ll_no_n008.transformedThetas
+
+# Filtered
+
+# 1284340665 c_ll_ki_n013.transformedThetas_filtered --> 1369113172 - 1284340665 = 84772507 que he filtrado. 
+# 1277662393 c_ll_po_n008.transformedThetas_filtered --> 1369400768 - 1277662393 = 91738375 que he filtrado.
+# 1289013196 c_lp_sm_n019.transformedThetas_filtered --> 1383676766 - 1289013196 = 94663570 que he filtrado. 
+# 1282704524 c_lp_do_n012.transformedThetas_filtered --> 1369906375 - 1282704524 = 87201851 que he filtrado.
+# 1284367841 c_ll_no_n008.transformedThetas_filtered --> 1369190105 - 1284367841 = 84822264 que he filtrado. 
+
+# Ahora vamos a eliminar el archivo thetas de aquí y lo dejamos sólo en backup
+
+rm *transformedThetas
+
+```
+
+## Separate by scaffold
+
+Ahora creo las carpetas de theta per scaffold para todas las poblaciones de nuevo partiendo de los archivos filtrados. 
+
+```{bash}
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
+
+NEW_FOLDER=("c_ll_no_n008_separated_by_scaffold" "c_lp_do_n012_separated_by_scaffold" "c_lp_sm_n019_separated_by_scaffold" "c_ll_ki_n013_separated_by_scaffold" "c_ll_po_n008_separated_by_scaffold")
 
 for FOLDER in "${NEW_FOLDER[@]}"
 do
@@ -292,19 +631,18 @@ mkdir $FOLDER;
 done
  
  
-POPS=("c_ll_no_n008" "c_ll_po_n008"  "c_lp_do_n012" "c_lp_sm_n019" "c_ll_ki_n013")
+POPS=("c_lp_sm_n019" "c_ll_ki_n013" "c_ll_po_n008" )
 
-########################
-
+# POPS=("c_ll_no_n008" "c_lp_do_n012")
 
 for POP in "${POPS[@]}"
 do
 echo $POP
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
-mv "$POP".transformedThetas "$POP"_separated_by_scaffold/
+mv "$POP".transformedThetas_filtered "$POP"_separated_by_scaffold/
 cd  /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/"$POP"_separated_by_scaffold
 # Create multiple files base on one column: transformedThetas:
-awk '{print >> $1; close($1)}' "$POP".transformedThetas
+awk '{print >> $1; close($1)}' "$POP".transformedThetas_filtered
 rm scaffold # esto borra la primera linea que forma un archivo llamado scaffold.
 # Rename the files: transformedThetas
 
@@ -317,10 +655,172 @@ done
 
 ```
 
+# ---------------------------------------------
+
+## Diversity calculus
+
+He modificado este script para que lo haga en bloques de 10, por lo que tadaría 10 veces menos. La estrategia consiste en establecer 10 bloques con empezando por un scaffold hasta otro y despues iterar sobre este bloque. Como los 10 bloques se lanzan en un bucle al poner & al final se lanzan los 10 a la vez. Además no necesitamos definir los scaffold a priori como hacíamos antes porque vamos a iterar por todos. 
 
 
 
+```{bash}
 
+# Run pop by pop:
+
+POP=c_lp_do_n012 # <--- Change pop here!
+screen -S "$POP"_scaffold_per_unit
+POP=c_lp_do_n012 # <--- Change pop here!
+script log_screen_"$POP"_scaffold_per_unit.log
+POP=c_lp_do_n012 # <--- Change pop here!
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+
+## Variables
+SCAFFOLDS_FOLDER=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3.PerScaffold/
+DIVERSITY_PER_UNIT_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+SFS_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
+
+
+echo "---------------------------------------------------$POP---------------------------------------------------"
+
+# Create headers for the outfile
+echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch" > $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
+
+for iteration in {1..10}
+do
+
+SCAFFOLD_START=$( echo '1 + 4170 * ('$iteration' - 1)' | bc)
+SCAFFOLD_END=$( echo '4170 * '$iteration | bc )
+
+for SCAFFOLD_NUMBER in $(seq -s " " -f %05g $SCAFFOLD_START $SCAFFOLD_END) # esta manera de hacer seq te va a sacar siempre 5 cifras.
+do
+
+SCAFFOLD=$(echo "lp23.s"$SCAFFOLD_NUMBER)
+
+echo "---------------------$SCAFFOLD---------------------"
+
+#For each unit
+
+# cd "$SFS_FOLDER""$POP"_separated_by_scaffold
+
+while read LOCATION METHOD FEATURE START_ONEBASED END POINT STRANDNESS FRAME IDRAW;
+
+do
+
+echo "--------$SCAFFOLD:$FEATURE--------"
+
+if [ "$METHOD" = "PipeR" ] 
+then
+ID_GENE=$(echo $IDRAW | awk -F "_" '{ split ($0, a, "ID="); split (a[2],b,"_"); print b[1]"_"b[2] }')
+else
+ID_GENE=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); split(b[1],c,"T"); print c[1] }') 
+fi
+
+if [ "$FEATURE" = "CDS" ]
+then
+ID=$(echo $IDRAW | awk -F "_" '{split ($0,a,"Target="); split(a[2],b,";"); print b[1]}' |  awk '{print $1"_"$2"_"$3}' )
+else
+ID=$(echo $IDRAW | awk '{ split($0,a,"ID="); split (a[2],b,";"); print b[1] }')
+fi
+
+START_CEROBASED=($(echo $START_ONEBASED-1 | bc))
+LENGTH=($(echo $END-$START_CEROBASED | bc)) 
+SPECIE=$(echo $POP | cut -d"_" -f 2)
+EPOCH=$(echo $POP | cut -d"_" -f 1)
+
+
+cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_CEROBASED\t$END") > "$POP".iter.transformedThetas.borrar
+# He comprobado que en el archivo de Thetas hay por lo menos 4 posiciones que empieza en 0. por tanto asumo que este archivo es 0-based.
+
+
+WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP".iter.transformedThetas.borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_AVERAGE_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+
+INFORMATIVESITES=$(wc -l "$POP".iter.transformedThetas.borrar | cut -d" " -f1)
+
+NAs=($(echo $LENGTH - $INFORMATIVESITES | bc)) 
+
+#Before printing check all variables are full, if empty use NA
+if [ -z ${LOCATION} ]; then  LOCATION=NA;  fi
+if [ -z ${START_CEROBASED} ]; then  START_CEROBASED=NA;  fi
+if [ -z ${END} ]; then  END=NA;  fi
+if [ -z ${LENGTH} ]; then  LENGTH=NA;  fi
+if [ -z ${NAs} ]; then  NAs=NA;  fi
+if [ -z ${INFORMATIVESITES} ]; then  INFORMATIVESITES=NA;  fi
+if [ -z ${FEATURE} ]; then  FEATURE=NA;  fi
+if [ -z ${STRANDNESS} ]; then  STRANDNESS=NA;  fi
+if [ -z ${FRAME} ]; then  FRAME=NA;  fi
+if [ -z ${ID_GENE} ]; then  ID_GENE=NA;  fi
+if [ -z ${ID} ]; then  ID=NA;  fi
+if [ -z ${WATTERSON_AVERAGE_PER_UNIT} ]; then  WATTERSON_AVERAGE_PER_UNIT=NA;  fi
+if [ -z ${WATTERSON_SD_PER_UNIT} ]; then  WATTERSON_SD_PER_UNIT=NA;  fi
+if [ -z ${PAIRWISE_AVERAGE_PER_UNIT} ]; then  PAIRWISE_AVERAGE_PER_UNIT=NA;  fi
+if [ -z ${PAIRWISE_SD_PER_UNIT} ]; then  PAIRWISE_SD_PER_UNIT=NA;  fi
+if [ -z ${TAJIMAS_D_PER_UNIT} ]; then  TAJIMAS_D_PER_UNIT=NA;  fi
+if [ -z ${POP} ]; then  POP=NA;  fi
+if [ -z ${SPECIE} ]; then  SPECIE=NA;  fi
+if [ -z ${EPOCH} ]; then  EPOCH=NA;  fi
+
+
+#Paste averages, and standatd deviations
+
+paste \
+<(echo $LOCATION ) \
+<(echo $START_CEROBASED ) \
+<(echo $END ) \
+<(echo $LENGTH ) \
+<(echo $NAs) \
+<(echo $INFORMATIVESITES) \
+<(echo $FEATURE ) \
+<(echo $STRANDNESS ) \
+<(echo $FRAME ) \
+<(echo $ID_GENE ) \
+<(echo $ID) \
+<(echo $WATTERSON_AVERAGE_PER_UNIT) \
+<(echo $WATTERSON_SD_PER_UNIT) \
+<(echo $PAIRWISE_AVERAGE_PER_UNIT) \
+<(echo $PAIRWISE_SD_PER_UNIT) \
+<(echo $TAJIMAS_D_PER_UNIT) \
+<(echo $POP) \
+<(echo $SPECIE) \
+<(echo $EPOCH) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g'  >>  $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
+
+#Reset all (but POP,SPECIE or EPOCH (those should be the same during the whole iteration and if you remove POP the loop won't work)) variables before next iteration
+
+unset LOCATION
+unset START_CEROBASED
+unset END
+unset LENGTH
+unset NAs
+unset INFORMATIVESITES
+unset FEATURE
+unset STRANDNESS
+unset FRAME
+unset ID_GENE
+unset ID
+unset WATTERSON_AVERAGE_PER_UNIT
+unset WATTERSON_SD_PER_UNIT
+unset PAIRWISE_AVERAGE_PER_UNIT
+unset PAIRWISE_SD_PER_UNIT
+unset TAJIMAS_D_PER_UNIT
+
+done < <(cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3_"$SCAFFOLD" ) 
+
+done &
+
+done
+
+rm "$POP".iter.transformedThetas.borrar
+
+```
 
 
 
@@ -466,7 +966,6 @@ EPOCH=$(echo $POP | cut -d"_" -f 1)
 cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_CEROBASED\t$END") > "$POP".iter.transformedThetas.borrar
 # He comprobado que en el archivo de Thetas hay por lo menos 4 posiciones que empieza en 0. por tanto asumo que este archivo es 0-based.
 
-
 WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
 WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
 
@@ -549,7 +1048,7 @@ unset TAJIMAS_D_PER_UNIT
 
 done < <(cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3_"$SCAFFOLD" ) 
 
-done &
+done 
 
 rm "$POP".iter.transformedThetas.borrar
 
@@ -1317,6 +1816,8 @@ write.table(dataframe, paste(wd, file_centr, sep=""), row.names = F, quote = F, 
 # ------------------------------------------
 
 # R analysis
+
+
 
 Ahora tengo que descargarme todos los archivos de cada población y despues hacer un super-join para cada población para acabar haciendo una unica tabla con rbind con todas las poblaciones. 
 
