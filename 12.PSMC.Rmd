@@ -1,0 +1,100 @@
+---
+title: "PSMC"
+output: html_document
+---
+
+Vamos a intentar hacer un pseudodiploide para intentar correrlo en PSMC y ver los tiempos de divergencia.
+Para ello vamos a usar seqtk. El problema es que nos salta error cuando por cualquier motivo un scaffold está en una población y no en otra, así que vamos a sacar la lista de aquellos scaffold que están en todas las poblaciones. 
+
+# Scaffold comunes
+
+```{bash}
+cd /home/GRUPOS/grupolince/lynx_genomes_5x/PSMC_analyses/WITHOUTH_X_Y/
+
+# Aquí consigos los scaffolds que están en cada archivo.
+
+for FILE_PSMC in *.psmcfa
+do
+echo $FILE_PSMC
+grep ">" $FILE_PSMC | sed 's/>//g' > ${FILE_PSMC/.psmcfa/.lista_scaffolds} 
+done
+
+
+# Lista de scaffolds comunes. 
+# He comprobado que hacer este join me hace un innerjoin.
+
+wc -l c_lc_zz_0001_recal_round-1_25x_without_x_y_chr.lista_scaffolds
+# 4117 c_lc_zz_0001_recal_round-1_25x_without_x_y_chr.lista_scaffolds
+
+wc -l c_ll_cr_0212_recal_round-1_25x_without_x_y_chr.lista_scaffolds
+# 3987 c_ll_cr_0212_recal_round-1_25x_without_x_y_chr.lista_scaffolds
+
+join -1 1 -2 1 c_lc_zz_0001_recal_round-1_25x_without_x_y_chr.lista_scaffolds c_ll_cr_0212_recal_round-1_25x_without_x_y_chr.lista_scaffolds | wc -l
+# 3972
+
+
+######ERROR#########################################
+
+Me he cargado sin querer sierra morena, así que tengo que sacar la lista de otra manera.
+
+gunzip c_lp_sm_0140_recal_round-1_25x_without_x_y_chr.fq.gz
+grep "lp23" c_lp_sm_0140_recal_round-1_25x_without_x_y_chr.fq | sed 's/@//g' > c_lp_sm_0140_recal_round-1_25x_without_x_y_chr.lista_scaffolds
+
+# Restauro el zip
+gzip c_lp_sm_0140_recal_round-1_25x_without_x_y_chr.fq
+
+##################################################
+
+# Perfecto! Menos que cada uno de los archivos, porque hace innerjoin. 
+
+join -1 1 -2 1 c_lc_zz_0001_recal_round-1_25x_without_x_y_chr.lista_scaffolds c_ll_cr_0212_recal_round-1_25x_without_x_y_chr.lista_scaffolds | join -1 1 -2 1 - c_ll_ki_0090_recal_round-1_25x_without_x_y_chr.lista_scaffolds | join -1 1 -2 1 - c_ll_vl_0112_recal_round-1_25x_without_x_y_chr.lista_scaffolds | join -1 1 -2 1 - c_ll_ya_0146_recal_round-1_25x_without_x_y_chr.lista_scaffolds | join -1 1 -2 1 - c_lr_zz_0001_recal_round-1_25x_without_x_y_chr.lista_scaffolds | join -1 1 -2 1 - c_lp_sm_0140_recal_round-1_25x_without_x_y_chr.lista_scaffolds | wc -l
+# 3938
+
+# Perfecto, los guardo. 
+
+join -1 1 -2 1 c_lc_zz_0001_recal_round-1_25x_without_x_y_chr.lista_scaffolds c_ll_cr_0212_recal_round-1_25x_without_x_y_chr.lista_scaffolds | join -1 1 -2 1 - c_ll_ki_0090_recal_round-1_25x_without_x_y_chr.lista_scaffolds | join -1 1 -2 1 - c_ll_vl_0112_recal_round-1_25x_without_x_y_chr.lista_scaffolds | join -1 1 -2 1 - c_ll_ya_0146_recal_round-1_25x_without_x_y_chr.lista_scaffolds | join -1 1 -2 1 - c_lr_zz_0001_recal_round-1_25x_without_x_y_chr.lista_scaffolds | join -1 1 -2 1 - c_lp_sm_0140_recal_round-1_25x_without_x_y_chr.lista_scaffolds  > scaffolds_in_common_all_pops.list
+
+
+# Ahora intento hacer la selección del FASTQ
+
+seqtk subseq c_ll_ya_0146_recal_round-1_25x_without_x_y_chr.fq.gz scaffolds_in_common_all_pops.list | grep lp23 > lista_que_guarda_de_ya
+
+wc -l lista_que_guarda_de_ya
+# 3938 lista_que_guarda_de_ya
+
+grep -v -f <(sed 's/@//g' lista_que_guarda_de_ya) scaffolds_in_common_all_pops.list
+# Nada! Perfecto!
+
+# Ahora ya lo puedo hacer para todos.
+
+for FILE_PSMC in *fq.gz
+do
+echo $FILE_PSMC
+seqtk subseq $FILE_PSMC scaffolds_in_common_all_pops.list > ${FILE_PSMC/.fq.gz/_filtered.fq.gz}
+done
+
+
+# Borro los archivos innecesarios
+
+rm lista_que_guarda_de_ya
+rm scaffolds_in_common_all_pops.list
+rm *.lista_scaffolds
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
