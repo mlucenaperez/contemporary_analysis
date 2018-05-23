@@ -661,17 +661,21 @@ done
 
 He modificado este script para que lo haga en bloques de 10, por lo que tadaría 10 veces menos. La estrategia consiste en establecer 10 bloques con empezando por un scaffold hasta otro y despues iterar sobre este bloque. Como los 10 bloques se lanzan en un bucle al poner & al final se lanzan los 10 a la vez. Además no necesitamos definir los scaffold a priori como hacíamos antes porque vamos a iterar por todos. 
 
-
+c_ll_ki_n013 # --> Lanzado
+c_ll_po_n008 # --> Lanzado
+c_lp_sm_n019 # --> Lanzado
+c_ll_no_n008 # --> Lanzado
+c_lp_do_n012 # --> Lanzado
 
 ```{bash}
 
 # Run pop by pop:
 
-POP=c_lp_do_n012 # <--- Change pop here!
+POP=c_ll_po_n008 # <--- Change pop here!
 screen -S "$POP"_scaffold_per_unit
-POP=c_lp_do_n012 # <--- Change pop here!
+POP=c_ll_po_n008 # <--- Change pop here!
 script log_screen_"$POP"_scaffold_per_unit.log
-POP=c_lp_do_n012 # <--- Change pop here!
+POP=c_ll_po_n008 # <--- Change pop here!
 
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
 
@@ -689,6 +693,8 @@ echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeatur
 for iteration in {1..10}
 do
 
+rm $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages_iteration"$iteration".tsv
+
 SCAFFOLD_START=$( echo '1 + 4170 * ('$iteration' - 1)' | bc)
 SCAFFOLD_END=$( echo '4170 * '$iteration | bc )
 
@@ -697,17 +703,17 @@ do
 
 SCAFFOLD=$(echo "lp23.s"$SCAFFOLD_NUMBER)
 
-echo "---------------------$SCAFFOLD---------------------"
+#echo "---------------------$SCAFFOLD---------------------"
 
 #For each unit
 
-# cd "$SFS_FOLDER""$POP"_separated_by_scaffold
+cd "$SFS_FOLDER""$POP"_separated_by_scaffold
 
 while read LOCATION METHOD FEATURE START_ONEBASED END POINT STRANDNESS FRAME IDRAW;
 
 do
 
-echo "--------$SCAFFOLD:$FEATURE--------"
+#echo "--------$SCAFFOLD:$FEATURE--------"
 
 if [ "$METHOD" = "PipeR" ] 
 then
@@ -729,21 +735,21 @@ SPECIE=$(echo $POP | cut -d"_" -f 2)
 EPOCH=$(echo $POP | cut -d"_" -f 1)
 
 
-cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_CEROBASED\t$END") > "$POP".iter.transformedThetas.borrar
+cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$START_CEROBASED\t$END") > "$POP".iter.transformedThetas.iteration"$iteration".borrar
 # He comprobado que en el archivo de Thetas hay por lo menos 4 posiciones que empieza en 0. por tanto asumo que este archivo es 0-based.
 
 
-WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
-WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.iteration"$iteration".borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.iteration"$iteration".borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
 
-PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5 "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$POP".iter.transformedThetas.borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5 "$POP".iter.transformedThetas.iteration"$iteration".borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$POP".iter.transformedThetas.iteration"$iteration".borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
 
-DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP".iter.transformedThetas.borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP".iter.transformedThetas.iteration"$iteration".borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
 
 TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_AVERAGE_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
 
-INFORMATIVESITES=$(wc -l "$POP".iter.transformedThetas.borrar | cut -d" " -f1)
+INFORMATIVESITES=$(wc -l "$POP".iter.transformedThetas.iteration"$iteration".borrar | cut -d" " -f1)
 
 NAs=($(echo $LENGTH - $INFORMATIVESITES | bc)) 
 
@@ -791,7 +797,7 @@ paste \
 <(echo $POP) \
 <(echo $SPECIE) \
 <(echo $EPOCH) |\
-sed 's/ /\t/g'| sed 's/\t\+/\t/g'  >>  $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
+sed 's/ /\t/g'| sed 's/\t\+/\t/g'  >>  $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages_iteration"$iteration".tsv
 
 #Reset all (but POP,SPECIE or EPOCH (those should be the same during the whole iteration and if you remove POP the loop won't work)) variables before next iteration
 
@@ -818,7 +824,7 @@ done &
 
 done
 
-rm "$POP".iter.transformedThetas.borrar
+rm "$POP".iter.transformedThetas*borrar
 
 ```
 
