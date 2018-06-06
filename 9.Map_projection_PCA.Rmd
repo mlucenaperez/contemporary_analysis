@@ -434,7 +434,7 @@ general_map <- ggplot() +
 panel.background = element_rect(fill="white"), axis.title = element_blank(), axis.text = element_text(size=18), title=element_text(size=25)) +
   geom_point(data=coordenada_per_pop, aes(x=mean_longitude, y=mean_latitude, fill=Populations), size=2, shape=20) + scale_fill_manual(values = cols) +
   
-  # Values for whole world 
+# Values for whole world 
 coord_map (xlim = c(min_long-20, max_long+20),ylim = c(min_lat-13, max_lat+13)) +
 scaleBar(lon = 146, lat = 30, distanceLon = 1000, distanceLat = 10, distanceLegend = 230, dist.unit = "km", orientation = FALSE) 
 
