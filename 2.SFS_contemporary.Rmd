@@ -185,11 +185,11 @@ scp *.transformedThetas /backup/mlucena/intermediate_files_ANGSD/whole_genome_an
 First we copy the SFS files to our local folder.
 
 ```{bash}
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/*sfs /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/*sfs /Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs
 
 # I need to change name as R does not like "-lr.sfs"
 
-cd /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/
+cd /Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/
 for i in *sfs
 do 
 #echo $i
@@ -206,7 +206,7 @@ Now we run the script.
 library(dplyr)
 library(magrittr)
 
-wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/"
+wd<-"/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/"
 
 my_files_unfolded = list.files(path = wd, pattern="*sfs$")    
 for (i in 1:length(my_files_unfolded)) 
@@ -221,7 +221,7 @@ for (i in 1:length (my_files_unfolded))
   temp3=norm(temp2[-c(length(temp2))])
   barplot(temp3,xlab="Chromosomes",
           names=1:length(temp3),ylab="Proportions",main=my_files_unfolded[i],col='grey')
-  dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/",my_files_unfolded[i],".eps", sep =""), onefile=FALSE, horizontal=FALSE)
+  dev.print(device=postscript, paste("/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/",my_files_unfolded[i],".eps", sep =""), onefile=FALSE, horizontal=FALSE)
   dev.off()
   rm(temp1)
   rm(temp2)
@@ -653,11 +653,26 @@ mv $file ${file/lp23/"$POP".transformedThetas_lp23}
 done
 done
 
+# Copiamos el archivo filtered a backup
+
+POPS=("c_lp_sm_n019" "c_ll_ki_n013" "c_ll_po_n008" "c_ll_no_n008" "c_lp_do_n012")
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+
+for POP in "${POPS[@]}"
+do
+echo $POP
+cd "$POP"_separated_by_scaffold/
+scp *.transformedThetas_filtered /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+done
+
+
 ```
 
 # ---------------------------------------------
 
-## Diversity calculus
+# Diversity calculus
 
 He modificado este script para que lo haga en bloques de 10, por lo que tadaría 10 veces menos. La estrategia consiste en establecer 10 bloques con empezando por un scaffold hasta otro y despues iterar sobre este bloque. Como los 10 bloques se lanzan en un bucle al poner & al final se lanzan los 10 a la vez. Además no necesitamos definir los scaffold a priori como hacíamos antes porque vamos a iterar por todos. 
 
@@ -828,17 +843,1489 @@ rm "$POP".iter.transformedThetas*borrar
 
 ```
 
+Esto me está creando una tabla que tiene una entrada por cada una de las unidades de la notación aunque eso no significa que tengan ningún resultado. No tiene sentido arrastrar toda esta información todo el rato, así que la filtro.
+
+```{bash}
+cd $DIVERSITY_PER_UNIT_FOLDER
+
+for FILE_DIVERSITY_EACH_ITERATION in *per.unit.averages_iteration*
+do
+echo $FILE_DIVERSITY_EACH_ITERATION
+awk '$12!="NA" && $13!="NA" && $14!="NA"&& $15!="NA"&& $16!="NA"' $FILE_DIVERSITY_EACH_ITERATION > ${FILE_DIVERSITY_EACH_ITERATION/.tsv/_filtered.tsv}
+done
+
+```
+
+Concateno con la tabla que tiene el header
+
+c_ll_ki_n013
+c_ll_no_n008
+c_ll_po_n008
+c_lp_do_n012
+c_lp_sm_n019
+
+
+```{bash}
+
+POP=c_lp_sm_n019
+cat "$POP".per.unit.averages_iteration"$iteration"{1..10}_filtered.tsv >> "$POP".per.unit.averages.tsv
+
+# Elimino los archivos intermedios.
+rm *_filtered.tsv
+
+
+# Almaceno en backup el archivo definitivo. 
+
+
+
+```
+
+
+# ---------------------------------------------
+
+# Anotación de las unidades: cromosoma y regiones; tel y centr. 
+
+Ahora vamos a anotar esas unidades según pertenezcan o no a distintos cromosomas, y según sean teloméricas, centromérica o no. 
+
+
+#### Cromosomas 
+
+Para ello hemos usado el archivo que tienen en común las coordenadas de gato y de lince
+
+```{bash}
+head /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed
+```
+  
+Creo una carpeta donde voy a guardar los archivos:
+```{bash}
+mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+```
+
+Los archivos de los que parto estén en:
+```{bash}
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+```
+
+Empiezo a unirlos. 
+
+El primer Bed te devolvería un archivo con una línea por cada posición de sintenia tal que así:
+
+lp23.s00001	0	15011	15011	11950	3061	intergenic	-	.	intergenic_region_1	intergenic_region_1	2.4096547746*10^-06	1.3458559263*10^-05	1.1416658651*10^-06	6.2801913098*10^-06	-1.7606196687*10^-01	c_ll_no_n008	ll	c	lp23.s00001	4071	4072	TCL=TTT:chrA3:15104518-15104519:NO	1
+
+Como no queremos pasar por ahí ni guardar tanto, vamos a intentar usar awk directamente para quedarnos con lo que nos interese. 
+
+```{bash}
+
+screen -S chromosome_annotation
+
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch\tchr" > header.chr.annotation
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+for FILE in *.per.unit.averages.tsv
+do
+echo $FILE
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$FILE) -b /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed | awk -v OFS='\t' '{split ($23, a, ":"); split(a[3],b, "-"); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,a[2] }' | awk '!a[$0]++' | cat header.chr.annotation - > ${FILE/.per.unit.averages.tsv/.per.unit.averages.chr.tsv}
+done
+
+```
+
+
+##### Sanity checks
+
+```{bash}
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+
+# Calculo qué unidades aparecen más de una vez:
+
+awk '{print $7"_"$11}' c_lp_do_n012.per.unit.averages.chr.tsv | sort | uniq -c | grep -v "1 " | wc -l
+# Hay 1477 
+
+# ¿Qué hay en esta lista?
+
+ awk '{print $7"_"$11}' c_lp_do_n012.per.unit.averages.chr.tsv | sort | uniq -c | grep -v "1 " | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | cut -d"_" -f 1 | sort  | uniq -c
+
+      9 3UTR
+     14 5UTR
+     12 CDS
+   1024 intergenic
+    406 intron
+      2 lncRNA
+      1 ncRNA
+      9 promoter
+
+# Esta lista incluye varias features distintas.
+
+# Dentro de estas features repetidas tengo otras casuisticas:
+
+# Ejemplo: Un intron repetido tres veces:
+
+# grep LYPA23C000420T1 c_lp_do_n012.per.unit.averages.chr.tsv | grep intron_62
+
+# lp23.s05342	577057	603192	26135	15052	11083	intron	+	0	LYPA23C000420	LYPA23C000420T1_intron_62	1.9406089032*10^-04	7.1920669656*10^-03	2.7265147013*10^-04	1.0183730201*10^-02	2.5254946264*10^-02	c_lp_do_n012	lp	cchrB2
+# lp23.s05342	577057	603192	26135	15052	11083	intron	+	0	LYPA23C000420	LYPA23C000420T1_intron_62	1.9406089032*10^-04	7.1920669656*10^-03	2.7265147013*10^-04	1.0183730201*10^-02	2.5254946264*10^-02	c_lp_do_n012	lp	cchrX
+# lp23.s05342	577057	603192	26135	15052	11083	intron	+	0	LYPA23C000420	LYPA23C000420T1_intron_62	1.9406089032*10^-04	7.1920669656*10^-03	2.7265147013*10^-04	1.0183730201*10^-02	2.5254946264*10^-02	c_lp_do_n012	lp	cchrB1
+
+# Este intrón aparece asignado a tres cromosomas distintos. 
+
+# Compruebo que efectivamente se asigna a tres cromosomas en el archivo de notación
+
+grep lp23.s05342 /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed  | grep -v chrB2
+
+# Efectivamente hay más de un cromosoma en ese scaffold. 
+
+# Vamos a ver que número de features presentan este problema. 
+
+# Creo una lista PARA DOÑANA de aquellas features que son identicas también en las posiciones (lo que excluiría a los casos de las UCR que hemos hablado antes). Para ello imprimo también la posición de comienzo y la de fin.
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_lp_do_n012.per.unit.averages.chr.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//'  > list_of_repeated_features_do
+
+# Compruebo a qué unidades pertenecen. 
+
+ cut -d' ' -f2 list_of_repeated_features_do | awk '{print $4}' | sort  | uniq -c
+
+      9 3UTR
+     14 5UTR
+     12 CDS
+   1024 intergenic
+    382 intron
+     24 intron_lncRNA
+      2 lncRNA
+      1 ncRNA
+      1 promoter_gene_1000
+      3 promoter_lncRNA_1000
+      2 promoter_lncRNA_250
+      3 promoter_lncRNA_500
+      
+      
+# Vemos que todos los numeros coinciden con las unidades repetidas que habían salido antes (promotor e intrón son la suma). Por tanto, parece que todas estas regiones repetidas están asignadas a mas de un cromosoma. Ahora vamos a ver cuantas bases son eso.
+
+# Compruebo que en las otras poblaciones son las mismas.
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_ki_n013.per.unit.averages.chr.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_ki
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_no_n008.per.unit.averages.chr.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_no
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_po_n008.per.unit.averages.chr.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_po
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_lp_sm_n019.per.unit.averages.chr.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_sm
+
+
+cut -d' ' -f2 list_of_repeated_features_po | awk '{print $4}' | sort  | uniq -c
+
+     9 3UTR
+     14 5UTR
+     12 CDS
+   1026 intergenic
+    383 intron
+     30 intron_lncRNA
+      2 lncRNA
+      1 ncRNA
+      1 promoter_gene_1000
+      3 promoter_lncRNA_1000
+      2 promoter_lncRNA_250
+      3 promoter_lncRNA_500
+
+cut -d' ' -f2 list_of_repeated_features_ki | awk '{print $4}' | sort  | uniq -c
+
+      9 3UTR
+     14 5UTR
+     12 CDS
+   1023 intergenic
+    382 intron
+     30 intron_lncRNA
+      2 lncRNA
+      1 ncRNA
+      1 promoter_gene_1000
+      3 promoter_lncRNA_1000
+      2 promoter_lncRNA_250
+      3 promoter_lncRNA_500
+      
+cut -d' ' -f2 list_of_repeated_features_no | awk '{print $4}' | sort  | uniq -c
+
+    9 3UTR
+     14 5UTR
+     12 CDS
+   1025 intergenic
+    384 intron
+     30 intron_lncRNA
+      2 lncRNA
+      1 ncRNA
+      1 promoter_gene_1000
+      3 promoter_lncRNA_1000
+      2 promoter_lncRNA_250
+      3 promoter_lncRNA_500
+      
+      
+cut -d' ' -f2 list_of_repeated_features_sm | awk '{print $4}' | sort  | uniq -c
+
+      9 3UTR
+     14 5UTR
+     12 CDS
+   1025 intergenic
+    382 intron
+     24 intron_lncRNA
+      2 lncRNA
+      1 ncRNA
+      1 promoter_gene_1000
+      3 promoter_lncRNA_1000
+      2 promoter_lncRNA_250
+      3 promoter_lncRNA_500
+      
+
+# Los números no coindicen, ¿en qúe se diferencian?
+
+
+diff list_of_repeated_features_do list_of_repeated_features_po
+diff list_of_repeated_features_do list_of_repeated_features_ki
+diff list_of_repeated_features_do list_of_repeated_features_no
+diff list_of_repeated_features_do list_of_repeated_features_sm
+
+
+# No son iguales, aunque las diferencias son muy pequeñas.
+# He comprobado que al menos en un caso, la feature que se reporta para Norway y no para Doñana no está disponible proque esas posiciones de diversidad no están.
+
+# Ejemplo, intergenic_region_29405 no aparece en Doñana pero sí en Sierra Morena. 
+
+# Lo busco.
+
+
+grep  intergenic_region_29405  list_of_repeated_features_sm
+# 2 lp23.s16211   3567    16982   intergenic      intergenic_region_29405
+
+      
+grep lp23.s16211 c_lp_do_n012.transformedThetas_filtered  
+# Nada!
+
+
+
+# La opción sería quitar todas las unidades que aparecen repetidas al menos en una población, visto las unidades que perdemos, el número de bases no sería muy alto. Anteriormente con aproximadamente las mismas unidades (algunos intergénicos más porque ahora hemos filtrado mejor) teníamos que:
+
+
+# ¿Cuantas bases perdemos?
+
+mkdir features_repeted
+cd features_repeted/
+
+# Primero calculamos cuantas bases totales tenemos:
+
+# Este archivo que genero tiene todas las unidades, no solo las repetidas.
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' ../c_lp_sm_n019.per.unit.averages.chr.tsv |  awk '{print >> $4; close($4)}'
+rm feature 
+
+# ¿Cuantas bases por cada unidad?
+
+for file in * 
+do
+echo $file "$(awk '{sum+=$3-$2}END{print sum}' $file )"
+done >> bases_total.txt
+
+mv bases_total.txt ../
+
+# Ahora elimino estos archivos y hago la misma cuenta para aquellas que están repetidas.
+
+# Ten cuidado de estar en la carpeta que debes!!!
+cd features_repeted/
+# rm *
+
+# ¿Cuantas repetidas?
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' ../c_lp_sm_n019.per.unit.averages.chr.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2-6 | awk '{print >> $4; close($4)}'
+
+rm feature 
+
+# ¿Cuantas bases por cada unidad?
+
+for file in * 
+do
+echo $file "$(awk '{sum+=$3-$2}END{print sum}' $file )"
+done >> bases_repeted.txt
+
+mv bases_repeted.txt ../
+
+# rm *
+
+# ¿Qué porcentaje supone del total?
+
+cd ..
+
+join -1 1 -2 1 bases_total.txt bases_repeted.txt | awk -v OFS='\t' '{print $1,$2,$3,$3/$2*100}' | cat <(echo -e "feature\ttotal_bases\tbases_assinged_to_2_or_more_chr\tpercentage") - > percentage_of_bases_assigned_to_2_chr_or_more_sm.txt
+
+rm bases_repeted.txt
+rm bases_total.txt 
+rm -r features_repeted/
+rm list_of_repeated_features_po
+
+cat percentage_of_bases_assigned_to_2_chr_or_more_sm.txt
+
+<!-- feature total_bases     bases_assinged_to_2_or_more_chr percentage -->
+<!-- 3UTR    10888821        31596   0.290169 -->
+<!-- 5UTR    39173937        747134  1.90722 -->
+<!-- CDS     29521748        12656   0.0428701 -->
+<!-- intergenic      1575985801      108644867       6.89377 -->
+<!-- intron  781408454       12974162        1.66036 -->
+<!-- intron_lncRNA   36490600        775481  2.12515 -->
+<!-- lncRNA  3932428 1503    0.0382207 -->
+<!-- ncRNA   319359  37      0.0115857 -->
+<!-- promoter_gene_1000      6885450 1001    0.0145379 -->
+<!-- promoter_lncRNA_1000    2905061 3003    0.103371 -->
+<!-- promoter_lncRNA_250     660912  502     0.0759556 -->
+<!-- promoter_lncRNA_500     1391917 1503    0.107981 -->
+
+
+# Esto es un ejemplo,pero todas las poblaciones son más o menos igual, así que no se perderían tantas bases. 
+
+```
+
+Creo la lista de unidades que tengo que filtrar.
+
+Sanity checks
+
+```{bash}
+cat list_of_repeated_features* | sort -k5,5 | uniq | wc -l  
+1488
+wc -l list_of_repeated_features_ki 
+1482 list_of_repeated_features_ki
+wc -l list_of_repeated_features_sm
+1478 list_of_repeated_features_sm
+wc -l list_of_repeated_features_do
+1477 list_of_repeated_features_do
+wc -l list_of_repeated_features_po
+1486 list_of_repeated_features_po
+wc -l list_of_repeated_features_no
+1486 list_of_repeated_features_no
+```
+
+Creo la lista
+
+```{bash}
+cat list_of_repeated_features* | sort -k5,5 | uniq > list_of_repeated_features_all_pops
+```
+
+Sanity checks
+
+```{bash}
+
+awk -v OFS='\t' '{print $2"_"$3"_"$4"_"$5"_"$6}' list_of_repeated_features_all_pops > list_of_repeated_features_all_pops_merged
+
+wc -l *per.unit.averages.chr.tsv 
+#   430830 c_ll_ki_n013.per.unit.averages.chr.tsv
+#   430997 c_ll_no_n008.per.unit.averages.chr.tsv
+#   430662 c_ll_po_n008.per.unit.averages.chr.tsv
+#   429972 c_lp_do_n012.per.unit.averages.chr.tsv
+#   430625 c_lp_sm_n019.per.unit.averages.chr.tsv --> 428377
+
+awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$7"_"$11, $0}' c_lp_sm_n019.per.unit.averages.chr.tsv | grep -f list_of_repeated_features_all_pops_merged - | awk '{print $1}' | sort | uniq -c | sort | sed -e 's/^[ \t]*//' | awk '{print $1"_"$2}' > lista_de_unidades_repetidas_que_encuentra
+
+head lista_de_unidades_repetidas_que_encuentra
+
+wc -l lista_de_unidades_repetidas_que_encuentra
+1478 lista_de_unidades_repetidas_que_encuentra
+
+awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$4"_"$5"_"$6}' list_of_repeated_features_sm > lista_de_unidades_repetidas_que_hay
+
+head lista_de_unidades_repetidas_que_hay
+
+ wc -l lista_de_unidades_repetidas_que_hay
+1478 lista_de_unidades_repetidas_que_hay
+
+grep -f -v lista_de_unidades_repetidas_que_encuentra lista_de_unidades_repetidas_que_hay
+# Nada! genial!
+
+awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$7"_"$11, $0}' c_lp_sm_n019.per.unit.averages.chr.tsv | 
+grep -f list_of_repeated_features_all_pops_merged - | wc -l 
+# 3102
+
+awk '{sum+=$1}END{print sum}' list_of_repeated_features_sm
+# 3102
+# Perfecto!
+
+```
+
+Modifico mis archivos para eliminar la información de cromosoma cuando la unidad esté en dos o más cromosomas. 
+
+
+```{bash}
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+
+# Como lo hice antes. YA NO porque esto elimina las filas repetidas, no elimina exclusivamente la info de cromosoma que es lo que nos interesa. 
+<!-- for FILE in *per.unit.averages.chr.tsv  -->
+<!-- do -->
+<!-- echo $FILE -->
+<!-- awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$7"_"$11, $0}' $FILE |  -->
+<!-- grep -v -f list_of_repeated_features_all_pops_merged - | cut -f2- > ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_filtered.tsv} -->
+<!-- done -->
+
+
+###
+
+for FILE in *per.unit.averages.chr.tsv 
+
+do
+
+echo $FILE
+
+awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$7"_"$11, $0}' $FILE | 
+grep -f list_of_repeated_features_all_pops_merged - | awk -v OFS='\t' '{$21="na"; print}' > ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_repeated_feature.tsv.borrar}
+
+awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$7"_"$11, $0}' $FILE | 
+grep -v -f list_of_repeated_features_all_pops_merged - > ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_NOT_repeated_feature.tsv.borrar}
+
+cat <(tail -n +2 ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_NOT_repeated_feature.tsv.borrar}) <( cat ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_repeated_feature.tsv.borrar}) | cut -f2-  | sort -k1,1 -k2,2n -k3,3n | cat header.chr.annotation - | awk '!a[$0]++' > ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_filtered.tsv}
+
+
+done
+
+
+# Sanity check!
+
+# grep 3UTR c_lp_sm_n019.per.unit.averages.chr.tsv | grep LYPA23C004261 
+
+# lp23.s10426	1414779	1415453	674	122	552	3UTR	-	.	LYPA23C004261	LYPA23C004261	5.2285065677*10^-07	3.1562104437*10^-06	1.2810182872*10^-07	7.8744833016*10^-07	-1.6655608018*10^-01	c_lp_sm_n019	lp	c	chrA2
+# lp23.s10426	1414779	1415453	674	122	552	3UTR	-	.	LYPA23C004261	LYPA23C004261	5.2285065677*10^-07	3.1562104437*10^-06	1.2810182872*10^-07	7.8744833016*10^-07	-1.6655608018*10^-01	c_lp_sm_n019	lp	c	chrX
+
+# grep 3UTR c_lp_sm_n019.per.unit.averages.chr_filtered.tsv | grep LYPA23C004261 
+
+# lp23.s10426	1414779	1415453	674	122	552	3UTR	-	.	LYPA23C004261	LYPA23C004261	5.2285065677*10^-07	3.1562104437*10^-06	1.2810182872*10^-07	7.8744833016*10^-07	-1.6655608018*10^-01	c_lp_sm_n019	lp	c	na
+# lp23.s10426	1414779	1415453	674	122	552	3UTR	-	.	LYPA23C004261	LYPA23C004261	5.2285065677*10^-07	3.1562104437*10^-06	1.2810182872*10^-07	7.8744833016*10^-07	-1.6655608018*10^-01	c_lp_sm_n019	lp	c	na
+
+
+# Perfecto!
+
+```
+
+
+#### Telomeros2m
+
+El archivo de interés, es: 
+```{bash}
+/GRUPOS/grupolince/telomers_centromers_definition/tel2m_regions_based_on_synteny_1000bp.bed
+```
+
+Creo una carpeta donde voy a guardar los archivos:
+```{bash}
+mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
+```
+
+Los archivos de los que parto estén en:
+```{bash}
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+```
+
+Empiezo a unirlos. 
+
+```{bash}
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+
+files_per_pop=($(ls *.per.unit.averages.tsv))
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
+
+echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch\ttel2m_bases\ttel2m_percentage" > header.region.tel2m.tsv
+
+for file_pop in ${files_per_pop[@]}
+do
+echo $file_pop
+intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$file_pop) -b <(awk -v OFS='\t' '{print $1,$2, $3}' /GRUPOS/grupolince/telomers_centromers_definition/tel2m_regions_based_on_synteny_1000bp.bed) | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$23,$24 }' | awk '!a[$0]++' | bedtools groupby -i stdin -g 1-19 -c 20 -o sum | awk -v OFS='\t'  '{percentage=$20/$4; printf "%s\t%f\n",$0,percentage}' | cat header.region.tel2m.tsv - > ${file_pop/.per.unit.averages.tsv/.per.unit.averages.region.tel2m.tsv}
+done
+
+```
+
+Esto me devuelve algo como así:
+lp23.s00006	14749	29606	14857	8272	6585	intergenic	-	.	intergenic_region_445	intergenic_region_445	6.8371515163*10^-04	1.2551611729*10^-02	1.1155938889*10^-03	2.1427002344*10^-02	4.4628203002*10^-02	c_lp_sm_n019	lp	c	ChrB2 485
+
+donde el último número representa las bases que solapan. 
+
+#### Telomeros10m
+
+El archivo de interés, es: 
+```{bash}
+/GRUPOS/grupolince/telomers_centromers_definition/tel0-10m_regions_based_on_synteny_1000bp.bed
+```
+
+Voy a guardar los archivos en la carpeta anteriormente creada:
+```{bash}
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
+```
+
+Los archivos de los que parto estén en:
+```{bash}
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+```
+
+Empiezo a unirlos. 
+
+```{bash}
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+
+files_per_pop=($(ls *.per.unit.averages.tsv))
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
+
+echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch\ttel10m_bases\ttel10m_percentage" > header.region.tel10m.tsv
+
+for file_pop in ${files_per_pop[@]}
+do
+echo $file_pop
+intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$file_pop) -b <(awk -v OFS='\t' '{print $1,$2, $3}' /GRUPOS/grupolince/telomers_centromers_definition/tel0-10m_regions_based_on_synteny_1000bp.bed) | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$23,$24 }' | awk '!a[$0]++' |  bedtools groupby -i stdin -g 1-19 -c 20 -o sum | awk -v OFS='\t'  '{percentage=$20/$4; printf "%s\t%f\n",$0,percentage}' | cat header.region.tel10m.tsv - > ${file_pop/.per.unit.averages.tsv/.per.unit.averages.region.tel10m.tsv}
+done
+
+```
+
+
+Y por último los centrómeros:
+
+#### Centrómeros
+
+El archivo de interés, es: 
+```{bash}
+/GRUPOS/grupolince/telomers_centromers_definition/centr_regions_based_on_synteny_1000bp.bed
+```
+
+Voy a guardar los archivos en la carpeta anteriormente creada:
+```{bash}
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
+```
+
+Los archivos de los que parto estén en:
+```{bash}
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+```
+
+Empiezo a unirlos. 
+
+```{bash}
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+
+files_per_pop=($(ls *.per.unit.averages.tsv))
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation
+
+echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch\tcentr_bases\tcentr_percentage" > header.region.centr.tsv
+
+for file_pop in ${files_per_pop[@]}
+do
+echo $file_pop
+# En el awk que le aplico a la region clasificada como cent, lo que estoy haciendo es eliminar el cromsoma. Así aunque esté asignado a distintos cromosomas, yo sí m voy a creer que es región centromérica. 
+intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$file_pop) -b <(awk -v OFS='\t' '{print $1,$2, $3}' /GRUPOS/grupolince/telomers_centromers_definition/centr_regions_based_on_synteny_1000bp.bed) | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$23,$24 }' | awk '!a[$0]++' |  bedtools groupby -i stdin -g 1-19 -c 20 -o sum | awk -v OFS='\t'  '{percentage=$20/$4; printf "%s\t%f\n",$0,percentage}' | cat header.region.centr.tsv - > ${file_pop/.per.unit.averages.tsv/.per.unit.averages.region.centr.tsv}
+done
+
+
+# Con el bedtools groupby agrupo a regiones que estaban partidas. 
+```
+
+Ahora borro lo que no necesito
+
+```{bash}
+rm header.region.*
+
+```
+
+Sanity checks
+
+```{bash}
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_lp_sm_n019.per.unit.averages.region.centr_filtered.tsv | sort | uniq -c | grep -v "1 " | head
+
+# Nada perfecto! Y además había comprobado que antes salían dos regiones independientes, pero ahora con el groupby se ha arreglado y se ha sumado bien las columnas. 
+
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_ki_n013.per.unit.averages.region.centr_filtered.tsv | sort | uniq -c | grep -v "1 " | head
+
+# Nada perfecto!
+
+```
+
+
+# ------------------------------------------
+
+# Descargar tablas 
+
+Primero me bajo las tablas.
+
+
+```{bash}
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*tsv /Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation/*.tsv /Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation/*.per.unit.averages.chr_filtered.tsv /Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit
+
+```
+
+# ------------------------------------------
+
+# R analysis
+
+Ahora tengo que descargarme todos los archivos de cada población y despues hacer un super-join para cada población para acabar haciendo una unica tabla con rbind con todas las poblaciones. 
+
+## Creación tablas
+
+```{r}
+
+# Ahora hago un join de la tabla principal de diversidad con las de telómeros, centrómeros y cromosoma. 
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
+
+# Ojo! antes de correr esto, asegurarme que no lo he corrido antes porque si no estoy haciendo append a las tablas viejas y no creando nuevas. 
+
+poplist <- c("do","po","no","ki", "sm")
+
+for (pop in poplist)
+{
+  if (exists("dataset"))
+  {rm (dataset)
+  }
+  
+  files_for_given_pop <- list.files(path = wd, pattern = pop)
+  
+  for (file_for_given_pop in files_for_given_pop)
+  {
+    # if the merged dataset doesn't exist, create it
+    if (!exists("dataset"))
+    {
+      dataset <- read.table(paste(wd,file_for_given_pop, sep=""), header=TRUE, sep="\t") 
+    }
+    
+    # if the merged dataset does exist, append to it
+    if (exists("dataset"))
+    {
+      temp_dataset <-read.table(paste(wd,file_for_given_pop, sep=""), header=TRUE, sep="\t")
+      dataset<-full_join(dataset, temp_dataset, by = c("scaffold", "start_cero_based", "end", "length", "NAs", "informative_sites", "feature", "strandness", "frame", "id_gene", "id", "watterson_ave", "watterson_sd", "pairwise_ave", "pairwise_sd", "tajimaD", "pop", "specie", "epoch"))   
+      rm(temp_dataset)
+      assign(pop, dataset) # Con esto quiero ponerle el nombre de la población a la dataframe. 
+    }
+  }    
+}
+
+
+rm(dataset)
+
+data_diversity <-rbind(do, ki, no, po, sm) %>% 
+    mutate( watterson_ave = as.numeric(gsub("\\*10\\^","e",watterson_ave)),
+            watterson_sd = as.numeric(gsub("\\*10\\^","e",watterson_sd)),
+            pairwise_ave  = as.numeric(gsub("\\*10\\^","e",pairwise_ave)),
+            pairwise_sd  = as.numeric(gsub("\\*10\\^","e",pairwise_sd)),
+            tajimaD = as.numeric(gsub("\\*10\\^","e",tajimaD)))
+
+
+write.table (data_diversity, paste(wd, "global.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (ki, paste(wd, "c_ll_ki_n013.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (no, paste(wd, "c_ll_no_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (po, paste(wd, "c_ll_po_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (do, paste(wd, "c_ll_do_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (sm, paste(wd, "c_ll_do_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+
+
+```
+
+
+## Cargo las tablas y exploro datos
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+
+wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
+wd_output <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/"
+  
+
+data_diversity <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions.tsv", sep=""), header=T) %>%  
+  replace(., is.na(.), "0") %>%  # Para que pueda calcular cuando es mayor o menor que 75%; si es NA no lo reconoce. 
+  mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                            ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                            ifelse (pop == "c_ll_no_n008", "Norway", 
+                            ifelse (pop == "c_lp_sm_n019", "Andujar", 
+                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
+  mutate (., Species =ifelse (specie=="ll", "L.lynx", 
+                   ifelse (specie=="lp", "L.pardinus", NA))) %>% 
+  # Anoto qué es cada región 
+  mutate (., region = ifelse (tel2m_percentage >= 0.75 & tel10m_percentage >= 0.75, "tel2m_tel10m", 
+                      ifelse (tel2m_percentage >= 0.75 & tel10m_percentage < 0.75, "tel2m", 
+                      ifelse (tel2m_percentage < 0.75 & tel10m_percentage >= 0.75, "tel10m", 
+                      ifelse (centr_percentage >= 0.75, "centr", "no_centr_no_tel" )))))  %>% 
+  # Creo un identificador único para luego poder filtrar por este cuando tenga que sacar los comunes a todas las poblaciones. 
+  mutate (., id_feature = paste(feature,"_",id, sep ="")) %>% 
+  mutate (., chr = ifelse (chr.x == chr.y, chr.y, "PROBLEMA"))
+
+
+b <- data_diversity %>% mutate (., prueba = ifelse (chr.x == chr.y, as.factor(chr.x), "PROBLEMA"))
+
+# Sanity checks de que no hay duplicados:
+# filter (data_diversity, pop=="c_ll_ki_n013") %>% nrow
+# 450064
+# filter (data_diversity, pop=="c_ll_ki_n013") %>% select(id_feature) %>% unique() %>% nrow
+# 450064
+
+data_diversity_filtered <- data_diversity %>%  filter (., informative_sites>=50 | informative_sites/length>=0.20) %>% 
+                                               filter (., !(feature=="promoter_gene_250" & length < 250)) %>% 
+                                               filter (., !(feature=="promoter_gene_500" & length < 500)) %>% 
+                                               filter (., !(feature=="promoter_gene_1000" & length < 1000)) %>% 
+                                               filter (., !(feature=="promoter_lncRNA_250" & length < 250)) %>% 
+                                               filter (., !(feature=="promoter_lncRNA_500" & length < 500)) %>% 
+                                               filter (., !(feature=="promoter_lncRNA_1000" & length < 1000)) %>% 
+  mutate (CHR, ifelse())
+
+
+# Ordenar los factores. 
+
+data_diversity$Populations <- factor (data_diversity$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
+data_diversity$chr <- factor(data_diversity$chr, levels = c("A1","C1","B1","A2","C2","B2","B3","B4","A3","D1","D3","D4","D2","F2","F1","E2","E1","X"))
+
+data_diversity_filtered$Populations <- factor (data_diversity_filtered$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
+data_diversity_filtered$chr <- factor(data_diversity_filtered$chr, levels = c("A1","C1","B1","A2","C2","B2","B3","B4","A3","D1","D3","D4","D2","F2","F1","E2","E1","X"))
+
+
+# 5/6/2018
+# Hemos decidido filtrar el 20% de sitios informativos/length.
+# También que tengan un mínimo de 50 sitios informativos. 
+# Por último tamibén quitamos los promotores que tengan menos del tamaño esperado. 
+## Aquí abajo están todas las pruebecillas que he ido haciendo para al final quedarnos con los filtro que explicamos arriba. 
+
+# Voy a nombrar como telómero 10m, 2m o centr lo que tenga más de 75% de bases como tal. 
+# Ojo que : Todo lo que tiene bases como tel2m está contenido en 10m, pero por supuesto no todo lo que está en 2m está en 10m . 
+# 
+# uu <- filter (data_diversity, data_diversity$tel10m_percentage!=data_diversity$tel2m_percentage)
+
+# # Porcentaje de telomericas.
+# ggplot (data = data_diversity, aes(tel10m_percentage)) +
+#   geom_histogram() +
+#    scale_y_continuous(trans = 'log10') 
+# 
+# 
+# ggplot (data = data_diversity, aes(data_diversity$tel2m_percentage)) +
+#   geom_histogram() +
+#    scale_y_continuous(trans = 'log10') 
+# 
+# ggplot (data = data_diversity, aes(data_diversity$centr_percentage)) +
+#   geom_histogram() +
+#    scale_y_continuous(trans = 'log10') 
+# 
+# Para cada una de las unidades voy comprobando
+# ggplot (data = filter (data_diversity,data_diversity$feature=="CDS" & data_diversity$length<2000), aes(informative_sites)) +
+#   geom_histogram(bins=500) 
+# ggplot (data = filter(data_diversity, data_diversity$feature=="CDS"), aes(x=informative_sites, y=length)) +
+#   geom_point()
+# ggplot (data = filter (data_diversity,data_diversity$feature=="intergenic"), aes(length)) +
+#   geom_histogram(bins=1000)
+# ggplot (data = filter (data_diversity,data_diversity$feature=="intron" & data_diversity$length<150000), aes(length)) +
+#   geom_histogram(bins=1000) 
+# ggplot (data = filter (data_diversity,data_diversity$feature=="5UTR"), aes(length)) +
+#   geom_histogram(bins=1000) 
+# ggplot (data = filter (data_diversity,data_diversity$feature=="3UTR"), aes(length)) +
+#   geom_histogram(bins=1000) 
+# ggplot (data = filter (data_diversity,data_diversity$feature=="lncRNA"), aes(length)) +
+#   geom_histogram(bins=1000) 
+# ggplot (data = filter (data_diversity,data_diversity$feature=="ncRNA "), aes(length)) +
+#   geom_histogram(bins=1000) 
+# ggplot (data = filter (data_diversity,data_diversity$feature=="UCNE"), aes(length)) +
+#   geom_histogram(bins=1000) 
+
+
+
+# Tamaño de las unidades
+
+ggplot (data = data_diversity, aes(length)) +
+  geom_histogram() +
+  facet_wrap (~feature, scales = "free")
+ggsave(paste (wd_output, "legth_per_unit_all_pops.pdf", sep=""))
+
+
+for (pop in unique(data_diversity$Populations))
+  {
+  
+  print (pop)
+  ggplot (data=dplyr::filter(data_diversity,data_diversity$Populations==!!pop), aes(length)) +
+  geom_histogram() +
+  facet_wrap (~feature, scales = "free") 
+  ggsave(paste (wd_output, "legth_per_unit_",pop,".pdf", sep="" ), device="pdf")
+
+  }
+ 
+```
+
+
+## Tablas de diversidad: stats
+
+
+```{r}
+
+# Basic stats per unit per pop. 
+
+library("Hmisc")
+
+diversity_stats_pop <- function(diversity_df)
+{
+  diversity_stats_df <- 
+             diversity_df %>% 
+             group_by(pop) %>%
+             summarise(mean_watterson_ave=mean(watterson_ave),
+                       mean_pairwise_ave=mean(pairwise_ave),
+                       # mean_tajimaD=mean(tajimaD),
+                       
+                       median_watterson_ave=median(watterson_ave),
+                       median_pairwise_ave=median(pairwise_ave),
+                       # median_tajimaD=median(tajimaD),
+                       
+                       wmean_watterson_ave=weighted.mean(watterson_ave,w=informative_sites),
+                       wmean_pairwise_ave=mean(pairwise_ave,w=informative_sites),
+                       # wmean_tajimaD=mean(tajimaD,w =informative_sites),
+  
+                       wmean_var_watterson_ave = wtd.var(watterson_ave,informative_sites),
+                       wmean_var_pairwise_ave = wtd.var(pairwise_ave,informative_sites),
+                       # wmean_var_tajimaD = wtd.var(tajimaD,informative_sites),
+
+                       wmean_sd_watterson_ave =  sqrt(wmean_var_watterson_ave),
+                       wmean_sd_pairwise_ave =  sqrt(wmean_var_pairwise_ave),
+                       # wmean_sd_tajimaD =  sqrt(wmean_var_tajimaD),
+
+                       q25_watterson_ave=quantile(watterson_ave,0.25),
+                       q25_pairwise_ave=quantile(pairwise_ave,0.25),
+                       # q25_tajimaD=quantile(tajimaD,0.25),
+                       
+                       q75_watterson_ave=quantile(watterson_ave,0.75),
+                       q75_pairwise_ave=quantile(pairwise_ave,0.75),
+                       # q75_tajimaD=quantile(tajimaD,0.75),
+                       
+                       q05_watterson_ave=quantile(watterson_ave,0.05),
+                       q05_pairwise_ave=quantile(pairwise_ave,0.05),
+                       # q05_tajimaD=quantile(tajimaD,0.05),
+                       
+                       q95_watterson_ave=quantile(watterson_ave,0.95),
+                       q95_pairwise_ave=quantile(pairwise_ave,0.95),
+                       # q95_tajimaD=quantile(tajimaD,0.95),
+                       
+                       IQR_watterson_ave = q75_watterson_ave - q25_watterson_ave,
+                       IQR_pairwise_ave  = q75_pairwise_ave  - q25_pairwise_ave,
+                       # IQR_tajimaD       = q75_tajimaD       - q25_tajimaD ,
+                       
+                       lowerw_watterson_ave = q25_watterson_ave - 1.5* IQR_watterson_ave,
+                       lowerw_pairwise_ave  = q25_pairwise_ave  - 1.5* IQR_pairwise_ave,
+                       # lowerw_tajimaD       = q25_tajimaD       - 1.5* IQR_tajimaD,
+                       
+                       upperw_watterson_ave = q75_watterson_ave + 1.5* IQR_watterson_ave,
+                       upperw_pairwise_ave  = q75_pairwise_ave  + 1.5* IQR_pairwise_ave)
+                       # upperw_tajimaD       = q75_tajimaD       + 1.5* IQR_tajimaD ) 
+  
+  return(diversity_stats_df)
+}
+
+stats_df_pop <- diversity_stats_pop(data_diversity)
+write.table(stats_df_pop, paste(wd_output,"stats_diversity_per_pop.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
+ # Basic stats per unit per pop & different groups (feature, chr, region) 
+
+GROUPS=c("feature", "region", "chr")
+for (GROUP in GROUPS)
+  {print (GROUP)  
+  
+diversity_stats_feature <- function(diversity_df)
+{
+  diversity_stats_df <- 
+             diversity_df %>% 
+             group_by(pop,GROUP) %>%
+             summarise(mean_watterson_ave=mean(watterson_ave),
+                       mean_pairwise_ave=mean(pairwise_ave),
+                       # mean_tajimaD=mean(tajimaD),
+                       
+                       median_watterson_ave=median(watterson_ave),
+                       median_pairwise_ave=median(pairwise_ave),
+                       # median_tajimaD=median(tajimaD),
+                       
+                       wmean_watterson_ave=weighted.mean(watterson_ave,w=informative_sites),
+                       wmean_pairwise_ave=mean(pairwise_ave,w=informative_sites),
+                       # wmean_tajimaD=mean(tajimaD,w =informative_sites),
+  
+                       wmean_var_watterson_ave = wtd.var(watterson_ave,informative_sites),
+                       wmean_var_pairwise_ave = wtd.var(pairwise_ave,informative_sites),
+                       # wmean_var_tajimaD = wtd.var(tajimaD,informative_sites),
+
+                       wmean_sd_watterson_ave =  sqrt(wmean_var_watterson_ave),
+                       wmean_sd_pairwise_ave =  sqrt(wmean_var_pairwise_ave),
+                       # wmean_sd_tajimaD =  sqrt(wmean_var_tajimaD),
+
+                       q25_watterson_ave=quantile(watterson_ave,0.25),
+                       q25_pairwise_ave=quantile(pairwise_ave,0.25),
+                       # q25_tajimaD=quantile(tajimaD,0.25),
+                       
+                       q75_watterson_ave=quantile(watterson_ave,0.75),
+                       q75_pairwise_ave=quantile(pairwise_ave,0.75),
+                       # q75_tajimaD=quantile(tajimaD,0.75),
+                       
+                       q05_watterson_ave=quantile(watterson_ave,0.05),
+                       q05_pairwise_ave=quantile(pairwise_ave,0.05),
+                       # q05_tajimaD=quantile(tajimaD,0.05),
+                       
+                       q95_watterson_ave=quantile(watterson_ave,0.95),
+                       q95_pairwise_ave=quantile(pairwise_ave,0.95),
+                       # q95_tajimaD=quantile(tajimaD,0.95),
+                       
+                       IQR_watterson_ave = q75_watterson_ave - q25_watterson_ave,
+                       IQR_pairwise_ave  = q75_pairwise_ave  - q25_pairwise_ave,
+                       # IQR_tajimaD       = q75_tajimaD       - q25_tajimaD ,
+                       
+                       lowerw_watterson_ave = q25_watterson_ave - 1.5* IQR_watterson_ave,
+                       lowerw_pairwise_ave  = q25_pairwise_ave  - 1.5* IQR_pairwise_ave,
+                       # lowerw_tajimaD       = q25_tajimaD       - 1.5* IQR_tajimaD,
+                       
+                       upperw_watterson_ave = q75_watterson_ave + 1.5* IQR_watterson_ave,
+                       upperw_pairwise_ave  = q75_pairwise_ave  + 1.5* IQR_pairwise_ave)
+                       # upperw_tajimaD       = q75_tajimaD       + 1.5* IQR_tajimaD ) 
+  
+  return(diversity_stats_df)
+}
+
+dataframename <- paste("stats_df", GROUP, sep ='_')
+assign(dataframename,diversity_stats_feature(data_diversity))
+write.table(paste(wd_output,"stats_diversity_per_pop_per_",GROUP,".tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+}
+
+```
+
+
+## Representacion gráfica general
+
+
+```{r}
+library(rlang)
+# Diversidad por población para cada especie y para cada indice
+## BOXPLOT
+
+INDICES=c("watterson_ave", "pairwise_ave", "tajimaD")
+GROUPS=c("feature", "region", "chr")
+
+for (SPECIE in unique(data_diversity_filtered$specie))
+{print (SPECIE)
+  for (INDEX in INDICES)
+  {print (INDEX)
+    for (GROUP in GROUPS)
+    {print (GROUP)
+      # BOXPLOT
+      ggplot(data=filter(data_diversity_filtered,specie==!!SPECIE), aes_string(x="Populations", y = INDEX, fill="Populations")) +
+        geom_boxplot(outlier.shape=NA, color="black") +
+        stat_summary(fun.y=mean, geom="point", shape=23, size=3,show.legend = FALSE) +
+        # geom_point(data=df.pm,aes(x=feature, y = weightedmean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+        facet_grid(reformulate(GROUP), scales="free", switch="x") +
+        scale_y_continuous(trans = 'log10') +
+        scale_x_discrete(GROUP) +
+        xlab(label = "Genomic region") + #x title
+        ylab(label = paste(INDEX)) + # y title
+        theme_bw() +  #theme selection for background and lines
+        # scale_x_continuous(expand = c(0, 1)) +# + scale_y_continuous(expand = c(0, 0)) +
+        theme(axis.line.x = element_line(color="black", size = 0.5),
+              axis.line.y = element_line(color="black", size = 0.5),
+              # axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+              axis.text.x = element_blank(),
+              axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+              axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+              axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.border = element_blank(),
+              panel.background = element_blank(),
+              strip.background = element_blank(),
+              strip.text = element_text(angle = 90),
+              panel.spacing = unit(1.5, "lines"))
+      ggsave(paste (wd_output, INDEX,"_per_",GROUP,"_",SPECIE,"_boxplot.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
+      
+      # VIOLIN
+      
+      ggplot(data=filter(data_diversity_filtered,specie==!!SPECIE), aes_string(x="Populations", y = INDEX, fill="Populations")) +
+        geom_violin(color="black") +
+        stat_summary(fun.y=mean, geom="point", shape=23, size=3,show.legend = FALSE) +
+        # geom_point(data=df.pm,aes(x=feature, y = weightedmean, fill=pop),shape = 23, position=position_dodge(width=0.75), size = 3, inherit.aes=FALSE) +
+        facet_grid(reformulate(GROUP), scales="free", switch="x") +
+        scale_y_continuous(trans = 'log10') +
+        scale_x_discrete(GROUP) +
+        xlab(label = "Genomic region") + #x title
+        ylab(label = paste(INDEX)) + # y title
+        theme_bw() +  #theme selection for background and lines
+        # scale_x_continuous(expand = c(0, 1)) +# + scale_y_continuous(expand = c(0, 0)) +
+        theme(axis.line.x = element_line(color="black", size = 0.5),
+              axis.line.y = element_line(color="black", size = 0.5),
+              # axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+              axis.text.x = element_blank(),
+              axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+              axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+              axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.border = element_blank(),
+              panel.background = element_blank(),
+              strip.background = element_blank(),
+              strip.text = element_text(angle = 90),
+              panel.spacing = unit(1.5, "lines"))
+      ggsave(paste (wd_output, INDEX,"_per_",GROUP,"_",SPECIE,"_violin.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
+      
+    }
+  }
+}
+
+
+```
+
+
+## Exploración interacción entre non-bootleneck vs bootleneck
+
+
+```{r}
+
+# Filtro para coger todas las unidades comunes a todas las poblaciones. 
+
+lista_c_ll_ki_n013 <- filter (data_diversity_filtered, pop=="c_ll_ki_n013") %>% select(id_feature) 
+lista_c_ll_no_n008 <- filter (data_diversity_filtered, pop=="c_ll_no_n008") %>% select(id_feature) 
+lista_c_ll_po_n008 <- filter (data_diversity_filtered, pop=="c_ll_po_n008") %>% select(id_feature) 
+
+lista_c_lp_sm_n019 <- filter (data_diversity_filtered, pop=="c_lp_sm_n019") %>% select(id_feature) 
+lista_c_lp_do_n012 <- filter (data_diversity_filtered, pop=="c_lp_do_n012") %>% select(id_feature) 
+
+# Saco las tablas para cada población y añado una columna en la que corrijo por la media de pairwise. 
+
+ki <- data_diversity_filtered %>% filter (pop=="c_ll_ki_n013") %>% mutate(corrected_pairwise_ave = .$pairwise_ave/(stats_df_pop %>% filter (pop=="c_ll_ki_n013") %>% select(mean_pairwise_ave))) 
+
+no <- data_diversity_filtered %>% filter (pop=="c_ll_no_n008") 
+
+
+# Dataframe Kirov-Norway
+features_in_common_Kirov_Norway <- inner_join(lista_c_ll_ki_n013, lista_c_ll_no_n008)
+
+
+
+
+data_diversity_filtered %>% filter(id_feature  %in% features_in_common_Kirov_Norway)
+
+
+
+
+combinations <- t(combn(distinct_vector_pop, 2)) # %>% mutate (combination=paste(V1,V2,sep="/")) %>% select(combination)
+
+# for(a in 1:nrow(combinations)) {
+#    row <- NULL
+    row <- combinations[a,]
+    # do stuff with row
+    POP1 <- NULL
+    POP2 <- NULL
+    POP1 <- row[1]
+    POP2 <- row[2]
+    NAME <- paste(POP1,"_",POP2,".percentagecovered",PERCENTAGE_COVERED,"_mininformativesites",INFORMATIVE_SITES, sep="")
+
+    
+    df_POP1 <- filter (dataframe, pop == POP1) %>% mutate(., feature2=feature) %>% unite (., scaffold, start, end, feature2, id, col="scaffold_start_end_feature_id")
+    
+    df_POP2 <- filter (dataframe, pop == POP2) %>% mutate(., feature2=feature) %>% unite (., scaffold, start, end, feature2, id, col="scaffold_start_end_feature_id") 
+    
+
+    vector_positions_POP1 <- unique(df_POP1$scaffold_start_end_feature_id) %>% sort(.)
+    vector_positions_POP2 <- unique(df_POP2$scaffold_start_end_feature_id) %>% sort(.)
+    
+    vector_common_positions <- as.vector(intersect(vector_positions_POP1, vector_positions_POP2))
+    
+    df_POP1_filtered <- df_POP1 %>% filter(scaffold_start_end_feature_id  %in% vector_common_positions) %>% arrange(., scaffold_start_end_feature_id) %>% select (., scaffold_start_end_feature_id, feature, id_gene, pairwise_ave, informative_sites, length, NAs, pop )
+    
+    df_POP2_filtered <- df_POP2 %>% filter(scaffold_start_end_feature_id  %in% vector_common_positions) %>% arrange(., scaffold_start_end_feature_id) %>% select (., scaffold_start_end_feature_id, feature, id_gene, pairwise_ave, informative_sites, length, NAs, pop )
+
+if (identical(df_POP1_filtered$scaffold_start_end_feature_id, df_POP2_filtered$scaffold_start_end_feature_id))
+{ df_pairwise <- cbind (
+  setNames(data.frame(df_POP1_filtered), c("scaffold_start_end_feature_id", "feature", "id_gene", "pairwise_ave1","informative_sites1", "length1", "NAs1", "pop1")),
+  setNames(data.frame(df_POP2_filtered), c("scaffold_start_end_feature_id2", "feature2", "id_gene2", "pairwise_ave2","informative_sites2", "length2", "NAs2", "pop2"))) %>% select_ (., "scaffold_start_end_feature_id", "feature", "id_gene", "pairwise_ave1","informative_sites1", "length1", "NAs1", "pop1","pairwise_ave2","informative_sites2", "length2", "NAs2", "pop2")
+           } else {print("First column not matching") }
+
+
+
+```
 
 
 
 
 
-#. 
-# ------------------------------------------------
-# . 
-# ------------------------------------------------
-# OLD (before 18/05/2018)
-## Global diversity per feature
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ------------------------------------------
+# OLD (before May 2018)
+
+Correcciones diversity per feature!!
+
+```{bash}
+
+# 8/9/2017: Haciendo un plot me he dado cuenta que hay algunas filas duplicadas en el archivo original .gff3, corresponden a UTR. 
+# En la carpeta /home/mlucena/grupolince/notation, están especificadas cuales son. He corregido el gff3, pero como no voy a volver a correr mis archivos para sacar los números, voy a corregir todos los originales para tenerlo todo bien desde el principio. 
+
+# Check:
+
+# sort c_ll_ki_n013.per.unit.averages.tsv | uniq -c | sort -nr | head
+
+# 2 lp23.s36682     338697  338929  232     -1      3UTR    +       .       LYPA23C000008   LYPA23C000008   1.4564973179*10^-06     4.5837356691*10^-06     4.4811971320*10^-07     1.3890498033*10^-06     -3.1562808160*1
+# 2 lp23.s36682     328523  328962  439     75      5UTR    -       .       LYPA23C000003   LYPA23C000003   5.0803158132*10^-06     1.2267826914*10^-05     1.8178262696*10^-06     4.0698820431*10^-06     -3.9712504595*1
+# 2 lp23.s36682     279677  279811  134     -1      3UTR    +       .       LYPA23C000015   LYPA23C000015   1.0437203878*10^-06     4.1265547119*10^-06     3.1206706874*10^-07     1.2333416354*10^-06     -2.5288512495*1
+# 2 lp23.s36682     100823  101610  787     82      3UTR    +       .       LYPA23C000004   LYPA23C000004   3.7669060166*10^-04     9.8624719772*10^-03     3.9965744098*10^-04     1.0556168131*10^-02     3.3103961265*10
+# 2 lp23.s26402     92633   95884   3251    166     3UTR    +       .       LYPA23C000017   LYPA23C000017   9.8348133084*10^-06     3.1577310510*10^-04     4.3617798050*10^-06     1.5841654621*10^-04     -3.4633370151*1
+# 2 lp23.s10719     96754   96794   40      -1      5UTR    -       .       LYPA23C000041   LYPA23C000041   3.0378406270*10^-06     1.0043475395*10^-06     1.0387353248*10^-06     3.9400597979*10^-07     -3.2716817179*1
+# 2 lp23.s10719     156260  156378  118     96      5UTR    -       .       LYPA23C000045   LYPA23C000045   1.3834272997*10^-05     2.2261745529*10^-06     6.3570507930*10^-06     1.2906641862*10^-06     -7.9734277877*1
+# 1 scaffold        start   end     length  NAs     feature strandness      frame   id_gene id      watterson_ave   watterson_sd    pairwise_ave    pairwise_sd     tajimaD informative_sites       pop     specie
+# 1 lp23.s41700     1       200     199     199     intergenic      -       .       intergenic_region_65795 intergenic_region_65795         0       c_ll_ki_n013    c_ll
+# 1 lp23.s41699     1       200     199     199     intergenic      -       .       intergenic_region_65794 intergenic_region_65794         0       c_ll_ki_n013    c_ll
+
+
+# 491637 c_ll_ki_n013.per.unit.averages.tsv
+
+# Efectivamente aquí también está duplicados, así que corro el loop para corregirlo:
+
+for i in  *.per.unit.averages.tsv
+do
+echo $i
+POP=$(echo ${i} | cut -d "." -f 1 )
+SPECIE=$(echo $POP | cut -d"_" -f 1-2)
+awk '!seen[$0]++' $i > ${i/.tsv/.corrected.tsv} # remove duplicated rows.
+mv ${i/.tsv/.corrected.tsv} $i
+done
+
+
+
+# Create a unique file with all the information
+
+awk 'FNR==1 && NR!=1{next;}{print}' c_lp*averages.tsv > c_lp_do_n012-c_lp_sm_n019.per.unit.averages.per_specie.tsv
+awk 'FNR==1 && NR!=1{next;}{print}' c_ll*averages.tsv > c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv
+
+
+# Compruebo que ha funcionado:
+
+# sort c_ll_ki_n013.per.unit.averages.tsv | uniq -c | sort -nr | head
+# 1 scaffold	start	end	length	NAs	feature	strandness	frame	id_gene	id	watterson_ave	watterson_sd	pairwise_ave	pairwise_sd	tajimaD	informative_sites	pop	specie
+# 1 lp23.s41700	1	200	
+      
+# Perfecto!!
+      
+```
+
+
+OJO!!
+
+Calcular luego en R medidas pareadas!!! cada unidad con su equivalente en las tres poblaciones!
+
+
+```{bash}
+nota
+
+
+wc -l c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv
+1474888 c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv
+
+
+awk '{if ($18 == "") print $0}' c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv  | wc -l
+134260
+
+# Tengo 134260 lineas que no tienen todos los campos, eso supone un 9,1% de total. 
+# ¿A cuantas les faltan todos los campos y por tanto no ha perjudicados los cálculos? (A todas las que tengas informative sites ($11), igual a cero)
+
+awk '{if ($18 == "") print $0}' c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv  | awk '{if ($11=="0") print $0}' | wc -l
+133589
+
+# Por tanto, de las 134260, a 133589 le faltan todos los datos, por tanto sólo hay 671 lineas con algunos valores sí y otros no. 
+
+133589-134260=671
+
+awk '{if ($18 == "") print $0}' c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv  | awk '{if ($11!="0") print $0}' | wc -l
+671
+
+
+
+# De estos, parece que hay muchos con sitios informativos=1, por lo que asumo que no puede calcular las tajimaD. 
+
+awk '{if ($18 == "") print $0}' c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv  | awk '{if ($11!="0") print $0}' | head
+lp23.s00005	1472211	1472211	0	-1	CDS	-	0	LYPA23C006624	LYPA23C006624P4_1_1	9.1722861064*10^-06	0.0000000000*10^00	3.7772361236*10^-06	0.0000000000*10^00		1	c_ll_ki_n013	c_ll
+lp23.s00006	42798	43028	230	229	intron	+	0	LYPA23C020681	LYPA23C020681T1_intron_13	7.9066451013*10^-06	0.0000000000*10^00	3.1403854839*10^-06	0.0000000000*10^00		1	c_ll_ki_n013	c_ll
+lp23.s00010	215823	215849	26	25	lncRNA	+
+
+# Concretamente encontramos,
+
+ awk '{if ($18 == "") print $0}' c_ll_ki_n013-c_ll_no_n008-c_ll_po_n008.per.unit.averages.per_specie.tsv  | awk '{if ($11!="0") print $0}' | awk '{if ($15="1") print $0}' | wc -l
+671
+
+# Todo cuadra. 
+
+# 671 supoone un 0.045 del total, así que yo creo que no influye o no mucho en los resultados que tenog. En todo caso, como en algunos casos la coumna de informative site 01 está donde watterson debería estar, ahí si pero en el resto no. 
+
+
+```
+
+
+
+
+Este script nos devuelve una gráfica por cada población. Hay un segundo script que devuelve una gráfica para lynx lynx y otra para lynx pardinus. 
+
+```{r}
+
+library ("ggplot2")
+library ("plyr")
+library ("RColorBrewer")
+library ("scales")
+library ("magrittr")
+
+# wd <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/diversity_per_unit"
+wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/Users/marialucenaperez/Desktop/Diversity_per_unit"
+
+finsdiversity = list.files(path = wd,pattern="*per.unit.averages.tsv$")
+INFORMATIVE_SITES=1
+PERCENTAGE_COVERED=0.5
+
+for (i in 1:length(finsdiversity))
+{
+  infile <- finsdiversity[i]
+  name_diversity <- unlist(strsplit(finsdiversity[i], "[.]"))
+
+#### Para que almacene varias dataframe con el nombre correcto
+#  dataframename <- paste("data_diversity", name_diversity[1], sep ='_')
+#  assign(dataframename, read.csv (paste(wd,infile, sep="/"), header = T, sep = '\t',stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".", colClasses=c("watterson_ave"="character")))
+
+dataframe <- read.csv (paste(wd,infile, sep="/"), header = T, sep = '\t',stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".")
+
+dataframe = dataframe[-1,]
+dataframe$watterson_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$watterson_ave))
+dataframe$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$pairwise_ave))
+dataframe$tajimaD <- as.numeric(gsub("\\*10\\^","e",dataframe$tajimaD))
+#dataframe  <- dataframe[complete.cases(dataframe),] ## --> No se que pasa que la columna de specie sale NA
+
+########################################################
+# Filtering
+dataframe <- dataframe %>% 
+  mutate(percentage_covered=ifelse(NAs>0, (as.numeric(length)-as.numeric(NAs))/as.numeric(length), 1)) %>% dplyr::filter(percentage_covered>PERCENTAGE_COVERED) %>% dplyr::filter(informative_sites>INFORMATIVE_SITES)
+name_diversity[1] <- paste(name_diversity[1],".percentagecovered",PERCENTAGE_COVERED,"_mininformativesites",INFORMATIVE_SITES, sep="")
+########################################################
+
+df.pm <- ddply(dataframe, "feature", summarise, weightedmean=weighted.mean(pairwise_ave, informative_sites))
+
+df.wm <- ddply(dataframe, "feature", summarise, weightedmean=weighted.mean(watterson_ave, informative_sites))
+
+
+# pdf(file = paste(wd,"/Diversity_by_feature_pairwise",name_diversity[1],".pdf", sep = ""))
+ggplot(data = dataframe, aes(x=feature, y = pairwise_ave)) + 
+  geom_boxplot()+
+  geom_point(data=df.pm,aes(x=feature, y = weightedmean),shape = 23, 
+             size = 3, inherit.aes=FALSE) +
+  # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic feature") +
+  xlab(label = "Genomic feature") + #x title
+  ylab(label = "Pairwise average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  # scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity by feature",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
+ggsave (file = paste(wd,"/",name_diversity[1],".diversity_feature_pairwise.pdf", sep = ""), device = "pdf")
+# dev.off()
+
+
+
+# pdf(file = paste(wd,"/Diversity_by_feature_watterson",name_diversity[1],".pdf", sep = ""))
+
+ggplot(data = dataframe, aes(x=feature, y = watterson_ave)) + 
+  geom_boxplot()+
+  geom_point(data=df.wm,aes(x=feature, y = weightedmean),shape = 23, 
+             size = 3, inherit.aes=FALSE) +
+  # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
+  facet_grid(.~feature, scales="free") +
+  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic feature") +
+  xlab(label = "Genomic feature") + #x title
+  ylab(label = "Watterson average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  # scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity by feature",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
+
+ggsave(filename = paste(wd,"/", name_diversity[1],".diversity_feature_watterson.pdf", sep = ""), device = "pdf")
+
+
+ggplot(data = dataframe, aes(x=feature, y = tajimaD)) + 
+  geom_boxplot()+
+  # scale_y_continuous(limits = c(-20,-3), expand =c(0,0), labels = comma) +
+  facet_grid(.~feature, scales="free") +
+  #  scale_y_continuous(trans = 'log10') +
+  scale_x_discrete("Genomic feature") +
+  xlab(label = "Genomic feature") + #x title
+  ylab(label = "Watterson average") + # y title
+  theme_bw() +  #theme selection for background and lines
+  # scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) +
+  ggtitle(paste ("Diversity by feature",name_diversity[1], sep = " " )) +
+  theme(axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1),
+        axis.text.y = element_text(vjust = 0.2, hjust = 0.2),
+        axis.title.y = element_text(margin=margin(r=0.3, unit="cm")),
+        axis.title.x = element_text(margin=margin(t=0.5, unit="cm")),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
+ggsave(filename = paste(wd,"/",name_diversity[1],".percentagecovered",PERCENTAGE_COVERED,"_mininformativesites",INFORMATIVE_SITES,".diversity_feature_tajimaD.pdf", sep = ""), device = "pdf")
+
+
+# Exploratory plots
+
+jpeg(paste(wd,"/",name_diversity[1],".plot1.jpg", sep=""))
+plot (dataframe$informative_sites, dataframe$tajimaD)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],".plot2.jpg", sep=""))
+plot (dataframe$pairwise_ave, dataframe$watterson_ave)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],".plot3.jpg", sep=""))
+plot (dataframe$pairwise_ave, dataframe$tajimaD)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],"plot4.jpg", sep=""))
+plot (dataframe$watterson_ave, dataframe$tajimaD)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],"plot5.jpg", sep=""))
+plot (dataframe$informative_sites, dataframe$pairwise_ave)
+dev.off()
+
+jpeg(paste(wd,"/",name_diversity[1],"plot6.jpg", sep=""))
+plot (dataframe$informative_sites, dataframe$watterson_ave)
+dev.off()
+
+
+}
+
+
+# Cosas útiles outliers.shape=NA.
+
+```
+
+
+Comparación por pares unidad
+
+
+```{r}
+
+library ("ggplot2")
+library ("plyr")
+library ("RColorBrewer")
+library ("scales")
+library ("magrittr")
+library(dplyr)
+
+# wd <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/diversity_per_unit"
+wd <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/diversity_per_unit"
+# wd <- "/Users/marialucenaperez/Desktop/Diversity_per_region"
+
+finsdiversity = list.files(path = wd,pattern="*.per.unit.averages.tsv$")
+
+for (i in 1:length(finsdiversity))
+{
+  infile <- finsdiversity[i]
+  name_diversity <- unlist(strsplit(finsdiversity[i], "[.]"))
+dataframe <- read.csv (paste(wd,infile, sep="/"), header = T, sep = '\t',stringsAsFactors = FALSE,  row.names=NULL, na.strings = "", dec=".")
+
+dataframe = dataframe[-1,]
+dataframe$watterson_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$watterson_ave))
+dataframe$pairwise_ave <- as.numeric(gsub("\\*10\\^","e",dataframe$pairwise_ave))
+dataframe$tajimaD <- as.numeric(gsub("\\*10\\^","e",dataframe$tajimaD))
+
+#### Para que almacene varias dataframe con el nombre correcto
+  dataframename <- paste("data_diversity", name_diversity[1], sep ='_')
+  assign(dataframename, dataframe)
+  
+  
+
+}
+
+
+pair_comparison <- full_join (data_diversity_c_ll_ki_n013, data_diversity_c_ll_no_n008, by=c("row.names"="row.names","scaffold"="scaffold","start"="start", "end"="end",  "feature"="feature", "strandness"="strandness", "frame"="frame", "id_gene"="id_gene", "id"="id")  )
+
+colourCount = length(unique(pair_comparison$feature))
+getPalette = colorRampPalette(brewer.pal(9, "Paired"))
+
+
+ggplot (filter(pair_comparison), aes(x= watterson_ave.x, y=watterson_ave.y , fill=feature, colour=feature)) +
+  geom_point(alpha=1/100) +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_abline(intercept = 0) +
+  scale_fill_manual(values = getPalette(colourCount))+
+  scale_colour_manual(values = getPalette(colourCount)) +
+   theme(legend.position="bottom") +
+  guides(fill=guide_legend(nrow=2))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+OLD (before 18/05/2018)
+
+Global diversity per feature
 
 I made a gff3 file with all the characteristics that we want to evaluate. 
 Now that I have the file to run over the calculus per unit. To do it in a efficient way I will split this file into as many files as scaffolds. I will do the same with my thetas file. 
@@ -848,7 +2335,7 @@ ESTE ES EL ARCHIVO (2018/04/03):
 
 /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.intergenic.UCR.nr.gff3
 
-### First I separate transformedThetas per scaffold. 
+First I separate transformedThetas per scaffold. 
 
 ```{bash}
 
@@ -889,7 +2376,7 @@ done
 ```
 
 
-### Diversity per feature.
+Diversity per feature.
 
 14/05/2018 --> Este script es válido, el problema es que en su momento tiraba de un archivo de notaciónq que no estaba bien 100% (ya si coge el archivo adecuado) y por eso tuve que hacer todas las modificaciones que explico abajo, pero funciona bien. 
 
@@ -1060,7 +2547,7 @@ rm "$POP".iter.transformedThetas.borrar
 
 ```
 
-### Copia de seguridad
+Copia de seguridad
 
 Hace falta copiar también lo demás que lo había lanzado de nuevo, el printed.stats y el transformedThetas:
 
@@ -1069,7 +2556,7 @@ Hace falta copiar también lo demás que lo había lanzado de nuevo, el printed.
 scp /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*per.unit.averages.tsv /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis/
 ```
 
-# -----------
+-----------
 
 10/05/2018
 y repetido con nuevo archivo el día 17/05/2018
@@ -1077,8 +2564,8 @@ y repetido con nuevo archivo el día 17/05/2018
 Este script lo corrí en su momento con el archivo: /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCR.intergenic.nr.gff3.PerScaffold/ que no es el definitivo y que ha sido sustituido por: LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3.PerScaffold. Con este corro mi script de nuevo el día 17. 
 
 
-# OJO! Me he dado cuenta que al menos hay un UCR dentro de una región que se considera intergénico!
-# Modificación de mis archivos y vuelta a correr lo que está mal. 
+OJO! Me he dado cuenta que al menos hay un UCR dentro de una región que se considera intergénico!
+Modificación de mis archivos y vuelta a correr lo que está mal. 
 
 Lo que ocurre es que UCR están dentro de intergénico, por tanto lo que hemos considerado intergénico estaría mal. 
 La forma de proceder va a ser la siguiente:
@@ -1089,7 +2576,7 @@ La forma de proceder va a ser la siguiente:
 4. Ordenar por scaffold y posición.
 
 
-#### ---> 1. Borrar intergenic del archivo de diversidad.
+---> 1. Borrar intergenic del archivo de diversidad.
 
 ```{bash}
 
@@ -1126,7 +2613,7 @@ c_lp_do_n012.per.unit.averages.tsv
 ```
 
 
-#### ---> 2. Lanzar el cálculo de diversidad sobre el intergénico únicamente.
+---> 2. Lanzar el cálculo de diversidad sobre el intergénico únicamente.
 
 ```{bash}
 
@@ -1281,7 +2768,7 @@ rm "$POP".iter.transformedThetas.borrar
 
 ```
 
-## ---> 4. Muevo los archivos recien creados al nombre inicial.
+---> 4. Muevo los archivos recien creados al nombre inicial.
 
 
 ```{bash}
@@ -1294,7 +2781,7 @@ done
 
 ```
 
-## ---> 5. Ordeno
+---> 5. Ordeno
 
 
 ```{bash}
@@ -1337,7 +2824,7 @@ rm *HEADER*
 ```
 
 
-## ---> 6. Copia de seguridad
+---> 6. Copia de seguridad
 
 Hace falta copiar también lo demás que lo había lanzado de nuevo, el printed.stats y el transformedThetas:
 
@@ -1348,14 +2835,14 @@ scp /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*p
 
 
 
-# -----------
+-----------
 
-### Anotación de las unidades: cromosoma y regiones; tel y centr. 
+Anotación de las unidades: cromosoma y regiones; tel y centr. 
 
 Ahora vamos a anotar esas unidades según pertenezcan o no a distintos cromosomas, y según sean teloméricas, centromérica o no. 
 
 
-#### Cromosomas 
+Cromosomas 
 
 Para ello hemos usado el archivo que tienen en común las coordenadas de gato y de lince
 
@@ -1413,7 +2900,7 @@ Esto me devuelve algo como así:
 lp23.s00001	0	15011	15011	11950	3061	intergenic	-	.	intergenic_region_1	intergenic_region_1	2.4096547746*10^-06	1.3458559263*10^-05	1.1416658651*10^-06	6.2801913098*10^-06	-1.7606196687*10^-01	c_ll_no_n008	ll	c	chrA3
 
 
-##### Sanity checks
+Sanity checks
 
 ```{bash}
 
@@ -1580,7 +3067,7 @@ rm list_of_repeated_features_do
 ```
 
 
-#### Telomeros2m
+Telomeros2m
 
 El archivo de interés, es: 
 ```{bash}
@@ -1621,7 +3108,7 @@ lp23.s00006	14749	29606	14857	8272	6585	intergenic	-	.	intergenic_region_445	int
 
 donde el último número representa las bases que solapan. 
 
-#### Telomeros10m
+Telomeros10m
 
 El archivo de interés, es: 
 ```{bash}
@@ -1661,7 +3148,7 @@ done
 
 Y por último los centrómeros:
 
-#### Centrómeros:
+Centrómeros:
 
 El archivo de interés, es: 
 ```{bash}
@@ -1706,10 +3193,10 @@ rm header.region.*
 ```
 
 
-# ------------------------------------------
+------------------------------------------
 
 
-# Postprocesado en R
+Postprocesado en R
 
 Ahora necesito hacer varias cositas con estos archivos que acabo de crear. En primer lugar tengo que colapsar aquellos que tienen tel o centr, ya que si este centr estaba definido en base a varias regiones pertenecientes a la misma unidad aparece varias veces. Ejemplo:
 
@@ -1819,15 +3306,15 @@ write.table(dataframe, paste(wd, file_centr, sep=""), row.names = F, quote = F, 
 ```
 
 
-# ------------------------------------------
+------------------------------------------
 
-# R analysis
+R analysis
 
 
 
 Ahora tengo que descargarme todos los archivos de cada población y despues hacer un super-join para cada población para acabar haciendo una unica tabla con rbind con todas las poblaciones. 
 
-## Creación tablas
+Creación tablas
 
 ```{r}
 
@@ -1889,7 +3376,7 @@ write.table (do, paste(wd, "c_ll_do_n012.per.unit.averages.chr.all.regions.tsv",
 ```
 
 
- ## Cargo las tablas
+Cargo las tablas
 
 
 ```{r}
@@ -1927,7 +3414,7 @@ kk <- do %>% filter (id_gene=="intergenic_region_44")
 ```
 
 
-## Exploracion de los datos
+Exploracion de los datos
 
 ```{r}
 
@@ -1974,12 +3461,11 @@ ggplot(data = data_diversity, aes(x=feature, y = pairwise_ave, fill=pop)) +
 
 
 
-# ------------------------------------------
+------------------------------------------
 
+Cosas antiguas!
 
-# Cosas antiguas!
-
-#### Correcciones diversity per feature!!
+Correcciones diversity per feature!!
 
 ```{bash}
 
@@ -2033,11 +3519,7 @@ awk 'FNR==1 && NR!=1{next;}{print}' c_ll*averages.tsv > c_ll_ki_n013-c_ll_no_n00
       
 ```
 
-
-
-
-
-## OJO!!
+OJO!!
 
 Calcular luego en R medidas pareadas!!! cada unidad con su equivalente en las tres poblaciones!
 
@@ -2088,9 +3570,7 @@ lp23.s00010	215823	215849	26	25	lncRNA	+
 ```
 
 
-
-
-#### Representation per pop --> I rm this files, but I keep the script in case is useful. 
+Representation per pop --> I rm this files, but I keep the script in case is useful. 
 
 Este script nos devuelve una gráfica por cada población. Hay un segundo script que devuelve una gráfica para lynx lynx y otra para lynx pardinus. 
 
@@ -2102,7 +3582,7 @@ library ("RColorBrewer")
 library ("scales")
 library ("magrittr")
 
-# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/diversity_per_unit"
 wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
 # wd <- "/Users/marialucenaperez/Desktop/Diversity_per_unit"
 
@@ -2261,7 +3741,7 @@ dev.off()
 
 ```
 
-# Comparación por pares unidad
+Comparación por pares unidad
 
 
 ```{r}
@@ -2273,8 +3753,8 @@ library ("scales")
 library ("magrittr")
 library(dplyr)
 
-# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
-wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/diversity_per_unit"
+wd <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/diversity_per_unit"
 # wd <- "/Users/marialucenaperez/Desktop/Diversity_per_region"
 
 finsdiversity = list.files(path = wd,pattern="*.per.unit.averages.tsv$")
@@ -2317,12 +3797,7 @@ ggplot (filter(pair_comparison), aes(x= watterson_ave.x, y=watterson_ave.y , fil
 ```
 
 
-
-
-
-
-
-#### Representation per specie
+Representation per specie
 
 Esta gráfica representa por especie.
 
@@ -2338,7 +3813,7 @@ library ("scales")
 library ("magrittr")
 library("tidyr")
 library ("dplyr")
-# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/diversity_per_unit"
 # wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
 # wd <- "/Users/marialucenaperez/Desktop/Diversity_per_unit"
 
@@ -2589,8 +4064,7 @@ ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_feature_watterson.e
 
 ```
 
-
-#### Pairwise Pi diversity
+ Pairwise Pi diversity
 
 ```{r}
 
@@ -2605,7 +4079,7 @@ library("tidyr")
 library(viridis)
 
 
-# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/diversity_per_unit"
 # wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit"
 wd <- "/Users/marialucenaperez/Desktop/"
 
@@ -2705,8 +4179,7 @@ ggsave(filename = paste(wd,"/",NAME,"_informative_sites1_Pi_pairwise.eps", sep =
 ```
 
 
-
-#### Representation per pop
+Representation per pop
 
 Este script nos devuelve una gráfica por cada población. Hay un segundo script que devuelve una gráfica para lynx lynx y otra para lynx pardinus. 
 
@@ -2720,7 +4193,7 @@ library ("RColorBrewer")
 library ("scales")
 library ("magrittr")
 
-# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/diversity_per_unit"
 wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region"
 # wd <- "/Users/marialucenaperez/Desktop/Diversity_per_region"
 
@@ -2880,15 +4353,7 @@ dev.off()
 
 ```
 
-
-
-
-
-
-
-
-
-#### Representation per specie
+Representation per specie
 
 Esta gráfica representa por especie.
 
@@ -2901,7 +4366,7 @@ library ("scales")
 library ("magrittr")
 library("tidyr")
 
-# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/diversity_per_unit"
+# wd <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/diversity_per_unit"
 wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_region"
 # wd <- "/Users/marialucenaperez/Desktop/Diversity_per_unit"
 
@@ -3108,11 +4573,7 @@ ggsave(filename = paste(wd,"/",name_diversity[1],".diversity_region_watterson.ep
 
 ```
 
-
-
-
-
-### Copy
+Copy
 
 ```{bash}
 
@@ -3127,11 +4588,7 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_ana
 
 ```
 
-
-
-
-
-#### Diversity per region: Cat Coordinates
+Diversity per region: Cat Coordinates
 
 He probado con el script de Fede de perl:
 
@@ -3171,18 +4628,8 @@ Así que ordeno antes:
 ```
 
 
-### Diversity per region & feature
-
-
-```{bash}
-
-
-
-
-```
-
-# --------------------------------
-## Window analysis
+--------------------------------
+Window analysis
 
 
 ```{bash}
@@ -3214,14 +4661,14 @@ $NGSTOOLS/thetaStat do_stat $RUTA/$POP.unfolded-lr.postprob.thetas.idx -win $WIN
 Values in this output file are the sum of the per-site estimates for the whole window.
 
 
-## Window R representation
+Window R representation
 
 
 Download data:
 
 ```{bash}
 
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*PG /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/window_analysis/
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/*PG /Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/window_analysis/
 
 ```
 
@@ -3235,7 +4682,7 @@ library(qqman)
 library(ggplot2)
 library ("GGally")
 
-# wd <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/whole_genome_analysis/sfs/window_analysis/" 
+# wd <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/window_analysis/" 
 wd <- "/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/window_analysis/"
 
 finsThetas = list.files(path = wd, pattern="*.pestPG$")
@@ -3406,10 +4853,123 @@ dev.off()
 ```
 
 
+# ----------------------------------
+
+# Otra info util
+
+
+Coincide para sierra morena
+
+3UTR
+5UTR
+CDS
+CDS,lncRNA
+feature
+intergenic
+intron
+intron,intron_lncRNA
+intron_lncRNA
+intron,ncRNA
+lncRNA
+lncRNA,ncRNA
+ncRNA
+promoter_gene_1000
+promoter_gene_1000,promoter_gene_250,promoter_gene_500
+promoter_gene_250
+promoter_gene_500
+promoter_lncRNA_1000
+promoter_lncRNA_1000,promoter_lncRNA_250,promoter_lncRNA_500
+promoter_lncRNA_250
+promoter_lncRNA_500
+UCNE
 
 
 
+____
 
+
+Omnogovi (in Mongolian) is equivalent South Gobi (or S.Gobi)
+
+Khentii−Aimag is better as Khentiy_Mong
+
+Tov (also Aimag/region) is equivalent Central region (Centr_Mong)
+
+
+
+_____
+
+
+Si queremos descargar tablas en base a un nombre y si no está que nos de error: tryCatch
+
+Procesamiento de la tabla con region annotation. Esto sólo se hace una vez!
+Comprobamos que el archivo tiene información y añadimos un porcentaje con las bases que tiene que son teloméricas / centroméricas.
+
+```{r}
+
+library(dplyr)
+
+wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
+
+# Tel2m
+files_tel2m <- list.files(path = wd, pattern = "region.tel2m")
+
+# Esto saca el porcentaje de bases anotadas como de una región determinada para cada población
+for (file_tel2m in files_tel2m){
+dataframe <- tryCatch({
+        if (file.size(paste(wd, file_tel2m, sep="")) > 0)
+          {
+    read.table(file=paste(wd, file_tel2m, sep=""), header=T) %>% 
+            mutate (tel2m_percentage=tel2m_bases/length)
+          }
+}, error =function(err) {
+            # error handler picks up where error was generated
+            print(paste("Read.table didn't work!:  ",err))
+        })
+# Hasta aquí bien, ahora guardo estos archivos en la carpeta de interes.
+write.table(dataframe, paste(wd, file_tel2m, sep=""), row.names = F, quote = F, sep = '\t')
+}
+
+
+# Tel10m
+files_tel10m <- list.files(path = wd, pattern = "region.tel10m")
+
+# Esto saca el porcentaje de bases anotadas como de una región determinada para cada población
+for (file_tel10m in files_tel10m){
+dataframe <- tryCatch({
+        if (file.size(paste(wd, file_tel10m, sep="")) > 0)
+          {
+    read.table(file=paste(wd, file_tel10m, sep=""), header=T) %>% 
+            mutate (tel10m_percentage=tel10m_bases/length)
+          }
+}, error =function(err) {
+            # error handler picks up where error was generated
+            print(paste("Read.table didn't work!:  ",err))
+        })
+# Hasta aquí bien, ahora guardo estos archivos en la carpeta de interes.
+write.table(dataframe, paste(wd, file_tel10m, sep=""), row.names = F, quote = F, sep = '\t')
+}
+
+# Centr
+
+files_centr <- list.files(path = wd, pattern = "region.centr")
+
+# Esto saca el porcentaje de bases anotadas como de una región determinada para cada población
+for (file_centr in files_centr){
+dataframe <- tryCatch({
+        if (file.size(paste(wd, file_centr, sep="")) > 0)
+          {
+    read.table(file=paste(wd, file_centr, sep=""), header=T) %>% 
+            mutate (centr_percentage=centr_bases/length)
+          }
+}, error =function(err) {
+            # error handler picks up where error was generated
+            print(paste("Read.table didn't work!:  ",err))
+        })
+# Hasta aquí bien, ahora guardo estos archivos en la carpeta de interes.
+write.table(dataframe, paste(wd, file_centr, sep=""), row.names = F, quote = F, sep = '\t')
+}
+
+```
 
 
 
