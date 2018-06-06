@@ -1499,7 +1499,7 @@ for (pop in poplist)
     # if the merged dataset does exist, append to it
     if (exists("dataset"))
     {
-      temp_dataset <-read.table(paste(wd,file_for_given_pop, sep=""), header=TRUE, sep="\t")
+      temp_dataset <-read.table(paste(wd,file_for_given_pop, sep=""), header=TRUE, sep="\t", na.strings = c("NA", "na"))
       dataset<-full_join(dataset, temp_dataset, by = c("scaffold", "start_cero_based", "end", "length", "NAs", "informative_sites", "feature", "strandness", "frame", "id_gene", "id", "watterson_ave", "watterson_sd", "pairwise_ave", "pairwise_sd", "tajimaD", "pop", "specie", "epoch"))   
       rm(temp_dataset)
       assign(pop, dataset) # Con esto quiero ponerle el nombre de la población a la dataframe. 
@@ -1523,7 +1523,7 @@ write.table (ki, paste(wd, "c_ll_ki_n013.per.unit.averages.chr.all.regions.tsv",
 write.table (no, paste(wd, "c_ll_no_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 write.table (po, paste(wd, "c_ll_po_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 write.table (do, paste(wd, "c_ll_do_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
-write.table (sm, paste(wd, "c_ll_do_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (sm, paste(wd, "c_ll_sm_n019.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 
 
 ```
@@ -1542,7 +1542,7 @@ wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
 wd_output <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/"
   
 
-data_diversity <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions.tsv", sep=""), header=T) %>%  
+data_diversity <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions.tsv", sep=""), header=T, na.strings = c("NA", "na")) %>%  
   replace(., is.na(.), "0") %>%  # Para que pueda calcular cuando es mayor o menor que 75%; si es NA no lo reconoce. 
   mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
@@ -1584,10 +1584,12 @@ data_diversity_filtered <- data_diversity %>%  filter (., informative_sites>=50 
 # Ordenar los factores. 
 
 data_diversity$Populations <- factor (data_diversity$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
-data_diversity$chr <- factor(data_diversity$chr, levels = c("A1","C1","B1","A2","C2","B2","B3","B4","A3","D1","D3","D4","D2","F2","F1","E2","E1","X"))
+data_diversity$chr <- factor(data_diversity$chr, levels = c("ChrA1","chrC1","chrB1","chrA2","chrC2","chrB2","chrB3","chrB4","chrA3","chrD1","chrD3","chrD4","chrD2","chrF2","chrF1","chrE2","chrE1","chrX"))
+
+
 
 data_diversity_filtered$Populations <- factor (data_diversity_filtered$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
-data_diversity_filtered$chr <- factor(data_diversity_filtered$chr, levels = c("A1","C1","B1","A2","C2","B2","B3","B4","A3","D1","D3","D4","D2","F2","F1","E2","E1","X"))
+data_diversity_filtered$chr <- factor(data_diversity_filtered$chr, levels = c("ChrA1","chrC1","chrB1","chrA2","chrC2","chrB2","chrB3","chrB4","chrA3","chrD1","chrD3","chrD4","chrD2","chrF2","chrF1","chrE2","chrE1","chrX"))
 
 
 # 5/6/2018
@@ -1665,7 +1667,7 @@ for (pop in unique(data_diversity$Populations))
 ```{r}
 
 # Basic stats per unit per pop. 
-
+install.packages("Hmisc")
 library("Hmisc")
 
 diversity_stats_pop <- function(diversity_df)
@@ -1731,6 +1733,7 @@ write.table(stats_df_pop, paste(wd_output,"stats_diversity_per_pop.tsv",sep=""),
  # Basic stats per unit per pop & different groups (feature, chr, region) 
 
 GROUPS=c("feature", "region", "chr")
+
 for (GROUP in GROUPS)
   {print (GROUP)  
   
@@ -1738,7 +1741,7 @@ diversity_stats_feature <- function(diversity_df)
 {
   diversity_stats_df <- 
              diversity_df %>% 
-             group_by(pop,GROUP) %>%
+             group_by_("pop",GROUP) %>%
              summarise(mean_watterson_ave=mean(watterson_ave),
                        mean_pairwise_ave=mean(pairwise_ave),
                        # mean_tajimaD=mean(tajimaD),
@@ -1791,7 +1794,9 @@ diversity_stats_feature <- function(diversity_df)
 }
 
 dataframename <- paste("stats_df", GROUP, sep ='_')
+
 assign(dataframename,diversity_stats_feature(data_diversity))
+
 write.table(paste(wd_output,"stats_diversity_per_pop_per_",GROUP,".tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 }
@@ -1881,75 +1886,116 @@ for (SPECIE in unique(data_diversity_filtered$specie))
 ```
 
 
-## Exploración interacción entre non-bootleneck vs bootleneck
+## Creo tablas interacción entre non-bootleneck vs bootleneck
 
 
 ```{r}
 
-# Filtro para coger todas las unidades comunes a todas las poblaciones. 
-
-lista_c_ll_ki_n013 <- filter (data_diversity_filtered, pop=="c_ll_ki_n013") %>% select(id_feature) 
-lista_c_ll_no_n008 <- filter (data_diversity_filtered, pop=="c_ll_no_n008") %>% select(id_feature) 
-lista_c_ll_po_n008 <- filter (data_diversity_filtered, pop=="c_ll_po_n008") %>% select(id_feature) 
-
-lista_c_lp_sm_n019 <- filter (data_diversity_filtered, pop=="c_lp_sm_n019") %>% select(id_feature) 
-lista_c_lp_do_n012 <- filter (data_diversity_filtered, pop=="c_lp_do_n012") %>% select(id_feature) 
-
 # Saco las tablas para cada población y añado una columna en la que corrijo por la media de pairwise. 
 
-ki <- data_diversity_filtered %>% filter (pop=="c_ll_ki_n013") %>% mutate(corrected_pairwise_ave = .$pairwise_ave/(stats_df_pop %>% filter (pop=="c_ll_ki_n013") %>% select(mean_pairwise_ave))) 
 
-no <- data_diversity_filtered %>% filter (pop=="c_ll_no_n008") 
+POPS=c("c_ll_ki_n013","c_ll_no_n008","c_ll_po_n008", "c_lp_do_n012", "c_lp_sm_n019")
+
+for (POP in POPS)
+{
+  print (POP)
+
+  pairwise_average_intergenic <- as.numeric(stats_df_feature %>% filter (pop==as.character(POP)) %>% filter (feature=="intergenic") %>% select (mean_pairwise_ave) %>% .[1,2])
+                                 
+  watterson_average_intergenic <- as.numeric(stats_df_feature %>% filter (pop==as.character(POP)) %>% filter (feature=="intergenic") %>% select (mean_watterson_ave) %>% .[1,2])
+
+  data.frame <-  data_diversity_filtered %>%  filter (pop==as.character(POP)) %>% 
+  mutate(corrected_pairwise_ave = pairwise_ave/pairwise_average_intergenic) %>%  
+  mutate(corrected_watterson_ave = watterson_ave/watterson_average_intergenic)
+  
+  assign(paste(POP,"_diversity", sep=""), data.frame)
+  rm (data.frame)
+  
+}
+
+# Dataframe Kirov-Norway
+
+data_diversity_ki_no <- inner_join (c_ll_ki_n013_diversity, c_ll_no_n008_diversity, by="id_feature") %>%  mutate (ratio_corrected_diversity_pairwise = corrected_pairwise_ave.y/corrected_pairwise_ave.x) %>%  mutate (ratio_corrected_diversity_watterson = corrected_watterson_ave.y/corrected_watterson_ave.x)
+
+# Dataframe Kirov-Poland
+
+data_diversity_ki_po <- inner_join (c_ll_ki_n013_diversity, c_ll_po_n008_diversity, by="id_feature") %>%  mutate (ratio_corrected_diversity_pairwise = corrected_pairwise_ave.y/corrected_pairwise_ave.x) %>%  mutate (ratio_corrected_diversity_watterson = corrected_watterson_ave.y/corrected_watterson_ave.x)
+
+# Dataframe Sierra_Morena-Doñana
+
+data_diversity_sm_do <- inner_join (c_lp_sm_n019_diversity, c_lp_do_n012_diversity, by="id_feature") %>%  mutate (ratio_corrected_diversity_pairwise = corrected_pairwise_ave.y/corrected_pairwise_ave.x) %>%  mutate (ratio_corrected_diversity_watterson = corrected_watterson_ave.y/corrected_watterson_ave.x)
+
+
+
+for (POP in POPS)
+{
+  print (POP)
+
+  pairwise_average_intergenic <- as.numeric(stats_df_feature %>% filter (pop==as.character(POP)) %>% filter (feature=="intergenic") %>% select (mean_pairwise_ave) %>% .[1,2])
+                                 
+  watterson_average_intergenic <- as.numeric(stats_df_feature %>% filter (pop==as.character(POP)) %>% filter (feature=="intergenic") %>% select (mean_watterson_ave) %>% .[1,2])
+
+  data.frame <-  stats_df_feature %>%  filter (pop==as.character(POP)) %>% 
+  mutate(corrected_pairwise_ave = mean_pairwise_ave/pairwise_average_intergenic) %>%  
+  mutate(corrected_watterson_ave = mean_watterson_ave/watterson_average_intergenic)
+  
+  assign(paste(POP,"_diversity_stats", sep=""), data.frame)
+  rm (data.frame)
+  
+}
 
 
 # Dataframe Kirov-Norway
-features_in_common_Kirov_Norway <- inner_join(lista_c_ll_ki_n013, lista_c_ll_no_n008)
 
+data_diversity_stats_ki_no <- inner_join (c_ll_ki_n013_diversity_stats, c_ll_no_n008_diversity_stats, by="feature") %>%  mutate (ratio_corrected_diversity_pairwise = corrected_pairwise_ave.y/corrected_pairwise_ave.x) %>%  mutate (ratio_corrected_diversity_watterson = corrected_watterson_ave.y/corrected_watterson_ave.x)
 
+# Dataframe Kirov-Poland
 
+data_diversity_stats_ki_po <- inner_join (c_ll_ki_n013_diversity_stats, c_ll_po_n008_diversity_stats, by="feature") %>%  mutate (ratio_corrected_diversity_pairwise = corrected_pairwise_ave.y/corrected_pairwise_ave.x) %>%  mutate (ratio_corrected_diversity_watterson = corrected_watterson_ave.y/corrected_watterson_ave.x)
 
-data_diversity_filtered %>% filter(id_feature  %in% features_in_common_Kirov_Norway)
+# Dataframe Sierra_Morena-Doñana
 
-
-
-
-combinations <- t(combn(distinct_vector_pop, 2)) # %>% mutate (combination=paste(V1,V2,sep="/")) %>% select(combination)
-
-# for(a in 1:nrow(combinations)) {
-#    row <- NULL
-    row <- combinations[a,]
-    # do stuff with row
-    POP1 <- NULL
-    POP2 <- NULL
-    POP1 <- row[1]
-    POP2 <- row[2]
-    NAME <- paste(POP1,"_",POP2,".percentagecovered",PERCENTAGE_COVERED,"_mininformativesites",INFORMATIVE_SITES, sep="")
-
-    
-    df_POP1 <- filter (dataframe, pop == POP1) %>% mutate(., feature2=feature) %>% unite (., scaffold, start, end, feature2, id, col="scaffold_start_end_feature_id")
-    
-    df_POP2 <- filter (dataframe, pop == POP2) %>% mutate(., feature2=feature) %>% unite (., scaffold, start, end, feature2, id, col="scaffold_start_end_feature_id") 
-    
-
-    vector_positions_POP1 <- unique(df_POP1$scaffold_start_end_feature_id) %>% sort(.)
-    vector_positions_POP2 <- unique(df_POP2$scaffold_start_end_feature_id) %>% sort(.)
-    
-    vector_common_positions <- as.vector(intersect(vector_positions_POP1, vector_positions_POP2))
-    
-    df_POP1_filtered <- df_POP1 %>% filter(scaffold_start_end_feature_id  %in% vector_common_positions) %>% arrange(., scaffold_start_end_feature_id) %>% select (., scaffold_start_end_feature_id, feature, id_gene, pairwise_ave, informative_sites, length, NAs, pop )
-    
-    df_POP2_filtered <- df_POP2 %>% filter(scaffold_start_end_feature_id  %in% vector_common_positions) %>% arrange(., scaffold_start_end_feature_id) %>% select (., scaffold_start_end_feature_id, feature, id_gene, pairwise_ave, informative_sites, length, NAs, pop )
-
-if (identical(df_POP1_filtered$scaffold_start_end_feature_id, df_POP2_filtered$scaffold_start_end_feature_id))
-{ df_pairwise <- cbind (
-  setNames(data.frame(df_POP1_filtered), c("scaffold_start_end_feature_id", "feature", "id_gene", "pairwise_ave1","informative_sites1", "length1", "NAs1", "pop1")),
-  setNames(data.frame(df_POP2_filtered), c("scaffold_start_end_feature_id2", "feature2", "id_gene2", "pairwise_ave2","informative_sites2", "length2", "NAs2", "pop2"))) %>% select_ (., "scaffold_start_end_feature_id", "feature", "id_gene", "pairwise_ave1","informative_sites1", "length1", "NAs1", "pop1","pairwise_ave2","informative_sites2", "length2", "NAs2", "pop2")
-           } else {print("First column not matching") }
+data_diversity_stats_sm_do <- inner_join (c_lp_sm_n019_diversity_stats, c_lp_do_n012_diversity_stats, by="feature") %>%  mutate (ratio_corrected_diversity_pairwise = corrected_pairwise_ave.y/corrected_pairwise_ave.x) %>%  mutate (ratio_corrected_diversity_watterson = corrected_watterson_ave.y/corrected_watterson_ave.x)
 
 
 
 ```
 
+## Representación gráfica de la interacción
+
+```{r}
+
+library(rlang)
+# Ratio de la diversidad población bootleneck frente non bootleneck
+## BOXPLOT
+
+DATAFRAMES=c("data_diversity_stats_ki_no","data_diversity_stats_ki_po","data_diversity_stats_sm_do")
+INDICES=c("ratio_corrected_diversity_pairwise", "ratio_corrected_diversity_watterson")
+
+
+myplot <- function(data)
+  {
+  print (data)
+  for (INDEX in INDICES)
+  {
+    ggplot(data=data, aes_string(x="feature", y = INDEX)) +
+        geom_point(color="black") +
+        theme_bw() +  #theme selection for background and lines
+        theme(axis.line.x = element_line(color="black", size = 0.5),
+              axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))
+      #ggsave(paste(wd_output, DATA.FRAME,"_plot_ratio_corrected.pdf", sep=""))
+  }
+}
+
+for(i in DATAFRAMES){
+  print (i)
+  print(myplot(get(i)))
+}
+
+
+      # ggsave(paste (wd_output, INDEX,"_per_",GROUP,"_",SPECIE,"_boxplot.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
+             # ggsave(paste (wd_output, INDEX,"_per_",GROUP,"_",SPECIE,"_violin.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
+```
 
 
 
