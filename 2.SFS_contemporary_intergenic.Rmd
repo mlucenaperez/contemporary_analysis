@@ -926,6 +926,9 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/datos/intermediate_ANGSD_files/
 
 ## R window analysis
 
+Más abajo está el análisis definitivo!
+
+
 
 ```{r}
 
@@ -940,7 +943,7 @@ index="tP"
 
 window_diversity <- read.table("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/analysis_diversity_window/c_ll_no_n008-c_ll_po_n008-c_ll_ki_n013-c_ll_to-c_ll_ka-c_ll_og_n008-c_ll_ya_n008-c_ll_vl_n008-c_ll_la_n006-c_ll_cr_n006-c_ll_tu_n006-c_ll_ur_n006.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions", sep="\t", dec=".", header=T, na.strings = "-nan") %>% mutate (XvsTOTAL= Xpositions/(Xpositions+AUTOSOMICpositions))
 
-window_divergence <- 
+window_divergence <- read.table("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_divergence_window/c_ll.divergence_with_rufus", header =T)
 
 ggplot(data = window_diversity, aes(window_diversity$XvsTOTAL)) +
   geom_histogram() #+
@@ -1044,7 +1047,7 @@ https://stats.stackexchange.com/questions/204264/interpreting-standard-deviation
 
 
 
-# First I will create a file that contain only windows in common in all pops.
+### First I will create a file that contain only windows in common in all pops.
 
 
 ```{bash}
@@ -1076,7 +1079,7 @@ scp mlucena@genomics-b.ebd.csic.es://home/mlucena/datos/intermediate_ANGSD_files
 
 ```
 
-
+# R final
 ## Diversity vs divergence
 
 ```{r}
@@ -1084,6 +1087,9 @@ scp mlucena@genomics-b.ebd.csic.es://home/mlucena/datos/intermediate_ANGSD_files
 library(dplyr)
 library(ggplot2)
 library (tidyr)
+library(boot)
+library(broom)
+library(RColorBrewer)
 
 wd_diversity <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/analysis_diversity_window/"
 index="tP_per_site"
@@ -1099,18 +1105,13 @@ mutate(window_type=ifelse(XvsTOTAL==1 , "Xchr", "Autosomic")) %>% # Lo que hago 
 mutate(tP_per_site=tP/nSites) %>% 
 mutate(tW_per_site=tW/nSites)
   
-  
 # Esto me convierte el dataframe de una variable en un vector sobre el que filtrar. 
 windows_in_common <- read.table(paste(wd_diversity, "windows_in_common_list.txt", sep =""), header = T)  [[1]]
-
 
 diversity_only_in_common <- filter(diversity, windows_identity %in% windows_in_common) 
 # Tiene 414180 lineas, lo que encaja puesto que anteriormente tenía: 414283
 
-
-
 hist(diversity_only_in_common$nSites)
-
 
 ####
 
@@ -1120,130 +1121,352 @@ wd_divergence <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/interge
 
 divergence <- read.table(paste (wd_divergence,"c_ll.divergence_with_rufus", sep =""), sep=" ", dec=".", header=T) %>% mutate (windows_identity = paste(scaffold,"_",winstart,"_", winend, sep =""))
 
-
 ####
 
 ## Hacemos un join.
 # Aquí tenemos la divergencia y la diversidad.
 
 diversity_divergence <- inner_join(diversity_only_in_common,divergence, by="windows_identity" )  %>% 
-  mutate(tW_per_site_corrected=tW_per_site/divergence) %>% mutate(tP_per_site_corrected=tP_per_site/divergence) %>% 
-  mutate(tW_per_site_corrected_ratio=tW_per_site_corrected/)
+  mutate(tW_per_site_corrected=tW_per_site/divergence) %>% mutate(tP_per_site_corrected=tP_per_site/divergence)
   
 index_corrected=paste0(index,"_corrected")
 
+rm (diversity_only_in_common)
 
-# Autosomico:
-
-diversity_divergence_autosomic <- diversity_divergence %>%  filter(XvsTOTAL=="0")
-
-## Some summary results:
-# By pop, average and standard deviation
-
-summary_diversity_autosomic <- diversity_divergence_autosomic %>% group_by(population) %>% summarise_at(vars(tW_per_site_corrected,tP_per_site_corrected),funs(mean, sd, n()))
-
-
-## Violin plot:
-
-ggplot(data=diversity_divergence_autosomic, aes_string(x="population", y=index_corrected))+
- geom_violin() +
- theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-# Este grafico es interesante. Ahora computo un boxplot sobre estos datos.
-
-ggplot(data=diversity_divergence_autosomic, aes_string(x="population", y=index_corrected))+
- geom_boxplot( outlier.shape = NA) +#outlier.alpha = 0.5) +
- theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
- coord_cartesian(ylim = quantile(diversity_divergence_autosomic[,which(colnames(diversity_divergence_autosomic)==index_corrected)], c(0.1, 0.9))) +
- scale_y_continuous(limits = quantile(diversity_divergence_autosomic[,which(colnames(diversity_divergence_autosomic)==index_corrected)], c(0.1, 0.9))) +
- stat_summary(fun.y = mean, geom="point", colour="darkred", size=3) +
- stat_summary(fun.y = mean, geom="text", vjust=-0.7, aes( label=round(..y.., digits=5)))
-
-
-# X
-
-diversity_divergence_X <- diversity_divergence %>%  filter(XvsTOTAL=="1")
-
-## Some summary results:
-# By pop, average and standard deviation
-
-summary_diversity_X <- diversity_divergence_X %>% group_by(population) %>% summarise_at(vars(tW_per_site_corrected,tP_per_site_corrected),funs(mean, sd, n()))
-
-
-## Violin plot:
-
-ggplot(data=diversity_divergence_X, aes_string(x="population", y=index_corrected))+
- geom_violin() +
- theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-# Este grafico es interesante. Ahora computo un boxplot sobre estos datos.
-
-ggplot(data=diversity_divergence_X, aes_string(x="population", y=index_corrected))+
- geom_boxplot( outlier.shape = NA) +#outlier.alpha = 0.5) +
- theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
- coord_cartesian(ylim = quantile(diversity_divergence_X[,which(colnames(diversity_divergence_X)==index_corrected)], c(0.1, 0.9))) +
- scale_y_continuous(limits = quantile(diversity_divergence_X[,which(colnames(diversity_divergence_X)==index_corrected)], c(0.1, 0.9))) +
- stat_summary(fun.y = mean, geom="point", colour="darkred", size=3) +
- stat_summary(fun.y = mean, geom="text", vjust=-0.7, aes( label=round(..y.., digits=5)))
-
-
-
-
-# Autosomic vs X chromosome. 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Ahora pruebo la misma funcion eliminando outliers.
+# # Autosomico:
 # 
-# remove_outliers <- function(x, na.rm = TRUE, ...) {
-#   qnt <- quantile(x, probs=c(.25, .75), na.rm = na.rm, ...)
-#   H <- 1.5 * IQR(x, na.rm = na.rm)
-#   y <- x
-#   y[x < (qnt[1] - H)] <- NA
-#   y[x > (qnt[2] + H)] <- NA
-#   y
-# }
+# diversity_divergence_autosomic <- diversity_divergence %>%  filter(XvsTOTAL=="0")
 # 
-# diversity_divergence_autosomic$tW_noOutliers <- remove_outliers(diversity_divergence_autosomic$tW)
-# diversity_divergence_autosomic$tP_noOutliers <- remove_outliers(diversity_divergence_autosomic$tP)
+# ## Some summary results:
+# # By pop, average and standard deviation
 # 
-# summary_diversity_no_outliers <- diversity_divergence_autosomic %>% group_by(population) %>% summarise_at(vars(tW_noOutliers,tP_noOutliers),funs(mean(.,na.rm=TRUE), sd(.,na.rm=TRUE)))
+# summary_diversity_autosomic <- diversity_divergence_autosomic %>% group_by(population) %>% summarise_at(vars(tW_per_site_corrected,tP_per_site_corrected),funs(mean, sd, n()))
 # 
 # 
-# ggplot (data = summary_diversity_no_outliers, aes_string(x="population", y=paste0(index,"_noOutliers_mean")))+
-#   geom_point() +
-#   geom_errorbar(aes_string(ymin=paste(index,"_noOutliers_mean - ",index,"_noOutliers_sd", sep =""),ymax=paste(index,"_noOutliers_mean + ",index,"_noOutliers_sd", sep ="")), colour="black", width=.1) 
+# ## Violin plot:
+# 
+# ggplot(data=diversity_divergence_autosomic, aes_string(x="population", y=index_corrected))+
+#  geom_violin() +
+#  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+# 
+# # Este grafico es interesante. Ahora computo un boxplot sobre estos datos.
+# 
+# ggplot(data=diversity_divergence_autosomic, aes_string(x="population", y=index_corrected))+
+#  geom_boxplot( outlier.shape = NA) +#outlier.alpha = 0.5) +
+#  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+#  coord_cartesian(ylim = quantile(diversity_divergence_autosomic[,which(colnames(diversity_divergence_autosomic)==index_corrected)], c(0.1, 0.9))) +
+#  scale_y_continuous(limits = quantile(diversity_divergence_autosomic[,which(colnames(diversity_divergence_autosomic)==index_corrected)], c(0.1, 0.9))) +
+#  stat_summary(fun.y = mean, geom="point", colour="darkred", size=3) +
+#  stat_summary(fun.y = mean, geom="text", vjust=-0.7, aes( label=round(..y.., digits=5)))
 # 
 # 
-# summary_diversity_ratio_autosome_XChr <- window_diversity_filtered %>% group_by(population, window_type) %>% summarise_at(vars(tW,tP),funs(mean, sd)) %>% select (population, window_type, paste0(index,"_mean")) %>% spread(., window_type, paste0(index,"_mean")) %>% mutate (ratio=Xchr/Autosomic)
+# # X
+# 
+# diversity_divergence_X <- diversity_divergence %>%  filter(XvsTOTAL=="1")
+# 
+# ## Some summary results:
+# # By pop, average and standard deviation
+# 
+# summary_diversity_X <- diversity_divergence_X %>% group_by(population) %>% summarise_at(vars(tW_per_site_corrected,tP_per_site_corrected),funs(mean, sd, n()))
 # 
 # 
-# ggplot (data = summary_diversity_no_outliers, aes_string(x="population", y=paste0(index,"_noOutliers_mean")))+
-#   geom_point() +
-#   geom_errorbar(aes_string(ymin=paste(index,"_noOutliers_mean - ",index,"_noOutliers_sd", sep =""),ymax=paste(index,"_noOutliers_mean + ",index,"_noOutliers_sd", sep ="")), colour="black", width=.1) 
+# ## Violin plot:
 # 
-# # u_f^2  = ((u_a^2 / a^2) + (u_b^2 / b^2)) * f^2
-# # u_f=sqrt(((u_a^2 / a^2) + (u_b^2 / b^2)) * f^2)
+# ggplot(data=diversity_divergence_X, aes_string(x="population", y=index_corrected))+
+#  geom_violin() +
+#  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 # 
-# # Del artículo esta es la versión naif: CVratio~ sqrt(CVx^2 + CVy^2)
+# # Este grafico es interesante. Ahora computo un boxplot sobre estos datos.
+# 
+# ggplot(data=diversity_divergence_X, aes_string(x="population", y=index_corrected))+
+#  geom_boxplot( outlier.shape = NA) +#outlier.alpha = 0.5) +
+#  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+#  coord_cartesian(ylim = quantile(diversity_divergence_X[,which(colnames(diversity_divergence_X)==index_corrected)], c(0.1, 0.9))) +
+#  scale_y_continuous(limits = quantile(diversity_divergence_X[,which(colnames(diversity_divergence_X)==index_corrected)], c(0.1, 0.9))) +
+#  stat_summary(fun.y = mean, geom="point", colour="darkred", size=3) +
+#  stat_summary(fun.y = mean, geom="text", vjust=-0.7, aes( label=round(..y.., digits=5)))
+# 
 
+
+
+# ----------------------------------------------------------------------------------------------------------------------------
+# 29/05/2018
+
+# Hasta aquí he trabajado con los datos sin bootstrap. Tiene sentido que las ventanas tengan una dispersión muy grande, puesto que hay ventanas con un valor de diversidad muy alto y otras con valores muy bajos. Por tanto, lo que vamos a hacer es un bootstrap con reemplazamiento y vamos a calcular sobre este bootstrap nuestra dispersión. Es decir, calculo 1000 veces la media cogiendo al azar tantas ventanas como hay (permitiendo coger dos veces la misma = bootstrap), y despues calculo la dispersión de estas medias. Igual voy a hacer con la dispersión del ratio. 
+
+# https://uoftcoders.github.io/studyGroup/lessons/r/resampling/lesson/
+
+
+# Create a function to take a resample of the values, and then calculate the mean
+
+boot_mean <- function(original_vector, resample_vector) {
+    mean(original_vector[resample_vector])
+}
+
+# R is number of replications
+
+ITERATION=10000
+
+# Mi dataframe de diversity_divergence ya tiene valores que o son 0 o 1 para autosomico/X. Así que la puedo usar para filtrar. 
+
+summary_boot_mean_autosomic_tW <- data.frame(mean=numeric())
+summary_boot_mean_X_tW <- data.frame(mean=numeric())
+summary_boot_ratio_X_autosomic_tW <- data.frame(mean=numeric())
+
+summary_boot_mean_autosomic_tP <- data.frame(mean=numeric())
+summary_boot_mean_X_tP <- data.frame(mean=numeric())
+summary_boot_ratio_X_autosomic_tP <- data.frame(mean=numeric())
+
+for(pop in unique(diversity_divergence$population)) {
+  
+  print (pop)
+  
+  # Hago dos tablas temporales, autosomic y X 
+  
+  tabla_temp_autosomic <- diversity_divergence %>% filter(XvsTOTAL=="0") %>% filter (population==pop)
+  tabla_temp_X <- diversity_divergence %>% filter(XvsTOTAL=="1") %>% filter (population==pop)
+  
+  # Calculo el bootstrap de tW para la media y el ratio y lo añado a una tabla global 
+    
+  boot_mean_autosomic_tW_per_pop <- boot( data = tabla_temp_autosomic$tW_per_site, boot_mean, R = ITERATION)
+  summary_boot_mean_autosomic_tW_per_pop <- cbind(tidy(boot_mean_autosomic_tW_per_pop), pop) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                           ifelse (pop == "c_ll_ur_n006", "Urals", 
+                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                           ifelse (pop == "c_ll_la_n006", "Latvia", 
+                           ifelse (pop == "c_ll_no_n008", "Norway", 
+                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
+                           ifelse (pop == "c_ll_to_n002", "Töv",
+                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
+                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
+                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
+                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
+                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
+                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
+                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) %>% mutate(index="tW")
+  
+  summary_boot_mean_autosomic_tW <- rbind(summary_boot_mean_autosomic_tW, summary_boot_mean_autosomic_tW_per_pop)
+  
+  boot_mean_X_tW_per_pop <- boot( data = tabla_temp_X$tW_per_site, boot_mean, R = ITERATION)
+  summary_boot_mean_X_tW_per_pop <- cbind(tidy(boot_mean_X_tW_per_pop), pop) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                           ifelse (pop == "c_ll_ur_n006", "Urals", 
+                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                           ifelse (pop == "c_ll_la_n006", "Latvia", 
+                           ifelse (pop == "c_ll_no_n008", "Norway", 
+                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
+                           ifelse (pop == "c_ll_to_n002", "Töv",
+                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
+                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
+                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
+                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
+                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
+                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
+                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) %>% mutate(index="tW")
+  
+  summary_boot_mean_X_tW <- rbind(summary_boot_mean_X_tW, summary_boot_mean_X_tW_per_pop)
+  
+  # Para el ratio, hago el bootstrap de los corregidos!
+  
+  boot_mean_autosomic_tW_corrected_per_pop <- boot( data = tabla_temp_autosomic$tW_per_site_corrected, boot_mean, R = ITERATION)
+  boot_mean_X_tW_corrected_per_pop <- boot( data = tabla_temp_X$tW_per_site_corrected, boot_mean, R = ITERATION)
+
+  boot_ratio_X_autosomic_X_tW_per_pop <- as.data.frame(cbind(boot_mean_X_tW_corrected_per_pop$t, boot_mean_autosomic_tW_corrected_per_pop$t)) %>% mutate (ratio_X_autosomic=V1/V2) %>%  select (ratio_X_autosomic)
+  summary_boot_ratio_X_autosomic_tW_per_pop <- cbind(tidy (boot_ratio_X_autosomic_X_tW_per_pop), pop) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                           ifelse (pop == "c_ll_ur_n006", "Urals", 
+                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                           ifelse (pop == "c_ll_la_n006", "Latvia", 
+                           ifelse (pop == "c_ll_no_n008", "Norway", 
+                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
+                           ifelse (pop == "c_ll_to_n002", "Töv",
+                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
+                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
+                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
+                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
+                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
+                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
+                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) %>% mutate(index="tW")
+  
+  summary_boot_ratio_X_autosomic_tW <- rbind(summary_boot_ratio_X_autosomic_tW, summary_boot_ratio_X_autosomic_tW_per_pop)
+
+  
+ # Calculo el bootstrap de tP para la media y el ratio y lo añado a una tabla global 
+ 
+  boot_mean_autosomic_tP_per_pop <- boot( data = tabla_temp_autosomic$tP_per_site, boot_mean, R = ITERATION)
+  summary_boot_mean_autosomic_tP_per_pop <- cbind(tidy(boot_mean_autosomic_tP_per_pop), pop)  %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                           ifelse (pop == "c_ll_ur_n006", "Urals", 
+                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                           ifelse (pop == "c_ll_la_n006", "Latvia", 
+                           ifelse (pop == "c_ll_no_n008", "Norway", 
+                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
+                           ifelse (pop == "c_ll_to_n002", "Töv",
+                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
+                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
+                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
+                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
+                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
+                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
+                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) %>% mutate(index="tP")
+  
+  summary_boot_mean_autosomic_tP <- rbind(summary_boot_mean_autosomic_tP, summary_boot_mean_autosomic_tP_per_pop)
+  
+  boot_mean_X_tP_per_pop <- boot( data = tabla_temp_X$tP_per_site, boot_mean, R = ITERATION)
+  summary_boot_mean_X_tP_per_pop <- cbind(tidy(boot_mean_X_tP_per_pop), pop) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                           ifelse (pop == "c_ll_ur_n006", "Urals", 
+                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                           ifelse (pop == "c_ll_la_n006", "Latvia", 
+                           ifelse (pop == "c_ll_no_n008", "Norway", 
+                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
+                           ifelse (pop == "c_ll_to_n002", "Töv",
+                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
+                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
+                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
+                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
+                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
+                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
+                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) %>% mutate(index="tP")
+  
+  summary_boot_mean_X_tP <- rbind(summary_boot_mean_X_tP, summary_boot_mean_X_tP_per_pop)
+  
+  
+  # Hago el bootstrap de los corregidos por la divergencia. 
+  
+  boot_mean_autosomic_tP_corrected_per_pop <- boot( data = tabla_temp_autosomic$tP_per_site_corrected, boot_mean, R = ITERATION)
+  boot_mean_X_tP_corrected_per_pop <- boot( data = tabla_temp_X$tP_per_site_corrected, boot_mean, R = ITERATION)
+
+  
+  boot_ratio_X_autosomic_X_tP_per_pop <- as.data.frame(cbind(boot_mean_X_tP_corrected_per_pop$t, boot_mean_autosomic_tP_corrected_per_pop$t)) %>% mutate (ratio_X_autosomic=V1/V2) %>%  select (ratio_X_autosomic)
+  summary_boot_ratio_X_autosomic_tP_per_pop <- cbind(tidy (boot_ratio_X_autosomic_X_tP_per_pop), pop) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                           ifelse (pop == "c_ll_ur_n006", "Urals", 
+                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                           ifelse (pop == "c_ll_la_n006", "Latvia", 
+                           ifelse (pop == "c_ll_no_n008", "Norway", 
+                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
+                           ifelse (pop == "c_ll_to_n002", "Töv",
+                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
+                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
+                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
+                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
+                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
+                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
+                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) %>% mutate(index="tP")
+  summary_boot_ratio_X_autosomic_tP <- rbind(summary_boot_ratio_X_autosomic_tP, summary_boot_ratio_X_autosomic_tP_per_pop)
+
+  
+  
+  # Remove intermediate files
+  
+    rm (tabla_temp_autosomic,tabla_temp_X,boot_mean_autosomic_tW_per_pop, summary_boot_mean_autosomic_tW_per_pop, boot_mean_X_tW_per_pop, summary_boot_mean_X_tW_per_pop, boot_ratio_X_autosomic_X_tW_per_pop, summary_boot_ratio_X_autosomic_tW_per_pop, boot_mean_autosomic_tP_per_pop, summary_boot_mean_autosomic_tP_per_pop, boot_mean_X_tP_per_pop, summary_boot_mean_X_tP_per_pop, boot_ratio_X_autosomic_X_tP_per_pop, summary_boot_ratio_X_autosomic_tP_per_pop)
+
+  
+}
+
+
+summary_boot_mean_autosomic <- rbind (summary_boot_mean_autosomic_tW, summary_boot_mean_autosomic_tP) 
+rm (summary_boot_mean_autosomic_tW, summary_boot_mean_autosomic_tP)
+summary_boot_mean_autosomic$Populations <- factor (summary_boot_mean_autosomic$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Khentii", "Töv", "Ömnögovi", "Mongolia",  "Yakutia", "Vladivostok"))
+
+
+summary_boot_mean_X <- rbind (summary_boot_mean_X_tW, summary_boot_mean_X_tP)
+rm (summary_boot_mean_X_tW, summary_boot_mean_X_tP)
+summary_boot_mean_X$Populations <- factor (summary_boot_mean_X$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Khentii", "Töv", "Ömnögovi", "Mongolia",  "Yakutia", "Vladivostok"))
+
+
+summary_boot_ratio_X_autosomic <- rbind (summary_boot_ratio_X_autosomic_tW, summary_boot_ratio_X_autosomic_tP)
+rm  (summary_boot_ratio_X_autosomic_tW, summary_boot_ratio_X_autosomic_tP)
+summary_boot_ratio_X_autosomic$Populations <- factor (summary_boot_ratio_X_autosomic$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Khentii", "Töv", "Ömnögovi", "Mongolia",  "Yakutia", "Vladivostok"))
+
+
+cols <- c("Carpathians"=brewer.pal(12,"Paired")[9], 
+           "Kirov"=brewer.pal(12,"Paired")[1],  
+           "Latvia"=brewer.pal(12,"Paired")[3],  
+           "Norway"=brewer.pal(12,"Paired")[2],  
+           "Bialowieza"=brewer.pal(12,"Paired")[4],  
+           "Mongolia"=brewer.pal(12,"Paired")[12], 
+           "Töv"=brewer.pal(12,"Paired")[12], 
+          "Khentii"=brewer.pal(12,"Paired")[7], 
+          "Ömnögovi"=brewer.pal(12,"Paired")[11], 
+            "Tuva"=brewer.pal(12,"Paired")[8],  
+           "Urals"=brewer.pal(11,"BrBG")[9],  
+           "Vladivostok"=brewer.pal(12,"Paired")[5], 
+           "Yakutia"=brewer.pal(12,"Paired")[6], 
+           "Balkans"=brewer.pal(12,"Paired")[10])  
+
+ 
+
+# Ploteo este estadístico. 
+
+# Autosómico
+
+for (INDICE in unique(summary_boot_mean_autosomic$index))
+{
+ ggplot (filter(summary_boot_mean_autosomic, index==INDICE), aes(y=statistic, x=Populations)) + 
+   geom_bar(stat = "identity", fill="grey70") + 
+   geom_errorbar(aes(ymin=statistic-std.error, ymax=statistic+std.error), colour="black", width=.1) +
+   # scale_fill_manual(values = cols) + 
+   # scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+   ylab (paste(INDICE, sep="")) +  
+   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1)) 
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/autosomic_mean_",INDICE,"_boot.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
+
+ }
+
+
+# Ratio
+
+for (INDICE in unique(summary_boot_ratio_X_autosomic$index))
+{
+ ggplot (filter(summary_boot_ratio_X_autosomic, index==INDICE), aes(x=Populations, y=mean)) + 
+   geom_point(size=2, shape=20) + 
+   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), colour="black", width=.1) +
+   # scale_fill_manual(values = cols) + 
+   # scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+   ylab (paste(INDICE, sep="")) +  
+   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1)) 
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/ratio_X_autosomic_",INDICE,"_boot.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
+
+ }
+
+
+## COLOR
+
+# Autosomic
+
+for (INDICE in unique(summary_boot_mean_autosomic$index))
+{
+ ggplot (filter(summary_boot_mean_autosomic, index==INDICE), aes(x=Populations, y=statistic, fill=Populations, color=Populations)) + 
+   geom_point(size=2, shape=20) + 
+   geom_errorbar(aes(ymin=statistic-std.error, ymax=statistic+std.error), colour="black", width=.1) +
+   # scale_fill_manual(values = cols) + 
+   # scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+   ylab (paste(INDICE, sep="")) +  
+   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1)) 
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/autosomic_mean_",INDICE,"_boot_color.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
+
+ }
+
+
+# COLOR:
+
+# Ratio
+
+for (INDICE in unique(summary_boot_ratio_X_autosomic$index))
+{
+ ggplot (filter(summary_boot_ratio_X_autosomic, index==INDICE), aes(x=Populations, y=mean, fill=Populations, color=Populations)) + 
+   geom_point(size=2, shape=20) + 
+   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), colour="black", width=.1) +
+   # scale_fill_manual(values = cols) + 
+   # scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+   ylab (paste(INDICE, sep="")) +  
+   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1)) 
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/ratio_X_autosomic_",INDICE,"_boot_color.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
+
+ }
 
 ```
+
   
   
   
