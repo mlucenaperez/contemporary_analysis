@@ -276,37 +276,32 @@ PC <- PC %>%  mutate(.,
                           ifelse(Pop == "c_ll_vl", "L.l.stroganovi", 
                           ifelse(Pop == "c_ll_ya", "L.l.wrangeli",     
                                  NA)))))))) %>% 
-  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Poland",
+  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Bialowieza",
                           ifelse (Pop == "c_ll_ur", "Urals",
                           ifelse (Pop == "c_ll_ki", "Kirov",
                           ifelse (Pop == "c_ll_la", "Latvia",
                           ifelse (Pop == "c_ll_no", "Norway",
                           ifelse (Pop == "c_ll_ba" | Pop == "h_ll_ba", "Balkans" ,
                           ifelse (Pop == "c_ll_cr","Carpathians",
-                          ifelse (Pop == "c_ll_to", "Tov",
+                          ifelse (Pop == "c_ll_to", "Töv",
                           ifelse (Pop == "c_ll_tu", "Tuva",
                           ifelse (Pop == "c_ll_ka", "Khentii-Aimag", 
-                          ifelse (Pop == "c_ll_og", "Omnogovi", 
+                          ifelse (Pop == "c_ll_og", "Ömnögovi", 
                           ifelse (Pop == "c_ll_vl", "Vladivostok", 
                           ifelse (Pop == "c_ll_ya", "Yakutia",
                           ifelse (Pop == "c_lp_sm", "Sierra Morena",
                           ifelse (Pop == "c_lp_do", "Doñana", NA)))))))))))))))) %>% 
-<<<<<<< HEAD
-    mutate (., color =  ifelse (Populations == "Poland", brewer.pal(12,"Paired")[4], 
-                      ifelse (Populations == "Urals", brewer.pal(9,"RdPu")[6], 
-=======
     mutate (., color =  ifelse (Populations == "Bialowieza", brewer.pal(12,"Paired")[4], 
                       ifelse (Populations == "Urals", brewer.pal(11,"BrBG")[9], 
->>>>>>> fffcaa59ba6b1a711d0220af8c72dd218ffaa19b
                       ifelse (Populations == "Balkans", brewer.pal(12,"Paired")[10], 
                       ifelse (Populations == "Carpathians", brewer.pal(12,"Paired")[9], 
                       ifelse (Populations == "Kirov", brewer.pal(12,"Paired")[1], 
                       ifelse (Populations == "Latvia", brewer.pal(12,"Paired")[3], 
                       ifelse (Populations == "Norway", brewer.pal(12,"Paired")[2], 
-                      ifelse (Populations == "Tov", brewer.pal(12,"Paired")[12], 
+                      ifelse (Populations == "Töv", brewer.pal(12,"Paired")[12], 
                       ifelse (Populations == "Tuva", brewer.pal(12,"Paired")[8], 
                       ifelse (Populations == "Khentii-Aimag", brewer.pal(12,"Paired")[7], 
-                      ifelse (Populations == "Omnogovi", brewer.pal(12,"Paired")[11], 
+                      ifelse (Populations == "Ömnögovi", brewer.pal(12,"Paired")[11], 
                       ifelse (Populations == "Vladivostok", brewer.pal(12,"Paired")[5], 
                       ifelse (Populations == "Yakutia", brewer.pal(12,"Paired")[6],
                       ifelse (Populations == "Sierra Morena", brewer.pal(8, "Greys") [5],
@@ -316,23 +311,23 @@ PC <- PC %>%  mutate(.,
                            
                            
                            
-cols <- c("Poland"=brewer.pal(12,"Paired")[4], 
-          "Urals"=brewer.pal(9,"RdPu")[6], 
+cols <- c("Bialowieza"=brewer.pal(12,"Paired")[4], 
+          "Urals"=brewer.pal(11,"BrBG")[9], 
           "Balkans"=brewer.pal(12,"Paired")[10], 
           "Carpathians"=brewer.pal(12,"Paired")[9], 
           "Kirov"=brewer.pal(12,"Paired")[1], 
           "Latvia"=brewer.pal(12,"Paired")[3], 
           "Norway"=brewer.pal(12,"Paired")[2], 
-          "Tov"=brewer.pal(12,"Paired")[12], 
+          "Töv"=brewer.pal(12,"Paired")[12], 
           "Tuva"=brewer.pal(12,"Paired")[8], 
           "Khentii-Aimag"=brewer.pal(12,"Paired")[7], 
-          "Omnogovi"=brewer.pal(12,"Paired")[11], 
+          "Ömnögovi"=brewer.pal(12,"Paired")[11], 
           "Vladivostok"=brewer.pal(12,"Paired")[5], 
           "Yakutia"=brewer.pal(12,"Paired")[6],
           "Sierra Morena"=brewer.pal(8, "Greys") [5],
           "Doñana"=brewer.pal(8, "Greys") [8])
 
-PC$Populations <- factor (PC$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii", "Ömnögovi",  "Yakutia", "Vladivostok"))
+PC$Populations <- factor (PC$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii-Aimag", "Ömnögovi",  "Yakutia", "Vladivostok"))
 
 
 title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
@@ -356,15 +351,10 @@ y_axis = paste("PC",comp[2],sep="")
 #   scale_shape_manual(values=1:7)
 
 ggplot() + 
-<<<<<<< HEAD
-  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations"), size = 5) + 
-  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic() + theme(text = element_text(size=20)) 
- ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
-
-=======
-  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Populations"), size = 5) + 
-scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic() +
- ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
+geom_point(data=PC, aes_string(x=x_axis, y=y_axis, color="Populations"), size = 5) + 
+scale_colour_manual(values = cols) + ggtitle(title) + theme_classic() 
+ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
+ 
 
 
 
@@ -376,12 +366,7 @@ scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic() +
   scale_y_reverse()
  ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2_reverse_axis.pdf", sep=""),units="mm",  width=270, height=190)
 
-  ggplot() + 
-  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations"), size = 5) + 
-  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic() +
-  scale_y_reverse() + scale_x_reverse() 
- ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2_reverse_axis.pdf", sep=""),units="mm",  width=270, height=190)
-
+ 
  
  
  
@@ -398,8 +383,6 @@ ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2_reverse_axis_spanish.pdf", sep="
 
 
  
- 
->>>>>>> fffcaa59ba6b1a711d0220af8c72dd218ffaa19b
 #ggplot() + 
 #  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations", shape="seq"), size = 5) + 
 #  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic()
@@ -414,7 +397,16 @@ ggplot() +
   ggsave(paste(WORKING_DIR,pop, "_pca_subspecies_PC1_PC2.pdf", sep=""),units="mm",  width=270, height=190)
 
   
-  
+  # Article
+   ggplot() + 
+  geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="Populations"), size = 5) + 
+  scale_colour_manual(values = cols)+ ggtitle(title) + theme_classic() +
+  scale_y_reverse() +
+     theme(legend.position="top")
+   
+ ggsave(paste(WORKING_DIR,pop, "_pca_pop_PC1_PC2_reverse_axis.pdf", sep=""),units="mm",  width=270, height=190,  useDingbats=FALSE)
+
+
   
 # ggplot() + 
 #   geom_point(data=PC, aes_string(x=x_axis, y=y_axis, colour="subspecies"), size = 3)  +
