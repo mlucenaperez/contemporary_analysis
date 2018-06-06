@@ -133,15 +133,6 @@ REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without
 samtools view -h -o  h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.sam h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam
 
 
-
-
-
-
-
-
-
-
-
 /home/mlucena/atlas/atlas task=estimateTheta bam=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam fasta=$REF chr=lp23.s00001 verbose
 
 
@@ -189,6 +180,28 @@ samtools index test_sorted_rg_solved_subsampled.bam
 
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
 /home/mlucena/atlas/atlas task=estimatePMD bam=test_sorted_rg_solved_subsampled.bam fasta=$REF  verbose 
+
+samtools flagstat test_sorted_rg_solved_subsampled.bam
+# ERROR: position in TPMDTable add function is < 0!
+
+# WARNING: The following alignment is longer than its insert size: HWI-ST0857:233:C5T3DACXX:2:1216:15950:44066
+# WARNING: The following alignment is longer than its insert size: HWI-ST0857:233:C5T3DACXX:2:1216:15950:44066
+
+samtools view -h -o test_sorted_rg_solved_subsampled.sam test_sorted_rg_solved_subsampled.bam
+
+grep "HWI-ST0857:233:C5T3DACXX:2:2207:9281:36290" test_sorted_rg_solved_subsampled.sam
+
+HWI-ST0857:233:C5T3DACXX:2:2207:9281:36290	117	lp23.s00001	506758	0	*	=	506758	0	TTCAACGGAGATATTAATTATATTTCTAATAGAATTGACCGGAAGAAGGCATCTTTGTGGCATGGATCCAGGAAAAAATGAAAATAAAATAAAAAGATGTG	DAABE?DDGFGFGFEEFEEDFFFEEDEDDDECCCCEEEC>BDCDDCDBCDDDDCCDCDBBCCCACCCACCACBBBBBBCCBBBCCBBBCCCCCDFDDC?BB	MC:Z:8S93M	BD:Z:KMLKOKNJKNKJLKIKKJIJIKDJHLHJIKHJJJKLLKHHKJIHJIIKMLJHHBJGGJJLKLKJKKKJLIKJBCCCJLLJCCJIHCDKJIEEFLLPQIHJJ	PG:Z:MarkDuplicates	RG:Z:c_lp_sm_0325_C5T3DACXX_2_9nf_sorted_rg	BI:Z:MOMMRQRONRONPNOMOMMMMOGNKPMLLOKNLNNPONLLMMLJMLNMOONJMEMKJNMOONNMNNMMONMMEEEEKNOMEEKKLEEKKMFFGNMQQLKLL	AS:i:0	XS:i:0
+
+HWI-ST0857:233:C5T3DACXX:2:2207:9281:36290	185	lp23.s00001	506758	60	8S93M	=	506758	0	GGGCATCTGGGTGGCTCAATTGGTTAAGCATCAGACTTCAGCTTAGGTCATGATCTCGCATTTCATGGATTCACGCCCCACGTTGGGCTCTGTGCTGACAG	BAACDDDDCCBDCDCD=BCCCBABADBBADBABA@@AA>A>???@@>A>BACBAAB;BBCBBCCCCACCCCB>=BAA@B@=BBCAABCCCCBCBCCCA=BA	BD:Z:GLNMOKPNIMIMMOHMLKKLLLKJIJLMLKLLHLLIJLLLMIIKIKLLLLLLKHGLHMLJCJLKKKKKJJLHJHKEEKHKKJKKFKMGHNIHOOPPPIMJJ	MD:Z:10G13C35G4G27	PG:Z:MarkDuplicates	RG:Z:c_lp_sm_0325_C5T3DACXX_2_9nf_sorted_rg	BI:Z:INPPSOTSLQNRPRMQOMOOPOOMNMOPPOOPKOPNMOPOPNKNNMMNONONNJJNKOOMELNONNMNMLNJMKMHHMJMMMMNHMOJJPLKOQQRQKPLL	NM:i:4	AS:i:73	XS:i:46
+
+
+# Para bajar el programa:
+
+# git pull
+# make clean
+# make
+
 
 ```
 
