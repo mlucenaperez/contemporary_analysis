@@ -188,7 +188,38 @@ mantel(as.dist(geo_distances_complete_matrix), as.dist(genetic_distances_matrix)
 filter(pop1 != "c_ll_cr" , pop2 != "c_ll_cr") 
 
 
+# Article
 
+ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, linetype=comparison)) +
+  geom_point(alpha = 0.05, aes(shape=comparison)) +
+  scale_shape_manual(values=c(3, 17, 16)) +
+  scale_linetype_manual(values=c("twodash", "solid", "dotted")) +
+  theme_classic() +
+  geom_smooth(method='lm', color="black") +
+  labs(
+    x = "log(Geographic distance (Km))",
+    y = "Genetic distance" ) +
+  theme(legend.position="top", legend.title = element_blank()) 
+  ggsave("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/figures_article/genetic_distance_vs_geographic_distance.pdf")
+
+  
+# Article --> color
+
+  ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, linetype=comparison, fill=comparison, color=comparison)) +
+  geom_point(alpha = 0.05, aes(shape=comparison)) +
+  scale_shape_manual(values=c(3, 17, 16)) +
+  scale_linetype_manual(values=c("twodash", "solid", "dotted")) +
+  theme_classic() +
+  geom_smooth(method='lm') +
+  labs(
+    x = "log(Geographic distance (Km))",
+    y = "Genetic distance" ) +
+  theme(legend.position="top", legend.title = element_blank()) 
+  ggsave("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/figures_article/genetic_distance_vs_geographic_distance_color.pdf")
+  
+  
+
+# Power Point
 ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, fill=comparison, color=comparison)) +
   geom_point(alpha = 0.01) +
   theme_classic() +
