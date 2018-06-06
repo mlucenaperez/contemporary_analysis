@@ -450,6 +450,44 @@ cols <- c("Carpathians"=brewer.pal(12,"Paired")[9],
            "Balkans"=brewer.pal(12,"Paired")[10])  
 
  
+
+
+# For article.
+
+## Autosomic.
+
+for (INDICE in unique(diversity_to_plot$index))
+{
+ ggplot (filter(diversity_to_plot,index==INDICE), aes(x=Populations, y=autosomic)) + 
+   geom_point(size=3, shape=20) + 
+   #scale_fill_manual(values = cols) + 
+   scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+   ylab (paste(INDICE, sep="")) +  
+   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1)) 
+ggsave(paste("/Users/marialucenaperez/Desktop/autosomic_",INDICE,".pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") 
+
+ }
+
+## Ratio
+
+for (INDICE in unique(diversity_to_plot$index))
+{
+ ggplot (filter(diversity_to_plot,index==INDICE), aes(x=Populations, y=ratio)) + 
+  geom_point(size=3, shape=20) + 
+   #scale_fill_manual(values = cols) + 
+   #scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+   ylab (paste("Ratio X/autosome:",INDICE, sep=""))  +  
+   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_y_continuous( by = 0.5),1))
+ggsave(paste("/Users/marialucenaperez/Desktop/ratio_Xchr_autosomic_",INDICE,".pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm") 
+
+ }
+
+
+# For Powerpoint.
+
 for (INDICE in unique(diversity_to_plot$index))
 {
  ggplot (filter(diversity_to_plot,index==INDICE), aes(x=Populations, y=ratio, fill=Populations)) + 
@@ -463,6 +501,6 @@ ggsave(paste("/Users/marialucenaperez/Desktop/ratio_Xchr_autosomic_",INDICE,".pd
 
 
 
-
+```
 
 
