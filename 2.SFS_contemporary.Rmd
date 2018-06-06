@@ -1558,10 +1558,14 @@ data_diversity <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions
                       ifelse (centr_percentage >= 0.75, "centr", "no_centr_no_tel" )))))  %>% 
   # Creo un identificador único para luego poder filtrar por este cuando tenga que sacar los comunes a todas las poblaciones. 
   mutate (., id_feature = paste(feature,"_",id, sep ="")) %>% 
-  mutate (., chr = ifelse (chr.x == chr.y, chr.y, "PROBLEMA"))
+  mutate (., chr = ifelse (chr.x == chr.y, as.character(chr.x), "PROBLEMA")) 
 
 
-b <- data_diversity %>% mutate (., prueba = ifelse (chr.x == chr.y, as.factor(chr.x), "PROBLEMA"))
+
+# Compruebo que efectivamente no hay ningún cromosoma que no encaje. 
+unique(data_diversity$chr)
+
+
 
 # Sanity checks de que no hay duplicados:
 # filter (data_diversity, pop=="c_ll_ki_n013") %>% nrow
@@ -1575,9 +1579,7 @@ data_diversity_filtered <- data_diversity %>%  filter (., informative_sites>=50 
                                                filter (., !(feature=="promoter_gene_1000" & length < 1000)) %>% 
                                                filter (., !(feature=="promoter_lncRNA_250" & length < 250)) %>% 
                                                filter (., !(feature=="promoter_lncRNA_500" & length < 500)) %>% 
-                                               filter (., !(feature=="promoter_lncRNA_1000" & length < 1000)) %>% 
-  mutate (CHR, ifelse())
-
+                                               filter (., !(feature=="promoter_lncRNA_1000" & length < 1000)) 
 
 # Ordenar los factores. 
 
