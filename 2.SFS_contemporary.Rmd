@@ -1972,25 +1972,23 @@ library(rlang)
 DATAFRAMES=c("data_diversity_stats_ki_no","data_diversity_stats_ki_po","data_diversity_stats_sm_do")
 INDICES=c("ratio_corrected_diversity_pairwise", "ratio_corrected_diversity_watterson")
 
-
-myplot <- function(data)
-  {
-  print (data)
-  for (INDEX in INDICES)
-  {
-    ggplot(data=data, aes_string(x="feature", y = INDEX)) +
+myplot <- function(data, title){
+  jpeg(paste(wd_output, title,".jpeg", sep=""))
+  plot <- ggplot(data=data, aes_string(x="feature", y = "ratio_corrected_diversity_watterson")) +
         geom_point(color="black") +
-        theme_bw() +  #theme selection for background and lines
+   theme_bw() +  #theme selection for background and lines
         theme(axis.line.x = element_line(color="black", size = 0.5),
-              axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))
-      #ggsave(paste(wd_output, DATA.FRAME,"_plot_ratio_corrected.pdf", sep=""))
-  }
+              axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))+
+    labs(title = title)
+  print (plot)
+  dev.off()
+    #ggsave(paste(wd_output, DATA.FRAME,"_plot_ratio_corrected.pdf", sep=""))
 }
 
 for(i in DATAFRAMES){
-  print (i)
-  print(myplot(get(i)))
+  print(myplot(get(i), i))
 }
+
 
 
       # ggsave(paste (wd_output, INDEX,"_per_",GROUP,"_",SPECIE,"_boxplot.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
