@@ -1584,11 +1584,13 @@ data_diversity_filtered <- data_diversity %>%  filter (., informative_sites>=50 
 # Ordenar los factores. 
 
 data_diversity$Populations <- factor (data_diversity$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
+
 data_diversity$chr <- factor(data_diversity$chr, levels = c("ChrA1","chrC1","chrB1","chrA2","chrC2","chrB2","chrB3","chrB4","chrA3","chrD1","chrD3","chrD4","chrD2","chrF2","chrF1","chrE2","chrE1","chrX"))
 
 
 
 data_diversity_filtered$Populations <- factor (data_diversity_filtered$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
+
 data_diversity_filtered$chr <- factor(data_diversity_filtered$chr, levels = c("ChrA1","chrC1","chrB1","chrA2","chrC2","chrB2","chrB3","chrB4","chrA3","chrD1","chrD3","chrD4","chrD2","chrF2","chrF1","chrE2","chrE1","chrX"))
 
 
@@ -1956,6 +1958,18 @@ calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity,c_ll
 calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_diversity,c_lp_do_n012_diversity, deparse(substitute(c_lp_sm_n019_diversity)),deparse(substitute(c_lp_do_n012_diversity)))
 
 
+write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, paste(wd_output,"data_diversity_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+rm(data_diversity)
+rm(c_ll_ki_n013_diversity)
+rm(c_ll_po_n008_diversity)
+rm(c_ll_no_n008_diversity)
+rm(c_lp_sm_n019_diversity)
+rm(c_lp_do_n012_diversity)
 
 ```
 
@@ -2007,227 +2021,92 @@ for(i in DATAFRAMES){
 
 ## Stats de los ratios. 
 
+
 ```{r}
+
 library(boot)
 library(broom)
+library(magrittr)
+library(dplyr)
+
+wd_output <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/"
+
+# https://uoftcoders.github.io/studyGroup/lessons/r/resampling/lesson/
+# Explicación del paquete boot y boot_mean
+# https://www.painblogr.org/2017-10-18-purrring-through-bootstraps.html
+# Explicación interesantisima sobre la integración de boot con dplyr group by. 
+
+# Leo las tablas
+
+data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity <- read.table(paste(wd_output,        "data_diversity_c_ll_ki_n013_c_ll_no_n008.tsv", sep=""), sep=";", header = T)
+
+data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity <- read.table(paste(wd_output,                 "data_diversity_c_ll_ki_n013_c_ll_po_n008.tsv", sep=""), sep=";", header = T)
+
+data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity <- read.table(paste(wd_output,                 "data_diversity_c_lp_sm_n019_c_lp_do_n012.tsv", sep=""), sep=";", header = T)
+
+
+boot_mean <- function(original_vector, resample_vector) {
+   mean(original_vector[resample_vector])
+}
+
 
 DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
 
 INDICES=c("ratio_pairwise_average", "ratio_watterson_average", "ratio_corrected_by_pairwise_average_intergenic_per_unit", "ratio_corrected_by_watterson_average_intergenic_per_unit", "ratio_corrected_by_pairwise_average_intergenic_weighted", "ratio_corrected_by_watterson_average_intergenic_weighted")
 
 GROUPS=c("feature", "region", "chr")
+DATAFRAMES=c("kk")
+ITERATION=10
 
 
-diversity_stats_pop <- function(diversity_df, title)
+for (DATAFRAME in DATAFRAMES)
 {
+  print (DATAFRAME)
   for (GROUP in GROUPS)
-    {
-  diversity_stats_df <- 
-             diversity_df %>% 
-             group_by(pop, GROUP) %>%
-             summarise(mean_ratio_pairwise_average=mean(ratio_pairwise_average),
-                       mean_ratio_watterson_average=mean(ratio_watterson_average),
-                       mean_ratio_corrected_by_pairwise_average_intergenic_per_unit=mean(ratio_corrected_by_pairwise_average_intergenic_per_unit),
-                       mean_ratio_corrected_by_watterson_average_intergenic_per_unit=mean(ratio_corrected_by_watterson_average_intergenic_per_unit),
-                       mean_ratio_corrected_by_pairwise_average_intergenic_weighted=mean(ratio_corrected_by_pairwise_average_intergenic_weighted),
-                       mean_ratio_corrected_by_watterson_average_intergenic_weighted=mean(ratio_corrected_by_watterson_average_intergenic_weighted))
-  assing (title, diversity_stats_df,.GlobalEnv)
+  {
+    print(GROUP)
+    #for (INDEX in INDICES)
+    #{
+    #  print (INDEX)
+      
+      DATAFRAME_filtered <- get(DATAFRAME) %>%
+ # First I group the data by species 
+ dplyr::group_by_(GROUP) %>%
+ # Then I nest the dataframe
+ tidyr::nest()
+
+# Add a list column called "booted" containing the object produced by `
+# applying `boot::boot` over the data in the "data" list-column.
+
+DATAFRAME_filtered_booted <- DATAFRAME_filtered %<>%
+ dplyr::mutate(booted = purrr::map(.x = data, # The list-column containing <S3: tibble>
+                                   ~ boot::boot(data = as.numeric(.x$ratio_pairwise_average), # The <S3 tibble> column being sampled
+                                                statistic = boot_mean, # The user-defined function
+                                                R = ITERATION)))
+DATAFRAME_filtered_boot_name <- paste (DATAFRAME, GROUP, "ratio_pairwise_ave", sep="_")
+assign (DATAFRAME_filtered_boot_name, DATAFRAME_filtered_booted,.GlobalEnv)    
+      
+    }
   }
-  }
+#}
 
 
-for (data in DATAFRAMES){
-  diversity_stats_pop (get(data), data)
-}
+
+   dplyr::mutate(booted_ci = purrr::map(.x = booted, # The list-column containing <S3: boot> objects
+                                        ~ boot::boot.ci(.x,
+                                                        conf = 0.95, # Interval width
+                                                        type = "bca")))  # Calculate a BCa interval
 
 
-stats_df_pop <- diversity_stats_pop(data_diversity_filtered)
-write.table(stats_df_pop, paste(wd_output,"stats_diversity_per_pop.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
-
-# https://uoftcoders.github.io/studyGroup/lessons/r/resampling/lesson/
-
-boot_mean <- function(original_vector, resample_vector) {
-    mean(original_vector[resample_vector])
-}
-
-# R is number of replications
-
-ITERATION=100
-kk <- boot( data = data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity$ratio_pairwise_average, boot_mean, R = ITERATION)
-tidy(kk)
- mierda <-data.frame(x = 1, y = 1:10)
-
-
+# Pasos a seguir despues:
+   # Cambiar el nombre boot por el nombre de cada ratio.
+   # Añadir los intervalos de confianza
+   # Plotear distribuciones
+   # Unnest los datos para tener una dataframe bonita para plotear.
+   
+# Si todo esto funciona hacerlo para la interacción feature-chr, feature-region, chr-region   
+   
 ```
-
-
-Bootstrap
-
-```{r}
-
-
-# Create a function to take a resample of the values, and then calculate the mean
-
-boot_mean <- function(original_vector, resample_vector) {
-    mean(original_vector[resample_vector])
-}
-
-# R is number of replications
-
-ITERATION=10000
-boot_mean_autosomic_tW_per_pop <- boot( data = tabla_temp_autosomic$tW_per_site, boot_mean, R = ITERATION)
-# Mi dataframe de diversity_divergence ya tiene valores que o son 0 o 1 para autosomico/X. Así que la puedo usar para filtrar. 
-
-summary_boot_mean_autosomic_tW <- data.frame(mean=numeric())
-summary_boot_mean_X_tW <- data.frame(mean=numeric())
-summary_boot_ratio_X_autosomic_tW <- data.frame(mean=numeric())
-
-summary_boot_mean_autosomic_tP <- data.frame(mean=numeric())
-summary_boot_mean_X_tP <- data.frame(mean=numeric())
-summary_boot_ratio_X_autosomic_tP <- data.frame(mean=numeric())
-
-for(pop in unique(diversity_divergence$population)) {
-  
-  print (pop)
-  
-  # Hago dos tablas temporales, autosomic y X 
-  
-  tabla_temp_autosomic <- diversity_divergence %>% filter(XvsTOTAL=="0") %>% filter (population==pop)
-  tabla_temp_X <- diversity_divergence %>% filter(XvsTOTAL=="1") %>% filter (population==pop)
-  
-  # Calculo el bootstrap de tW para la media y el ratio y lo añado a una tabla global 
-    
-  boot_mean_autosomic_tW_per_pop <- boot( data = tabla_temp_autosomic$tW_per_site, boot_mean, R = ITERATION)
-  summary_boot_mean_autosomic_tW_per_pop <- cbind(tidy(boot_mean_autosomic_tW_per_pop), pop) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
-                           ifelse (pop == "c_ll_ur_n006", "Urals", 
-                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
-                           ifelse (pop == "c_ll_la_n006", "Latvia", 
-                           ifelse (pop == "c_ll_no_n008", "Norway", 
-                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
-                           ifelse (pop == "c_ll_to_n002", "Töv",
-                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
-                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
-                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
-                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
-                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
-                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
-                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) %>% mutate(index="tW")
-  
-  summary_boot_mean_autosomic_tW <- rbind(summary_boot_mean_autosomic_tW, summary_boot_mean_autosomic_tW_per_pop)
-  
-  boot_mean_X_tW_per_pop <- boot( data = tabla_temp_X$tW_per_site, boot_mean, R = ITERATION)
-  summary_boot_mean_X_tW_per_pop <- cbind(tidy(boot_mean_X_tW_per_pop), pop) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
-                           ifelse (pop == "c_ll_ur_n006", "Urals", 
-                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
-                           ifelse (pop == "c_ll_la_n006", "Latvia", 
-                           ifelse (pop == "c_ll_no_n008", "Norway", 
-                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
-                           ifelse (pop == "c_ll_to_n002", "Töv",
-                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
-                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
-                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
-                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
-                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
-                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
-                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) %>% mutate(index="tW")
-  
-  summary_boot_mean_X_tW <- rbind(summary_boot_mean_X_tW, summary_boot_mean_X_tW_per_pop)
-  
-  # Para el ratio, hago el bootstrap de los corregidos!
-  
-  boot_mean_autosomic_tW_corrected_per_pop <- boot( data = tabla_temp_autosomic$tW_per_site_corrected, boot_mean, R = ITERATION)
-  boot_mean_X_tW_corrected_per_pop <- boot( data = tabla_temp_X$tW_per_site_corrected, boot_mean, R = ITERATION)
-
-  boot_ratio_X_autosomic_X_tW_per_pop <- as.data.frame(cbind(boot_mean_X_tW_corrected_per_pop$t, boot_mean_autosomic_tW_corrected_per_pop$t)) %>% mutate (ratio_X_autosomic=V1/V2) %>%  select (ratio_X_autosomic)
-  summary_boot_ratio_X_autosomic_tW_per_pop <- cbind(tidy (boot_ratio_X_autosomic_X_tW_per_pop), pop) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
-                           ifelse (pop == "c_ll_ur_n006", "Urals", 
-                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
-                           ifelse (pop == "c_ll_la_n006", "Latvia", 
-                           ifelse (pop == "c_ll_no_n008", "Norway", 
-                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
-                           ifelse (pop == "c_ll_to_n002", "Töv",
-                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
-                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
-                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
-                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
-                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
-                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
-                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) %>% mutate(index="tW")
-  
-  summary_boot_ratio_X_autosomic_tW <- rbind(summary_boot_ratio_X_autosomic_tW, summary_boot_ratio_X_autosomic_tW_per_pop)
-
-  
- # Calculo el bootstrap de tP para la media y el ratio y lo añado a una tabla global 
- 
-  boot_mean_autosomic_tP_per_pop <- boot( data = tabla_temp_autosomic$tP_per_site, boot_mean, R = ITERATION)
-  summary_boot_mean_autosomic_tP_per_pop <- cbind(tidy(boot_mean_autosomic_tP_per_pop), pop)  %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
-                           ifelse (pop == "c_ll_ur_n006", "Urals", 
-                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
-                           ifelse (pop == "c_ll_la_n006", "Latvia", 
-                           ifelse (pop == "c_ll_no_n008", "Norway", 
-                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
-                           ifelse (pop == "c_ll_to_n002", "Töv",
-                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
-                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
-                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
-                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
-                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
-                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
-                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) %>% mutate(index="tP")
-  
-  summary_boot_mean_autosomic_tP <- rbind(summary_boot_mean_autosomic_tP, summary_boot_mean_autosomic_tP_per_pop)
-  
-  boot_mean_X_tP_per_pop <- boot( data = tabla_temp_X$tP_per_site, boot_mean, R = ITERATION)
-  summary_boot_mean_X_tP_per_pop <- cbind(tidy(boot_mean_X_tP_per_pop), pop) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
-                           ifelse (pop == "c_ll_ur_n006", "Urals", 
-                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
-                           ifelse (pop == "c_ll_la_n006", "Latvia", 
-                           ifelse (pop == "c_ll_no_n008", "Norway", 
-                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
-                           ifelse (pop == "c_ll_to_n002", "Töv",
-                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
-                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
-                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
-                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
-                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
-                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
-                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) %>% mutate(index="tP")
-  
-  summary_boot_mean_X_tP <- rbind(summary_boot_mean_X_tP, summary_boot_mean_X_tP_per_pop)
-  
-  
-  # Hago el bootstrap de los corregidos por la divergencia. 
-  
-  boot_mean_autosomic_tP_corrected_per_pop <- boot( data = tabla_temp_autosomic$tP_per_site_corrected, boot_mean, R = ITERATION)
-  boot_mean_X_tP_corrected_per_pop <- boot( data = tabla_temp_X$tP_per_site_corrected, boot_mean, R = ITERATION)
-
-  
-  boot_ratio_X_autosomic_X_tP_per_pop <- as.data.frame(cbind(boot_mean_X_tP_corrected_per_pop$t, boot_mean_autosomic_tP_corrected_per_pop$t)) %>% mutate (ratio_X_autosomic=V1/V2) %>%  select (ratio_X_autosomic)
-  summary_boot_ratio_X_autosomic_tP_per_pop <- cbind(tidy (boot_ratio_X_autosomic_X_tP_per_pop), pop) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
-                           ifelse (pop == "c_ll_ur_n006", "Urals", 
-                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
-                           ifelse (pop == "c_ll_la_n006", "Latvia", 
-                           ifelse (pop == "c_ll_no_n008", "Norway", 
-                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
-                           ifelse (pop == "c_ll_to_n002", "Töv",
-                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
-                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
-                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
-                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
-                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
-                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
-                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) %>% mutate(index="tP")
-  summary_boot_ratio_X_autosomic_tP <- rbind(summary_boot_ratio_X_autosomic_tP, summary_boot_ratio_X_autosomic_tP_per_pop)
-
-  
-```
-
-
-
-
-
-
 
 
 
