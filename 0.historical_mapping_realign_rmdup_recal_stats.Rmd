@@ -1237,7 +1237,7 @@ declare -A BARCODEID=(["C9KH6ANXX_5_LYNX7-702ii5-4"]="h_lp_mt_0884" ["C9KN6ANXX_
 ```
 
 
-## 	Aligment BWA-MEM	
+## 	Aligment BWA-ALN
 
 Checked whether you are using trimmed or untrimmed data.
 
