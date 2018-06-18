@@ -115,6 +115,7 @@ REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without
 
 # Con BWA-mem
 
+
 ```{bash}
 
 java -jar /opt/picard-tools/picard.jar FixMateInformation I=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner.bam O=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam VALIDATION_STRINGENCY=LENIENT
@@ -123,8 +124,12 @@ java -jar /opt/picard-tools/picard.jar ValidateSamFile I=h_lp_mt_1305_sorted_rmd
 
 samtools index h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam
 
+
+# 18/06/2018 --> Relanzo esto.
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
 /home/mlucena/atlas/atlas task=estimatePMD bam=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam fasta=$REF  verbose 
+
+
 # ERROR: position in TPMDTable add function is < 0!
 # estimatePMD: Gives the error “ERROR: position in TPMDTable add function is < 0!"
 # Parece ser que es porque no tiene el TLEN (o longitud de inserto), así que voy a comprobarlo. 
@@ -134,8 +139,6 @@ samtools view -h -o  h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.
 
 
 /home/mlucena/atlas/atlas task=estimateTheta bam=h_lp_mt_1305_sorted_rmdup_sorted_indelrealigner_mate_fixed.bam fasta=$REF chr=lp23.s00001 verbose
-
-
 
 
 
@@ -201,6 +204,19 @@ HWI-ST0857:233:C5T3DACXX:2:2207:9281:36290	185	lp23.s00001	506758	60	8S93M	=	506
 # git pull
 # make clean
 # make
+
+
+```
+
+# CONTEMPORARY
+
+
+```{bash}
+
+# corro estimate theta sobre una muestra contemporanea.
+
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+/home/mlucena/atlas/atlas task=estimateTheta bam=test_sorted_rg_solved.bam fasta=$REF chr=lp23.s00001 verbose
 
 
 ```
