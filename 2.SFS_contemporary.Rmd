@@ -32,7 +32,7 @@ cd $RUTA/whole_genome_analysis/sfs
 #To launch one by one
 
 # POP="c_lp_do_n012"  # <--CHANGE POP HERE
-POP="all pops"
+POP="c_ll_ki_n008"
 screen -S "$POP"_sfs_wg
 # screen -S "$POP"_thetas
 #POP="all pops"
@@ -41,7 +41,10 @@ screen -S "$POP"_sfs_wg
 #script "$POP"_sfs_wg.log
 # script "$POP"_thetas.log
 
-# POP="c_lp_do_n012"  # <--CHANGE POP HERE
+#POP="c_lp_sm_n012"  # <--CHANGE POP HERE
+POP="c_ll_ki_n008"  # <--CHANGE POP HERE
+
+# POPS=(c_lp_sm_n012 c_ll_ki_n008)   # <--CHANGE POP HERE
 
 THREADS=15                     # no. of computer cores used by bwa and samtools. 20 = OK, >20 = ask people first!
 
@@ -49,17 +52,20 @@ RUTA=/home/mlucena/ANGSD_analysis/depth_calculus
 ANGSD="/opt/angsd/angsd"
 NGSTOOLS="/opt/angsd/angsd/misc"
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+
+###  Ojo para correr esto en el futuro: hay que tener en cuenta que este no tiene filtrado los sitios repetitivos y low complexity y que si nos interesa quitarlos habría que recortarlo luego, o usar una referencia libre de estos sitios. 
 ANC="/home/GRUPOS/grupolince/reference_genomes/lynx_rufus_genome/c_lr_zz_0001_recal1.fa"
+###  
+
 FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
 FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
 RUTA=/home/mlucena/ANGSD_analysis
 
-POPS=(c_lp_sm_n019 c_ll_ki_n013 c_ll_no_n008 c_ll_po_n008 c_lp_do_n012 c_lp_sm_n019)   # <--CHANGE POP HERE
 
 # 6/3/2018 --> Lo he lanzado en un loop que acaba en SAF posprob. 
 
-for POP in  ${POPS[@]}
-do
+#for POP in  ${POPS[@]}
+#do
 
 read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < $RUTA/depth_calculus/"${POP}"_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
 
@@ -1552,15 +1558,13 @@ data_diversity <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions
   mutate (., Species =ifelse (specie=="ll", "L.lynx", 
                    ifelse (specie=="lp", "L.pardinus", NA))) %>% 
   # Anoto qué es cada región 
-  mutate (., region = ifelse (tel2m_percentage >= 0.75 & tel10m_percentage >= 0.75, "tel2m_tel10m", 
-                      ifelse (tel2m_percentage >= 0.75 & tel10m_percentage < 0.75, "tel2m", 
-                      ifelse (tel2m_percentage < 0.75 & tel10m_percentage >= 0.75, "tel10m", 
-                      ifelse (centr_percentage >= 0.75, "centr", "no_centr_no_tel" )))))  %>% 
+  mutate (., region = ifelse (tel2m_percentage >= 0.75, "Telomere_2m", 
+                       ifelse (centr_percentage >= 0.75, "Centromere", "Arm" )))  %>% 
   # Creo un identificador único para luego poder filtrar por este cuando tenga que sacar los comunes a todas las poblaciones. 
   mutate (., id_feature = paste(feature,"_",id, sep ="")) %>% 
   mutate (., chr = ifelse (chr.x == chr.y, as.character(chr.x), "PROBLEMA")) %>% select (-c(chr.x, chr.y))
 
-
+# 2248581
 
 # Compruebo que efectivamente no hay ningún cromosoma que no encaje. 
 # unique(data_diversity$chr)
@@ -1573,25 +1577,60 @@ data_diversity <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions
 # filter (data_diversity, pop=="c_ll_ki_n013") %>% select(id_feature) %>% unique() %>% nrow
 # 450064
 
-data_diversity_filtered <- data_diversity %>%  filter (., informative_sites>=50 | informative_sites/length>=0.20) %>% 
-                                               filter (., !(feature=="promoter_gene_250" & length < 250)) %>% 
-                                               filter (., !(feature=="promoter_gene_500" & length < 500)) %>% 
-                                               filter (., !(feature=="promoter_gene_1000" & length < 1000)) %>% 
-                                               filter (., !(feature=="promoter_lncRNA_250" & length < 250)) %>% 
-                                               filter (., !(feature=="promoter_lncRNA_500" & length < 500)) %>% 
-                                               filter (., !(feature=="promoter_lncRNA_1000" & length < 1000)) 
+
+data_diversity_pre <- data_diversity %>%  
+  filter (., informative_sites>=50) %>% 
+  filter (., informative_sites/length>=0.20) %>% 
+  filter (., !(feature=="promoter_gene_250")) %>% 
+  filter (., !(feature=="promoter_gene_500")) %>% 
+  filter (., !(feature=="promoter_gene_1000" & length < 1000)) %>% 
+  filter (., !(feature=="promoter_lncRNA_250")) %>% 
+  filter (., !(feature=="promoter_lncRNA_500")) %>% 
+  filter (., !(feature=="promoter_lncRNA_1000" & length < 1000)) %>% 
+  mutate (unique_id = paste (id,feature, sep="_"))
+
+# 2003073; 2248581-2003073=245508 
+
+# Saco la lista de elementos comunes a todas las unidades para cada especie. 
+
+# Primero par lynx lynx:
+
+data_diversity_filtered_ki <- data_diversity_pre %>% filter (pop=="c_ll_ki_n013")
+data_diversity_filtered_no <- data_diversity_pre %>% filter (pop=="c_ll_no_n008")
+data_diversity_filtered_po <- data_diversity_pre %>% filter (pop=="c_ll_po_n008")
+
+lista_lynxlynx <- inner_join(data_diversity_filtered_ki, data_diversity_filtered_no, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>% inner_join(., data_diversity_filtered_po, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id" ))  %>% select("unique_id")
+ 
+data_diversity_filtered_lynxlynx <- data_diversity_pre %>% filter (specie=="ll") %>% filter(unique_id %in% lista_lynxlynx$unique_id)
+
+# Ahora para pardinus:
+
+data_diversity_filtered_sm <- data_diversity_pre %>% filter (pop=="c_lp_sm_n019")
+data_diversity_filtered_do <- data_diversity_pre %>% filter (pop=="c_lp_do_n012")
+
+lista_lynxpardinus <- inner_join(data_diversity_filtered_sm, data_diversity_filtered_do, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>% select("unique_id")
+
+data_diversity_filtered_lynxpardinus <- data_diversity_pre %>% filter (specie=="lp") %>% filter(unique_id %in% lista_lynxpardinus$unique_id)
+data_diversity_filtered <- rbind(data_diversity_filtered_lynxlynx, data_diversity_filtered_lynxpardinus)
+
+# Con los filtrados hemos perdido 251.736 unidades. Aqui entran los promotores que se han caido. 
 
 # Ordenar los factores. 
 
-data_diversity$Populations <- factor (data_diversity$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
-
-data_diversity$chr <- factor(data_diversity$chr, levels = c("chrA1","chrC1","chrB1","chrA2","chrC2","chrB2","chrB3","chrB4","chrA3","chrD1","chrD3","chrD4","chrD2","chrF2","chrF1","chrE2","chrE1","chrX"))
-
-
-
 data_diversity_filtered$Populations <- factor (data_diversity_filtered$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
-
 data_diversity_filtered$chr <- factor(data_diversity_filtered$chr, levels = c("chrA1","chrC1","chrB1","chrA2","chrC2","chrB2","chrB3","chrB4","chrA3","chrD1","chrD3","chrD4","chrD2","chrF2","chrF1","chrE2","chrE1","chrX"))
+
+
+# Borro las que no necesito luego
+rm (data_diversity_filtered_sm)
+rm (data_diversity_filtered_do)
+rm (data_diversity_filtered_ki)
+rm (data_diversity_filtered_po)
+rm (data_diversity_filtered_no)
+rm (data_diversity)
+rm (data_diversity_filtered_lynxlynx)
+rm (data_diversity_filtered_lynxpardinus)
+rm (data_diversity_pre)
 
 
 # 5/6/2018
@@ -1602,7 +1641,8 @@ data_diversity_filtered$chr <- factor(data_diversity_filtered$chr, levels = c("c
 
 # Voy a nombrar como telómero 10m, 2m o centr lo que tenga más de 75% de bases como tal. 
 # Ojo que : Todo lo que tiene bases como tel2m está contenido en 10m, pero por supuesto no todo lo que está en 2m está en 10m . 
-# 
+# 21/06/2018 --> Despues de pensarlo, y hacer gráficas que comparaban tel 0-10 con tel 0-2 me voy a quedar solo con tel2.  
+#
 # uu <- filter (data_diversity, data_diversity$tel10m_percentage!=data_diversity$tel2m_percentage)
 
 # # Porcentaje de telomericas.
@@ -1662,7 +1702,42 @@ for (pop in unique(data_diversity$Populations))
  
 ```
 
+##### Otros sanity checks
+
+¿Cómo solapan lncRNA con ncRNA?
+
+```{r}
+
+lncRNA <- data_diversity %>% filter (feature=="lncRNA")
+# 55885 observaciones
+
+ggplot(lncRNA, aes(x=length))+
+  geom_histogram(bins = 2000) +
+  coord_cartesian(xlim=c(0, 3000))
+
+sncRNA <- data_diversity %>% filter (feature=="ncRNA")
+# 21043 observaciones
+
+ggplot(sncRNA, aes(x=length))+
+  geom_histogram(bins = 2000) +
+  coord_cartesian(xlim=c(0, 3000))
+
+ncRNA <- inner_join(lncRNA, sncRNA, by = c("scaffold", "start_cero_based", "end", "length")) %>%  select ("scaffold", "start_cero_based", "end","feature.x","id_gene.x", "id.x", "feature.y","id_gene.y", "id.y" ) %>% unique
+# Son 14 los que coinciden. 
+
+# He sacado graficas para tel2m y telomero de 0 a 10m y hemos decidido quedarnos con tel2m.
+# Antes la clasificación incluía tel2m_tel10m de esta manera lo separamos en dos y replicamos las columnas de manera que una región que pertenece al 2m también aparece repetida para el 10m. 
+data_diversity_filtered <-  data_diversity_filtered %>%  mutate (., region=replace(region, region =="no_centr_no_tel", "nocentrnotel")) %>% separate_rows (data_diversity_filtered, region, sep="_")
+
+
+```
+Algunas notas sobre los lncRNA y ncRNA
+Infernal ("INFERence of RNA ALignment") is for searching DNA sequence databases for RNA structure and sequence similarities. It is an implementation of a special case of profile stochastic context-free grammars called covariance models (CMs). A CM is like a sequence profile, but it scores a combination of sequence consensus and RNA secondary structure consensus, so in many cases, it is more capable of identifying RNA homologs that conserve their secondary structure more than their primary sequence.
+
+
+
 #### General stats
+
 
 #### Empirical values per pop
 
@@ -1678,15 +1753,15 @@ diversity_stats_pop <- function(diversity_df)
              dplyr::group_by(pop) %>%
              dplyr::summarise(mean_watterson_ave=mean(watterson_ave),
                        mean_pairwise_ave=mean(pairwise_ave),
-                       # mean_tajimaD=mean(tajimaD),
+                       mean_tajimaD=mean(tajimaD),
                        
                        median_watterson_ave=median(watterson_ave),
                        median_pairwise_ave=median(pairwise_ave),
-                       # median_tajimaD=median(tajimaD),
+                       median_tajimaD=median(tajimaD),
                        
                        wmean_watterson_ave=weighted.mean(watterson_ave,w=informative_sites),
                        wmean_pairwise_ave=mean(pairwise_ave,w=informative_sites),
-                       # wmean_tajimaD=mean(tajimaD,w =informative_sites),
+                       wmean_tajimaD=mean(tajimaD,w =informative_sites),
   
                        # wmean_var_watterson_ave = wtd.var(watterson_ave,informative_sites),
                        # wmean_var_pairwise_ave = wtd.var(pairwise_ave,informative_sites),
@@ -1698,11 +1773,11 @@ diversity_stats_pop <- function(diversity_df)
 
                        q25_watterson_ave=quantile(watterson_ave,0.25),
                        q25_pairwise_ave=quantile(pairwise_ave,0.25),
-                       # q25_tajimaD=quantile(tajimaD,0.25),
+                       q25_tajimaD=quantile(tajimaD,0.25),
                        
                        q75_watterson_ave=quantile(watterson_ave,0.75),
                        q75_pairwise_ave=quantile(pairwise_ave,0.75),
-                       # q75_tajimaD=quantile(tajimaD,0.75),
+                       q75_tajimaD=quantile(tajimaD,0.75),
                        
                        q05_watterson_ave=quantile(watterson_ave,0.05),
                        q05_pairwise_ave=quantile(pairwise_ave,0.05),
@@ -1710,15 +1785,15 @@ diversity_stats_pop <- function(diversity_df)
                        
                        q95_watterson_ave=quantile(watterson_ave,0.95),
                        q95_pairwise_ave=quantile(pairwise_ave,0.95),
-                       # q95_tajimaD=quantile(tajimaD,0.95),
+                       q95_tajimaD=quantile(tajimaD,0.95),
                        
                        IQR_watterson_ave = q75_watterson_ave - q25_watterson_ave,
                        IQR_pairwise_ave  = q75_pairwise_ave  - q25_pairwise_ave,
-                       # IQR_tajimaD       = q75_tajimaD       - q25_tajimaD ,
+                       IQR_tajimaD       = q75_tajimaD       - q25_tajimaD ,
                        
                        lowerw_watterson_ave = q25_watterson_ave - 1.5* IQR_watterson_ave,
                        lowerw_pairwise_ave  = q25_pairwise_ave  - 1.5* IQR_pairwise_ave,
-                       # lowerw_tajimaD       = q25_tajimaD       - 1.5* IQR_tajimaD,
+                       lowerw_tajimaD       = q25_tajimaD       - 1.5* IQR_tajimaD,
                        
                        upperw_watterson_ave = q75_watterson_ave + 1.5* IQR_watterson_ave,
                        upperw_pairwise_ave  = q75_pairwise_ave  + 1.5* IQR_pairwise_ave) %>% 
@@ -1756,48 +1831,48 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
              dplyr::group_by_("pop",GROUP) %>%
              dplyr::summarise(mean_watterson_ave=mean(watterson_ave),
                        mean_pairwise_ave=mean(pairwise_ave),
-                       # mean_tajimaD=mean(tajimaD),
+                       mean_tajimaD=mean(tajimaD),
                        
                        median_watterson_ave=median(watterson_ave),
                        median_pairwise_ave=median(pairwise_ave),
-                       # median_tajimaD=median(tajimaD),
+                       median_tajimaD=median(tajimaD),
                        
                        wmean_watterson_ave=weighted.mean(watterson_ave,w=informative_sites),
                        wmean_pairwise_ave=weighted.mean(pairwise_ave,w=informative_sites),
-                       # wmean_tajimaD=mean(tajimaD,w =informative_sites),
+                       wmean_tajimaD=mean(tajimaD,w =informative_sites),
   
                        wmean_var_watterson_ave = wtd.var(watterson_ave,informative_sites),
                        wmean_var_pairwise_ave = wtd.var(pairwise_ave,informative_sites),
-                       # wmean_var_tajimaD = wtd.var(tajimaD,informative_sites),
+                       wmean_var_tajimaD = wtd.var(tajimaD,informative_sites),
   
                        
                        wmean_sd_watterson_ave =  sqrt(wmean_var_watterson_ave),
                        wmean_sd_pairwise_ave =  sqrt(wmean_var_pairwise_ave),
-                       # wmean_sd_tajimaD =  sqrt(wmean_var_tajimaD),
+                       wmean_sd_tajimaD =  sqrt(wmean_var_tajimaD),
 
                        q25_watterson_ave=quantile(watterson_ave,0.25),
                        q25_pairwise_ave=quantile(pairwise_ave,0.25),
-                       # q25_tajimaD=quantile(tajimaD,0.25),
+                       q25_tajimaD=quantile(tajimaD,0.25),
                        
                        q75_watterson_ave=quantile(watterson_ave,0.75),
                        q75_pairwise_ave=quantile(pairwise_ave,0.75),
-                       # q75_tajimaD=quantile(tajimaD,0.75),
+                       q75_tajimaD=quantile(tajimaD,0.75),
                        
                        q05_watterson_ave=quantile(watterson_ave,0.05),
                        q05_pairwise_ave=quantile(pairwise_ave,0.05),
-                       # q05_tajimaD=quantile(tajimaD,0.05),
+                       q05_tajimaD=quantile(tajimaD,0.05),
                        
                        q95_watterson_ave=quantile(watterson_ave,0.95),
                        q95_pairwise_ave=quantile(pairwise_ave,0.95),
-                       # q95_tajimaD=quantile(tajimaD,0.95),
+                       q95_tajimaD=quantile(tajimaD,0.95),
                        
                        IQR_watterson_ave = q75_watterson_ave - q25_watterson_ave,
                        IQR_pairwise_ave  = q75_pairwise_ave  - q25_pairwise_ave,
-                       # IQR_tajimaD       = q75_tajimaD       - q25_tajimaD ,
+                       IQR_tajimaD       = q75_tajimaD       - q25_tajimaD ,
                        
                        lowerw_watterson_ave = q25_watterson_ave - 1.5* IQR_watterson_ave,
                        lowerw_pairwise_ave  = q25_pairwise_ave  - 1.5* IQR_pairwise_ave,
-                       # lowerw_tajimaD       = q25_tajimaD       - 1.5* IQR_tajimaD,
+                       lowerw_tajimaD       = q25_tajimaD       - 1.5* IQR_tajimaD,
                        
                        upperw_watterson_ave = q75_watterson_ave + 1.5* IQR_watterson_ave,
                        upperw_pairwise_ave  = q75_pairwise_ave  + 1.5* IQR_pairwise_ave) %>% 
@@ -1833,6 +1908,9 @@ for (GROUP in GROUPS)
  diversity_stats_grouped(data_diversity_filtered, GROUP) 
 }
 
+
+
+
 # Lo calculamos con la tabla filtrada. 
 
 write.table(stats_df_chr, paste(wd_output,"stats_diversity_per_pop_per_chr.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
@@ -1841,6 +1919,26 @@ write.table(stats_df_region, paste(wd_output,"stats_diversity_per_pop_per_region
 
 ```
 
+
+#### Separate by pop 
+
+```{r}
+
+# Saco las tablas para cada población y añado una columna en la que corrijo por la media de pairwise. 
+
+
+POPS=c("c_ll_ki_n013","c_ll_no_n008","c_ll_po_n008", "c_lp_do_n012", "c_lp_sm_n019")
+
+for (POP in POPS)
+{
+  print (POP)
+    data.frame <-  stats_df_feature  %>%  filter (pop==as.character(POP))
+    assign(paste(POP,"_ave_diversity", sep=""), data.frame)
+  rm (data.frame)
+  
+}
+
+```
 
 #### Bootstraped mean 
 
@@ -1854,7 +1952,6 @@ library(broom)
 boot_mean <- function(original_vector, resample_vector) {
    mean(original_vector[resample_vector])
 }
-
 
 # Cargo la función global
 diversity_stats_grouped_boot <- function(DATAFRAME ,GROUP)
@@ -1901,7 +1998,33 @@ diversity_stats_grouped_boot <- function(DATAFRAME ,GROUP)
   names(watterson_average_summary)[3] <- "mean_watterson_boot"
   names(watterson_average_summary)[4] <- "sd_watterson_boot"
   
-  tmp_group <- full_join (watterson_average_summary, pairwise_average_summary, by = c("pop", GROUP, "Populations", "Species"))
+  
+  
+  DATAFRAME_nested <- DATAFRAME %>% dplyr::group_by_("pop", GROUP) %>% tidyr::nest()
+  tajimaD <- DATAFRAME_nested %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$tajimaD), statistic = boot_mean, R = ITERATION))) %>% 
+    dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+    dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+  names(tajimaD)[3] <- "values"
+  tajimaD_summary <- tajimaD  %>% 
+    group_by_(.dots=c("pop", GROUP)) %>%
+    dplyr::summarise(mean=mean(values),sd=sd(values)) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                            ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                            ifelse (pop == "c_ll_no_n008", "Norway", 
+                            ifelse (pop == "c_lp_sm_n019", "Andujar", 
+                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
+  mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
+                            ifelse (pop == "c_ll_ki_n013", "L.lynx", 
+                            ifelse (pop == "c_ll_no_n008", "L.lynx", 
+                            ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
+                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA)))))) 
+  names(tajimaD_summary)[3] <- "mean_tajimaD_boot"
+  names(tajimaD_summary)[4] <- "sd_tajimaD_boot"
+  
+  
+  
+  
+  
+  tmp_group <- full_join (watterson_average_summary, pairwise_average_summary, by = c("pop", GROUP, "Populations", "Species")) %>% full_join (., tajimaD_summary, by = c("pop", GROUP, "Populations", "Species"))
   tmp_group$Populations <- factor (tmp_group$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
   
   
@@ -1916,6 +2039,8 @@ diversity_stats_grouped_boot <- function(DATAFRAME ,GROUP)
   rm (watterson_average_summary)
   rm (pairwise_average)
   rm (pairwise_average_summary)
+  rm (tajimaD)
+  rm (tajimaD_summary)
   rm (DATAFRAME_nested)
   
 }
@@ -1932,12 +2057,27 @@ GROUPS=c("feature", "region", "chr")
 
 # Lo guardo 
 
-write.table(stats_df_chr_boostrapped, paste(wd_output,"stats_diversity_per_pop_per_chr_bootstrapped.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-write.table(stats_df_feature_boostrapped, paste(wd_output,"stats_diversity_per_pop_per_feature_boostrapped.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-write.table(stats_df_region_boostrapped, paste(wd_output,"stats_diversity_per_pop_per_region_boostrapped.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+write.table(stats_df_chr_boostrapped, paste(wd_output,"stats_diversity_per_pop_per_chr_bootstrapped.tsv",sep=""), quote = F,  row.names = F, sep =";", dec="," )
+write.table(stats_df_feature_boostrapped, paste(wd_output,"stats_diversity_per_pop_per_feature_boostrapped.tsv",sep=""), quote = F,  row.names = F, sep =";", dec="," )
+write.table(stats_df_region_boostrapped, paste(wd_output,"stats_diversity_per_pop_per_region_boostrapped.tsv",sep=""), quote = F,  row.names = F, sep =";", dec="," )
 
 
 ```
+Nota:
+He comprobado la normalidad en un caso concreto, pero creo que puede ser aplicable a todo.
+
+Para el caso:
+kk <- DATAFRAME_nested %>%  filter(pop=="c_ll_ki_n013") %>% filter(feature=="CDS")
+shapiro.test(kk$boot_matrix)
+
+Shapiro-Wilk normality test
+
+data:  kk$boot_matrix
+W = 0.99973, p-value = 0.8071
+
+From the output, the p-value > 0.05 implying that the distribution of the data are not significantly different from normal distribution. In other words, we can assume the normality.
+
+Así que perfecto!
 
 
 #### Graph empirical boxplot & violin plot 
@@ -1979,14 +2119,14 @@ for (SPECIE in unique(data_diversity_filtered$specie))
               panel.border = element_blank(),
               panel.background = element_blank(),
               strip.background = element_blank(),
-              strip.text = element_text(angle = 90),
-              panel.spacing = unit(1.5, "lines"))
+              strip.text = element_text(angle = 90))
+             # panel.spacing = unit(1.5, "lines"))
       ggsave(paste (wd_output, "boxplot_violin_plot/",INDEX,"_per_",GROUP,"_",SPECIE,"_boxplot.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
       
       # VIOLIN
       
       ggplot(data=filter(data_diversity_filtered,specie==!!SPECIE), aes_string(x="Populations", y = INDEX, fill="Populations")) +
-        geom_violin(color="black") +
+        geom_violin() +
         facet_grid(reformulate(GROUP), scales="free", switch="x") +
         scale_y_continuous(trans = 'log10') +
         scale_x_discrete(GROUP) +
@@ -2006,13 +2146,14 @@ for (SPECIE in unique(data_diversity_filtered$specie))
               panel.border = element_blank(),
               panel.background = element_blank(),
               strip.background = element_blank(),
-              strip.text = element_text(angle = 90),
-              panel.spacing = unit(1.5, "lines"))
+              strip.text = element_text(angle = 90))
+            #  panel.spacing = unit(1.5, "lines"))
       ggsave(paste (wd_output,"boxplot_violin_plot/", INDEX,"_per_",GROUP,"_",SPECIE,"_violin.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
       
     }
   }
 }
+
 
 
 ```
@@ -2047,6 +2188,16 @@ for (DATAFRAME in DATAFRAMES)
       theme(axis.line.x = element_line(color="black", size = 0.5),
             axis.text.x = element_blank(),strip.text = element_text(angle = 90))
     ggsave(paste (wd_output,"wmean_watterson_per_",colnames(get(DATAFRAME))[2],"_",SPECIE,".pdf", sep="" ), device="pdf")
+    
+    
+    ggplot(data=get(DATAFRAME) %>% filter(.,Species==!!SPECIE), aes_string(x="Populations",y="wmean_tajimaD", fill="Populations", color="Populations")) +
+      geom_point() +
+      facet_grid(reformulate(colnames(get(DATAFRAME))[2]), scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))
+    ggsave(paste (wd_output,"wmean_tajimaD_per_",colnames(get(DATAFRAME))[2],"_",SPECIE,".pdf", sep="" ), device="pdf")
    }
 }
 
@@ -2085,6 +2236,17 @@ for (DATAFRAME in DATAFRAMES)
       theme(axis.line.x = element_line(color="black", size = 0.5),
             axis.text.x = element_blank(),strip.text = element_text(angle = 90))
     ggsave(paste (wd_output,"mean_watterson_boot_per_",colnames(get(DATAFRAME))[2],"_",SPECIE,".pdf", sep="" ), device="pdf")
+    
+     ggplot(data=get(DATAFRAME) %>% filter(.,Species==!!SPECIE), aes_string(x="Populations",y="mean_tajimaD_boot", fill="Populations", color="Populations")) +
+      geom_point() +
+      geom_errorbar(aes(ymin=(mean_tajimaD_boot-sd_tajimaD_boot), ymax=(mean_tajimaD_boot+sd_tajimaD_boot))) +
+      facet_grid(reformulate(colnames(get(DATAFRAME))[2]), scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))
+    ggsave(paste (wd_output,"mean_tajimaD_boot_per_",colnames(get(DATAFRAME))[2],"_",SPECIE,".pdf", sep="" ), device="pdf")
+
    }
 }
 
@@ -2093,6 +2255,10 @@ for (DATAFRAME in DATAFRAMES)
 
 
 ## Tablas corregidas para la media de intergénico.
+
+
+General
+
 
 ```{r}
 
@@ -2128,6 +2294,7 @@ for (POP in POPS)
 # Hago una tabla con la media para cada grupo y para cada población. 
 
 data_diversity_filtered_ave_corrected <- rbind (c_ll_ki_n013_diversity,c_ll_no_n008_diversity,c_ll_po_n008_diversity, c_lp_do_n012_diversity, c_lp_sm_n019_diversity)
+
 
 INDICES=c("corrected_by_pairwise_average_intergenic_per_unit", "corrected_by_watterson_average_intergenic_per_unit")
 
@@ -2271,6 +2438,43 @@ for (SPECIE in unique(diversity_stats_df_feature_corrected$specie))
 
 ## Creo tablas interacción entre non-bootleneck vs bootleneck
 
+###Sobre la de stats
+
+```{r}
+
+
+# Calculo el ratio para la media:
+
+bootleneck_vs_non_bootleneck_ratio_averages <- function(POP1, POP2, name_POP1, name_POP2){
+  ratio_averages_POP1_POP2 <- full_join ( select ( POP1, pop, feature, mean_pairwise_ave, mean_watterson_ave), select ( POP2, pop, feature, mean_pairwise_ave, mean_watterson_ave), by ="feature") %>% 
+    mutate (ratio_averages_pairwise=mean_pairwise_ave.y/mean_pairwise_ave.x) %>% 
+    mutate (ratio_averages_watterson=mean_watterson_ave.y/mean_watterson_ave.x)
+  
+  dataframename <- paste ("ratio_averages", name_POP1, name_POP2, sep="_")
+  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
+}
+
+
+# Create data frame
+
+# Dataframe Kirov-Norway
+bootleneck_vs_non_bootleneck_ratio_averages(c_ll_ki_n013_ave_diversity,c_ll_no_n008_ave_diversity, deparse(substitute(c_ll_ki_n013_ave_diversity)),deparse(substitute(c_ll_no_n008_ave_diversity)))
+
+# Dataframe Kirov-Poland
+bootleneck_vs_non_bootleneck_ratio_averages(c_ll_ki_n013_ave_diversity,c_ll_po_n008_ave_diversity, deparse(substitute(c_ll_ki_n013_ave_diversity)),deparse(substitute(c_ll_po_n008_ave_diversity)))
+
+# Dataframe Sierra_Morena-Doñana
+bootleneck_vs_non_bootleneck_ratio_averages(c_lp_sm_n019_ave_diversity, c_lp_do_n012_ave_diversity, deparse(substitute(c_lp_sm_n019_ave_diversity)),deparse(substitute(c_lp_do_n012_ave_diversity)))
+
+
+write.table(ratio_averages_c_ll_ki_n013_ave_diversity_c_ll_no_n008_ave_diversity, paste(wd_output,"ratio_averages_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+write.table(ratio_averages_c_ll_ki_n013_ave_diversity_c_ll_po_n008_ave_diversity, paste(wd_output,"ratio_averages_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+write.table(ratio_averages_c_lp_sm_n019_ave_diversity_c_lp_do_n012_ave_diversity, paste(wd_output,"ratio_averages_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+```
+
+###Sobre la general
 
 ```{r}
 
@@ -2311,6 +2515,12 @@ write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity, paste(
 
 write.table(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity, paste(wd_output,"data_diversity_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
+
+# También las creo a lo largo para poder lanzar modelos
+
+c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model <- rbind(c_ll_ki_n013_diversity, c_ll_po_n008_diversity)
+
+
 # rm(data_diversity)
 # rm(c_ll_ki_n013_diversity)
 # rm(c_ll_po_n008_diversity)
@@ -2320,9 +2530,65 @@ write.table(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity, paste(
 
 ```
 
+## Modelo glm
+
+```{r}
+install.packages("stats")
+library(stats)
+# data=c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model
+
+ki.po.model_glm_nointeraction <- glm (watterson_ave ~ Populations + feature, data=c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model )
+summary(ki.po.model_glm_nointeraction)
+
+ki.po.model_glm_interaction <- glm (watterson_ave ~ Populations * feature, data=c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model )
+summary(ki.po.model_glm_interaction)
+
+plot(ki.po.model_glm_nointeraction)
+
+anova.res <- anova(ki.po.model_glm_nointeraction, ki.po.model_glm_interaction)
+ 1-pchisq( abs(anova.res$Deviance[2]), abs(anova.res$Df[2]))
+```
 
 
-## Representación gráfica de la interacción: boxplots
+
+## Modelo mixto generalizado
+
+
+```{r}
+library(lme4)
+
+data=c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model
+
+ki.po.model_nointeraction <- lmer (watterson_ave ~ Populations + feature + ( 1 | unique_id ), data=c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model, REML=FALSE)
+# Nota: REML sirve para el likelihood ratio test
+
+summary (ki.po.model_nointeraction)
+
+
+ki.po.model_iteraction <- lmer (watterson_ave ~ Populations * feature + ( 1 | unique_id ), data=c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model, REML=FALSE)
+
+summary (ki.po.model_iteraction)
+
+
+# problema de convergencia!
+
+
+anova(ki.po.model_nointeraction,ki.po.model_iteraction)
+
+```
+Again, let’s work through this: First, the output reminds you of the model that you
+fit. Then, there’s some general summary statistics such as Akaike’s Information
+Criterion, the log-Likelihood etc. We won’t go into the meaning of these different
+values in this tutorial because these are conceptually a little bit more involved.
+Let’s focus on the output for the random effects first:
+
+
+You’re being reminded of the formula of the two models that you’re comparing.
+Then, you find a Chi-Square value, the associated degrees of freedom and the pvalue2.
+You would report this result the following way:
+“… politeness affected pitch (χ2(1)=11.62, 
+
+## Graph boxplot interacción
 
 No corro esto porque creo que NO es útil 
 
@@ -2334,57 +2600,57 @@ No estoy haciendo esta vez:
 Primero los voy a representar en boxplot para chr, feature, y región , luego voy a hacer una tabla con la media de los ratios y su bootstrap. 
 
 ```{r}
-# 
-# library(rlang)
-# # Ratio de la diversidad población bootleneck frente non bootleneck
-# ## BOXPLOT
-# 
-# DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
-# 
-# INDICES=c("ratio_pairwise_average", "ratio_watterson_average", "ratio_corrected_by_pairwise_average_intergenic_per_unit", "ratio_corrected_by_watterson_average_intergenic_per_unit")
-# 
-# GROUPS=c("feature", "region", "chr")
-# 
-# 
-# myplot <- function(data, title){
-#   for (INDEX in INDICES){
-#     for (GROUP in GROUPS){
-#   pdf(paste(wd_output,title,"_",GROUP,"_",INDEX,"_y_transformed.pdf", sep=""))
-#   plot <- ggplot(data=data, aes_string(x=GROUP, y = INDEX)) +
-#         geom_boxplot(outlier.shape = NA, color="black") +
-#         scale_y_continuous(trans = 'log10') +
-#         theme_bw() +  #theme selection for background and lines
-#         theme(axis.line.x = element_line(color="black", size = 0.5),
-#               axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))+
-#   labs(title = paste (title, "scale_y_transformed", sep=""))
-#   print (plot)
-#   dev.off()
-# }}}
-# 
-# 
-# 
-# myplot2 <- function(data, title){
-#   for (INDEX in INDICES){
-#     for (GROUP in GROUPS){
-#   pdf(paste(wd_output,title,"_",GROUP,"_",INDEX,".pdf", sep=""))
-#   plot <- ggplot(data=data, aes_string(x=GROUP, y = INDEX)) +
-#         geom_boxplot(outlier.shape = NA, color="black") +
-#         #scale_y_continuous(trans = 'log10') +
-#         theme_bw() +  #theme selection for background and lines
-#         theme(axis.line.x = element_line(color="black", size = 0.5),
-#               axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))+
-#   labs(title = paste (title, sep=""))
-#   print (plot)
-#   dev.off()
-# }}}
-# 
-# 
-# 
-# for(i in DATAFRAMES){
-#   print(myplot(get(i), i))
-#   print(myplot2(get(i), i))
-# 
-# }
+
+library(rlang)
+# Ratio de la diversidad población bootleneck frente non bootleneck
+## BOXPLOT
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+INDICES=c("ratio_pairwise_average", "ratio_watterson_average")
+
+GROUPS=c("feature", "region", "chr")
+
+
+myplot <- function(data, title){
+  for (INDEX in INDICES){
+    for (GROUP in GROUPS){
+  pdf(paste(wd_output, "boxplot_violin_plot/",title,"_",GROUP,"_",INDEX,"_boxplot.pdf", sep=""))
+  plot <- ggplot(data=data, aes_string(x=GROUP, y = INDEX)) +
+        geom_boxplot() +
+        #scale_y_continuous(trans = 'log10') +
+        theme_bw() +  #theme selection for background and lines
+        theme(axis.line.x = element_line(color="black", size = 0.5),
+              axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))+
+  labs(title = paste (title,  sep=""))
+  print (plot)
+  dev.off()
+}}}
+
+
+
+myplot2 <- function(data, title){
+  for (INDEX in INDICES){
+    for (GROUP in GROUPS){
+  pdf(paste(wd_output, "boxplot_violin_plot/",title,"_",GROUP,"_",INDEX,"_violin.pdf", sep=""))
+  plot <- ggplot(data=data, aes_string(x=GROUP, y = INDEX)) +
+        geom_violin() +
+        #scale_y_continuous(trans = 'log10') +
+        theme_bw() +  #theme selection for background and lines
+        theme(axis.line.x = element_line(color="black", size = 0.5),
+              axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))+
+  labs(title = paste (title, sep=""))
+  print (plot)
+  dev.off()
+}}}
+
+
+
+for(i in DATAFRAMES){
+  print(myplot(get(i), i))
+  print(myplot2(get(i), i))
+
+}
 
 
 ```
@@ -2474,7 +2740,7 @@ boot_mean <- function(original_vector, resample_vector) {
 
 DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
 GROUPS=c("feature", "region", "chr")
-ITERATION=1000
+ITERATION=100
 
 
 
@@ -2790,14 +3056,38 @@ DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "da
 
 for (DATAFRAME in DATAFRAMES) 
 {
- ggplot(data=get(DATAFRAME), aes(x=watterson_ave.y ,y=watterson_ave.x, fill=feature, colour=feature)) +
-        geom_point() +
+ 
+    ggplot(data=get(DATAFRAME), aes(x=watterson_ave.y ,y=watterson_ave.x, fill=feature, colour=feature)) +
+       geom_point(alpha = 1/100) +
+    geom_smooth()+
     geom_abline(intercept = 0) +
    facet_wrap(~feature, scales = "free" )
-   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_.pdf", sep=""))
+   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson_scalefree.pdf", sep=""))
+     
+   ggplot(data=get(DATAFRAME), aes(x=watterson_ave.y ,y=watterson_ave.x, fill=feature, colour=feature)) +
+       geom_point(alpha = 1/100) +
+    geom_smooth()+
+    geom_abline(intercept = 0) +
+   facet_wrap(~feature)
+   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson.pdf", sep=""))
 }      
         
-   
+for (DATAFRAME in DATAFRAMES) 
+{
+ ggplot(data=get(DATAFRAME), aes(x=pairwise_ave.y ,y=pairwise_ave.x, fill=feature, colour=feature)) +
+        geom_point() +
+        geom_smooth()+
+    geom_abline(intercept = 0) +
+   facet_wrap(~feature, scales = "free" )
+   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise_scalefree.pdf", sep=""))
+
+   ggplot(data=get(DATAFRAME), aes(x=pairwise_ave.y ,y=pairwise_ave.x, fill=feature, colour=feature)) +
+        geom_point() +
+        geom_smooth()+
+    geom_abline(intercept = 0) +
+   facet_wrap(~feature )
+   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise.pdf", sep=""))
+}       
    
 ```
 
