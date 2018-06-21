@@ -1,0 +1,30 @@
+---
+title: '*gene_content_per_cat_chr'
+output: html_document
+---
+
+
+# Gene content
+
+```{r}
+
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(stringr)
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/"
+
+cat_chr_info <- read.table(paste(wd, "cat_chr_information.txt", sep=""), header=T, na.strings = c("NA", "na"), dec = ".", stringsAsFactors=F)
+
+genes_in_cat_by_chr <- read.table(paste(wd, "CatGenesEnsembl.txt", sep=""), header=T, na.strings = c("NA", "na"), sep="\t", stringsAsFactors=F) %>%  mutate( number_of_bases_genes=txEnd -txStart) %>% mutate (chr=substr(chrom, 1, 5)) %>% mutate(chr=replace(chr, chr=="chrX_", "chrX"))
+genes_in_cat_by_chr <- genes_in_cat_by_chr[! genes_in_cat_by_chr$chr %in% c("chrUn","chrM"), ] 
+gene_content_by_chr <- genes_in_cat_by_chr %>% group_by(chr) %>% summarise(genic_bases =sum(number_of_bases_genes))
+
+all_chr_infor <- full_join(cat_chr_info, gene_content_by_chr, by="chr") %>% mutate(percentage_genes= genic_bases /(SizeMb*1000000))
+
+write.table(all_chr_infor, paste (wd, "cat_chr_gene_content_information.txt", sep=""))
+
+```
+
