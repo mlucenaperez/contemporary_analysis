@@ -156,19 +156,22 @@ c_ll_to-c_ll_ka-c_ll_og --> Done
 
 
 Para los análisis de intergénico vamos a usar un filtro sacado de wg. 
-
-
 ¡¡¡ OJO INCLUIR NUMERO DE IND EN LA DEFINICION DE POP!!!
+
+# 2018/06/19
+
+Creo un bam list para  c_ll_ki (with only 8 ind 2018/06/19) y otro para Sierra Morena con 12 ind a mano, y lo lanzo!
+
 
 ```{r, engine=bash, eval=FALSE}
 
 cd /home/mlucena/ANGSD_analysis/depth_calculus
 #To launch one by one
-POP="c_ll_og_n002"  # <--CHANGE POP HERE
+POP="c_lp_sm_n012"  # <--CHANGE POP HERE
 screen -S "$POP"_qc_test
-POP="c_ll_og_n002"  # <--CHANGE POP HERE
+POP="c_lp_sm_n012"  # <--CHANGE POP HERE
 script "$POP"_qc.log
-POP="c_ll_og_n002"  # <--CHANGE POP HERE
+POP="c_lp_sm_n012"  # <--CHANGE POP HERE
 
 REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
 THREADS=15                    # no. of computer cores used 20 = OK, >20 = ask people first!
