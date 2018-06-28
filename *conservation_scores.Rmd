@@ -1,0 +1,81 @@
+---
+title: '*conservation_scores'
+output: html_document
+---
+
+26/06/2018
+
+# Getting the conservation scores by gene in humnan / cat
+
+Queremos obtener los conservation score de los distintos genes de lince para ver si la perdida / ganancia de diversidad se relaciona (+ o -) con estos o no. 
+
+Para ello, inspirandonos en este post (https://www.biostars.org/p/150152/) lo primero que hemos hecho ha sido:
+
+##  1. Info about PhastCons & phyloP
+
+Empaparnos de cómo se mide este grado de conservación. Hemos observado que generalmente se mide como phyloP (phylogenetic p-values) o PhastCons que salen del programa PhastCons. 
+De la página: http://genome.ucsc.edu/cgi-bin/hgTrackUi?db=hg19&g=cons46way
+
+This track shows multiple alignments of 46 vertebrate species and measurements of evolutionary conservation using two methods (phastCons and phyloP) from the PHAST package, for all species (vertebrate) and two subsets (primate and placental mammal). The multiple alignments were generated using multiz and other tools in the UCSC/Penn State Bioinformatics comparative genomics alignment pipeline. Conserved elements identified by phastCons are also displayed in this track.
+
+PhastCons --> PhastCons (which has been used in previous Conservation tracks) is a hidden Markov model-based method that estimates the probability that each nucleotide belongs to a conserved element, based on the multiple alignment. It considers not just each individual alignment column, but also its flanking columns. 
+
+phyloP --> By contrast, phyloP separately measures conservation at individual columns, ignoring the effects of their neighbors. As a consequence, the phyloP plots have a less smooth appearance than the phastCons plots, with more "texture" at individual sites. 
+
+The two methods have different strengths and weaknesses. PhastCons is sensitive to "runs" of conserved sites, and is therefore effective for picking out conserved elements. PhyloP, on the other hand, is more appropriate for evaluating signatures of selection at particular nucleotides or classes of nucleotides (e.g., third codon positions, or first positions of miRNA target sites).
+
+Another important difference is that phyloP can measure acceleration (faster evolution than expected under neutral drift) as well as conservation (slower than expected evolution). In the phyloP plots, sites predicted to be conserved are assigned positive scores (and shown in blue), while sites predicted to be fast-evolving are assigned negative scores (and shown in red). The absolute values of the scores represent -log p-values under a null hypothesis of neutral evolution. The phastCons scores, by contrast, represent probabilities of negative selection and range between 0 and 1.
+
+Both phastCons and phyloP treat alignment gaps and unaligned nucleotides as missing data, and both were run with the same parameters for each species set (vertebrates, placental mammals, and primates). Thus, in regions in which only primates appear in the alignment, all three sets of scores will be the same, but in regions in which additional species are available, the mammalian and/or vertebrate scores may differ from the primate scores. The alternative plots help to identify sequences that are under different evolutionary pressures in, say, primates and non-primates, or mammals and non-mammals.
+
+The species aligned for this track include the reptile, amphibian, bird, and fish clades, as well as marsupial, monotreme (platypus), and placental mammals. Compared to the previous 44-vertebrate alignment (hg18), this track includes 2 new species and 5 species with updated sequence assemblies (Table 1). The new species consist of two assemblies: baboon (papHam1) at 5.3X coverage and wallaby (macEug1) at 2X coverage. The elephant, opossum, rabbit, tetraodon, and zebrafish assemblies have been updated from those used in the previous 44-species alignment.
+
+UCSC has repeatmasked and aligned the low-coverage genome assemblies, and provides the sequence for download; however, we do not construct genome browsers for them. Missing sequence in the low-coverage assemblies is highlighted in the track display by regions of yellow when zoomed out and Ns displayed at base level (see Gap Annotation, below).
+
+
+## 2. Download data:
+
+We downloaded data from http://hgdownload.cse.ucsc.edu/goldenPath/hg19/phyloP46way/
+
+```{bash}
+
+mkdir /home/mlucena/conservation_level
+cd /home/mlucena/conservation_level
+
+rsync -avz --progress         rsync://hgdownload.cse.ucsc.edu/goldenPath/hg19/phyloP46way/vertebrate ./
+
+```
+
+## 3. Format data
+
+```{bash}
+# First download bedopts:
+
+## Download program from https://github.com/bedops/bedops/releases and copy in the terminal
+## Follow instructions: http://bedops.readthedocs.io/en/latest/content/installation.html
+
+cd /home/mlucena/conservation_level/vertebrate
+
+for fn in `ls *.wigFix.gz`; do gunzip -c ${fn} | /home/mlucena/bedops/wig2bed - > ${fn}.bed; done
+
+# Ahora toca lo de abajo
+/home/mlucena/bedops/bedops --everything chr*.bed > vertebrate.phyloP46.bed
+
+```
+
+
+
+
+
+
+Otros enlaces de interes:
+
+https://www.biostars.org/p/150152/
+https://github.com/maasha/biopieces/wiki/get_genome_phastcons
+https://www.biostars.org/p/16724/#16731
+https://ccg.vital-it.ch/mga/mm9/phastcons/phastcons.html
+
+
+
+
+
