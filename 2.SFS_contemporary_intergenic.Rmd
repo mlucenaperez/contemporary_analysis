@@ -1466,7 +1466,33 @@ ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeogra
  }
 
 ```
+# Population density vs diversity
 
+```{r}
+library(dplyr)
+library(ggplot2)
+library (tidyr)
+library(RColorBrewer)
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/population_density/"
+
+pop_vs_diversity <- read.table(paste (wd, "population_vs_diversity.txt", sep=""), sep="\t", dec=",", header=T, na.strings = "-nan")
+
+
+ggplot(pop_vs_diversity, aes(x=sqrtkm, y=pi, label=population)) +
+  geom_point( ) +
+  geom_smooth(method='lm') +
+  geom_text(aes(label=population),hjust=0, vjust=0)
+
+
+
+
+ggplot(pop_vs_diversity, aes(x=sqrtkm, y=watterson, label=population)) +
+  geom_point( ) +
+  geom_smooth(method='lm') +
+  geom_text(aes(label=population),hjust=0, vjust=0)
+
+```
   
   
   
