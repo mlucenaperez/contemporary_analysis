@@ -768,7 +768,7 @@ mv * /GRUPOS/grupolince
 
 ```
 
-#### Creating a folder per scaffold to speed up the process when calculating diversity per region.
+#### OLD: Creating a folder per scaffold to speed up the process when calculating diversity per region.
 
 ```{bash}
 
