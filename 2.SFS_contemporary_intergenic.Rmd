@@ -920,6 +920,8 @@ rm *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG_synteny_X_chr
 
 awk 'FNR==1 && NR!=1{next;}{print $0, FILENAME}' *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions | awk 'FNR==1{$19="population"};1' | sed 's/.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions//g' | sed $'s/ /\t/g'  > c_ll_no_n008-c_ll_po_n008-c_ll_ki_n013-c_ll_to-c_ll_ka-c_ll_og_n008-c_ll_ya_n008-c_ll_vl_n008-c_ll_la_n006-c_ll_cr_n006-c_ll_tu_n006-c_ll_ur_n006.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions 
 
+
+
 scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs/c_ll_no_n008-c_ll_po_n008-c_ll_ki_n013-c_ll_to-c_ll_ka-c_ll_og_n008-c_ll_ya_n008-c_ll_vl_n008-c_ll_la_n006-c_ll_cr_n006-c_ll_tu_n006-c_ll_ur_n006.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/analysis_diversity_window
 
 ```
@@ -1058,12 +1060,15 @@ cd /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_s
 for file in *unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions
 do
 echo $file
-awk '{print $1"_"$2"_"$3, $0}' $file > ${file/mic_positions/mic_positions_borrar}
+# Dia 29/06/2018 me he dado cuenta que las ventanas con cero sitios a veces aparecen, pero estas no nos interesan, así que de esta manera, con la frase que acabo de añadir las filtraría y ahora sí haría las ventanas en común. 
+awk '$15!=0 {print $0}' $file |\ 
+awk '{print $1"_"$2"_"$3, $0}'  > ${file/mic_positions/mic_positions_borrar}
 done
 
 
 LANG=en_EN join -t'  ' -11 -21 <(LANG=en_EN sort -k 1,1 c_ll_cr_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) <(LANG=en_EN sort -k 1,1 c_ll_ki_n013.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <(LANG=en_EN sort -k 1,1 c_ll_la_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_no_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_po_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_to-c_ll_ka-c_ll_og_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_tu_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_ur_n006.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_vl_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) | LANG=en_EN join  -t'  ' -11 -21 - <( LANG=en_EN sort -k 1,1 c_ll_ya_n008.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_borrar) > c_ll_no_n008-c_ll_po_n008-c_ll_ki_n013-c_ll_to-c_ll_ka-c_ll_og_n008-c_ll_ya_n008-c_ll_vl_n008-c_ll_la_n006-c_ll_cr_n006-c_ll_tu_n006-c_ll_ur_n006.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_only_window_in_common
 
+# 29/06/2018 antes tenía 41419 y ahora tengo 32773. Sí esta filtrando
 
 
 awk '{print $1}' c_ll_no_n008-c_ll_po_n008-c_ll_ki_n013-c_ll_to-c_ll_ka-c_ll_og_n008-c_ll_ya_n008-c_ll_vl_n008-c_ll_la_n006-c_ll_cr_n006-c_ll_tu_n006-c_ll_ur_n006.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions_only_window_in_common > windows_in_common_list.txt 
@@ -1109,7 +1114,8 @@ mutate(tW_per_site=tW/nSites)
 windows_in_common <- read.table(paste(wd_diversity, "windows_in_common_list.txt", sep =""), header = T)  [[1]]
 
 diversity_only_in_common <- filter(diversity, windows_identity %in% windows_in_common) 
-# Tiene 414180 lineas, lo que encaja puesto que anteriormente tenía: 414283
+# Tiene 327720 lineas, lo que encaja puesto que anteriormente tenía: 32772 (*10 poblaciones)
+
 
 hist(diversity_only_in_common$nSites)
 
@@ -1223,7 +1229,7 @@ for(pop in unique(diversity_divergence$population)) {
   
   # Hago dos tablas temporales, autosomic y X 
   
-  tabla_temp_autosomic <- diversity_divergence %>% filter(XvsTOTAL=="0") %>% filter (population==pop)
+  tabla_temp_autosomic <- diversity_divergence %>% filter(window_type=="Autosomic") %>% filter (population==pop)
   tabla_temp_X <- diversity_divergence %>% filter(XvsTOTAL=="1") %>% filter (population==pop)
   
   # Calculo el bootstrap de tW para la media y el ratio y lo añado a una tabla global 
