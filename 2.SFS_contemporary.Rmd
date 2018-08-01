@@ -616,7 +616,11 @@ done
 
 # Ahora vamos a eliminar el archivo thetas de aquí y lo dejamos sólo en backup
 
-rm *transformedThetas
+
+
+
+#¡Lanzar ahora esto, pero cuidad con la población!
+#rm *transformedThetas
 
 ```
 
@@ -628,7 +632,10 @@ Ahora creo las carpetas de theta per scaffold para todas las poblaciones de nuev
 
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
 
-NEW_FOLDER=("c_ll_no_n008_separated_by_scaffold" "c_lp_do_n012_separated_by_scaffold" "c_lp_sm_n019_separated_by_scaffold" "c_ll_ki_n013_separated_by_scaffold" "c_ll_po_n008_separated_by_scaffold")
+#NEW_FOLDER=("c_ll_no_n008_separated_by_scaffold" "c_lp_do_n012_separated_by_scaffold" "c_lp_sm_n019_separated_by_scaffold" "c_ll_ki_n013_separated_by_scaffold" "c_ll_po_n008_separated_by_scaffold")
+
+NEW_FOLDER=("c_lp_sm_n012_separated_by_scaffold")
+
 
 for FOLDER in "${NEW_FOLDER[@]}"
 do
@@ -637,7 +644,7 @@ mkdir $FOLDER;
 done
  
  
-POPS=("c_lp_sm_n019" "c_ll_ki_n013" "c_ll_po_n008" )
+POPS=("c_lp_sm_n012" )
 
 # POPS=("c_ll_no_n008" "c_lp_do_n012")
 
@@ -687,16 +694,19 @@ c_ll_po_n008 # --> Lanzado
 c_lp_sm_n019 # --> Lanzado
 c_ll_no_n008 # --> Lanzado
 c_lp_do_n012 # --> Lanzado
+c_ll_ki_n008 # --> Lanzado
+c_lp_sm_n012 # --> Lanzado
+
 
 ```{bash}
 
 # Run pop by pop:
 
-POP=c_ll_po_n008 # <--- Change pop here!
+POP=c_lp_sm_n012 # <--- Change pop here!
 screen -S "$POP"_scaffold_per_unit
-POP=c_ll_po_n008 # <--- Change pop here!
+POP=c_lp_sm_n012 # <--- Change pop here!
 script log_screen_"$POP"_scaffold_per_unit.log
-POP=c_ll_po_n008 # <--- Change pop here!
+POP=c_lp_sm_n012 # <--- Change pop here!
 
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
 
@@ -845,22 +855,10 @@ done &
 
 done
 
-rm "$POP".iter.transformedThetas*borrar
+# rm "$POP".iter.transformedThetas*borrar
 
 ```
 
-Esto me está creando una tabla que tiene una entrada por cada una de las unidades de la notación aunque eso no significa que tengan ningún resultado. No tiene sentido arrastrar toda esta información todo el rato, así que la filtro.
-
-```{bash}
-cd $DIVERSITY_PER_UNIT_FOLDER
-
-for FILE_DIVERSITY_EACH_ITERATION in *per.unit.averages_iteration*
-do
-echo $FILE_DIVERSITY_EACH_ITERATION
-awk '$12!="NA" && $13!="NA" && $14!="NA"&& $15!="NA"&& $16!="NA"' $FILE_DIVERSITY_EACH_ITERATION > ${FILE_DIVERSITY_EACH_ITERATION/.tsv/_filtered.tsv}
-done
-
-```
 
 Concateno con la tabla que tiene el header
 
@@ -873,14 +871,52 @@ c_lp_sm_n019
 
 ```{bash}
 
-POP=c_lp_sm_n019
-cat "$POP".per.unit.averages_iteration"$iteration"{1..10}_filtered.tsv >> "$POP".per.unit.averages.tsv
+mkdir iterations_to_rm_when_everything_is_correct
+mv *_iteration*.tsv  iterations_to_rm_when_everything_is_correct 
+cd iterations_to_rm_when_everything_is_correct
 
-# Elimino los archivos intermedios.
-rm *_filtered.tsv
+POPS=($(ls *tsv | cut -d"." -f 1 | sort | uniq))
+rm *raw.tsv
+for POP in "${POPS[@]}"
+do
+echo $POP
+cat "$POP".per.unit.averages_iteration{1..10}.tsv >> "$POP".per.unit.averages_raw.tsv
+done
 
+```
 
-# Almaceno en backup el archivo definitivo. 
+## Sanity check
+
+```{bash}
+POPS=($(ls *tsv | cut -d"." -f 1 | sort | uniq))
+for POP in "${POPS[@]}"
+do
+echo $POP
+wc -l $POP*_iteration*tsv >> "${POP}".wcperiteration.list
+wc -l $POP.per.unit.averages_raw.tsv >>  "${POP}".wctotal.list
+done
+
+```
+
+Esto me está creando una tabla que tiene una entrada por cada una de las unidades de la notación aunque eso no significa que tengan ningún resultado. No tiene sentido arrastrar toda esta información todo el rato, así que la filtro.
+
+```{bash}
+cd iterations_to_rm_when_everything_is_correct
+
+for FILE_DIVERSITY_EACH_ITERATION in *per.unit.averages_raw.tsv
+do
+echo $FILE_DIVERSITY_EACH_ITERATION
+awk '($12!="NA") || ($13!="NA") || ($14!="NA") || ($15!="NA") || ($16!="NA")' $FILE_DIVERSITY_EACH_ITERATION | sort -k1,1 > ${FILE_DIVERSITY_EACH_ITERATION/_raw.tsv/.tsv}
+done
+
+# Sanity
+wc -l *_filtered.tsv >>  wcfiltered.list
+
+# Perfecto! Mas o menos todos son iguales.
+
+mv *.per.unit.averages.tsv ..
+rm *raw.tsv
+rm *list
 
 
 
@@ -939,7 +975,7 @@ done
 ```
 
 
-##### Sanity checks
+##### OLD Sanity checks
 
 ```{bash}
 
@@ -1020,6 +1056,12 @@ awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_no_n008.per.unit.averages.chr.tsv
 awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_po_n008.per.unit.averages.chr.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_po
 
 awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_lp_sm_n019.per.unit.averages.chr.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_sm
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_lp_sm_n012.per.unit.averages.chr.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_sm_n012
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_ki_n008.per.unit.averages.chr.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_ki_n008
+
+
 
 
 cut -d' ' -f2 list_of_repeated_features_po | awk '{print $4}' | sort  | uniq -c
@@ -1206,6 +1248,11 @@ wc -l list_of_repeated_features_po
 1486 list_of_repeated_features_po
 wc -l list_of_repeated_features_no
 1486 list_of_repeated_features_no
+wc -l list_of_repeated_features_sm_n012
+1464 list_of_repeated_features_sm_n012
+wc -l  list_of_repeated_features_sm_n012
+1464 list_of_repeated_features_sm_n012
+
 ```
 
 Creo la lista
@@ -1430,7 +1477,7 @@ done
 Ahora borro lo que no necesito
 
 ```{bash}
-rm header.region.*
+# rm header.region.*
 
 ```
 
@@ -1458,9 +1505,9 @@ Primero me bajo las tablas.
 
 ```{bash}
 
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*tsv /Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation/*.tsv /Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation/*.per.unit.averages.chr_filtered.tsv /Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/*tsv /Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/raw_tables/
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/region_annotation/*.tsv /Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/raw_tables/
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation/*.per.unit.averages.chr_filtered.tsv /Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/raw_tables/
 
 ```
 
@@ -1480,32 +1527,35 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 
-wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
+wd_in <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/raw_tables/"
+wd_out <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
+
 
 # Ojo! antes de correr esto, asegurarme que no lo he corrido antes porque si no estoy haciendo append a las tablas viejas y no creando nuevas. 
 
-poplist <- c("do","po","no","ki", "sm")
+poplist <- c("c_ll_ki_n013", "c_ll_ki_n008", "c_ll_po_n008","c_ll_no_n008","c_lp_sm_n019", "c_lp_sm_n012", "c_lp_do_n012")
 
+  
 for (pop in poplist)
 {
   if (exists("dataset"))
   {rm (dataset)
   }
   
-  files_for_given_pop <- list.files(path = wd, pattern = pop)
+  files_for_given_pop <- list.files(path = wd_in, pattern = pop)
   
   for (file_for_given_pop in files_for_given_pop)
   {
     # if the merged dataset doesn't exist, create it
     if (!exists("dataset"))
     {
-      dataset <- read.table(paste(wd,file_for_given_pop, sep=""), header=TRUE, sep="\t") 
+      dataset <- read.table(paste(wd_in,file_for_given_pop, sep=""), header=TRUE, sep="\t") 
     }
     
     # if the merged dataset does exist, append to it
     if (exists("dataset"))
     {
-      temp_dataset <-read.table(paste(wd,file_for_given_pop, sep=""), header=TRUE, sep="\t", na.strings = c("NA", "na"))
+      temp_dataset <-read.table(paste(wd_in,file_for_given_pop, sep=""), header=TRUE, sep="\t", na.strings = c("NA", "na"))
       dataset<-full_join(dataset, temp_dataset, by = c("scaffold", "start_cero_based", "end", "length", "NAs", "informative_sites", "feature", "strandness", "frame", "id_gene", "id", "watterson_ave", "watterson_sd", "pairwise_ave", "pairwise_sd", "tajimaD", "pop", "specie", "epoch"))   
       rm(temp_dataset)
       assign(pop, dataset) # Con esto quiero ponerle el nombre de la población a la dataframe. 
@@ -1516,7 +1566,9 @@ for (pop in poplist)
 
 rm(dataset)
 
-data_diversity <-rbind(do, ki, no, po, sm) %>% 
+
+
+data_diversity <-rbind(c_ll_ki_n013,c_ll_ki_n008,c_ll_po_n008,c_ll_no_n008,c_lp_sm_n019,c_lp_sm_n012,c_lp_do_n012) %>% 
     mutate( watterson_ave = as.numeric(gsub("\\*10\\^","e",watterson_ave)),
             watterson_sd = as.numeric(gsub("\\*10\\^","e",watterson_sd)),
             pairwise_ave  = as.numeric(gsub("\\*10\\^","e",pairwise_ave)),
@@ -1524,12 +1576,14 @@ data_diversity <-rbind(do, ki, no, po, sm) %>%
             tajimaD = as.numeric(gsub("\\*10\\^","e",tajimaD)))
 
 
-write.table (data_diversity, paste(wd, "global.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
-write.table (ki, paste(wd, "c_ll_ki_n013.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
-write.table (no, paste(wd, "c_ll_no_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
-write.table (po, paste(wd, "c_ll_po_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
-write.table (do, paste(wd, "c_ll_do_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
-write.table (sm, paste(wd, "c_ll_sm_n019.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (data_diversity, paste(wd_out, "global.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (c_ll_ki_n013, paste(wd_out, "c_ll_ki_n013.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (c_ll_ki_n008, paste(wd_out, "c_ll_ki_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (c_ll_no_n008, paste(wd_out, "c_ll_no_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (c_ll_po_n008, paste(wd_out, "c_ll_po_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (c_lp_do_n012, paste(wd_out, "c_ll_do_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (c_lp_sm_n019, paste(wd_out, "c_ll_sm_n019.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (c_lp_sm_n012, paste(wd_out, "c_ll_sm_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 
 
 ```
@@ -1552,9 +1606,11 @@ data_diversity <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions
   replace(., is.na(.), "0") %>%  # Para que pueda calcular cuando es mayor o menor que 75%; si es NA no lo reconoce. 
   mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                            ifelse (pop == "c_ll_ki_n008", "Kirov_subsampled", 
                             ifelse (pop == "c_ll_no_n008", "Norway", 
                             ifelse (pop == "c_lp_sm_n019", "Andujar", 
-                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
+                            ifelse (pop == "c_lp_sm_n012", "Andujar_subsampled", 
+                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))))) %>% 
   mutate (., Species =ifelse (specie=="ll", "L.lynx", 
                    ifelse (specie=="lp", "L.pardinus", NA))) %>% 
   # Anoto qué es cada región 
@@ -1562,7 +1618,62 @@ data_diversity <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions
                        ifelse (centr_percentage >= 0.75, "Centromere", "Arm" )))  %>% 
   # Creo un identificador único para luego poder filtrar por este cuando tenga que sacar los comunes a todas las poblaciones. 
   mutate (., id_feature = paste(feature,"_",id, sep ="")) %>% 
-  mutate (., chr = ifelse (chr.x == chr.y, as.character(chr.x), "PROBLEMA")) %>% select (-c(chr.x, chr.y))
+  mutate (., chr = ifelse (chr.x == chr.y, as.character(chr.x), "PROBLEMA")) %>% select (-c(chr.x, chr.y)) %>%   mutate (unique_id = paste (id,feature, sep="_"))
+
+
+unique(data_diversity$pop)
+
+unique(data_diversity$Populations)
+
+``` 
+
+
+##### Sanity check
+
+Chequeo por qué las submuestreadas tienen menos unidades que las otras.
+
+```{r}
+
+c_ll_ki_n0013 <- data_diversity %>% filter (pop=="c_ll_ki_n013")
+c_ll_ki_n0008 <- data_diversity %>% filter (pop=="c_ll_ki_n008")
+
+lost_c_ll_ki <- dplyr::anti_join(c_ll_ki_n0013, c_ll_ki_n0008, by = c("unique_id"))
+
+# Con esta lista estoy sacando las que solo están en la no submuestreada. Me fijo en una de ellas al azar:
+
+# LYPA23C013736 y la busco en el servidor en la tabla de diversidad:
+
+```
+
+```{bash}
+grep LYPA23C013736 c_ll_ki_n008.per.unit.averages_iteration1.tsv
+
+# lp23.s00001	42532	42623	91	9	82	CDS	+	0	LYPA23C013736	LYPA23C013736P1_1_31	8.4643631707*10^-06	4.2156730876*10^-05	3.9287378174*10^-06	1.9473962736*10^-05	-2.2590594071*10^-01	c_ll_ki_n008	ll	c
+
+# lp23.s00001	42623	43535	912	43	869	intron	+	0	LYPA23C013736	LYPA23C013736T1_intron_1	3.5047507546*10^-04	1.0217133672*10^-02	2.8990944884*10^-04	8.4917807232*10^-03	-7.1323235666*10^-03	c_ll_ki_n008	ll	c
+
+# lp23.s00001	43535	43669	134	0	134	CDS	+	2	LYPA23C013736	LYPA23C013736P1_31_75	4.2079181642*10^-06	1.5220192831*10^-06	1.9598973779*10^-06	7.7132835007*10^-07	NA	c_ll_ki_n008	ll	c
+
+grep LYPA23C013736 ../c_ll_ki_n008.per.unit.averages.tsv
+
+# lp23.s00001	42532	42623	91	9	82	CDS	+	0	LYPA23C013736	LYPA23C013736P1_1_31	8.4643631707*10^-06	4.2156730876*10^-05	3.9287378174*10^-06	1.9473962736*10^-05	-2.2590594071*10^-01	c_ll_ki_n008	ll	c
+
+# lp23.s00001	42623	43535	912	43	869	intron	+	0	LYPA23C013736	LYPA23C013736T1_intron_1	3.5047507546*10^-04	1.0217133672*10^-02	2.8990944884*10^-04	8.4917807232*10^-03	-7.1323235666*10^-03	c_ll_ki_n008	ll	c
+
+
+
+# OJO!!! Parece que sí esta en el archivo de iteraciones pero no en el global, por tanto algo ha debido de ir mal al pegarlos. Reviso esa parte de código. 
+```
+
+
+
+
+
+
+```{r}
+
+
+
 
 # 2248581
 
@@ -1586,8 +1697,7 @@ data_diversity_pre <- data_diversity %>%
   filter (., !(feature=="promoter_gene_1000" & length < 1000)) %>% 
   filter (., !(feature=="promoter_lncRNA_250")) %>% 
   filter (., !(feature=="promoter_lncRNA_500")) %>% 
-  filter (., !(feature=="promoter_lncRNA_1000" & length < 1000)) %>% 
-  mutate (unique_id = paste (id,feature, sep="_"))
+  filter (., !(feature=="promoter_lncRNA_1000" & length < 1000)) 
 
 # 2003073; 2248581-2003073=245508 
 
@@ -1596,19 +1706,21 @@ data_diversity_pre <- data_diversity %>%
 # Primero par lynx lynx:
 
 data_diversity_filtered_ki <- data_diversity_pre %>% filter (pop=="c_ll_ki_n013")
+data_diversity_filtered_ki_filtered <- data_diversity_pre %>% filter (pop=="c_ll_ki_n008")
 data_diversity_filtered_no <- data_diversity_pre %>% filter (pop=="c_ll_no_n008")
 data_diversity_filtered_po <- data_diversity_pre %>% filter (pop=="c_ll_po_n008")
 
-lista_lynxlynx <- inner_join(data_diversity_filtered_ki, data_diversity_filtered_no, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>% inner_join(., data_diversity_filtered_po, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id" ))  %>% select("unique_id")
+lista_lynxlynx <- inner_join(data_diversity_filtered_ki_filtered, data_diversity_filtered_no, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>% inner_join(., data_diversity_filtered_po, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id" ))  %>% inner_join(., data_diversity_filtered_ki, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id" )) %>% select("unique_id")
  
 data_diversity_filtered_lynxlynx <- data_diversity_pre %>% filter (specie=="ll") %>% filter(unique_id %in% lista_lynxlynx$unique_id)
 
 # Ahora para pardinus:
 
 data_diversity_filtered_sm <- data_diversity_pre %>% filter (pop=="c_lp_sm_n019")
+data_diversity_filtered_sm_filtered <- data_diversity_pre %>% filter (pop=="c_lp_sm_n012")
 data_diversity_filtered_do <- data_diversity_pre %>% filter (pop=="c_lp_do_n012")
 
-lista_lynxpardinus <- inner_join(data_diversity_filtered_sm, data_diversity_filtered_do, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>% select("unique_id")
+lista_lynxpardinus <- inner_join(data_diversity_filtered_sm_filtered, data_diversity_filtered_do, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>% inner_join(., data_diversity_filtered_sm, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id" )) %>% select("unique_id")
 
 data_diversity_filtered_lynxpardinus <- data_diversity_pre %>% filter (specie=="lp") %>% filter(unique_id %in% lista_lynxpardinus$unique_id)
 
@@ -1618,14 +1730,16 @@ data_diversity_filtered <- rbind(data_diversity_filtered_lynxlynx, data_diversit
 
 # Ordenar los factores. 
 
-data_diversity_filtered$Populations <- factor (data_diversity_filtered$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
+data_diversity_filtered$Populations <- factor (data_diversity_filtered$Populations, levels=c("Kirov","Kirov_subsampled","Bialowieza","Norway", "Andujar","Andujar_subsampled","Donana"))
 data_diversity_filtered$chr <- factor(data_diversity_filtered$chr, levels = c("chrA1","chrC1","chrB1","chrA2","chrC2","chrB2","chrB3","chrB4","chrA3","chrD1","chrD3","chrD4","chrD2","chrF2","chrF1","chrE2","chrE1","chrX"))
 
 
 # Borro las que no necesito luego
 rm (data_diversity_filtered_sm)
+rm (data_diversity_filtered_sm_filtered)
 rm (data_diversity_filtered_do)
 rm (data_diversity_filtered_ki)
+rm (data_diversity_filtered_ki_filtered)
 rm (data_diversity_filtered_po)
 rm (data_diversity_filtered_no)
 rm (data_diversity)
@@ -1684,17 +1798,17 @@ rm (data_diversity_pre)
 
 # Tamaño de las unidades
 
-ggplot (data = data_diversity, aes(length)) +
+ggplot (data = data_diversity_filtered, aes(length)) +
   geom_histogram() +
   facet_wrap (~feature, scales = "free")
 ggsave(paste (wd_output, "length_per_unit_all_pops.pdf", sep=""))
 
 
-for (pop in unique(data_diversity$Populations))
+for (pop in unique(data_diversity_filtered$Populations))
   {
   
   print (pop)
-  ggplot (data=dplyr::filter(data_diversity,data_diversity$Populations==!!pop), aes(length)) +
+  ggplot (data=dplyr::filter(data_diversity_filtered,data_diversity_filtered$Populations==!!pop), aes(length)) +
   geom_histogram() +
   facet_wrap (~feature, scales = "free") 
   ggsave(paste (wd_output, "length_per_unit_",pop,".pdf", sep="" ), device="pdf")
@@ -1801,21 +1915,26 @@ diversity_stats_pop <- function(diversity_df)
                        
                        upperw_watterson_ave = q75_watterson_ave + 1.5 * IQR_watterson_ave,
                        upperw_pairwise_ave  = q75_pairwise_ave  + 1.5 * IQR_pairwise_ave) %>% 
-    
   mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                            ifelse (pop == "c_ll_ki_n008", "Kirov_subsampled", 
                             ifelse (pop == "c_ll_no_n008", "Norway", 
                             ifelse (pop == "c_lp_sm_n019", "Andujar", 
-                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
+                            ifelse (pop == "c_lp_sm_n012", "Andujar_subsampled", 
+                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))))) %>% 
   mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
                             ifelse (pop == "c_ll_ki_n013", "L.lynx", 
+                            ifelse (pop == "c_ll_ki_n008", "L.lynx",
                             ifelse (pop == "c_ll_no_n008", "L.lynx", 
                             ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
-                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA)))))) 
-               
+                            ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
+                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))))
+
+
+
+diversity_stats_df$Populations <- factor (diversity_stats_df$Populations, levels=c("Kirov","Kirov_subsampled","Bialowieza","Norway", "Andujar", "Andujar_subsampled","Donana"))
   
- diversity_stats_df$Populations <- factor (diversity_stats_df$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
-  return(diversity_stats_df)
+return(diversity_stats_df)
 }
 
 stats_df_pop <- diversity_stats_pop(data_diversity_filtered)
@@ -1885,18 +2004,22 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
                        upperw_pairwise_ave  = q75_pairwise_ave  + 1.5* IQR_pairwise_ave) %>% 
   mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                            ifelse (pop == "c_ll_ki_n008", "Kirov_subsampled", 
                             ifelse (pop == "c_ll_no_n008", "Norway", 
                             ifelse (pop == "c_lp_sm_n019", "Andujar", 
-                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
+                            ifelse (pop == "c_lp_sm_n012", "Andujar_subsampled", 
+                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))))) %>% 
   mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
                             ifelse (pop == "c_ll_ki_n013", "L.lynx", 
+                            ifelse (pop == "c_ll_ki_n008", "L.lynx",
                             ifelse (pop == "c_ll_no_n008", "L.lynx", 
                             ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
-                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA)))))) 
+                            ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
+                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))))
 
 
 
-diversity_stats_df_grouped$Populations <- factor (diversity_stats_df_grouped$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
+diversity_stats_df_grouped$Populations <- factor (diversity_stats_df_grouped$Populations, levels=c("Kirov","Kirov_subsampled","Bialowieza","Norway", "Andujar", "Andujar_subsampled","Donana"))
 
 
  if("chr" %in% colnames(diversity_stats_df_grouped))
@@ -1916,12 +2039,12 @@ for (GROUP in GROUPS)
 }
 
 
-
-
 # Lo calculamos con la tabla filtrada. 
 
 write.table(stats_df_chr, paste(wd_output,"stats_diversity_per_pop_per_chr.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
 write.table(stats_df_feature, paste(wd_output,"stats_diversity_per_pop_per_feature.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
 write.table(stats_df_region, paste(wd_output,"stats_diversity_per_pop_per_region.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 ```
@@ -1997,14 +2120,18 @@ for (ITERATION in 1:ncol(all_combinations))
                        upperw_pairwise_ave  = q75_pairwise_ave  + 1.5* IQR_pairwise_ave) %>% 
   mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                            ifelse (pop == "c_ll_ki_n008", "Kirov_subsampled", 
                             ifelse (pop == "c_ll_no_n008", "Norway", 
                             ifelse (pop == "c_lp_sm_n019", "Andujar", 
-                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
+                            ifelse (pop == "c_lp_sm_n012", "Andujar_subsampled", 
+                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))))) %>% 
   mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
                             ifelse (pop == "c_ll_ki_n013", "L.lynx", 
+                            ifelse (pop == "c_ll_ki_n008", "L.lynx",
                             ifelse (pop == "c_ll_no_n008", "L.lynx", 
                             ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
-                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA)))))) 
+                            ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
+                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))))
 
 
 
@@ -2051,16 +2178,21 @@ diversity_stats_grouped_boot <- function(DATAFRAME ,GROUP)
   names(pairwise_average)[3] <- "values"
   pairwise_average_summary <- pairwise_average  %>% 
     group_by_(.dots=c("pop", GROUP)) %>%
-    dplyr::summarise(mean=mean(values),sd=sd(values)) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
-                            ifelse (pop == "c_ll_ki_n013", "Kirov", 
-                            ifelse (pop == "c_ll_no_n008", "Norway", 
-                            ifelse (pop == "c_lp_sm_n019", "Andujar", 
-                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
-  mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
-                            ifelse (pop == "c_ll_ki_n013", "L.lynx", 
-                            ifelse (pop == "c_ll_no_n008", "L.lynx", 
-                            ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
-                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA)))))) 
+    dplyr::summarise(mean=mean(values),sd=sd(values)) %>% 
+    mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                              ifelse (pop == "c_ll_ki_n013", "Kirov",
+                              ifelse (pop == "c_ll_ki_n008", "Kirov_subsampled", 
+                              ifelse (pop == "c_ll_no_n008", "Norway", 
+                              ifelse (pop == "c_lp_sm_n019", "Andujar",
+                              ifelse (pop == "c_lp_sm_n012", "Andujar_subsampled", 
+                              ifelse (pop == "c_lp_do_n012", "Donana", NA)))))))) %>% 
+    mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
+                              ifelse (pop == "c_ll_ki_n013", "L.lynx",                               
+                              ifelse (pop == "c_ll_ki_n008", "L.lynx", 
+                              ifelse (pop == "c_ll_no_n008", "L.lynx", 
+                              ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
+                              ifelse (pop == "c_lp_sm_n012", "L.pardinus", 
+                              ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))))
   names(pairwise_average_summary)[3] <- "mean_pairwise_boot"
   names(pairwise_average_summary)[4] <- "sd_pairwise_boot"
   
@@ -2072,16 +2204,21 @@ diversity_stats_grouped_boot <- function(DATAFRAME ,GROUP)
   names(watterson_average)[3] <- "values"
   watterson_average_summary <- watterson_average  %>% 
     group_by_(.dots=c("pop", GROUP)) %>%
-    dplyr::summarise(mean=mean(values),sd=sd(values)) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
-                            ifelse (pop == "c_ll_ki_n013", "Kirov", 
-                            ifelse (pop == "c_ll_no_n008", "Norway", 
-                            ifelse (pop == "c_lp_sm_n019", "Andujar", 
-                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
-  mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
-                            ifelse (pop == "c_ll_ki_n013", "L.lynx", 
-                            ifelse (pop == "c_ll_no_n008", "L.lynx", 
-                            ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
-                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA)))))) 
+    dplyr::summarise(mean=mean(values),sd=sd(values)) %>%     
+    mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                              ifelse (pop == "c_ll_ki_n013", "Kirov",
+                              ifelse (pop == "c_ll_ki_n008", "Kirov_subsampled", 
+                              ifelse (pop == "c_ll_no_n008", "Norway", 
+                              ifelse (pop == "c_lp_sm_n019", "Andujar",
+                              ifelse (pop == "c_lp_sm_n012", "Andujar_subsampled", 
+                              ifelse (pop == "c_lp_do_n012", "Donana", NA)))))))) %>% 
+    mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
+                              ifelse (pop == "c_ll_ki_n013", "L.lynx",                               
+                              ifelse (pop == "c_ll_ki_n008", "L.lynx", 
+                              ifelse (pop == "c_ll_no_n008", "L.lynx", 
+                              ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
+                              ifelse (pop == "c_lp_sm_n012", "L.pardinus", 
+                              ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))))
   names(watterson_average_summary)[3] <- "mean_watterson_boot"
   names(watterson_average_summary)[4] <- "sd_watterson_boot"
   
@@ -2094,16 +2231,21 @@ diversity_stats_grouped_boot <- function(DATAFRAME ,GROUP)
   names(tajimaD)[3] <- "values"
   tajimaD_summary <- tajimaD  %>% 
     group_by_(.dots=c("pop", GROUP)) %>%
-    dplyr::summarise(mean=mean(values),sd=sd(values)) %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
-                            ifelse (pop == "c_ll_ki_n013", "Kirov", 
-                            ifelse (pop == "c_ll_no_n008", "Norway", 
-                            ifelse (pop == "c_lp_sm_n019", "Andujar", 
-                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
-  mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
-                            ifelse (pop == "c_ll_ki_n013", "L.lynx", 
-                            ifelse (pop == "c_ll_no_n008", "L.lynx", 
-                            ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
-                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA)))))) 
+    dplyr::summarise(mean=mean(values),sd=sd(values)) %>% 
+        mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                              ifelse (pop == "c_ll_ki_n013", "Kirov",
+                              ifelse (pop == "c_ll_ki_n008", "Kirov_subsampled", 
+                              ifelse (pop == "c_ll_no_n008", "Norway", 
+                              ifelse (pop == "c_lp_sm_n019", "Andujar",
+                              ifelse (pop == "c_lp_sm_n012", "Andujar_subsampled", 
+                              ifelse (pop == "c_lp_do_n012", "Donana", NA)))))))) %>% 
+    mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
+                              ifelse (pop == "c_ll_ki_n013", "L.lynx",                               
+                              ifelse (pop == "c_ll_ki_n008", "L.lynx", 
+                              ifelse (pop == "c_ll_no_n008", "L.lynx", 
+                              ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
+                              ifelse (pop == "c_lp_sm_n012", "L.pardinus", 
+                              ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))))
   names(tajimaD_summary)[3] <- "mean_tajimaD_boot"
   names(tajimaD_summary)[4] <- "sd_tajimaD_boot"
   
@@ -2112,7 +2254,7 @@ diversity_stats_grouped_boot <- function(DATAFRAME ,GROUP)
   
   
   tmp_group <- full_join (watterson_average_summary, pairwise_average_summary, by = c("pop", GROUP, "Populations", "Species")) %>% full_join (., tajimaD_summary, by = c("pop", GROUP, "Populations", "Species"))
-  tmp_group$Populations <- factor (tmp_group$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
+  tmp_group$Populations <- factor (tmp_group$Populations, levels=c("Kirov","Kirov_subsampled","Bialowieza","Norway", "Andujar","Andujar_subsampled", "Donana"))
   
   
   if("chr" %in% colnames(tmp_group))
@@ -2150,6 +2292,7 @@ write.table(stats_df_region_boostrapped, paste(wd_output,"stats_diversity_per_po
 
 
 ```
+
 Nota:
 He comprobado la normalidad en un caso concreto, pero creo que puede ser aplicable a todo.
 
@@ -2165,7 +2308,6 @@ W = 0.99973, p-value = 0.8071
 From the output, the p-value > 0.05 implying that the distribution of the data are not significantly different from normal distribution. In other words, we can assume the normality.
 
 Así que perfecto!
-
 
 #### Graph empirical boxplot & violin plot 
 
@@ -2352,7 +2494,7 @@ General
 # Saco las tablas para cada población y añado una columna en la que corrijo por la media de pairwise. 
 
 
-POPS=c("c_ll_ki_n013","c_ll_no_n008","c_ll_po_n008", "c_lp_do_n012", "c_lp_sm_n019")
+POPS=c("c_ll_ki_n013","c_ll_ki_n008","c_ll_no_n008","c_ll_po_n008", "c_lp_sm_n019", "c_lp_sm_n012", "c_lp_do_n012")
 
 for (POP in POPS)
 {
@@ -2380,7 +2522,7 @@ for (POP in POPS)
 
 # Hago una tabla con la media para cada grupo y para cada población. 
 
-data_diversity_filtered_ave_corrected <- rbind (c_ll_ki_n013_diversity,c_ll_no_n008_diversity,c_ll_po_n008_diversity, c_lp_do_n012_diversity, c_lp_sm_n019_diversity)
+data_diversity_filtered_ave_corrected <- rbind (c_ll_ki_n013_diversity, c_ll_ki_n008_diversity, c_ll_no_n008_diversity, c_ll_po_n008_diversity,  c_lp_sm_n019_diversity, c_lp_sm_n012_diversity, c_lp_do_n012_diversity)
 
 
 INDICES=c("corrected_by_pairwise_average_intergenic_per_unit", "corrected_by_watterson_average_intergenic_per_unit")
@@ -2397,20 +2539,25 @@ diversity_stats_df_feature_corrected <-
   mutate (., specie = ifelse (pop=="c_ll_ki_n013" | pop=="c_ll_po_n008" | pop=="c_ll_no_n008", "ll", "lp")) %>% 
   mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                            ifelse (pop == "c_ll_ki_n008", "Kirov_subsampled", 
                             ifelse (pop == "c_ll_no_n008", "Norway", 
-                            ifelse (pop == "c_lp_sm_n019", "Andujar", 
-                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
+                            ifelse (pop == "c_lp_sm_n019", "Andujar",
+                            ifelse (pop == "c_lp_sm_n012", "Andujar_subsampled",
+                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))))) %>% 
   mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
-                            ifelse (pop == "c_ll_ki_n013", "L.lynx", 
+                            ifelse (pop == "c_ll_ki_n013", "L.lynx",
+                            ifelse (pop == "c_ll_ki_n008", "L.lynx", 
                             ifelse (pop == "c_ll_no_n008", "L.lynx", 
-                            ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
-                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA)))))) 
+                            ifelse (pop == "c_lp_sm_n019", "L.pardinus",
+                            ifelse (pop == "c_lp_sm_n012", "L.pardinus", 
+                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))))
 
-diversity_stats_df_feature_corrected$Populations <- factor (diversity_stats_df_feature_corrected$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
+diversity_stats_df_feature_corrected$Populations <- factor (diversity_stats_df_feature_corrected$Populations, levels=c("Kirov","Kirov_subsampled", "Bialowieza","Norway", "Andujar","Andujar_subsampled", "Donana"))
 
 
 
-  write.table(diversity_stats_df_feature_corrected, paste(wd_output,"stats_diversity_per_pop_per_feature_corrected.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+write.table(diversity_stats_df_feature_corrected, paste(wd_output,"stats_diversity_per_pop_per_feature_corrected.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
 
 ```
 
@@ -2552,21 +2699,36 @@ calculus_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, nam
 
 # Create data frame
 
+
+
+## CREARLAS!!!!
+
+
+
+
 # Dataframe Kirov-Norway
 calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity,c_ll_no_n008_diversity, deparse(substitute(c_ll_ki_n013_diversity)),deparse(substitute(c_ll_no_n008_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n008_diversity,c_ll_no_n008_diversity, deparse(substitute(c_ll_ki_n008_diversity)),deparse(substitute(c_ll_no_n008_diversity)))
 
 # Dataframe Kirov-Poland
 calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity,c_ll_po_n008_diversity, deparse(substitute(c_ll_ki_n013_diversity)),deparse(substitute(c_ll_po_n008_diversity)))
 
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n008_diversity,c_ll_po_n008_diversity, deparse(substitute(c_ll_ki_n008_diversity)),deparse(substitute(c_ll_po_n008_diversity)))
+
+
 # Dataframe Sierra_Morena-Doñana
 calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_diversity,c_lp_do_n012_diversity, deparse(substitute(c_lp_sm_n019_diversity)),deparse(substitute(c_lp_do_n012_diversity)))
 
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n012_diversity,c_lp_do_n012_diversity, deparse(substitute(c_lp_sm_n012_diversity)),deparse(substitute(c_lp_do_n012_diversity)))
+
 
 write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
+write.table(data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n008_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
+write.table(data_diversity_c_ll_ki_n008_diversity_c_ll_po_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n008_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 write.table(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity, paste(wd_output,"data_diversity_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+write.table(data_diversity_c_lp_sm_n012_diversity_c_lp_do_n012_diversity, paste(wd_output,"data_diversity_c_lp_sm_n012_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 
 # También las creo a lo largo para poder lanzar modelos
@@ -2592,7 +2754,7 @@ c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model <- rbind(c_ll_ki_n013_di
 # Saco las tablas para cada población y añado una columna en la que corrijo por la media de pairwise. 
 
 
-POPS=c("c_ll_ki_n013","c_ll_no_n008","c_ll_po_n008", "c_lp_do_n012", "c_lp_sm_n019")
+POPS=c("c_ll_ki_n013","c_ll_ki_n008","c_ll_no_n008","c_ll_po_n008", "c_lp_do_n012", "c_lp_sm_n019","c_lp_sm_n012")
 
 # Feature
 for (POP in POPS)
@@ -2662,14 +2824,30 @@ bootleneck_vs_non_bootleneck_ratio_median_feature <- function(POP1, POP2, name_P
 # Create data frame
 
 # Dataframe Kirov-Norway
+
 bootleneck_vs_non_bootleneck_ratio_median_feature(c_ll_ki_n013_ave_diversity_feature,c_ll_no_n008_ave_diversity_feature, deparse(substitute(c_ll_ki_n013_ave_diversity_feature)),deparse(substitute(c_ll_no_n008_ave_diversity_feature)))
 write.table(ratio_median_c_ll_ki_n013_ave_diversity_feature_c_ll_no_n008_ave_diversity_feature, paste(wd_output,"ratio_median_feature_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+bootleneck_vs_non_bootleneck_ratio_median_feature(c_ll_ki_n008_ave_diversity_feature,c_ll_no_n008_ave_diversity_feature, deparse(substitute(c_ll_ki_n008_ave_diversity_feature)),deparse(substitute(c_ll_no_n008_ave_diversity_feature)))
+write.table(ratio_median_c_ll_ki_n008_ave_diversity_feature_c_ll_no_n008_ave_diversity_feature, paste(wd_output,"ratio_median_feature_c_ll_ki_n008_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
 # Dataframe Kirov-Poland
+
 bootleneck_vs_non_bootleneck_ratio_median_feature(c_ll_ki_n013_ave_diversity_feature,c_ll_po_n008_ave_diversity_feature, deparse(substitute(c_ll_ki_n013_ave_diversity_feature)),deparse(substitute(c_ll_po_n008_ave_diversity_feature)))
 write.table(ratio_median_c_ll_ki_n013_ave_diversity_feature_c_ll_po_n008_ave_diversity_feature, paste(wd_output,"ratio_median_feature_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+bootleneck_vs_non_bootleneck_ratio_median_feature(c_ll_ki_n008_ave_diversity_feature,c_ll_po_n008_ave_diversity_feature, deparse(substitute(c_ll_ki_n008_ave_diversity_feature)),deparse(substitute(c_ll_po_n008_ave_diversity_feature)))
+write.table(ratio_median_c_ll_ki_n008_ave_diversity_feature_c_ll_po_n008_ave_diversity_feature, paste(wd_output,"ratio_median_feature_c_ll_ki_n008_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
 # Dataframe Sierra_Morena-Doñana
+
 bootleneck_vs_non_bootleneck_ratio_median_feature(c_lp_sm_n019_ave_diversity_feature, c_lp_do_n012_ave_diversity_feature, deparse(substitute(c_lp_sm_n019_ave_diversity_feature)),deparse(substitute(c_lp_do_n012_ave_diversity_feature)))
 write.table(ratio_median_c_lp_sm_n019_ave_diversity_feature_c_lp_do_n012_ave_diversity_feature, paste(wd_output,"ratio_median_feature_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+bootleneck_vs_non_bootleneck_ratio_median_feature(c_lp_sm_n012_ave_diversity_feature, c_lp_do_n012_ave_diversity_feature, deparse(substitute(c_lp_sm_n012_ave_diversity_feature)),deparse(substitute(c_lp_do_n012_ave_diversity_feature)))
+write.table(ratio_median_c_lp_sm_n012_ave_diversity_feature_c_lp_do_n012_ave_diversity_feature, paste(wd_output,"ratio_median_feature_c_lp_sm_n012_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 
 ### REGION ###
@@ -2688,15 +2866,29 @@ bootleneck_vs_non_bootleneck_ratio_median_region <- function(POP1, POP2, name_PO
 # Create data frame
 
 # Dataframe Kirov-Norway
+
 bootleneck_vs_non_bootleneck_ratio_median_region(c_ll_ki_n013_ave_diversity_region,c_ll_no_n008_ave_diversity_region, deparse(substitute(c_ll_ki_n013_ave_diversity_region)),deparse(substitute(c_ll_no_n008_ave_diversity_region)))
 write.table(ratio_median_c_ll_ki_n013_ave_diversity_region_c_ll_no_n008_ave_diversity_region, paste(wd_output,"ratio_median_region_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+bootleneck_vs_non_bootleneck_ratio_median_region(c_ll_ki_n008_ave_diversity_region,c_ll_no_n008_ave_diversity_region, deparse(substitute(c_ll_ki_n008_ave_diversity_region)),deparse(substitute(c_ll_no_n008_ave_diversity_region)))
+write.table(ratio_median_c_ll_ki_n008_ave_diversity_region_c_ll_no_n008_ave_diversity_region, paste(wd_output,"ratio_median_region_c_ll_ki_n008_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
 # Dataframe Kirov-Poland
+
 bootleneck_vs_non_bootleneck_ratio_median_region(c_ll_ki_n013_ave_diversity_region,c_ll_po_n008_ave_diversity_region, deparse(substitute(c_ll_ki_n013_ave_diversity_region)),deparse(substitute(c_ll_po_n008_ave_diversity_region)))
 write.table(ratio_median_c_ll_ki_n013_ave_diversity_region_c_ll_po_n008_ave_diversity_region, paste(wd_output,"ratio_median_region_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+bootleneck_vs_non_bootleneck_ratio_median_region(c_ll_ki_n008_ave_diversity_region,c_ll_po_n008_ave_diversity_region, deparse(substitute(c_ll_ki_n008_ave_diversity_region)),deparse(substitute(c_ll_po_n008_ave_diversity_region)))
+write.table(ratio_median_c_ll_ki_n008_ave_diversity_region_c_ll_po_n008_ave_diversity_region, paste(wd_output,"ratio_median_region_c_ll_ki_n008_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
 # Dataframe Sierra_Morena-Doñana
+
 bootleneck_vs_non_bootleneck_ratio_median_region(c_lp_sm_n019_ave_diversity_region, c_lp_do_n012_ave_diversity_region, deparse(substitute(c_lp_sm_n019_ave_diversity_region)),deparse(substitute(c_lp_do_n012_ave_diversity_region)))
 write.table(ratio_median_c_lp_sm_n019_ave_diversity_region_c_lp_do_n012_ave_diversity_region, paste(wd_output,"ratio_median_region_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
+bootleneck_vs_non_bootleneck_ratio_median_region(c_lp_sm_n012_ave_diversity_region, c_lp_do_n012_ave_diversity_region, deparse(substitute(c_lp_sm_n012_ave_diversity_region)),deparse(substitute(c_lp_do_n012_ave_diversity_region)))
+write.table(ratio_median_c_lp_sm_n012_ave_diversity_region_c_lp_do_n012_ave_diversity_region, paste(wd_output,"ratio_median_region_c_lp_sm_n012_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 
 ### chr ###
@@ -2717,15 +2909,28 @@ bootleneck_vs_non_bootleneck_ratio_median_chr <- function(POP1, POP2, name_POP1,
 # Dataframe Kirov-Norway
 bootleneck_vs_non_bootleneck_ratio_median_chr(c_ll_ki_n013_ave_diversity_chr,c_ll_no_n008_ave_diversity_chr, deparse(substitute(c_ll_ki_n013_ave_diversity_chr)),deparse(substitute(c_ll_no_n008_ave_diversity_chr)))
 write.table(ratio_median_c_ll_ki_n013_ave_diversity_chr_c_ll_no_n008_ave_diversity_chr, paste(wd_output,"ratio_median_chr_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+bootleneck_vs_non_bootleneck_ratio_median_chr(c_ll_ki_n008_ave_diversity_chr,c_ll_no_n008_ave_diversity_chr, deparse(substitute(c_ll_ki_n008_ave_diversity_chr)),deparse(substitute(c_ll_no_n008_ave_diversity_chr)))
+write.table(ratio_median_c_ll_ki_n008_ave_diversity_chr_c_ll_no_n008_ave_diversity_chr, paste(wd_output,"ratio_median_chr_c_ll_ki_n008_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
 # Dataframe Kirov-Poland
 bootleneck_vs_non_bootleneck_ratio_median_chr(c_ll_ki_n013_ave_diversity_chr,c_ll_po_n008_ave_diversity_chr, deparse(substitute(c_ll_ki_n013_ave_diversity_chr)),deparse(substitute(c_ll_po_n008_ave_diversity_chr)))
 write.table(ratio_median_c_ll_ki_n013_ave_diversity_chr_c_ll_po_n008_ave_diversity_chr, paste(wd_output,"ratio_median_chr_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+bootleneck_vs_non_bootleneck_ratio_median_chr(c_ll_ki_n008_ave_diversity_chr,c_ll_po_n008_ave_diversity_chr, deparse(substitute(c_ll_ki_n008_ave_diversity_chr)),deparse(substitute(c_ll_po_n008_ave_diversity_chr)))
+write.table(ratio_median_c_ll_ki_n008_ave_diversity_chr_c_ll_po_n008_ave_diversity_chr, paste(wd_output,"ratio_median_chr_c_ll_ki_n008_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
 # Dataframe Sierra_Morena-Doñana
 bootleneck_vs_non_bootleneck_ratio_median_chr(c_lp_sm_n019_ave_diversity_chr, c_lp_do_n012_ave_diversity_chr, deparse(substitute(c_lp_sm_n019_ave_diversity_chr)),deparse(substitute(c_lp_do_n012_ave_diversity_chr)))
 write.table(ratio_median_c_lp_sm_n019_ave_diversity_chr_c_lp_do_n012_ave_diversity_chr, paste(wd_output,"ratio_median_chr_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
+bootleneck_vs_non_bootleneck_ratio_median_chr(c_lp_sm_n012_ave_diversity_chr, c_lp_do_n012_ave_diversity_chr, deparse(substitute(c_lp_sm_n012_ave_diversity_chr)),deparse(substitute(c_lp_do_n012_ave_diversity_chr)))
+write.table(ratio_median_c_lp_sm_n012_ave_diversity_chr_c_lp_do_n012_ave_diversity_chr, paste(wd_output,"ratio_median_chr_c_lp_sm_n012_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
 
 ############## INTERACCIONES ################
+
+# $POR AQUI VOY!!!
 
 ### FEATURE - CHR ###
 
@@ -2743,15 +2948,30 @@ bootleneck_vs_non_bootleneck_ratio_median_feature_chr <- function(POP1, POP2, na
 # Create data frame
 
 # Dataframe Kirov-Norway
+
 bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_ll_ki_n013_ave_diversity_feature_chr,c_ll_no_n008_ave_diversity_feature_chr, deparse(substitute(c_ll_ki_n013_ave_diversity_feature_chr)),deparse(substitute(c_ll_no_n008_ave_diversity_feature_chr)))
 write.table(ratio_median_c_ll_ki_n013_ave_diversity_feature_chr_c_ll_no_n008_ave_diversity_feature_chr, paste(wd_output,"ratio_median_feature_chr_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_ll_ki_n008_ave_diversity_feature_chr,c_ll_no_n008_ave_diversity_feature_chr, deparse(substitute(c_ll_ki_n008_ave_diversity_feature_chr)),deparse(substitute(c_ll_no_n008_ave_diversity_feature_chr)))
+write.table(ratio_median_c_ll_ki_n008_ave_diversity_feature_chr_c_ll_no_n008_ave_diversity_feature_chr, paste(wd_output,"ratio_median_feature_chr_c_ll_ki_n008_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
 # Dataframe Kirov-Poland
+
 bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_ll_ki_n013_ave_diversity_feature_chr,c_ll_po_n008_ave_diversity_feature_chr, deparse(substitute(c_ll_ki_n013_ave_diversity_feature_chr)),deparse(substitute(c_ll_po_n008_ave_diversity_feature_chr)))
 write.table(ratio_median_c_ll_ki_n013_ave_diversity_feature_chr_c_ll_po_n008_ave_diversity_feature_chr, paste(wd_output,"ratio_median_feature_chr_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_ll_ki_n008_ave_diversity_feature_chr,c_ll_po_n008_ave_diversity_feature_chr, deparse(substitute(c_ll_ki_n008_ave_diversity_feature_chr)),deparse(substitute(c_ll_po_n008_ave_diversity_feature_chr)))
+write.table(ratio_median_c_ll_ki_n008_ave_diversity_feature_chr_c_ll_po_n008_ave_diversity_feature_chr, paste(wd_output,"ratio_median_feature_chr_c_ll_ki_n008_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
 # Dataframe Sierra_Morena-Doñana
+
 bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_lp_sm_n019_ave_diversity_feature_chr, c_lp_do_n012_ave_diversity_feature_chr, deparse(substitute(c_lp_sm_n019_ave_diversity_feature_chr)),deparse(substitute(c_lp_do_n012_ave_diversity_feature_chr)))
 write.table(ratio_median_c_lp_sm_n019_ave_diversity_feature_chr_c_lp_do_n012_ave_diversity_feature_chr, paste(wd_output,"ratio_median_feature_chr_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
+bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_lp_sm_n012_ave_diversity_feature_chr, c_lp_do_n012_ave_diversity_feature_chr, deparse(substitute(c_lp_sm_n012_ave_diversity_feature_chr)),deparse(substitute(c_lp_do_n012_ave_diversity_feature_chr)))
+write.table(ratio_median_c_lp_sm_n012_ave_diversity_feature_chr_c_lp_do_n012_ave_diversity_feature_chr, paste(wd_output,"ratio_median_feature_chr_c_lp_sm_n012_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 
 ### FEATURE - REGION ###
@@ -2770,14 +2990,30 @@ bootleneck_vs_non_bootleneck_ratio_median_feature_region <- function(POP1, POP2,
 # Create data frame
 
 # Dataframe Kirov-Norway
+
 bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_ll_ki_n013_ave_diversity_feature_region,c_ll_no_n008_ave_diversity_feature_region, deparse(substitute(c_ll_ki_n013_ave_diversity_feature_region)),deparse(substitute(c_ll_no_n008_ave_diversity_feature_region)))
 write.table(ratio_median_c_ll_ki_n013_ave_diversity_feature_region_c_ll_no_n008_ave_diversity_feature_region, paste(wd_output,"ratio_median_feature_region_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_ll_ki_n008_ave_diversity_feature_region,c_ll_no_n008_ave_diversity_feature_region, deparse(substitute(c_ll_ki_n008_ave_diversity_feature_region)),deparse(substitute(c_ll_no_n008_ave_diversity_feature_region)))
+write.table(ratio_median_c_ll_ki_n008_ave_diversity_feature_region_c_ll_no_n008_ave_diversity_feature_region, paste(wd_output,"ratio_median_feature_region_c_ll_ki_n008_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
 # Dataframe Kirov-Poland
+
 bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_ll_ki_n013_ave_diversity_feature_region,c_ll_po_n008_ave_diversity_feature_region, deparse(substitute(c_ll_ki_n013_ave_diversity_feature_region)),deparse(substitute(c_ll_po_n008_ave_diversity_feature_region)))
 write.table(ratio_median_c_ll_ki_n013_ave_diversity_feature_region_c_ll_po_n008_ave_diversity_feature_region, paste(wd_output,"ratio_median_feature_region_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_ll_ki_n008_ave_diversity_feature_region,c_ll_po_n008_ave_diversity_feature_region, deparse(substitute(c_ll_ki_n008_ave_diversity_feature_region)),deparse(substitute(c_ll_po_n008_ave_diversity_feature_region)))
+write.table(ratio_median_c_ll_ki_n008_ave_diversity_feature_region_c_ll_po_n008_ave_diversity_feature_region, paste(wd_output,"ratio_median_feature_region_c_ll_ki_n008_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
 # Dataframe Sierra_Morena-Doñana
+
 bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_lp_sm_n019_ave_diversity_feature_region, c_lp_do_n012_ave_diversity_feature_region, deparse(substitute(c_lp_sm_n019_ave_diversity_feature_region)),deparse(substitute(c_lp_do_n012_ave_diversity_feature_region)))
 write.table(ratio_median_c_lp_sm_n019_ave_diversity_feature_region_c_lp_do_n012_ave_diversity_feature_region, paste(wd_output,"ratio_median_feature_region_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_lp_sm_n012_ave_diversity_feature_region, c_lp_do_n012_ave_diversity_feature_region, deparse(substitute(c_lp_sm_n012_ave_diversity_feature_region)),deparse(substitute(c_lp_do_n012_ave_diversity_feature_region)))
+write.table(ratio_median_c_lp_sm_n012_ave_diversity_feature_region_c_lp_do_n012_ave_diversity_feature_region, paste(wd_output,"ratio_median_feature_region_c_lp_sm_n012_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
 
 
 ### REGION - CHR ###
@@ -2796,16 +3032,31 @@ bootleneck_vs_non_bootleneck_ratio_median_region_chr <- function(POP1, POP2, nam
 # Create data frame
 
 # Dataframe Kirov-Norway
+
 bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_ll_ki_n013_ave_diversity_region_chr,c_ll_no_n008_ave_diversity_region_chr, deparse(substitute(c_ll_ki_n013_ave_diversity_region_chr)),deparse(substitute(c_ll_no_n008_ave_diversity_region_chr)))
 write.table(ratio_median_c_ll_ki_n013_ave_diversity_region_chr_c_ll_no_n008_ave_diversity_region_chr, paste(wd_output,"ratio_median_region_chr_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_ll_ki_n008_ave_diversity_region_chr,c_ll_no_n008_ave_diversity_region_chr, deparse(substitute(c_ll_ki_n008_ave_diversity_region_chr)),deparse(substitute(c_ll_no_n008_ave_diversity_region_chr)))
+write.table(ratio_median_c_ll_ki_n008_ave_diversity_region_chr_c_ll_no_n008_ave_diversity_region_chr, paste(wd_output,"ratio_median_region_chr_c_ll_ki_n008_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
 # Dataframe Kirov-Poland
+
 bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_ll_ki_n013_ave_diversity_region_chr,c_ll_po_n008_ave_diversity_region_chr, deparse(substitute(c_ll_ki_n013_ave_diversity_region_chr)),deparse(substitute(c_ll_po_n008_ave_diversity_region_chr)))
 write.table(ratio_median_c_ll_ki_n013_ave_diversity_region_chr_c_ll_po_n008_ave_diversity_region_chr, paste(wd_output,"ratio_median_region_chr_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
+bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_ll_ki_n008_ave_diversity_region_chr,c_ll_po_n008_ave_diversity_region_chr, deparse(substitute(c_ll_ki_n008_ave_diversity_region_chr)),deparse(substitute(c_ll_po_n008_ave_diversity_region_chr)))
+write.table(ratio_median_c_ll_ki_n008_ave_diversity_region_chr_c_ll_po_n008_ave_diversity_region_chr, paste(wd_output,"ratio_median_region_chr_c_ll_ki_n008_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
 # Dataframe Sierra_Morena-Doñana
+
 bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_lp_sm_n019_ave_diversity_region_chr, c_lp_do_n012_ave_diversity_region_chr, deparse(substitute(c_lp_sm_n019_ave_diversity_region_chr)),deparse(substitute(c_lp_do_n012_ave_diversity_region_chr)))
 write.table(ratio_median_c_lp_sm_n019_ave_diversity_region_chr_c_lp_do_n012_ave_diversity_region_chr, paste(wd_output,"ratio_median_region_chr_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
-
+bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_lp_sm_n012_ave_diversity_region_chr, c_lp_do_n012_ave_diversity_region_chr, deparse(substitute(c_lp_sm_n012_ave_diversity_region_chr)),deparse(substitute(c_lp_do_n012_ave_diversity_region_chr)))
+write.table(ratio_median_c_lp_sm_n012_ave_diversity_region_chr_c_lp_do_n012_ave_diversity_region_chr, paste(wd_output,"ratio_median_region_chr_c_lp_sm_n012_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 ```
 
@@ -2954,7 +3205,7 @@ library(rlang)
 # Ratio de la diversidad población bootleneck frente non bootleneck
 ## BOXPLOT
 
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity","data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity","data_diversity_c_ll_ki_n008_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity","data_diversity_c_lp_sm_n012_diversity_c_lp_do_n012_diversity")
 
 INDICES=c("ratio_pairwise_average", "ratio_watterson_average")
 
@@ -3012,7 +3263,6 @@ for(i in DATAFRAMES){
 
 ```{r}
 library("Hmisc")
-install.packages("modeest")
 library(modeest)
 
 
@@ -3042,10 +3292,17 @@ diversity_stats_pop <- function(diversity_df)
 
 stats_data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity <- diversity_stats_pop(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity)
 
+stats_data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity <- diversity_stats_pop(data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity)
+
+
 stats_data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity <- diversity_stats_pop(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity)
+
+stats_data_diversity_c_ll_ki_n008_diversity_c_ll_po_n008_diversity <- diversity_stats_pop(data_diversity_c_ll_ki_n008_diversity_c_ll_po_n008_diversity)
+
 
 stats_data_diversity_data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity <- diversity_stats_pop(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity)
 
+stats_data_diversity_data_diversity_c_lp_sm_n012_diversity_c_lp_do_n012_diversity <- diversity_stats_pop(data_diversity_c_lp_sm_n012_diversity_c_lp_do_n012_diversity)
 
 
 
@@ -3057,6 +3314,7 @@ stats_data_diversity_data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversit
 
 
 ```{r}
+
 library(plyr)
 library(boot)
 library(broom)
@@ -3087,7 +3345,7 @@ boot_mean <- function(original_vector, resample_vector) {
 
 # Defino variables para iterar
 
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity","data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity","data_diversity_c_ll_ki_n008_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity","data_diversity_c_lp_sm_n012_diversity_c_lp_do_n012_diversity")
 GROUPS=c("feature", "region", "chr")
 ITERATION=100
 
@@ -3401,7 +3659,7 @@ for (DATAFRAME in DATAFRAMES)
 
 ```{r}
 
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity","data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity","data_diversity_c_ll_ki_n008_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity","data_diversity_c_lp_sm_n012_diversity_c_lp_do_n012_diversity")
 
 for (DATAFRAME in DATAFRAMES) 
 {
@@ -3424,14 +3682,14 @@ for (DATAFRAME in DATAFRAMES)
 for (DATAFRAME in DATAFRAMES) 
 {
  ggplot(data=get(DATAFRAME), aes(x=pairwise_ave.y ,y=pairwise_ave.x, fill=feature, colour=feature)) +
-        geom_point() +
+        geom_point(alpha = 1/100) +
         geom_smooth()+
     geom_abline(intercept = 0) +
    facet_wrap(~feature, scales = "free" )
    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise_scalefree.pdf", sep=""))
 
    ggplot(data=get(DATAFRAME), aes(x=pairwise_ave.y ,y=pairwise_ave.x, fill=feature, colour=feature)) +
-        geom_point() +
+        geom_point(alpha = 1/100) +
         geom_smooth()+
     geom_abline(intercept = 0) +
    facet_wrap(~feature )
@@ -3448,7 +3706,16 @@ for (DATAFRAME in DATAFRAMES)
 
 library(rlang)
 
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_feature", "data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_region", "data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_chr", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_feature", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_region", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_chr", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_feature", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_region", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_chr")
+DATAFRAMES=c(
+"data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_feature", "data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_region", "data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_chr", 
+"data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity_feature", "data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity_region", "data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity_chr", 
+
+"data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_feature", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_region", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_chr", 
+"data_diversity_c_ll_ki_n008_diversity_c_ll_po_n008_diversity_feature", "data_diversity_c_ll_ki_n008_diversity_c_ll_po_n008_diversity_region", "data_diversity_c_ll_ki_n008_diversity_c_ll_po_n008_diversity_chr", 
+
+"data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_feature", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_region", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_chr",
+"data_diversity_c_lp_sm_n012_diversity_c_lp_do_n012_diversity_feature", "data_diversity_c_lp_sm_n012_diversity_c_lp_do_n012_diversity_region", "data_diversity_c_lp_sm_n012_diversity_c_lp_do_n012_diversity_chr")
+
 INDICES=c("ratio_watterson_boot", "ratio_pairwise_boot", "ratio_corrected_by_pairwise_average_intergenic_per_unit_boot", "ratio_corrected_by_watterson_average_intergenic_per_unit_boot")
 
 # "ratio_corrected_by_pairwise_average_intergenic_weighted_boot", "ratio_corrected_by_watterson_average_intergenic_weighted_boot"
@@ -3483,7 +3750,7 @@ for(i in DATAFRAMES){
 
 
 
-
+$$$
 ```
 
 ## Heatmap for two groups
