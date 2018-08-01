@@ -1,0 +1,323 @@
+---
+title: "recent_demographic_reconstruction"
+output: html_document
+---
+
+# IBDNe
+
+Quiero obtener la reconstrucción demográfica reciente de las distintas poblaciones. Una forma de hacerlo es con IBDne que usa los tracks IBD. 
+
+```{bash}
+# Pruebo con ibdne: http://faculty.washington.edu/browning/ibdne.html#download
+mkdir /home/mlucena/recent_demographic_reconstruction
+
+# Copiamos el archivo IBD de Dani para probar: 
+scp /home/GRUPOS/grupolince/lynx_genomes_5x/IBD_analysis/ngsF-HMM/c_ll_ki-c_ll_no-c_ll_po-c_lp_do-c_lp_sm_n060_ngsF-HMM.ibd recent_demographic_reconstruction/
+
+# Copiamos un archivo VCF de Dani para probar: 
+scp /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/ll_perspecies.trimmed_filtered1.ann.vcf /home/mlucena/recent_demographic_reconstruction
+
+cd /home/mlucena/recent_demographic_reconstruction
+
+# Obtengo un archivo map en plink 
+/opt/plink_1.9/plink_1.9 --vcf /home/mlucena/recent_demographic_reconstruction/ll_perspecies.trimmed_filtered1.ann.vcf --maf 0.05 --recode --out /home/mlucena/recent_demographic_reconstruction/ll_perspecies.trimmed_filtered1.ann --const-fid 0 --allow-extra-chr
+
+
+# Corro IBDNe:
+cat c_ll_ki-c_ll_no-c_ll_po-c_lp_do-c_lp_sm_n060_ngsF-HMM.ibd | java -jar ibdne.07May18.6a4.jar map=/home/mlucena/recent_demographic_reconstruction/ll_perspecies.trimmed_filtered1.ann.map out=output
+
+# No puedo pq necesita mapa gnetico de verdad.
+# http://methodspopgen.com/methods-to-infer-populations-history/
+# Saco la equivalencia basada en el mapa de ligamiento de gato (LaDeana et al. 2016) de bases a morgan. 
+# Transformo el .map. --> Equivalencia: Si 100Mb son 1.9Morgan; 1 base=1900cM
+
+cd /home/mlucena/recent_demographic_reconstruction
+
+awk -v OFS='\t'  '{print $1, $4, $4*0.00000000019, $4}' ll_perspecies.trimmed_filtered1.ann.map > ll_perspecies.trimmed_filtered1.ann.w_genetic_distances.map
+
+# 0.00000000019 son los cM a los que equivale una base. 
+
+cat c_ll_ki-c_ll_no-c_ll_po-c_lp_do-c_lp_sm_n060_ngsF-HMM.ibd | java -jar ibdne.07May18.6a4.jar map=/home/mlucena/recent_demographic_reconstruction/ll_perspecies.trimmed_filtered1.ann.w_genetic_distances.map out=output
+
+# Error tengo que eliminar los que sean valores unicos.
+
+awk '{print $1}'  ll_perspecies.trimmed_filtered1.ann.w_genetic_distances.map | sort | uniq -u > scaffold_list_uniq_values.txt 
+
+grep -v -F -f scaffold_list_uniq_values.txt ll_perspecies.trimmed_filtered1.ann.w_genetic_distances.map > ll_perspecies.trimmed_filtered1.ann.w_genetic_distances_no_unique.map
+
+cat c_ll_ki-c_ll_no-c_ll_po-c_lp_do-c_lp_sm_n060_ngsF-HMM.ibd | java -jar ibdne.07May18.6a4.jar map=ll_perspecies.trimmed_filtered1.ann.w_genetic_distances_no_unique.map out=output
+
+
+# Error en reading IBD
+# Creo el IBD con IBDseq: http://faculty.washington.edu/browning/ibdseq.html
+
+java -jar ibdseq.r1206.jar gt=ll_perspecies.trimmed_filtered1.ann.vcf out=ll_perspecies.trimmed_filtered1.ann.IBDseq
+
+# Done! y está bien
+
+# Pruebo a correr de nuevo el archivo ibd recién creado con ibdseq:
+
+cat ll_perspecies.trimmed_filtered1.ann.IBDseq.ibd | java -jar ibdne.07May18.6a4.jar map=ll_perspecies.trimmed_filtered1.ann.w_genetic_distances_no_unique.map out=output filtersamples=false mincm=5e-06 nboots=0
+
+
+# Exception in thread "main" java.lang.IllegalStateException: trim parameter for trimmed mean is too large
+# Los trozos de IBD son demasiado pequeños. De hecho, si miro como es el más grande del scaffold 1 que es uno de los más largos: 
+# lp23.s00001	13187672	0.00250566	13187672. 
+# 0.00250566 es la distancia en cM al comienzo del scaffold. Si tenemos en cuenta que por defecto el programa filtra todo lo que sea menor a 2cM y además trima 0.2 cM para evitar problemas con el final del cromosoma; claramente nuestros fragmentos son muy pequeños. 
+
+# mincm=[positive number]
+#The mincm argument specifies the minimum IBD segment length in centiMorgan units. Any input IBD segments that have length shorter than the minimum length are ignored. The minimum IBD segment length should be sufficiently large so that IBD segments exceeding the minimum length are detected with high power and low false discovery rate (default: mincm=2).
+
+
+``` 
+
+Dead end. Siguiente aproximación.
+(Primero limpio la carpeta porque nada de lo que hay aquí me va a servir).
+
+# SNeP
+
+Para esta aproximación necesito un archivo ped y un archivo map. El programa me puede calcular el archivo de ld. 
+Leer manual y artículo de Barbato donde presentan el método. 
+
+Basicamente usan el calculo de LD para inferir Ne. LD se calcula como la r2 entre dos SNPs. Para ello la distancia genética puede ser una funcion de la distancia física y la tasa de recombinación, o se pueden añadir algunas correcciones para distancias muy grandes donde LD aparece saturado. 
+
+Lo primero que tengo que hacer es lograr un VCF por población.
+
+Para ello, uso los VCF de Dani que se supone que están limpios y filtrados. 
+
+La carpeta donde voy a hacer los análisis ya la tengo generada y es: /home/mlucena/recent_demographic_reconstruction
+
+## Split VCF into different pops.
+
+
+```{bash}
+
+cd /home/mlucena/recent_demographic_reconstruction
+
+# VCF que voy a usar están en la carpeta: /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/
+
+# Los dos archivos útiles son:
+
+# ll_perspecies.trimmed_filtered1.ann.vcf
+# lp_perspecies.trimmed_filtered1.ann.vcf
+
+# Los voy a copiar a mi carpeta de reconstrucción demográfica para que no haya ningún problema si los rompo.
+
+scp /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/ll_perspecies.trimmed_filtered1.ann.vcf /home/mlucena/recent_demographic_reconstruction
+scp /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/lp_perspecies.trimmed_filtered1.ann.vcf /home/mlucena/recent_demographic_reconstruction
+
+# Primero tengo que sacar una lista con todos los individuos de cada población que hay. 
+
+bcftools query -l ll_perspecies.trimmed_filtered1.ann.vcf > list_of_samples_c_ll
+bcftools query -l lp_perspecies.trimmed_filtered1.ann.vcf > list_of_samples_c_lp
+
+# Lista de las poblaciones que tenemos. 
+declare POPS=$(bcftools query -l ll_perspecies.trimmed_filtered1.ann.vcf | cut -c1-7 | sort | uniq)
+declare POPS=$(bcftools query -l lp_perspecies.trimmed_filtered1.ann.vcf | cut -c1-7 | sort | uniq)
+
+# Voy a iterar sobre las distintas poblaciones para hacer una lista con los ind de esa poblacion. 
+for POP in ${POPS[@]}
+do
+echo $POP
+grep $POP list_of_samples_c_ll > $POP.list
+done
+
+rm list_of_samples_c_ll
+
+for POP in ${POPS[@]}
+do
+echo $POP
+grep $POP list_of_samples_c_lp > $POP.list
+done
+
+rm list_of_samples_c_lp
+
+
+# Ahora lo modifico un poco a mano. Voy a eliminar las de balcanes que no nos interesan y voy a unir mongolia, que lo vamos a considerar una población. 
+
+# Compruebo que así borro lo que me interesa 
+ls -ltr *ba*
+# Borro
+# rm *ba*
+
+# Borro también pais vasco
+rm h_ll_pv.list
+
+# Hago cat de mongolia
+cat c_ll_og.list c_ll_to.list c_ll_ka.list > c_ll_mo.list
+
+rm c_ll_og.list 
+rm c_ll_to.list 
+rm c_ll_ka.list
+
+
+# Perfecto!
+# Ahora lanzo el script para separa por poblaciones.
+
+screen -S separate_VCF_by_pop_pardinus
+
+GATK=/opt/GATK-3.7/GenomeAnalysisTK.jar #GATK software path
+#VCF=ll_perspecies.trimmed_filtered1.ann.vcf
+VCF=lp_perspecies.trimmed_filtered1.ann.vcf
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa #path to reference genome
+
+for POP_list in c_lp*.list
+  do
+  declare POP=$(echo $POP_list | cut -d "." -f1 )
+  echo "${POP}"
+     java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC -XX:+UseStringDeduplication -Xms16g -Xmx32g -jar $GATK \
+    -T SelectVariants \
+    -R $REF \
+    -V $VCF \
+    -o ${VCF/.vcf/.$POP.vcf} \
+    --sample_file $POP_list \
+    --preserveAlleles
+    done
+
+# Sanity check
+# ¿Está quitando lo que me interesa?
+
+bcftools query -l ll_perspecies.trimmed_filtered1.ann.c_ll_ya.vcf 
+
+
+# Ahora nos vamos a quedar solo con los de intergénico.
+
+
+task(){
+   bedtools intersect -a $i -b /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.intergenic.PLUS1000.bed -sorted -g /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/lp23.version.sorted.genome -header > ${i/.vcf/_intergenic.vcf}
+}
+
+
+for i in *c_l*vcf
+do
+echo $i
+ task "$i" 
+done
+
+
+# De todas formas hay muchos scaffold que tiene muy pocos SNPs, así que el autor me recomienda que lo filtre. Puedo filtrar primero para los scaffolds que tiene al menos 1000 SNPs y luego los que tienen 2000 SNPs. Y así hacer una pruebecilla para ver si los datos son parecidos, me puedo quedar con el dataset más pequeño. 
+
+for vcf_POP in *c_l*_intergenic.vcf
+do
+echo $vcf_POP
+declare POP=$(echo $vcf_POP | cut -d "." -f4 )
+# Ahora contamos el número de SNPS por scaffold
+
+grep -v -E '^#'  $vcf_POP | cut -f 1 | sort | uniq -c | sort -n | awk '$1>2000{print $2}' | sort | sed -n -e 'H;${x;s/\n/,/g;s/^,//;p;}' > "${POP}"_more_than_2000_SNPS_per_scaffold.list
+grep -v -E '^#'  $vcf_POP | cut -f 1 | sort | uniq -c | sort -n | awk '$1>1000{print $2}' | sort | sed -n -e 'H;${x;s/\n/,/g;s/^,//;p;}' > "${POP}"_more_than_1000_SNPS_per_scaffold.list
+bcftools query -l $vcf_POP 
+bgzip $vcf_POP 
+bcftools index "${vcf_POP}".gz
+bcftools view -r `cat "${POP}"_more_than_2000_SNPS_per_scaffold.list` "${vcf_POP}".gz -Ov -o "${vcf_POP/.vcf/_filtered_more_than_2000_SNPS.vcf}"
+bcftools view -r `cat "${POP}"_more_than_1000_SNPS_per_scaffold.list` "${vcf_POP}".gz -Ov -o "${vcf_POP/.vcf/_filtered_more_than_1000_SNPS.vcf}"
+done
+
+```
+
+
+Ahora que ya tengo los VCF por población para las dos especies lo que tengo que hacer es generar el archivo map y ped de cada población.
+
+# Generate ped and map file
+
+```{bash}
+
+cd /home/mlucena/recent_demographic_reconstruction
+
+
+VCFs=$(ls *.c_l*more_than_*000_SNPS.vcf)
+
+for VCF_per_pop in ${VCFs[@]}
+do 
+echo $VCF_per_pop
+declare POP=$(echo $VCF_per_pop | cut -d "." -f4 )
+/opt/plink_1.9/plink_1.9 --vcf $VCF_per_pop --maf 0.05 --recode --out "${POP}" --const-fid 0 --allow-extra-chr
+done
+
+
+
+```
+
+
+# Copy to UBUNTU local
+
+SNeP sólo corre en Ubunto 14.04 o en windows, por tanto me he tenido que crear una máquina virtual en local que tenga instalado ubuntu. Así que lo primero que tngo que hacer es bajarme los archivos a este ordenador. 
+
+Me meto en mi máquina virtual, y una vez ahí me los bajo.
+
+```{bash}
+
+# En local--> Maquina virtual --> Ubuntu. 
+
+mkdir /home/maria/SneP
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/*ped /home/maria/SneP
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/*map /home/maria/SneP
+
+```
+
+# SNeP
+
+```{bash}
+
+cd /home/maria/SneP
+
+SNeP1.1 -ped c_ll_ki_intergenic_filtered_more_than_2000_SNPS.ped -out ./c_ll_ki_intergenic_filtered_more_than_2000_SNPS -ld -recrate 1.9e-8  -svedf -samplesize 1 --> lanzado
+SNeP1.1 -ped c_ll_ki_intergenic_filtered_more_than_1000_SNPS.ped -out ./c_ll_ki_intergenic_filtered_more_than_1000_SNPS -ld -recrate 1.9e-8  -svedf -samplesize 1
+
+
+for PED_FILE in *.ped
+do
+declare POP=$(echo $PED_FILE | cut -d "." -f 1)
+declare SAMPLE_SIZE=$(grep $POP sample_size_file.csv | cut -d"," -f 2)
+SNePv1.1 -ped $PED_FILE -out ./$POP -ld -recrate 1.9e-8  -svedf -samplesize 1
+done
+
+```
+
+# Copy back to the server & to mac local
+
+```{bash}
+# Copy to server
+
+cd /home/maria/SneP
+
+scp /home/maria/SneP/*Ne* mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/
+
+mkdir /Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/recent_demographic_reconstruction
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/*NeAll /Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/
+
+```
+
+
+
+# R representation
+
+```{r}
+# Leo la tabla de Ne.
+
+
+library(ggplot2)
+library(RColorBrewer)
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/"
+
+
+finsNeAll = list.files(path = wd, pattern="*NeAll$")
+
+for (i in 1:length(finsNeAll))
+{
+  datNeAll <- read.csv (paste(wd,finsNeAll [i],sep=""), header = T, sep = '\t')  
+  name_NeAll <- unlist(strsplit(finsNeAll [i], "[.]"))
+  ggplot (datNeAll, aes(GenAgo, Ne)) +
+    geom_point(alpha=0.1) +
+    geom_smooth(color="grey24", fill="grey64") +
+    theme_classic() +
+    ggtitle(paste(name_NeAll[1]))
+  ggsave(paste(wd,name_NeAll[1],"_", name_NeAll[2],".pdf", sep=""), device = "pdf")
+}
+ 
+
+```
+
+
