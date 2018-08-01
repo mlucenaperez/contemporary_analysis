@@ -18,6 +18,7 @@ library(reshape2)
 library(ape)
 library(ade4) # For mantel test
 library(dplyr)
+library(vegan)
 
 
 # Este archivo tiene en ocasiones una sola entrada que engloba a varios individuos. Para hacer unnest necesito un lista y lo logro con transform. 
