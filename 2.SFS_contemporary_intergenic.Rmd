@@ -1097,7 +1097,7 @@ library(broom)
 library(RColorBrewer)
 
 wd_diversity <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/analysis_diversity_window/"
-index="tP_per_site"
+# index="tP_per_site" --> Esto ya no me hace falta. 
 
 # Bajasmos los archivos de diversidad y seleccionamos solo aquellas ventanas que estén en común para todas las poblaciones. 
 
@@ -1108,16 +1108,56 @@ filter(nSites>10000) %>%
 filter(XvsTOTAL=="1" | XvsTOTAL=="0" ) %>% 
 mutate(window_type=ifelse(XvsTOTAL==1 , "Xchr", "Autosomic")) %>% # Lo que hago es quedarme con las posiciones que son solo X o sólo autosomicas.
 mutate(tP_per_site=tP/nSites) %>% 
-mutate(tW_per_site=tW/nSites)
-  
-# Esto me convierte el dataframe de una variable en un vector sobre el que filtrar. 
-windows_in_common <- read.table(paste(wd_diversity, "windows_in_common_list.txt", sep =""), header = T)  [[1]]
+mutate(tW_per_site=tW/nSites) %>% 
+mutate(tajima_per_site=Tajima/nSites)
+ 
 
-diversity_only_in_common <- filter(diversity, windows_identity %in% windows_in_common) 
+## En esta parte filtraba por la ventanas en común en bash, por lo que no tenía en cuenta las que se filtran a posteriori y las que no. 
+# Ahora voy a filtrar sobre las que ya están filtradas para numero de sitios, por ejemplo. 
+
+# Esto me convierte el dataframe de una variable en un vector sobre el que filtrar. 
+#windows_in_common <- read.table(paste(wd_diversity, "windows_in_common_list.txt", sep =""), header = T)  [[1]]
+
+#diversity_only_in_common_bash <- filter(diversity, windows_identity %in% windows_in_common) 
 # Tiene 327720 lineas, lo que encaja puesto que anteriormente tenía: 32772 (*10 poblaciones)
 
 
-hist(diversity_only_in_common$nSites)
+#hist(diversity_only_in_common$nSites)
+
+
+# NUEVO FILTRO PARA VENTANAS EN COMÚN
+
+## Ahora he filtrado por las ventanas en común que tenían al principio, pero no he filtrado por las ventanas comunes que quedan despues de aplicar todos los filtros, por tanto tengo que hacer un filtro por estas vetanas en común:
+
+unique(diversity$population)
+diversity_c_ll_cr_n006 <- diversity %>%  filter (population=="c_ll_cr_n006") %>% select(windows_identity) %>% unique()
+diversity_c_ll_ki_n013 <- diversity %>%  filter (population=="c_ll_ki_n013") %>% select(windows_identity) %>% unique()
+diversity_c_ll_la_n006 <- diversity %>%  filter (population=="c_ll_la_n006") %>% select(windows_identity) %>% unique()
+diversity_c_ll_no_n008 <- diversity %>%  filter (population=="c_ll_no_n008") %>% select(windows_identity) %>% unique()
+diversity_c_ll_po_n008 <- diversity %>%  filter (population=="c_ll_po_n008") %>% select(windows_identity) %>% unique()
+diversity_c_ll_to_c_ll_ka_c_ll_og_n008   <- diversity %>%  filter (population=="c_ll_to-c_ll_ka-c_ll_og_n008") %>% select(windows_identity) %>% unique()
+diversity_c_ll_tu_n006 <- diversity %>%  filter (population=="c_ll_tu_n006") %>% select(windows_identity) %>% unique()
+diversity_c_ll_ur_n006 <- diversity %>%  filter (population=="c_ll_ur_n006") %>% select(windows_identity) %>% unique()
+diversity_c_ll_vl_n008 <- diversity %>%  filter (population=="c_ll_vl_n008") %>% select(windows_identity) %>% unique()
+diversity_c_ll_ya_n008 <- diversity %>%  filter (population=="c_ll_ya_n008") %>% select(windows_identity) %>% unique()
+
+
+windows_in_common_after_filtering <- inner_join(diversity_c_ll_cr_n006, diversity_c_ll_ki_n013) %>% inner_join(diversity_c_ll_la_n006) %>% inner_join(diversity_c_ll_no_n008) %>% inner_join(diversity_c_ll_po_n008) %>% inner_join(diversity_c_ll_to_c_ll_ka_c_ll_og_n008) %>% inner_join(diversity_c_ll_tu_n006) %>% inner_join(diversity_c_ll_ur_n006) %>% inner_join(diversity_c_ll_vl_n008) %>% inner_join(diversity_c_ll_ya_n008) %>%  .[[1]]
+
+rm (diversity_c_ll_cr_n006)
+rm (diversity_c_ll_ki_n013)
+rm (diversity_c_ll_la_n006)
+rm (diversity_c_ll_no_n008)
+rm (diversity_c_ll_po_n008)
+rm (diversity_c_ll_to_c_ll_ka_c_ll_og_n008)
+rm (diversity_c_ll_tu_n006)
+rm (diversity_c_ll_ur_n006)
+rm (diversity_c_ll_vl_n008)
+rm (diversity_c_ll_ya_n008)
+
+diversity_only_in_common <- filter(diversity, windows_identity %in% windows_in_common_after_filtering) 
+
+rm (diversity)
 
 ####
 
@@ -1135,9 +1175,12 @@ divergence <- read.table(paste (wd_divergence,"c_ll.divergence_with_rufus", sep 
 diversity_divergence <- inner_join(diversity_only_in_common,divergence, by="windows_identity" )  %>% 
   mutate(tW_per_site_corrected=tW_per_site/divergence) %>% mutate(tP_per_site_corrected=tP_per_site/divergence)
   
-index_corrected=paste0(index,"_corrected")
+#index_corrected=paste0(index,"_corrected")
 
 rm (diversity_only_in_common)
+rm (divergence)
+
+
 
 # # Autosomico:
 # 
@@ -1222,6 +1265,9 @@ summary_boot_ratio_X_autosomic_tW <- data.frame(mean=numeric())
 summary_boot_mean_autosomic_tP <- data.frame(mean=numeric())
 summary_boot_mean_X_tP <- data.frame(mean=numeric())
 summary_boot_ratio_X_autosomic_tP <- data.frame(mean=numeric())
+
+
+
 
 for(pop in unique(diversity_divergence$population)) {
   
@@ -1366,6 +1412,40 @@ for(pop in unique(diversity_divergence$population)) {
 }
 
 
+# Para Tajima's
+
+summary_boot_mean_autosomic_tajima <- data.frame(mean=numeric())
+
+for(pop in unique(diversity_divergence$population)) {
+  
+  print (pop)
+  
+  # Hago dos tablas temporales, autosomic y X 
+  
+  tabla_temp_autosomic <- diversity_divergence %>% filter(window_type=="Autosomic") %>% filter (population==pop)
+  
+boot_mean_autosomic_tajima_per_pop <- boot( data = tabla_temp_autosomic$tajima_per_site, boot_mean, R = ITERATION)
+  summary_boot_mean_autosomic_tajima_per_pop <- cbind(tidy(boot_mean_autosomic_tajima_per_pop), pop)  %>% mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                           ifelse (pop == "c_ll_ur_n006", "Urals", 
+                           ifelse (pop == "c_ll_ki_n013", "Kirov", 
+                           ifelse (pop == "c_ll_la_n006", "Latvia", 
+                           ifelse (pop == "c_ll_no_n008", "Norway", 
+                           ifelse (pop == "x_ll_ba_n003", "Balkans" ,
+                           ifelse (pop == "c_ll_to_n002", "Töv",
+                           ifelse (pop == "c_ll_ka_n004", "Khentii", 
+                           ifelse (pop == "c_ll_og_n002", "Ömnögovi", 
+                           ifelse (pop == "c_ll_cr_n006","Carpathians", 
+                           ifelse (pop == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
+                           ifelse (pop == "c_ll_tu_n006", "Tuva", 
+                           ifelse (pop == "c_ll_vl_n008", "Vladivostok",  
+                           ifelse (pop == "c_ll_ya_n008", "Yakutia", NA))))))))))))))) %>% mutate(index="Tajima")
+  
+  summary_boot_mean_autosomic_tajima <- rbind(summary_boot_mean_autosomic_tajima, summary_boot_mean_autosomic_tajima_per_pop)
+ 
+}
+  ##
+
+
 summary_boot_mean_autosomic <- rbind (summary_boot_mean_autosomic_tW, summary_boot_mean_autosomic_tP) 
 rm (summary_boot_mean_autosomic_tW, summary_boot_mean_autosomic_tP)
 summary_boot_mean_autosomic$Populations <- factor (summary_boot_mean_autosomic$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Khentii", "Töv", "Ömnögovi", "Mongolia",  "Yakutia", "Vladivostok"))
@@ -1410,8 +1490,8 @@ for (INDICE in unique(summary_boot_mean_autosomic$index))
    # scale_fill_manual(values = cols) + 
    # scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
    ylab (paste(INDICE, sep="")) +  
-   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(),
-          axis.text.x = element_text(angle = 45, hjust = 1)) 
+   theme_light() +
+   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
 ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/autosomic_mean_",INDICE,"_boot.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
 
  }
@@ -1426,9 +1506,9 @@ for (INDICE in unique(summary_boot_ratio_X_autosomic$index))
    geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), colour="black", width=.1) +
    # scale_fill_manual(values = cols) + 
    # scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
-   ylab (paste(INDICE, sep="")) +  
-   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(),
-          axis.text.x = element_text(angle = 45, hjust = 1)) 
+   ylab (paste(INDICE, sep="")) + 
+   theme_light() +
+   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
 ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/ratio_X_autosomic_",INDICE,"_boot.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
 
  }
@@ -1446,8 +1526,8 @@ for (INDICE in unique(summary_boot_mean_autosomic$index))
    # scale_fill_manual(values = cols) + 
    # scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
    ylab (paste(INDICE, sep="")) +  
-   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(),
-          axis.text.x = element_text(angle = 45, hjust = 1)) 
+   theme_light() +
+   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
 ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/autosomic_mean_",INDICE,"_boot_color.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
 
  }
@@ -1465,8 +1545,8 @@ for (INDICE in unique(summary_boot_ratio_X_autosomic$index))
    # scale_fill_manual(values = cols) + 
    # scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
    ylab (paste(INDICE, sep="")) +  
-   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(),
-          axis.text.x = element_text(angle = 45, hjust = 1)) 
+   theme_light() +
+   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
 ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/ratio_X_autosomic_",INDICE,"_boot_color.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
 
  }
