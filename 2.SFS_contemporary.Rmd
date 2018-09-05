@@ -868,6 +868,7 @@ c_ll_po_n008
 c_lp_do_n012
 c_lp_sm_n019
 
+## Merge different iterations
 
 ```{bash}
 
@@ -875,12 +876,14 @@ mkdir iterations_to_rm_when_everything_is_correct
 mv *_iteration*.tsv  iterations_to_rm_when_everything_is_correct 
 cd iterations_to_rm_when_everything_is_correct
 
+echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch" > header.annotation
+
 POPS=($(ls *tsv | cut -d"." -f 1 | sort | uniq))
 rm *raw.tsv
 for POP in "${POPS[@]}"
 do
 echo $POP
-cat "$POP".per.unit.averages_iteration{1..10}.tsv >> "$POP".per.unit.averages_raw.tsv
+cat "$POP".per.unit.averages_iteration{1..10}.tsv | cat header.annotation - >> "$POP".per.unit.averages_raw.tsv
 done
 
 ```
@@ -906,7 +909,7 @@ cd iterations_to_rm_when_everything_is_correct
 for FILE_DIVERSITY_EACH_ITERATION in *per.unit.averages_raw.tsv
 do
 echo $FILE_DIVERSITY_EACH_ITERATION
-awk '($12!="NA") || ($13!="NA") || ($14!="NA") || ($15!="NA") || ($16!="NA")' $FILE_DIVERSITY_EACH_ITERATION | sort -k1,1 > ${FILE_DIVERSITY_EACH_ITERATION/_raw.tsv/.tsv}
+awk '($12!="NA") || ($13!="NA") || ($14!="NA") || ($15!="NA") || ($16!="NA")' $FILE_DIVERSITY_EACH_ITERATION > ${FILE_DIVERSITY_EACH_ITERATION/_raw.tsv/.tsv}
 done
 
 # Sanity
@@ -975,7 +978,7 @@ done
 ```
 
 
-##### OLD Sanity checks
+##### Sanity checks
 
 ```{bash}
 
@@ -1237,21 +1240,21 @@ Sanity checks
 
 ```{bash}
 cat list_of_repeated_features* | sort -k5,5 | uniq | wc -l  
-1488
+1490
 wc -l list_of_repeated_features_ki 
-1482 list_of_repeated_features_ki
+1484 list_of_repeated_features_ki
 wc -l list_of_repeated_features_sm
-1478 list_of_repeated_features_sm
+1481 list_of_repeated_features_sm
 wc -l list_of_repeated_features_do
-1477 list_of_repeated_features_do
+1479 list_of_repeated_features_do
 wc -l list_of_repeated_features_po
-1486 list_of_repeated_features_po
+1488 list_of_repeated_features_po
 wc -l list_of_repeated_features_no
-1486 list_of_repeated_features_no
+1488 list_of_repeated_features_no
 wc -l list_of_repeated_features_sm_n012
-1464 list_of_repeated_features_sm_n012
-wc -l  list_of_repeated_features_sm_n012
-1464 list_of_repeated_features_sm_n012
+1481 list_of_repeated_features_sm_n012
+wc -l  list_of_repeated_features_ki_n008
+1485 list_of_repeated_features_ki_n008
 
 ```
 
@@ -1268,11 +1271,13 @@ Sanity checks
 awk -v OFS='\t' '{print $2"_"$3"_"$4"_"$5"_"$6}' list_of_repeated_features_all_pops > list_of_repeated_features_all_pops_merged
 
 wc -l *per.unit.averages.chr.tsv 
-#   430830 c_ll_ki_n013.per.unit.averages.chr.tsv
-#   430997 c_ll_no_n008.per.unit.averages.chr.tsv
-#   430662 c_ll_po_n008.per.unit.averages.chr.tsv
-#   429972 c_lp_do_n012.per.unit.averages.chr.tsv
-#   430625 c_lp_sm_n019.per.unit.averages.chr.tsv --> 428377
+#   431096 c_ll_ki_n008.per.unit.averages.chr.tsv
+#   431034 c_ll_ki_n013.per.unit.averages.chr.tsv
+#   431217 c_ll_no_n008.per.unit.averages.chr.tsv
+#   430907 c_ll_po_n008.per.unit.averages.chr.tsv
+#   430255 c_lp_do_n012.per.unit.averages.chr.tsv
+#   430829 c_lp_sm_n012.per.unit.averages.chr.tsv
+#   430853 c_lp_sm_n019.per.unit.averages.chr.tsv
 
 awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$7"_"$11, $0}' c_lp_sm_n019.per.unit.averages.chr.tsv | grep -f list_of_repeated_features_all_pops_merged - | awk '{print $1}' | sort | uniq -c | sort | sed -e 's/^[ \t]*//' | awk '{print $1"_"$2}' > lista_de_unidades_repetidas_que_encuentra
 
@@ -1333,21 +1338,24 @@ grep -v -f list_of_repeated_features_all_pops_merged - > ${FILE/.per.unit.averag
 
 cat <(tail -n +2 ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_NOT_repeated_feature.tsv.borrar}) <( cat ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_repeated_feature.tsv.borrar}) | cut -f2-  | sort -k1,1 -k2,2n -k3,3n | cat header.chr.annotation - | awk '!a[$0]++' > ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_filtered.tsv}
 
-
 done
 
 
 # Sanity check!
 
-# grep 3UTR c_lp_sm_n019.per.unit.averages.chr.tsv | grep LYPA23C004261 
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_ki_n013.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
 
-# lp23.s10426	1414779	1415453	674	122	552	3UTR	-	.	LYPA23C004261	LYPA23C004261	5.2285065677*10^-07	3.1562104437*10^-06	1.2810182872*10^-07	7.8744833016*10^-07	-1.6655608018*10^-01	c_lp_sm_n019	lp	c	chrA2
-# lp23.s10426	1414779	1415453	674	122	552	3UTR	-	.	LYPA23C004261	LYPA23C004261	5.2285065677*10^-07	3.1562104437*10^-06	1.2810182872*10^-07	7.8744833016*10^-07	-1.6655608018*10^-01	c_lp_sm_n019	lp	c	chrX
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_ki_n008.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
 
-# grep 3UTR c_lp_sm_n019.per.unit.averages.chr_filtered.tsv | grep LYPA23C004261 
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_po_n008.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
 
-# lp23.s10426	1414779	1415453	674	122	552	3UTR	-	.	LYPA23C004261	LYPA23C004261	5.2285065677*10^-07	3.1562104437*10^-06	1.2810182872*10^-07	7.8744833016*10^-07	-1.6655608018*10^-01	c_lp_sm_n019	lp	c	na
-# lp23.s10426	1414779	1415453	674	122	552	3UTR	-	.	LYPA23C004261	LYPA23C004261	5.2285065677*10^-07	3.1562104437*10^-06	1.2810182872*10^-07	7.8744833016*10^-07	-1.6655608018*10^-01	c_lp_sm_n019	lp	c	na
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_no_n008.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_lp_do_n012.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_lp_sm_n019.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_lp_sm_n012.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
 
 
 # Perfecto!
@@ -1386,7 +1394,7 @@ echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeatur
 for file_pop in ${files_per_pop[@]}
 do
 echo $file_pop
-intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$file_pop) -b <(awk -v OFS='\t' '{print $1,$2, $3}' /GRUPOS/grupolince/telomers_centromers_definition/tel2m_regions_based_on_synteny_1000bp.bed) | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$23,$24 }' | awk '!a[$0]++' | bedtools groupby -i stdin -g 1-19 -c 20 -o sum | awk -v OFS='\t'  '{percentage=$20/$4; printf "%s\t%f\n",$0,percentage}' | cat header.region.tel2m.tsv - > ${file_pop/.per.unit.averages.tsv/.per.unit.averages.region.tel2m.tsv}
+intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$file_pop) -b <(awk -v OFS='\t' '{print $1,$2, $3}' /GRUPOS/grupolince/telomers_centromers_definition/tel2m_regions_based_on_synteny_1000bp.bed) | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$23 }' | awk '!a[$0]++' | bedtools groupby -i stdin -g 1-19 -c 20 -o sum | awk -v OFS='\t'  '{percentage=$20/$4; printf "%s\t%f\n",$0,percentage}' | cat header.region.tel2m.tsv - > ${file_pop/.per.unit.averages.tsv/.per.unit.averages.region.tel2m.tsv}
 done
 
 ```
@@ -1427,7 +1435,7 @@ echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeatur
 for file_pop in ${files_per_pop[@]}
 do
 echo $file_pop
-intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$file_pop) -b <(awk -v OFS='\t' '{print $1,$2, $3}' /GRUPOS/grupolince/telomers_centromers_definition/tel0-10m_regions_based_on_synteny_1000bp.bed) | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$23,$24 }' | awk '!a[$0]++' |  bedtools groupby -i stdin -g 1-19 -c 20 -o sum | awk -v OFS='\t'  '{percentage=$20/$4; printf "%s\t%f\n",$0,percentage}' | cat header.region.tel10m.tsv - > ${file_pop/.per.unit.averages.tsv/.per.unit.averages.region.tel10m.tsv}
+intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$file_pop) -b <(awk -v OFS='\t' '{print $1,$2, $3}' /GRUPOS/grupolince/telomers_centromers_definition/tel0-10m_regions_based_on_synteny_1000bp.bed) | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$23 }' | awk '!a[$0]++' |  bedtools groupby -i stdin -g 1-19 -c 20 -o sum | awk -v OFS='\t'  '{percentage=$20/$4; printf "%s\t%f\n",$0,percentage}' | cat header.region.tel10m.tsv - > ${file_pop/.per.unit.averages.tsv/.per.unit.averages.region.tel10m.tsv}
 done
 
 ```
@@ -1520,6 +1528,8 @@ Ahora tengo que descargarme todos los archivos de cada población y despues hace
 ## Creación tablas
 
 ```{r}
+
+# https://github.com/MTFA/CohortEx/wiki/Run-rJava-with-RStudio-under-OSX-10.10,-10.11-(El-Capitan)-or-10.12-(Sierra)
 
 # Ahora hago un join de la tabla principal de diversidad con las de telómeros, centrómeros y cromosoma. 
 
@@ -1618,7 +1628,9 @@ data_diversity <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions
                        ifelse (centr_percentage >= 0.75, "Centromere", "Arm" )))  %>% 
   # Creo un identificador único para luego poder filtrar por este cuando tenga que sacar los comunes a todas las poblaciones. 
   mutate (., id_feature = paste(feature,"_",id, sep ="")) %>% 
-  mutate (., chr = ifelse (chr.x == chr.y, as.character(chr.x), "PROBLEMA")) %>% select (-c(chr.x, chr.y)) %>%   mutate (unique_id = paste (id,feature, sep="_"))
+  mutate (., chr = ifelse (chr.x == chr.y, as.character(chr.x), "PROBLEMA")) %>% 
+  select (-c(chr.x, chr.y)) %>% 
+  mutate (unique_id = paste (id,feature, sep="_"))
 
 
 unique(data_diversity$pop)
@@ -1627,47 +1639,7 @@ unique(data_diversity$Populations)
 
 ``` 
 
-
-##### Sanity check
-
-Chequeo por qué las submuestreadas tienen menos unidades que las otras.
-
-```{r}
-
-c_ll_ki_n0013 <- data_diversity %>% filter (pop=="c_ll_ki_n013")
-c_ll_ki_n0008 <- data_diversity %>% filter (pop=="c_ll_ki_n008")
-
-lost_c_ll_ki <- dplyr::anti_join(c_ll_ki_n0013, c_ll_ki_n0008, by = c("unique_id"))
-
-# Con esta lista estoy sacando las que solo están en la no submuestreada. Me fijo en una de ellas al azar:
-
-# LYPA23C013736 y la busco en el servidor en la tabla de diversidad:
-
-```
-
-```{bash}
-grep LYPA23C013736 c_ll_ki_n008.per.unit.averages_iteration1.tsv
-
-# lp23.s00001	42532	42623	91	9	82	CDS	+	0	LYPA23C013736	LYPA23C013736P1_1_31	8.4643631707*10^-06	4.2156730876*10^-05	3.9287378174*10^-06	1.9473962736*10^-05	-2.2590594071*10^-01	c_ll_ki_n008	ll	c
-
-# lp23.s00001	42623	43535	912	43	869	intron	+	0	LYPA23C013736	LYPA23C013736T1_intron_1	3.5047507546*10^-04	1.0217133672*10^-02	2.8990944884*10^-04	8.4917807232*10^-03	-7.1323235666*10^-03	c_ll_ki_n008	ll	c
-
-# lp23.s00001	43535	43669	134	0	134	CDS	+	2	LYPA23C013736	LYPA23C013736P1_31_75	4.2079181642*10^-06	1.5220192831*10^-06	1.9598973779*10^-06	7.7132835007*10^-07	NA	c_ll_ki_n008	ll	c
-
-grep LYPA23C013736 ../c_ll_ki_n008.per.unit.averages.tsv
-
-# lp23.s00001	42532	42623	91	9	82	CDS	+	0	LYPA23C013736	LYPA23C013736P1_1_31	8.4643631707*10^-06	4.2156730876*10^-05	3.9287378174*10^-06	1.9473962736*10^-05	-2.2590594071*10^-01	c_ll_ki_n008	ll	c
-
-# lp23.s00001	42623	43535	912	43	869	intron	+	0	LYPA23C013736	LYPA23C013736T1_intron_1	3.5047507546*10^-04	1.0217133672*10^-02	2.8990944884*10^-04	8.4917807232*10^-03	-7.1323235666*10^-03	c_ll_ki_n008	ll	c
-
-
-
-# OJO!!! Parece que sí esta en el archivo de iteraciones pero no en el global, por tanto algo ha debido de ir mal al pegarlos. Reviso esa parte de código. 
-```
-
-
-
-
+¡Ojo! el filtro que estás aplicando se está quedando con las que para la Tajima son NA. Si las quieres eliminar ¡ojo!
 
 
 ```{r}
@@ -2483,7 +2455,8 @@ for (DATAFRAME in DATAFRAMES)
 ```
 
 
-## Tablas corregidas para la media de intergénico.
+## Tablas per pop
+### Corregidas para la media de intergénico.
 
 
 General
@@ -2685,7 +2658,7 @@ for (SPECIE in unique(diversity_stats_df_feature_corrected$specie))
 # Cuidado porque aquí estoy asumiendo que la region es igual, y esto parece que es asi, pero no estoy 100% segura de que no haya podido pasar que en una población se haya definido como telomérico y en otra no por falta de bases. 
 
 calculus_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_POP1, name_POP2){
-  data_diversity_POP1_POP2 <- inner_join (POP1, POP2, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr")) %>%  
+  data_diversity_POP1_POP2 <- inner_join (POP1, POP2, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>%  
     mutate (ratio_pairwise_average = pairwise_ave.y/pairwise_ave.x) %>% 
     mutate (ratio_watterson_average = watterson_ave.y/watterson_ave.x) %>% 
     mutate (ratio_corrected_by_pairwise_average_intergenic_per_unit = corrected_by_pairwise_average_intergenic_per_unit.y/corrected_by_pairwise_average_intergenic_per_unit.x) %>%
@@ -2698,13 +2671,6 @@ calculus_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, nam
 }
 
 # Create data frame
-
-
-
-## CREARLAS!!!!
-
-
-
 
 # Dataframe Kirov-Norway
 calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity,c_ll_no_n008_diversity, deparse(substitute(c_ll_ki_n013_diversity)),deparse(substitute(c_ll_no_n008_diversity)))
@@ -2723,12 +2689,12 @@ calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_diversity,c_lp
 calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n012_diversity,c_lp_do_n012_diversity, deparse(substitute(c_lp_sm_n012_diversity)),deparse(substitute(c_lp_do_n012_diversity)))
 
 
-write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-write.table(data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n008_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-write.table(data_diversity_c_ll_ki_n008_diversity_c_ll_po_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n008_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-write.table(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity, paste(wd_output,"data_diversity_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-write.table(data_diversity_c_lp_sm_n012_diversity_c_lp_do_n012_diversity, paste(wd_output,"data_diversity_c_lp_sm_n012_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+# write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+# write.table(data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n008_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+# write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+# write.table(data_diversity_c_ll_ki_n008_diversity_c_ll_po_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n008_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+# write.table(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity, paste(wd_output,"data_diversity_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+# write.table(data_diversity_c_lp_sm_n012_diversity_c_lp_do_n012_diversity, paste(wd_output,"data_diversity_c_lp_sm_n012_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 
 # También las creo a lo largo para poder lanzar modelos
@@ -2745,6 +2711,53 @@ c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model <- rbind(c_ll_ki_n013_di
 
 ```
 
+#### Venh-diagram
+
+Sobre estas tablas que acabo de crear donde están TODAS las unidades y el ratio entre par de poblaciones, voy a sacar todas las unidades con un ratio mayor que uno y voy a hacer un diagrama de Venh. 
+
+```{r}
+install.packages("rJava")
+require(rJava)
+library(venneuler)
+# https://stackoverflow.com/questions/8713994/venn-diagram-proportional-and-color-shading-with-semi-transparency
+# https://rstudio-pubs-static.s3.amazonaws.com/13301_6641d73cfac741a59c0a851feb99e98b.html
+
+
+pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008 <- data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity %>%  filter(ratio_corrected_by_pairwise_average_intergenic_per_unit>1) %>% select (unique_id) %>%  mutate (factor="c_ll_ki_n013_c_ll_no_n008")
+
+pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008 <- data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity %>%  filter(ratio_corrected_by_pairwise_average_intergenic_per_unit>1) %>% select (unique_id) %>% mutate (factor="c_ll_ki_n008_c_ll_no_n008")  
+
+
+pairwise_ratio_above_one_c_ll_ki_n013_c_ll_po_n008 <- data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity %>%  filter(ratio_corrected_by_pairwise_average_intergenic_per_unit>1) %>% select (unique_id) #%>% mutate (factor="c_ll_ki_n013_c_ll_po_n008")
+
+pairwise_ratio_above_one_c_ll_ki_n008_c_ll_po_n008 <- data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity %>%  filter(ratio_corrected_by_pairwise_average_intergenic_per_unit>1) %>% select (unique_id) #%>% mutate (factor="c_ll_ki_n008_c_ll_po_n008")  
+
+  
+kk <- kk <- full_join(pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008, pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008, by="unique_id") %>% full_join(pairwise_ratio_above_one_c_ll_ki_n013_c_ll_po_n008 , by="unique_id")
+
+d <- read.csv("catdoge.csv")
+
+
+data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity
+data_diversity_c_ll_ki_n008_diversity_c_ll_po_n008_diversity
+data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity
+data_diversity_c_lp_sm_n012_diversity_c_lp_do_n012_diversity
+
+```
+
+
+```{r}
+set.seed(1)
+x = paste("cluster-",sample(c(1:100),500,replace=TRUE),sep="")
+y = c(
+  paste("factor-",sample(c(letters[1:3]),300, replace=TRUE),sep=""),
+  paste("factor-",sample(c(letters[1]),100, replace=TRUE),sep=""),
+  paste("factor-",sample(c(letters[2]),50, replace=TRUE),sep=""),
+  paste("factor-",sample(c(letters[3]),50, replace=TRUE),sep="")
+)
+data = data.frame(cluster=x,factor=y)
+
+```
 
 
 #### Separate by pop 
