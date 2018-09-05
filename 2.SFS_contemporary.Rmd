@@ -1712,6 +1712,10 @@ data_diversity_filtered_po <- data_diversity_pre %>% filter (pop=="c_ll_po_n008"
 
 lista_lynxlynx <- inner_join(data_diversity_filtered_ki_filtered, data_diversity_filtered_no, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>% inner_join(., data_diversity_filtered_po, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id" ))  %>% inner_join(., data_diversity_filtered_ki, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id" )) %>% select("unique_id")
  
+lista_lynxlynx <- inner_join(data_diversity_filtered_ki, data_diversity_filtered_no, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>% inner_join(., data_diversity_filtered_po, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id" ))  %>% select("unique_id")
+
+
+
 data_diversity_filtered_lynxlynx <- data_diversity_pre %>% filter (specie=="ll") %>% filter(unique_id %in% lista_lynxlynx$unique_id)
 
 # Ahora para pardinus:
@@ -1730,7 +1734,7 @@ data_diversity_filtered <- rbind(data_diversity_filtered_lynxlynx, data_diversit
 
 # Ordenar los factores. 
 
-data_diversity_filtered$Populations <- factor (data_diversity_filtered$Populations, levels=c("Kirov","Kirov_subsampled","Bialowieza","Norway", "Andujar","Andujar_subsampled","Donana"))
+data_diversity_filtered$Populations <- factor (data_diversity_filtered$Populations, levels=c("Kirov","Kirov_subsampled","Bialowieza","Norway", "Andujar","Donana"))
 data_diversity_filtered$chr <- factor(data_diversity_filtered$chr, levels = c("chrA1","chrC1","chrB1","chrA2","chrC2","chrB2","chrB3","chrB4","chrA3","chrD1","chrD3","chrD4","chrD2","chrF2","chrF1","chrE2","chrE1","chrX"))
 
 
@@ -1846,6 +1850,7 @@ data_diversity_filtered <-  data_diversity_filtered %>%  mutate (., region=repla
 
 
 ```
+
 Algunas notas sobre los lncRNA y ncRNA
 Infernal ("INFERence of RNA ALignment") is for searching DNA sequence databases for RNA structure and sequence similarities. It is an implementation of a special case of profile stochastic context-free grammars called covariance models (CMs). A CM is like a sequence profile, but it scores a combination of sequence consensus and RNA secondary structure consensus, so in many cases, it is more capable of identifying RNA homologs that conserve their secondary structure more than their primary sequence.
 
@@ -2492,9 +2497,9 @@ General
 ```{r}
 
 # Saco las tablas para cada población y añado una columna en la que corrijo por la media de pairwise. 
+"c_ll_ki_n008"
 
-
-POPS=c("c_ll_ki_n013","c_ll_ki_n008","c_ll_no_n008","c_ll_po_n008", "c_lp_sm_n019", "c_lp_sm_n012", "c_lp_do_n012")
+POPS=c("c_ll_ki_n013","c_ll_no_n008","c_ll_po_n008", "c_lp_sm_n019", "c_lp_sm_n012", "c_lp_do_n012")
 
 for (POP in POPS)
 {
@@ -2521,8 +2526,10 @@ for (POP in POPS)
 }
 
 # Hago una tabla con la media para cada grupo y para cada población. 
+c_ll_ki_n008_diversity
 
-data_diversity_filtered_ave_corrected <- rbind (c_ll_ki_n013_diversity, c_ll_ki_n008_diversity, c_ll_no_n008_diversity, c_ll_po_n008_diversity,  c_lp_sm_n019_diversity, c_lp_sm_n012_diversity, c_lp_do_n012_diversity)
+
+data_diversity_filtered_ave_corrected <- rbind (c_ll_ki_n013_diversity,  c_ll_no_n008_diversity, c_ll_po_n008_diversity,  c_lp_sm_n019_diversity, c_lp_sm_n012_diversity, c_lp_do_n012_diversity)
 
 
 INDICES=c("corrected_by_pairwise_average_intergenic_per_unit", "corrected_by_watterson_average_intergenic_per_unit")
@@ -2753,8 +2760,8 @@ c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model <- rbind(c_ll_ki_n013_di
 
 # Saco las tablas para cada población y añado una columna en la que corrijo por la media de pairwise. 
 
-
-POPS=c("c_ll_ki_n013","c_ll_ki_n008","c_ll_no_n008","c_ll_po_n008", "c_lp_do_n012", "c_lp_sm_n019","c_lp_sm_n012")
+"c_ll_ki_n008"
+POPS=c("c_ll_ki_n013","c_ll_no_n008","c_ll_po_n008", "c_lp_do_n012", "c_lp_sm_n019","c_lp_sm_n012")
 
 # Feature
 for (POP in POPS)
@@ -2922,6 +2929,7 @@ write.table(ratio_median_c_ll_ki_n008_ave_diversity_chr_c_ll_po_n008_ave_diversi
 
 # Dataframe Sierra_Morena-Doñana
 bootleneck_vs_non_bootleneck_ratio_median_chr(c_lp_sm_n019_ave_diversity_chr, c_lp_do_n012_ave_diversity_chr, deparse(substitute(c_lp_sm_n019_ave_diversity_chr)),deparse(substitute(c_lp_do_n012_ave_diversity_chr)))
+
 write.table(ratio_median_c_lp_sm_n019_ave_diversity_chr_c_lp_do_n012_ave_diversity_chr, paste(wd_output,"ratio_median_chr_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 bootleneck_vs_non_bootleneck_ratio_median_chr(c_lp_sm_n012_ave_diversity_chr, c_lp_do_n012_ave_diversity_chr, deparse(substitute(c_lp_sm_n012_ave_diversity_chr)),deparse(substitute(c_lp_do_n012_ave_diversity_chr)))
