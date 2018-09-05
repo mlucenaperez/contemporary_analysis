@@ -116,7 +116,7 @@ cor(c(geo_distances_complete_matrix), c(genetic_distances_matrix))
 cor(c(as.matrix(geo_distances_complete_matrix)), c(as.matrix(genetic_distances_matrix)))
 
 
-# Removing poland and norway to do the mantel test
+# Removing poland, norway & balcans to do the mantel test
 
 library(tibble)
 
@@ -150,6 +150,10 @@ genetic_distances_matrix_no_drift <- genetic_distances_matrix %>%
     column_to_rownames('id') %>% data.matrix(.)
   
 
+
+
+
+
 mantel(as.dist(geo_distances_complete_matrix_no_drift), as.dist(genetic_distances_matrix_no_drift))
 mantel(as.dist(geo_distances_complete_matrix), as.dist(genetic_distances_matrix))
 
@@ -168,7 +172,6 @@ mantel(as.dist(geo_distances_complete_matrix), as.dist(genetic_distances_matrix)
   mutate (pair_ind=paste(ind1,ind2, sep="-")) %>% 
   full_join ((melt(genetic_distances_matrix) %>%   mutate (pair_ind=paste(Var1,Var2, sep="-"))),., by ="pair_ind" ) %>% 
   rename (genetic_distance=value, geographic_distance=distances_km_Winkel_Tripel) %>% 
-  filter(complete.cases(.)) %>% 
   mutate (pop1=substr(ind1, 0, 7)) %>% 
   mutate (pop2=substr(ind2, 0, 7)) %>% 
   mutate (area_pop1 =  ifelse (pop1 == "c_ll_po" | pop1 == "c_ll_ur" | pop1 == "c_ll_ki" | pop1 == "c_ll_la" | pop1 == "c_ll_no" | pop1 == "c_ll_ba" | pop1 == "h_ll_ba" | 
@@ -183,10 +186,8 @@ mantel(as.dist(geo_distances_complete_matrix), as.dist(genetic_distances_matrix)
                        ifelse (area_pop1=="East" & area_pop2 =="East", "East-East", NA))))) %>% 
   mutate (self_comparison =ifelse (ind1==ind2, "SELF", "DISTINCT")) %>% 
   filter(self_comparison!="SELF") %>% 
-  filter(geographic_distance!=0) %>% 
  filter(pop1 != "c_ll_ba" , pop1!="h_ll_ba", pop2 != "c_ll_ba" , pop2!="h_ll_ba")  %>% 
- filter(pop1 != "c_ll_no" , pop1!="c_ll_po", pop2 != "c_ll_no" , pop2!="c_ll_po") %>% 
-filter(pop1 != "c_ll_cr" , pop2 != "c_ll_cr") 
+ filter(pop1 != "c_ll_no" , pop1!="c_ll_po", pop2 != "c_ll_no" , pop2!="c_ll_po") #%>% filter(pop1 != "c_ll_cr" , pop2 != "c_ll_cr") 
 
 
 # Article
@@ -236,16 +237,40 @@ summary(mod1)
  
 ```
 
+# Partial mantel test
 ```{r}
+
+# General yes/no matrix if the comparison is among west-east=1
+geo_genetic_distances_yes_no_matrix_no_drift <- geo_genetic_distances %>% mutate(west_east= ifelse (comparison == "West-East", "1", "0")) %>% 
+  select (ind1, ind2, west_east) %>%
+  dplyr:: select(-starts_with("c_ll_no")) %>% 
+  dplyr::select(-starts_with("c_ll_po")) %>% 
+  dplyr::select(-starts_with("c_ll_ba")) %>% 
+  dplyr::select(-starts_with("h_ll_ba")) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1') %>% data.matrix(.)
+
+geo_genetic_distances_yes_no_matrix_no_drift <- geo_genetic_distances_yes_no_matrix_no_drift[order(rownames(geo_genetic_distances_yes_no_matrix_no_drift)), order(colnames(geo_genetic_distances_yes_no_matrix_no_drift))]
+
+genetic_distances_matrix_no_drift <- genetic_distances_matrix_no_drift[order(rownames(genetic_distances_matrix_no_drift)), order(colnames(genetic_distances_matrix_no_drift))]
+
+geo_distances_complete_matrix_no_drift <- geo_distances_complete_matrix_no_drift[order(rownames(geo_distances_complete_matrix_no_drift)), order(colnames(geo_distances_complete_matrix_no_drift))]
+
+mantel.partial(as.dist(genetic_distances_matrix_no_drift), as.dist(geo_distances_complete_matrix_no_drift), as.dist(geo_genetic_distances_yes_no_matrix_no_drift), method = "pearson", permutations = 999)
+
+
 # Now I will create a matrix with west-west east-west east-east comparisons.
+west_genetic_matrix <- geo_genetic_distances %>% filter (comparison=="West-West") %>% select (ind1, ind2, genetic_distance) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1') %>% data.matrix(.)
 
-geo_genetic_distances_yes_no_matrix_no_drift <- geo_genetic_distances %>% mutate(west_east= ifelse (comparison == "West-East", "1", "0")) %>% select (ind1, ind2, west_east) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1') %>% data.matrix(.)
+east_genetic_matrix <- geo_genetic_distances %>% filter (comparison=="East-East") %>% select (ind1, ind2, genetic_distance) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1') %>% data.matrix(.)
 
-mantel.partial(as.dist(genetic_distances_matrix_no_drift), as.dist(geo_distances_complete_matrix_no_drift), geo_genetic_distances_yes_no_matrix, method = "pearson", permutations = 999)
+west_geographic_matrix <- geo_genetic_distances %>% filter (comparison=="West-West") %>% select (ind1, ind2, geographic_distance) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1') %>% data.matrix(.)
 
-geo_genetic_distances_cualitative_matrix_no_drift <- geo_genetic_distances %>% select (ind1, ind2, comparison) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1')
+east_geographic_matrix <- geo_genetic_distances %>% filter (comparison=="East-East") %>% select (ind1, ind2, geographic_distance) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1') %>% data.matrix(.)
 
-geo_genetic_distances_cualitative_matrix_no_drift
+
+# Mantel test in the west,east and west-east
+mantel(as.dist(west_genetic_matrix), as.dist(west_geographic_matrix))
+mantel(as.dist(east_genetic_matrix), as.dist(east_geographic_matrix))
+
 
 ```
 
