@@ -2929,7 +2929,6 @@ write.table(ratio_median_c_ll_ki_n008_ave_diversity_chr_c_ll_po_n008_ave_diversi
 
 # Dataframe Sierra_Morena-Doñana
 bootleneck_vs_non_bootleneck_ratio_median_chr(c_lp_sm_n019_ave_diversity_chr, c_lp_do_n012_ave_diversity_chr, deparse(substitute(c_lp_sm_n019_ave_diversity_chr)),deparse(substitute(c_lp_do_n012_ave_diversity_chr)))
-
 write.table(ratio_median_c_lp_sm_n019_ave_diversity_chr_c_lp_do_n012_ave_diversity_chr, paste(wd_output,"ratio_median_chr_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 bootleneck_vs_non_bootleneck_ratio_median_chr(c_lp_sm_n012_ave_diversity_chr, c_lp_do_n012_ave_diversity_chr, deparse(substitute(c_lp_sm_n012_ave_diversity_chr)),deparse(substitute(c_lp_do_n012_ave_diversity_chr)))
