@@ -1574,6 +1574,7 @@ for (pop in poplist)
 }
 
 
+
 rm(dataset)
 
 
@@ -1708,6 +1709,12 @@ data_diversity_filtered <- rbind(data_diversity_filtered_lynxlynx, data_diversit
 
 data_diversity_filtered$Populations <- factor (data_diversity_filtered$Populations, levels=c("Kirov","Kirov_subsampled","Bialowieza","Norway", "Andujar","Donana"))
 data_diversity_filtered$chr <- factor(data_diversity_filtered$chr, levels = c("chrA1","chrC1","chrB1","chrA2","chrC2","chrB2","chrB3","chrB4","chrA3","chrD1","chrD3","chrD4","chrD2","chrF2","chrF1","chrE2","chrE1","chrX"))
+
+data_diversity_filtered$watterson_ave <- as.numeric(data_diversity_filtered$watterson_ave)
+data_diversity_filtered$watterson_sd <- as.numeric(data_diversity_filtered$watterson_sd)
+data_diversity_filtered$pairwise_sd <- as.numeric(data_diversity_filtered$pairwise_sd)
+data_diversity_filtered$tajimaD <- as.numeric(data_diversity_filtered$tajimaD)
+
 
 
 # Borro las que no necesito luego
@@ -2470,9 +2477,8 @@ General
 ```{r}
 
 # Saco las tablas para cada población y añado una columna en la que corrijo por la media de pairwise. 
-"c_ll_ki_n008"
 
-POPS=c("c_ll_ki_n013","c_ll_no_n008","c_ll_po_n008", "c_lp_sm_n019", "c_lp_sm_n012", "c_lp_do_n012")
+POPS=c("c_ll_ki_n013","c_ll_no_n008","c_ll_ki_n008","c_ll_po_n008", "c_lp_sm_n019", "c_lp_sm_n012", "c_lp_do_n012")
 
 for (POP in POPS)
 {
@@ -2499,10 +2505,10 @@ for (POP in POPS)
 }
 
 # Hago una tabla con la media para cada grupo y para cada población. 
-c_ll_ki_n008_diversity
 
 
-data_diversity_filtered_ave_corrected <- rbind (c_ll_ki_n013_diversity,  c_ll_no_n008_diversity, c_ll_po_n008_diversity,  c_lp_sm_n019_diversity, c_lp_sm_n012_diversity, c_lp_do_n012_diversity)
+
+data_diversity_filtered_ave_corrected <- rbind (c_ll_ki_n013_diversity, c_ll_ki_n008_diversity, c_ll_no_n008_diversity, c_ll_po_n008_diversity,  c_lp_sm_n019_diversity, c_lp_sm_n012_diversity, c_lp_do_n012_diversity)
 
 
 INDICES=c("corrected_by_pairwise_average_intergenic_per_unit", "corrected_by_watterson_average_intergenic_per_unit")
@@ -2706,7 +2712,7 @@ calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n012_diversity,c_lp
 
 # También las creo a lo largo para poder lanzar modelos
 
-c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model <- rbind(c_ll_ki_n013_diversity, c_ll_po_n008_diversity)
+# c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model <- rbind(c_ll_ki_n013_diversity, c_ll_po_n008_diversity)
 
 
 # rm(data_diversity)
@@ -2729,20 +2735,37 @@ library(venneuler)
 # https://stackoverflow.com/questions/8713994/venn-diagram-proportional-and-color-shading-with-semi-transparency
 # https://rstudio-pubs-static.s3.amazonaws.com/13301_6641d73cfac741a59c0a851feb99e98b.html
 
+install.packages('VennDiagram')
+library(VennDiagram)
 
-pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008 <- data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity %>%  filter(ratio_corrected_by_pairwise_average_intergenic_per_unit>1) %>% select (unique_id) %>%  mutate (factor="c_ll_ki_n013_c_ll_no_n008")
-
-pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008 <- data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity %>%  filter(ratio_corrected_by_pairwise_average_intergenic_per_unit>1) %>% select (unique_id) %>% mutate (factor="c_ll_ki_n008_c_ll_no_n008")  
+draw.triple.venn(area1 = 3472, area2 = 3528, area3 = 3492, n12 = 3176, n23 = 3323, n13 = 3182, n123 = 3096, category = c("sample1", "sample2", "sample3"), lty = "blank", fill = c("skyblue", "pink1", "mediumorchid") , cex=2, cat.cex=2, cat.fontfamily = rep("serif", 3))
 
 
-pairwise_ratio_above_one_c_ll_ki_n013_c_ll_po_n008 <- data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity %>%  filter(ratio_corrected_by_pairwise_average_intergenic_per_unit>1) %>% select (unique_id) #%>% mutate (factor="c_ll_ki_n013_c_ll_po_n008")
+pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008 <- data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity %>%  filter(ratio_corrected_by_pairwise_average_intergenic_per_unit>1) %>% select (unique_id) %>% rename (c_ll_ki_n013_c_ll_no_n008=unique_id) 
+
+pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008 <- data_diversity_c_ll_ki_n008_diversity_c_ll_no_n008_diversity %>%  filter(ratio_corrected_by_pairwise_average_intergenic_per_unit>1) %>% select (unique_id) %>% rename (c_ll_ki_n008_c_ll_no_n008=unique_id)
+
+pairwise_ratio_above_one_c_ll_ki_n013_c_ll_po_n008 <- data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity %>%  filter(ratio_corrected_by_pairwise_average_intergenic_per_unit>1) %>% select (unique_id) %>% rename (c_ll_ki_n013_c_ll_po_n008=unique_id)
+
+
+ kk<- add.col(pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008, pairwise_ratio_above_one_c_ll_ki_n013_c_ll_po_n008) 
+ 
+ 
+  add.col<-function(df, new.col) {n.row<-dim(df)[1]
+           length(new.col)<-n.row
+           cbind(df, new.col)}
+  
+library(rowr)
+table_to_vehn_raw <- Map(cbind.fill, pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008, pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008, MoreArgs = list(fill=NA)) %>% Map(cbind.fill, ., pairwise_ratio_above_one_c_ll_ki_n013_c_ll_po_n008, MoreArgs = list(fill=NA))
+
+geneLS <- lapply(as.list(table_to_vehn_raw), function(x) x[x != ""])
+
 
 pairwise_ratio_above_one_c_ll_ki_n008_c_ll_po_n008 <- data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity %>%  filter(ratio_corrected_by_pairwise_average_intergenic_per_unit>1) %>% select (unique_id) #%>% mutate (factor="c_ll_ki_n008_c_ll_po_n008")  
 
   
 kk <- kk <- full_join(pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008, pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008, by="unique_id") %>% full_join(pairwise_ratio_above_one_c_ll_ki_n013_c_ll_po_n008 , by="unique_id")
 
-d <- read.csv("catdoge.csv")
 
 
 data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity
