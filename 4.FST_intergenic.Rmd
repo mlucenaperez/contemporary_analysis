@@ -59,7 +59,7 @@ FST_FOLDER=$RUTA/intergenic_analysis/intergenic_fst
 
 #Get all populations name
 cd $SFS_FOLDER
-POPS=($(ls *.unfolded-lr.postprob.thetas.gz | sed -e 's/.unfolded-lr.postprob.thetas.gz//g'  | sort | uniq))
+POPS=($(ls *.unfolded-lr.saf.pos.gz | sed -e 's/.unfolded-lr.saf.pos.gz//g'  | sort | uniq))
 cd $FST_FOLDER
 #Get all possible pairwise combinations
 POP_PAIRS=($(echo ${POPS[@]} | Rscript pops_combinations.R))
@@ -214,7 +214,7 @@ plot_FST_nj_weighted_unrooted_tree <- function(wd,df,filter_pattern,subset_name 
     select(POP1,POP2,FSTweight)%>% 
     spread(POP2,FSTweight)%>%
     tibble::remove_rownames() %>% tibble::column_to_rownames("POP1")  
-    
+write.table(fst.w_matrix, paste(wd,"matrix_fst.csv"))  
     
     
   ## plot Neighbouring-Joining Tree
@@ -236,4 +236,175 @@ for (i in 1:length (fst_table)){
 
 
 ```
+
+# X chromsome
+
+
+## 1 - Estimate multidimensional SFS: Calculate all pairwise 2dsfs's
+
+Todo esto está hecho, y guardado en datos.
+
+```{bash}
+/home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_fst
+
+```
+
+
+
+
+# mkdir
+
+```{bash}
+mkdir /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_fst/Xchr
+```
+
+
+## Get X positions (rf file)
+
+```{bash}
+
+# file=/GRUPOS/grupolince/Lynx_Xchr/Xchr.intergenic.bed
+
+awk '{print $1":"$2+1"-"$3}' /GRUPOS/grupolince/Lynx_Xchr/Xchr.intergenic.bed > /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_fst/Xchr/Xchr.intergenic.rf
+
+
+
+awk '{print $0, $3-$2}' /GRUPOS/grupolince/Lynx_Xchr/Xchr.intergenic.bed | sort -n -k4,4 
+
+```
+
+
+
+
+
+```{r, engine=bash, eval=FALSE}
+#Get the global estimate
+screen -S fst_x_chr
+
+
+RUTA=/home/mlucena/ANGSD_analysis 
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
+THREADS=15
+SFS_FOLDER=$RUTA/intergenic_analysis/intergenic_sfs
+FST_FOLDER=$RUTA/intergenic_analysis/intergenic_fst
+
+REGIONFILE=/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_fst/Xchr/Xchr.intergenic.rf
+
+
+
+#Get all populations name
+cd $SFS_FOLDER
+POPS=($(ls *.unfolded-lr.saf.pos.gz | sed -e 's/.unfolded-lr.saf.pos.gz//g'  | sort | uniq))
+cd $FST_FOLDER
+#Get all possible pairwise combinations
+POP_PAIRS=($(echo ${POPS[@]} | Rscript pops_combinations.R))
+
+cd /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_fst
+
+echo "POP1,POP2,FSTunweight,FSTweight" > X.fsts.csv
+for POP_PAIR in  ${POP_PAIRS[@]}
+do
+POP1=($(echo $POP_PAIR | cut -d "/"  -f 1))
+POP2=($(echo $POP_PAIR | cut -d "/"  -f 2)) 
+echo $POP1"-"$POP2
+FST=($( $NGSTOOLS/realSFS fst stats $POP1.$POP2.unfolded-lr.fst.idx -r `cat $REGIONFILE` | tr ' ' ',' ))
+echo "$POP1,$POP2,$FST" >> X.fsts.csv
+done
+
+
+
+# you can have a look at their values:
+#$NGSTOOLS/realSFS fst print KIR.NOR.BIA.unfolded.pbs.fst.idx | less -S
+
+# where columns are: chromosome, postisition, (a), (a+b) values for the three FST comparisons, where FST is defined as a/(a+b).
+# Note that FST on multiple SNPs is calculated as sum(a)/sum(a+b).
+
+
+# Now, you could do an sliding-window analysis.
+# * If you give only 2 pop in input, only the FST will be calculated. 
+#### All this analysis could be estimated using NGStools (ngs2dSFS plus ngsFST) but it would need to:
+
+# 1. Define the subset of overlapping sites as it does not compute it automatically as it does ANGSD.
+# 2. It could required more memory than ANGSD and may be slower. 
+# 3. The methods behind both programs are very similar. 
+# 4. ngsTools implements a very simple estimator of the SFS, where the most likely joint allele frequency is recorded at each site. 
+# 	 This tends to overestimate singletons, for instance. If you have enough sites, then it is recommended to use the 2DSFS estimated in ANGSD instead. 
+# 5. ANGSD can compute a ML estimate of the 2D-SFS which should be preferred when many sites are available. 
+# 	 However, ANGSD output file should be transformed (from log to un-log and from space-separated to tab-separated) before being used in ngsFST.
+
+
+```
+
+ # Copying to local
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_fst/*.fsts.csv /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_fst/
+```
+
+
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(ggplot2)
+library(ape)
+
+wd<-"/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_fst/"
+
+#Look for all global fts table 
+
+fst_table = list.files(path = wd, pattern="*fsts.csv")    
+
+
+# Define function to plot trees
+
+plot_FST_nj_weighted_unrooted_tree <- function(wd,df,filter_pattern,subset_name ){
+
+  first.pop <- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%     filter (POP1!="x_ll_ba_n003") %>% 
+    filter (POP2!="x_ll_ba_n003") %>% 
+    # Esta parte es para quitar poblaciones grandes en caso de que tuviera valores para toda la distribución por ejemplo. Yo no lo quiero porque tengo mongolia junto y no me interesa quitarlo. 
+    # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
+    # filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
+    select(POP1) %>% slice(c(1)) %>% as.character()
+  
+  last.pop<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>%  filter (POP1!="x_ll_ba_n003") %>% 
+    filter (POP2!="x_ll_ba_n003") %>% 
+    # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
+    # filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
+    select(POP2) %>% slice(n())%>% as.character()
+ 
+  fst.w_matrix<- read.csv( paste0(wd,df) , stringsAsFact=F, sep=",", header = TRUE) %>% filter (POP1!="x_ll_ba_n003") %>% 
+    filter (POP2!="x_ll_ba_n003") %>% 
+    rbind(c(first.pop,first.pop,NA,NA),
+          c(last.pop,last.pop,NA,NA)) %>%
+   # mutate(pop1.n=(nchar(POP1)-4)/8,pop2.n=(nchar(POP2)-4)/8)%>%
+   #  filter(pop1.n<2, pop2.n<2, grepl(filter_pattern,POP1),grepl(filter_pattern,POP2)) %>% 
+    select(POP1,POP2,FSTweight)%>% 
+    spread(POP2,FSTweight)%>%
+    tibble::remove_rownames() %>% tibble::column_to_rownames("POP1")  
+write.table(fst.w_matrix, paste(wd,"matrix_fst.csv"))  
+    
+    
+  ## plot Neighbouring-Joining Tree
+ 
+    pdf(paste0(wd,subset_name, gsub(".fsts.csv", "_weighted.pdf",df)), paper =  "a4" )
+    plot(nj(as.dist(t(fst.w_matrix))), main=gsub(".csv", "_Fst_w", df),sub="neighbor joining",type="unrooted")
+    dev.off()
+}
+
+
+# Format tables intro matrices and Plot NJtrees
+
+
+for (i in 1:length (fst_table)){
+  #Load table,  keep only the values of single populations 
+  #(I migth be interested in the other comparissons but later)
+  plot_FST_nj_weighted_unrooted_tree(wd,fst_table[i],"_ll_","lynx_lynx_fst_test") 
+}
+
+
+```
+
 
