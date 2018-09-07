@@ -1,0 +1,148 @@
+---
+title: '*upload_to_ENA'
+output: html_document
+---
+
+
+# Copy files to a common folder
+
+
+Copio los mitocondriales (que son 93 (77 WG (80 WG 5x - 4 WG 15x) + 17 captura))
+
+
+## Carpeta de intergénico
+
+
+```{bash}
+mkdir /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/move_to_ENA
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/
+
+mv c_ll_*_intergenic.bam move_to_ENA/
+mv *_ll_ba_*_intergenic.bam move_to_ENA/
+
+# Aqui hemos movido, ¡que no copiado! los intergénicos. Luego hay que devolverlos a la carpeta orginal. 
+
+cd move_to_ENA/
+
+# Devuelvo los intergénico de WG a más cobertura para copiar los de WG completo. 
+# Estos son:
+
+mv c_ll_ki_0090_intergenic.bam ..
+mv c_ll_vl_0112_intergenic.bam ..
+mv c_ll_ya_0146_intergenic.bam ..
+mv c_ll_cr_0212_intergenic.bam ..
+ 
+# COPIO los de WG completo (despues se pueden borrar)
+
+scp /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/c_ll_ki_0090_recal_round-1.bam /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/move_to_ENA
+scp /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/c_ll_vl_0112_recal_round-1.bam /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/move_to_ENA
+scp /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/c_ll_ya_0146_recal_round-1.bam /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/move_to_ENA
+scp /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/c_ll_cr_0212_recal_round-1.bam /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/move_to_ENA
+
+scp /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/c_lr_zz_0001_recal_round-1.bam /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/move_to_ENA
+
+
+# Les cambio el nombre.
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/move_to_ENA
+
+mv c_ll_ki_0090_recal_round-1.bam c_ll_ki_0090_wg.bam
+mv c_ll_vl_0112_recal_round-1.bam c_ll_vl_0112_wg.bam
+mv c_ll_ya_0146_recal_round-1.bam c_ll_ya_0146_wg.bam
+mv c_ll_cr_0212_recal_round-1.bam c_ll_cr_0212_wg.bam
+mv c_lr_zz_0001_recal_round-1.bam c_lr_zz_0001_wg.bam
+
+
+```
+
+
+## Carpeta de mitocondrial
+
+Elena me los ha copiado en una carpeta (mito_to_ENA) así que le voy a cambiar el nombre a todos para que sea más intuitivo.
+
+```{bash}
+
+cd /GRUPOS/grupolince/Lly_mtDNA/alignments_bwamem/mito_to_ENA
+
+for i in *sorted_rmdup_sorted.bam
+do
+echo $i
+echo ${i/_sorted_rmdup_sorted.bam/_mit.bam}
+mv $i ${i/_sorted_rmdup_sorted.bam/_mit.bam}
+done
+
+# Balcanes
+
+for i in *_sorted_rmdup_sorted_blast_filtered.bam
+do
+echo $i
+echo ${i/_sorted_rmdup_sorted_blast_filtered.bam/_mit.bam}
+mv $i ${i/_sorted_rmdup_sorted_blast_filtered.bam/_mit.bam}
+done
+
+# Lo muevo a la carpeta donde estoy guardando todo para moverlo luego
+
+mv /GRUPOS/grupolince/Lly_mtDNA/alignments_bwamem/mito_to_ENA/* /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/move_to_ENA/
+
+```
+
+
+## md5
+
+
+```{bash}
+
+# Hago un md5sum para luego compararlo con lo que subo
+
+ md5sum *bam > bamfiles.md5
+ 
+```
+
+
+
+## Conect to ENA
+
+Me voy a la carpeta del servidor donde tengo los datos:
+Las instrucciones para subir las cosas están aqui:
+http://ena-docs.readthedocs.io/en/latest/upload_01.html
+
+```{bash}
+# En screen
+
+cd /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/move_to_ENA/
+
+screen -S move_to_ENA
+
+ftp webin.ebi.ac.uk
+
+# Name (webin.ebi.ac.uk:mlucena): Webin-50101
+# Password: CJbRKGNhg
+
+bin # To change to binary mode.
+
+prompt # To switch off confirmation for each file uploaded.
+# Interactive mode off.
+
+mput *_mit.bam # command to upload files.
+mput md5check_mit.list
+mput *_intergenic.bam
+mput *_wg.bam
+
+ls
+
+bye # to exit
+
+```
+
+
+Al final: 
+borrar carpeta de elena
+recolocar intergénico
+borrar WG
+
+
+
+
+
+
