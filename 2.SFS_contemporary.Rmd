@@ -1800,6 +1800,18 @@ for (pop in unique(data_diversity_filtered$Populations))
  
 ```
 
+##### Cuentas
+
+```{r}
+cuentas_perfeature_per_chr <- data_diversity_filtered %>% mutate (autosome_sexual = ifelse(chr=="chrX", "chrX" , ifelse(chr=="chrA1" | chr=="chrC1" | chr=="chrB1" | chr=="chrA2" | chr=="chrC2" | chr=="chrB2" | chr=="chrB3" | chr=="chrB4" | chr=="chrA3" | chr=="chrD1" | chr=="chrD3" | chr=="chrD4" | chr=="chrD2" | chr=="chrF2" | chr=="chrF1" | chr=="chrE2" | chr=="chrE1", "autosome", NA))) %>% dplyr::group_by(feature, autosome_sexual) %>% dplyr::summarise(total_count=n()) 
+
+write.csv(cuentas_perfeature_per_chr, paste (wd_output, "counts_autosome_vs_sexual.csv", sep="" ), quote = F, row.names = F)
+```
+
+
+
+
+
 ##### Otros sanity checks
 
 ¿Cómo solapan lncRNA con ncRNA?
