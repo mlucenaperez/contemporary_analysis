@@ -293,7 +293,7 @@ for (i in 1:length (my_files_unfolded))
   temp1=(eval(parse(text=my_files_unfolded[i])))
   temp2=norm(temp1[-1])
   temp3=norm(temp2[-c(length(temp2))])
-  barplot(temp3,xlab="Alleles",
+  barplot(temp3,xlab="Minor allele frequency",
           names=1:length(temp3),ylab="Proportions",main=my_files_unfolded[i],col='grey')
   dev.print(device=postscript, paste("/Users/marialucenaperez/Dropbox/phd/contemporary/ANGSD/intergenic_analysis/analysis_sfs/",my_files_unfolded[i],".eps", sep=""), onefile=FALSE, horizontal=FALSE)
   dev.off()
