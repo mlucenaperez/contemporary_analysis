@@ -1,0 +1,152 @@
+---
+title: "10.Recombination"
+output: html_document
+---
+
+
+29/11/2018
+
+We would like to considere recombination in our analysis, first we created a file ...
+
+```{bash}
+
+# In server B:
+
+mkdir /home/mlucena/recombination_analysis
+
+
+scp /Users/marialucenaperez/Owncloud/publico/WG_diversity/recombination/linkage_map_cat.csv mlucena@genomics-b.ebd.csic.es:/home/mlucena/recombination_analysis
+```
+
+
+
+
+Download genome info
+Me meto en la siguiente pagina https://www.ncbi.nlm.nih.gov/assembly/GCF_000181335.2/#/st_Primary-Assembly
+
+Guardo el statistic report (Felis_catus_8.0_statistic_report_NCBI.txt) en la carpeta de /Users/marialucenaperez/Owncloud/publico/WG_diversity/recombination 
+
+```{bash}
+
+grep -v "#" Felis_catus_8.0_statistic_report_NCBI.txt | grep assembled-molecule | grep total-length | grep Primary | grep -v all | awk -v OFS='\t' '{print "chr"$3, $7}' > Felis_catus_8.0_chr_lenght
+
+# En servidor B:
+mkdir /home/mlucena/grupolince/reference_genomes/felis_catus_genome/felis_catus_genome_v8
+
+
+
+scp /Users/marialucenaperez/Owncloud/publico/WG_diversity/recombination/Felis_catus_8.0_chr_lenght mlucena@genomics-b.ebd.csic.es:/home/mlucena/grupolince/reference_genomes/felis_catus_genome/felis_catus_genome_v8
+
+
+
+```
+
+Create a bed file of the linkage map
+
+```{bash}
+
+cd /home/mlucena/grupolince/reference_genomes/felis_catus_genome/felis_catus_genome_v8
+
+
+tail -n +2 Felis_catus_v8_linkage_map.csv | awk  '$1' | awk '$2' | awk  '$3' | awk '$4' | awk -v OFS='\t' '{print $3, $2-1, $2, $1, $4}' > Felis_catus_v8_linkage_map.bed
+# Estos awk eliminan si por casualidad hay algunos campos en blanco. Hemos comprobado que el cromosoma A1 tiene varios campos en blanco pra posición que no debería. 
+
+
+wc -l Felis_catus_v8_linkage_map.bed
+# 8347 Felis_catus_v8_linkage_map.bed
+```
+
+Make windows over the Felis_catus_genome_v8
+
+
+```{bash}
+bedtools makewindows -g /home/mlucena/grupolince/reference_genomes/felis_catus_genome/felis_catus_genome_v8/Felis_catus_8.0_chr_lenght -w 50000 > Felis_catus_v8_window_5kb.bed
+
+```
+
+
+Intersect with the linkage map Felis_catus_genome_v8
+
+```{bash}
+bedtools intersect -a Felis_catus_v8_window_5kb.bed -b Felis_catus_v8_linkage_map.bed -wa -wb > Felis_catus_v8_window_5kb_intersect_linkage_map.bed
+
+
+wc -l Felis_catus_v8_window_5kb_intersect_linkage_map.bed
+# 8302 Felis_catus_v8_window_5kb_intersect_linkage_map.bed
+
+# Si nos fijamos antes había 8347 posiciones (SNPs) y se han unido en 8302 ventanas, es decir la mayoría de las ventanas sólo tienen un SNPs.
+```
+
+Este archivo tiene esta pinta:
+
+chrA1	950000	1000000	chrA1	979797	979798	3.314	autosome
+chrA1	2200000	2250000	chrA1	2226163	2226164	3.844	autosome
+chrA1	2400000	2450000	chrA1	2420864	2420865	3.824	autosome
+chrA1	3400000	3450000	chrA1	3429059	3429060	4.857	autosome
+chrA1	3500000	3550000	chrA1	3546620	3546621	5.187	autosome
+chrA1	3650000	3700000	chrA1	3669186	3669187	5.553	autosome
+
+
+Ojo que hay muchas ventanas que faltan. 
+
+Lo que vemos es para cada ventana la posicion de inicio y de fin de la ventana y despues los SNPs que caen dentro de esa ventana (formato bed) y su posición en cM y si pertenecen a autosomas o chr sexuales. 
+
+Lo que voy a hacer a continuación es coger ese intervalo, y calcular para ese intervalo cual es la tasa de recombinación
+
+Group by windows
+
+```{bash}
+
+# Ahora calculamos el recombination rate para cada ventana de 5kb de la siguiente manera:
+
+# (Posicion en cM más proximal (min de la column 7) - Posición en cM más distal (max de la columna 7)) / (SNPs con la posición más proximal (min de la columna 6) - SNPs con la posición más distal (max de la columna 6)) * 10^6
+
+
+
+bedtools groupby -i Felis_catus_v8_window_5kb_intersect_linkage_map.bed -g 1,2,3 -c 6,6,7,7,8 -o min,max,min,max,distinct | awk -v OFS='\t' '{print $1,$2,$3, $5-$4}'
+
+# Haciendo el groupby queda algo asi:
+# ch    winstart winend min_SNP max_SNP min_cM max_cM type_chr
+# chrA1	950000	1000000	979798	979798	3.314	3.314	autosome
+# chrA1	2200000	2250000	2226164	2226164	3.844	3.844	autosome
+# chrA1	2400000	2450000	2420865	2420865	3.824	3.824	autosome
+
+```
+
+
+
+Como vamos a hacer ventanas de 2Mb, vamos a ver si en aluna población hay algún chunk que mida más de eso, en cuyo caso tendríamos un problema. 
+
+
+```{bash}
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+
+
+awk '{print $3-$2}' c_ll_ki_n008.per.unit.averages.chr.tsv | sort -n | tail -1
+awk '{print $3-$2}' c_ll_ki_n013.per.unit.averages.chr.tsv | sort -n | tail -1
+awk '{print $3-$2}' c_ll_no_n008.per.unit.averages.chr.tsv | sort -n | tail -1
+awk '{print $3-$2}' c_ll_po_n008.per.unit.averages.chr.tsv | sort -n | tail -1
+awk '{print $3-$2}' c_lp_do_n012.per.unit.averages.chr.tsv | sort -n | tail -1
+awk '{print $3-$2}' c_lp_sm_n012.per.unit.averages.chr.tsv | sort -n | tail -1
+awk '{print $3-$2}' c_lp_sm_n019.per.unit.averages.chr.tsv | sort -n | tail -1
+
+
+# Siempre es 940956; por tanto, incluso nuestro chunk más grande debería de entrar en una de nuestras ventanas. 
+
+```
+
+Para convertir lynx a gato debería:
+
+1. Hacer el intersect de mis genes de lince con el archivo de la sintenia
+
+algo tal que asi
+```{bash}
+intersectBed -sorted -wo -a /home/mlucena/grupolince/ultra_conserved_regions/cat_conversion_UCNE_coord_from_hg19_sorted.bed -b /GRUPOS/grupolince/copia_fabascal/MAPPINGS/cat2lynx_wTiger.bed > /home/mlucena/grupolince/ultra_conserved_regions/lynx_coordinates_cat_conversion_UCNE_coord_from_hg19_sorted.bed
+
+```
+
+2. Hacer group by con las posiciones de gato
+
+
+
+3. Pasar un liftOver de v6 a v8. 
