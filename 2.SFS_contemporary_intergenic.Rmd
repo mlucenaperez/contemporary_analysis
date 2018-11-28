@@ -3,6 +3,8 @@ title: "pipeline_contemporary_sfs"
 output: html_document
 ---
 
+# Medidas en ventanas
+
 # Generating SAF for intergenic data
 
 ## Defining variables:
@@ -1460,6 +1462,9 @@ summary_boot_ratio_X_autosomic <- rbind (summary_boot_ratio_X_autosomic_tW, summ
 rm  (summary_boot_ratio_X_autosomic_tW, summary_boot_ratio_X_autosomic_tP)
 summary_boot_ratio_X_autosomic$Populations <- factor (summary_boot_ratio_X_autosomic$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Khentii", "Töv", "Ömnögovi", "Mongolia",  "Yakutia", "Vladivostok"))
 
+
+
+write.table(summary_boot_mean_autosomic, "/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/diversity_per_pop_windows_mean_stderror_autosomic.tsv", row.names = F, quote = F)
 
 cols <- c("Carpathians"=brewer.pal(12,"Paired")[9], 
            "Kirov"=brewer.pal(12,"Paired")[1],  
