@@ -3,6 +3,10 @@ title: "2.SFS_contemporary_intergenic_X_vs_autosomic"
 output: html_document
 ---
 
+
+# NOTA: Aqui valores de diversidad (una medida) para autosomico y para X
+
+
 # Copy transformed thetas from datos.
 
 All my "$POP".transformedThetas are already in datos:
