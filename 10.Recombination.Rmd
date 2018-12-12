@@ -356,7 +356,8 @@ rm list_of_units_with_chr_info_in_lynx.txt
 
 ```
 
-## 2.2 Intersect de esas unidades con coordenadas gato
+## 2.2 Intersect de esas unidades con coordenadas gato: SINTENIA
+
 
 ```{bash}
 cd /home/mlucena/recombination_analysis/
@@ -368,15 +369,41 @@ intersectBed -sorted -wo -a /home/mlucena/recombination_analysis/list_of_units_w
 ¿Qué pinta tiene este archivo?
 
 
-
-
+lp23.s00001     0       15011   intergenic_region_1_intergenic  lp23.s00001     3930    3931    TCL=AAA:chrA3:15104377-15104378:NO      1
+lp23.s00001     0       15011   intergenic_region_1_intergenic  lp23.s00001     3931    3932    TCL=TTT:chrA3:15104378-15104379:NO      1
+lp23.s00001     0       15011   intergenic_region_1_intergenic  lp23.s00001     4059    4060    TCL=AAA:chrA3:15104506-15104507:NO      1
+lp23.s00001     0       15011   intergenic_region_1_intergenic  lp23.s00001     4060    4061    TCL=AAA:chrA3:15104507-15104508:NO      1
+lp23.s00001     0       15011   intergenic_region_1_intergenic  lp23.s00001     4061    4062    TCL=GGG:chrA3:15104508-15104509:NO      1
 
 
 
 ## 2.3 Hacer group by con las posiciones de gato
 
 ```{bash}
-awk -v OFS='\t' '{split ($8, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2], $4 }' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_lynx_coordinates_information.bed | sort -k1,1 -k2,2n | bedtools merge -i stdin -c 4 -o distinct -delim ";" > list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed
+
+# Primero compruebo cual es el tamaño máximo de una unidad en lince.
+
+awk '{print $3-$2,$1,$2,$3,$4}' /home/mlucena/recombination_analysis/list_of_units_with_chr_info_in_lynx_no_duplicates.txt | sort -k1,1n | tail 
+# 940956 lp23.s10433 631672 1572628 intergenic_region_17624_intergenic
+
+# La más grande es más pequeña que nuestras unidades de 2Mb que hemos usado para establecer la tasa de recombinación, asi que en principio es posible una vez pasadas a gato, tener solo dos coordenadas de gato. Primero vamos a ver si estas unidades, una vez pasadas a gato, corresponden a cromosomas de gato distintos, lo cual sería un problema. 
+
+
+# Primero vamos a ver si hay más de un cromosoma en algunas unidades:
+
+awk -v OFS='\t' '{split ($8, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2], $4 }' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_lynx_coordinates_information.bed | sort -k4,4 | bedtools groupby -i stdin -g 4 -c 1 -o distinct -delim ";" > lista_chr_per_unit
+
+
+# Fusiono en base a la unidad, siempre que esté en el mismo cromosoma.
+
+awk -v OFS='\t' '{split ($8, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2], $4 }' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_lynx_coordinates_information.bed | sort -k4,4 | bedtools groupby -i stdin -g 4 -c 1,2,3,4 -o distinct,min,max,distinct -delim ";" > list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed
+
+# Si hay unidades que están en más de dos cromosomas, las elimino:
+
+grep ";" lista_chr_per_unit | awk '{print $$$$$$$$$}' > lista_unidades_en_mas_de_dos_chr.csv
+
+grep -Ff lista_unidades_en_mas_de_dos_chr.csv list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed > $$$
+
 
 ```
 
@@ -386,19 +413,33 @@ awk -v OFS='\t' '{split ($8, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2]
 
 ```{bash}
 awk '{sum+=$3-$2} END {print sum}' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed
-# 
+# 1138528400
 
 ```
 
 ## 2.4 Pasar un liftOver de v6 a v8. 
 
-Para hacer este liftOver, tenemos que pasar de la version felCat5 a la versión felCat4, y de ahi a felCat3 y luego a felCat8,en la página web http://rohsdb.cmb.usc.edu/GBshape/cgi-bin/hgLiftOver.
+Para hacer este liftOver, tenemos que pasar de la version felCat5 (la nuestra, 6.2) a la versión felCat4, y de ahi a felCat3 y luego a felCat8,en la página web http://rohsdb.cmb.usc.edu/GBshape/cgi-bin/hgLiftOver.
+
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/recombination_analysis/list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed /Users/marialucenaperez/Owncloud/publico/WG_diversity/recombination
+
+# En local modifico el archivo para liftOver
+cd /Users/marialucenaperez/Owncloud/publico/WG_diversity/recombination
+
+# cat list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed | awk -v OFS='\t' '{print $1":"$2"-"$3,$4}' | grep "^chr"  > list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_v5_liftover.bed
+
+
+head list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_v5_liftover.bed > kk
+
+```
 
 
 
+Minimum ratio of bases that must remap: 0.95 
 
-
-
+¿Queremos otra?
 
 
 # 3. Asigno tasa de recombinación a cada unidad
