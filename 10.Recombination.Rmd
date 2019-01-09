@@ -393,19 +393,18 @@ awk '{print $3-$2,$1,$2,$3,$4}' /home/mlucena/recombination_analysis/list_of_uni
 
 awk -v OFS='\t' '{split ($8, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2], $4 }' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_lynx_coordinates_information.bed | sort -k4,4 | bedtools groupby -i stdin -g 4 -c 1 -o distinct -delim ";" > lista_chr_per_unit
 
+# YUHUUU no hay!!
+
 
 # Fusiono en base a la unidad, siempre que esté en el mismo cromosoma.
 
-awk -v OFS='\t' '{split ($8, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2], $4 }' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_lynx_coordinates_information.bed | sort -k4,4 | bedtools groupby -i stdin -g 4 -c 1,2,3,4 -o distinct,min,max,distinct -delim ";" > list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed
-
-# Si hay unidades que están en más de dos cromosomas, las elimino:
-
-grep ";" lista_chr_per_unit | awk '{print $$$$$$$$$}' > lista_unidades_en_mas_de_dos_chr.csv
-
-grep -Ff lista_unidades_en_mas_de_dos_chr.csv list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed > $$$
-
+awk -v OFS='\t' '{split ($8, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2], $4 }' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_lynx_coordinates_information.bed | sort -k4,4 | bedtools merge -i stdin -c 4 -o distinct -delim ";" > list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed
 
 ```
+
+$$POR AQUI!
+
+Este archivo tiene esta pinta
 
 
 ¿Cuantas regiones tengo?
@@ -413,7 +412,7 @@ grep -Ff lista_unidades_en_mas_de_dos_chr.csv list_of_units_with_chr_info_in_lyn
 
 ```{bash}
 awk '{sum+=$3-$2} END {print sum}' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed
-# 1138528400
+# 
 
 ```
 
