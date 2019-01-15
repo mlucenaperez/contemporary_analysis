@@ -143,7 +143,7 @@ En el txv tengo 8347 valores, por tanto tengo 19 comparaciones que no están, po
 
  
 
-#1. Media de los valores de recombinación sacados por pares, para ventanas de de 2Mb
+#1. Media de los valores de recombinación sacados por pares, para ventanas de 2Mb
 
 
 ## 1.1 Coordinadas de las ventanas
@@ -163,7 +163,7 @@ bedtools intersect -a Felis_catus_v8_window_2Mb.bed -b Felis_catus_v8_recombinat
 
 
 wc -l Felis_catus_v8_window_2Mb_recombination_rate_all_info.bed
-# 8762 Felis_catus_v8_window_2Mb_recombination_rate.bed
+# 8762 Felis_catus_v8_window_2Mb_recombination_rate_all_info.bed
 
 ```
 
@@ -311,14 +311,63 @@ rm Felis_catus_v8_recombination_rate.tsv
 
 
 
-# 2. Transformar coordenadas de lince a gato. 
+# 2. Catv8 to cat v5: LiftOver para transformar esta tasa de recombinación de v8 a v5 del genoma para que sean comparables con nuestras unidades. 
+
+Para hacer este liftOver, tenemos que pasar de la version felCat8 a la versión felCat5 (6.2, la nuestra),en la página web http://rohsdb.cmb.usc.edu/GBshape/cgi-bin/hgLiftOver.
+
+Copio a local
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/recombination_analysis/Felis_catus_v8_window_2Mb_recombination_rate.bed /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination 
+```
+
+Meto este archivo Felis_catus_v8_window_2Mb_recombination_rate.bed) en liftOver pasando de v8 a v5. 
+Minimum ratio of bases that must remap: 0.8
+Successfully converted 1160 records: View Conversions
+Conversion failed on 27 records.    Display failure file    Explain failure messages
+
+
+Las regiones que han fallado en la conversión, son:
+chrA1	86000000	88000000	0.075628	autosome
+chrA1	88000000	90000000	0.4130146667	autosome
+chrA3	30000000	32000000	1.2466412	autosome
+chrB1	96000000	98000000	0.596053	autosome
+chrB1	192000000	194000000	0.09761325	autosome
+chrB1	200000000	202000000	2.2444055	autosome
+chrB2	10000000	12000000	4.638532615	autosome
+chrB2	12000000	14000000	7.9302656	autosome
+chrB3	28000000	30000000	0	autosome
+chrB3	146000000	148000000	3.9208705	autosome
+chrC1	0	2000000	16.1224402	autosome
+chrC1	98000000	100000000	3.810719222	autosome
+chrC2	84000000	86000000	1.9685322	autosome
+chrC2	86000000	88000000	2.6012076	autosome
+chrD2	88000000	88096124	2.9224215	autosome
+chrD3	16000000	18000000	1.9717296	autosome
+chrD3	26000000	28000000	0.552016	autosome
+chrD3	32000000	34000000	0.175396	autosome
+chrD4	28000000	30000000	0.1762234	autosome
+chrD4	92000000	94000000	2.99246325	autosome
+chrE2	8000000	10000000	4.7189235	autosome
+chrE3	16000000	18000000	0.4099955	autosome
+chrX	0	2000000	19.67587725	sexual
+chrX	44000000	46000000	0.03085	sexual
+chrX	48000000	50000000	0.03085	sexual
+chrX	80000000	82000000	0.056941	sexual
+chrX	82000000	84000000	0.056941	sexual
+
+El archivo generado es:
+
+hglft_genome_6243_dcc890.bed
+
+
+# 3. Lynx to catv5. Transformar coordenadas de lince a gato. 
 
 Voy a usar solo las unidades que tienen sintenia. 
 
 
 ## 2.1 Sacar las unidades para las que tenemos sintenia con cromosoma de gato en una lista
 
-primero saco la lista de las unidades para las que tengo información de cromosoma:
+Primero saco la lista de las unidades para las que tengo información de cromosoma:
 
 ```{bash}
 
@@ -398,50 +447,57 @@ awk -v OFS='\t' '{split ($8, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2]
 
 # Fusiono en base a la unidad, siempre que esté en el mismo cromosoma.
 
-awk -v OFS='\t' '{split ($8, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2], $4 }' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_lynx_coordinates_information.bed | sort -k4,4 | bedtools merge -i stdin -c 4 -o distinct -delim ";" > list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed
+awk -v OFS='\t' '{split ($8, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2], $4 }' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_lynx_coordinates_information.bed >
+list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information.bed
+
+sort -k1,1 -k2,2n list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information.bed > list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted.bed
 
 ```
-
-$$POR AQUI!
 
 Este archivo tiene esta pinta
 
+chrA3	15104377	15104378	intergenic_region_1_intergenic
+chrA3	15104378	15104379	intergenic_region_1_intergenic
+chrA3	15104506	15104507	intergenic_region_1_intergenic
+chrA3	15104507	15104508	intergenic_region_1_intergenic
+chrA3	15104508	15104509	intergenic_region_1_intergenic
 
-¿Cuantas regiones tengo?
-
-
-```{bash}
-awk '{sum+=$3-$2} END {print sum}' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed
-# 
-
-```
-
-## 2.4 Pasar un liftOver de v6 a v8. 
-
-Para hacer este liftOver, tenemos que pasar de la version felCat5 (la nuestra, 6.2) a la versión felCat4, y de ahi a felCat3 y luego a felCat8,en la página web http://rohsdb.cmb.usc.edu/GBshape/cgi-bin/hgLiftOver.
-
+¿Cuantas bases tengo?
 
 ```{bash}
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/recombination_analysis/list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed /Users/marialucenaperez/Owncloud/publico/WG_diversity/recombination
-
-# En local modifico el archivo para liftOver
-cd /Users/marialucenaperez/Owncloud/publico/WG_diversity/recombination
-
-# cat list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates.bed | awk -v OFS='\t' '{print $1":"$2"-"$3,$4}' | grep "^chr"  > list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_v5_liftover.bed
-
-
-head list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_v5_liftover.bed > kk
-
+wc -l list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information.bed
+# 1.171.301.858 list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information.bed
 ```
-
-
-
-Minimum ratio of bases that must remap: 0.95 
-
-¿Queremos otra?
-
 
 # 3. Asigno tasa de recombinación a cada unidad
+
+
+Copio el bed con las coordenadas de versión 5 de la tasa de recombinación al servidor.
+
+```{bash}
+scp /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination/hglft_genome_6243_dcc890.bed mlucena@genomics-b.ebd.csic.es://home/mlucena/recombination_analysis/
+```
+
+
+Fusiono los dos archivos.
+
+```{bash}
+
+intersectBed -sorted -wao -a hglft_genome_6243_dcc890.bed -b list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted.bed 
+
+```
+
+Una vez que tenga asignado a cada unidad su tasa de recombinación, me quedo con un valor por unidad
+
+```{bash}
+
+groupBy 
+
+
+```
+
+
+
 
 
 
