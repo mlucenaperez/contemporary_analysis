@@ -456,11 +456,12 @@ sort -k1,1 -k2,2n list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordina
 
 Este archivo tiene esta pinta
 
-chrA3	15104377	15104378	intergenic_region_1_intergenic
-chrA3	15104378	15104379	intergenic_region_1_intergenic
-chrA3	15104506	15104507	intergenic_region_1_intergenic
-chrA3	15104507	15104508	intergenic_region_1_intergenic
-chrA3	15104508	15104509	intergenic_region_1_intergenic
+chrA1   329     330     intergenic_region_54349_intergenic
+chrA1   369     370     intergenic_region_54349_intergenic
+chrA1   370     371     intergenic_region_54349_intergenic
+chrA1   371     372     intergenic_region_54349_intergenic
+chrA1   372     373     intergenic_region_54349_intergenic
+chrA1   373     374     intergenic_region_54349_intergenic
 
 ¿Cuantas bases tengo?
 
@@ -478,31 +479,21 @@ Copio el bed con las coordenadas de versión 5 de la tasa de recombinación al s
 scp /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination/hglft_genome_6243_dcc890.bed mlucena@genomics-b.ebd.csic.es://home/mlucena/recombination_analysis/
 ```
 
-
-Fusiono los dos archivos.
-
-```{bash}
-
-intersectBed -sorted -wao -a hglft_genome_6243_dcc890.bed -b list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted.bed 
-
-```
-
-Una vez que tenga asignado a cada unidad su tasa de recombinación, me quedo con un valor por unidad
+Primero he detectado que el archivo de la equivalencia no está ordenado, así que tengo que ordenarlo
 
 ```{bash}
-
-groupBy 
-
-
+sort -k1,1 -k2,2n hglft_genome_6243_dcc890.bed > hglft_genome_6243_dcc890_sorted.bed
 ```
 
 
 
+Fusiono los dos archivos, quedandome con un valor de tasa de recombinación por unidad. También calculo la suma de bases de cada unidad que tengo representada, aunque despues seguramente lo borre.
 
+```{bash}
 
+intersectBed -sorted -wao -a hglft_genome_6243_dcc890_sorted.bed -b list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted.bed | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$9,$10}' | sort -k1,1 -k2,2n -k3,3n -k6,6 |  groupBy -i stdin -g 1,2,3,4,5,6 -c 7 -o sum > recombination_rate_per_unit_all_info.bed
 
-
-
+```
 
 
 
