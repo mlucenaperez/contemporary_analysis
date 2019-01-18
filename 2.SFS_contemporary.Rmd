@@ -1519,6 +1519,9 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_ana
 
 ```
 
+Tambien tengo descargada la tabla de recombinación. 
+
+
 # ------------------------------------------
 
 # R analysis
@@ -1539,11 +1542,11 @@ library(tidyr)
 
 wd_in <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/raw_tables/"
 wd_out <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
+wd_recom <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination"
 
+# Ojo! antes de correr esto, asegurarme que no lo he corrido antes porque si no estoy haciendo append a las tablas viejas y no creando nuevas. --> YA NO PASA ESTO PQ LO TENGO EN CARPETAS DISTINTAS!!!!
 
-# Ojo! antes de correr esto, asegurarme que no lo he corrido antes porque si no estoy haciendo append a las tablas viejas y no creando nuevas. 
-
-poplist <- c("c_ll_ki_n013", "c_ll_ki_n008", "c_ll_po_n008","c_ll_no_n008","c_lp_sm_n019", "c_lp_sm_n012", "c_lp_do_n012")
+poplist <- c("c_ll_ki_n013", "c_ll_po_n008","c_ll_no_n008","c_lp_sm_n019", "c_lp_do_n012")
 
   
 for (pop in poplist)
@@ -1579,7 +1582,7 @@ rm(dataset)
 
 
 
-data_diversity <-rbind(c_ll_ki_n013,c_ll_ki_n008,c_ll_po_n008,c_ll_no_n008,c_lp_sm_n019,c_lp_sm_n012,c_lp_do_n012) %>% 
+data_diversity_raw <-rbind(c_ll_ki_n013,c_ll_po_n008,c_ll_no_n008,c_lp_sm_n019,c_lp_do_n012) %>% 
     mutate( watterson_ave = as.numeric(gsub("\\*10\\^","e",watterson_ave)),
             watterson_sd = as.numeric(gsub("\\*10\\^","e",watterson_sd)),
             pairwise_ave  = as.numeric(gsub("\\*10\\^","e",pairwise_ave)),
@@ -1587,41 +1590,28 @@ data_diversity <-rbind(c_ll_ki_n013,c_ll_ki_n008,c_ll_po_n008,c_ll_no_n008,c_lp_
             tajimaD = as.numeric(gsub("\\*10\\^","e",tajimaD)))
 
 
-write.table (data_diversity, paste(wd_out, "global.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
-write.table (c_ll_ki_n013, paste(wd_out, "c_ll_ki_n013.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
-write.table (c_ll_ki_n008, paste(wd_out, "c_ll_ki_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
-write.table (c_ll_no_n008, paste(wd_out, "c_ll_no_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
-write.table (c_ll_po_n008, paste(wd_out, "c_ll_po_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
-write.table (c_lp_do_n012, paste(wd_out, "c_ll_do_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
-write.table (c_lp_sm_n019, paste(wd_out, "c_ll_sm_n019.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
-write.table (c_lp_sm_n012, paste(wd_out, "c_ll_sm_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+# write.table (data_diversity, paste(wd_out, "global.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+# write.table (c_ll_ki_n013, paste(wd_out, "c_ll_ki_n013.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+# write.table (c_ll_ki_n008, paste(wd_out, "c_ll_ki_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+# write.table (c_ll_no_n008, paste(wd_out, "c_ll_no_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+# write.table (c_ll_po_n008, paste(wd_out, "c_ll_po_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+# write.table (c_lp_do_n012, paste(wd_out, "c_ll_do_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+# write.table (c_lp_sm_n019, paste(wd_out, "c_ll_sm_n019.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+#write.table (c_lp_sm_n012, paste(wd_out, "c_ll_sm_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 
 
-```
+# Los submuestreados los he quitado. 
 
+data_diversity <- data_diversity_raw 
+# En teoría debería de funcionar llamando a la tabla anterior, pero como no funciona no le doy más vueltas. Me he descargado la raw y la he vuelto a cargar, que así funcionaba antes, y así ha funcionado ahora. 
 
-## Cargar tablas originales 
-
-```{r}
-
-library(dplyr)
-library(ggplot2)
-library(tidyr)
-
-
-wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
-wd_output <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/"
-  
-
-data_diversity <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions.tsv", sep=""), header=T, na.strings = c("NA", "na")) %>%  
+data_diversity <- read.table(paste(wd_out, "global.per.unit.averages.chr.all.regions.tsv", sep=""), header=T, na.strings = c("NA", "na")) %>%  
   replace(., is.na(.), "0") %>%  # Para que pueda calcular cuando es mayor o menor que 75%; si es NA no lo reconoce. 
   mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
-                            ifelse (pop == "c_ll_ki_n008", "Kirov_subsampled", 
                             ifelse (pop == "c_ll_no_n008", "Norway", 
-                            ifelse (pop == "c_lp_sm_n019", "Andujar", 
-                            ifelse (pop == "c_lp_sm_n012", "Andujar_subsampled", 
-                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))))) %>% 
+                            ifelse (pop == "c_lp_sm_n019", "Andujar",  
+                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
   mutate (., Species =ifelse (specie=="ll", "L.lynx", 
                    ifelse (specie=="lp", "L.pardinus", NA))) %>% 
   # Anoto qué es cada región 
@@ -1638,16 +1628,8 @@ unique(data_diversity$pop)
 
 unique(data_diversity$Populations)
 
-``` 
 
-¡Ojo! el filtro que estás aplicando se está quedando con las que para la Tajima son NA. Si las quieres eliminar ¡ojo!
-
-
-```{r}
-
-
-
-
+#¡Ojo! el filtro que estás aplicando se está quedando con las que para la Tajima son NA. Si las quieres eliminar ¡ojo!
 # 2248581
 
 # Compruebo que efectivamente no hay ningún cromosoma que no encaje. 
@@ -1678,36 +1660,40 @@ data_diversity_pre <- data_diversity %>%
 
 # Primero par lynx lynx:
 
-data_diversity_filtered_ki <- data_diversity_pre %>% filter (pop=="c_ll_ki_n013")
-data_diversity_filtered_ki_filtered <- data_diversity_pre %>% filter (pop=="c_ll_ki_n008")
-data_diversity_filtered_no <- data_diversity_pre %>% filter (pop=="c_ll_no_n008")
-data_diversity_filtered_po <- data_diversity_pre %>% filter (pop=="c_ll_po_n008")
-
-lista_lynxlynx <- inner_join(data_diversity_filtered_ki_filtered, data_diversity_filtered_no, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>% inner_join(., data_diversity_filtered_po, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id" ))  %>% inner_join(., data_diversity_filtered_ki, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id" )) %>% select("unique_id")
- 
-lista_lynxlynx <- inner_join(data_diversity_filtered_ki, data_diversity_filtered_no, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>% inner_join(., data_diversity_filtered_po, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id" ))  %>% select("unique_id")
+data_diversity_pre_ki <- data_diversity_pre %>% filter (pop=="c_ll_ki_n013")
+data_diversity_pre_no <- data_diversity_pre %>% filter (pop=="c_ll_no_n008")
+data_diversity_pre_po <- data_diversity_pre %>% filter (pop=="c_ll_po_n008")
 
 
+lista_lynxlynx <- inner_join(data_diversity_pre_ki, data_diversity_pre_no, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>% inner_join(., data_diversity_pre_po, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id" ))  %>% select("unique_id")
 
 data_diversity_filtered_lynxlynx <- data_diversity_pre %>% filter (specie=="ll") %>% filter(unique_id %in% lista_lynxlynx$unique_id)
 
 # Ahora para pardinus:
 
-data_diversity_filtered_sm <- data_diversity_pre %>% filter (pop=="c_lp_sm_n019")
-data_diversity_filtered_sm_filtered <- data_diversity_pre %>% filter (pop=="c_lp_sm_n012")
-data_diversity_filtered_do <- data_diversity_pre %>% filter (pop=="c_lp_do_n012")
+data_diversity_pre_sm <- data_diversity_pre %>% filter (pop=="c_lp_sm_n019")
+data_diversity_pre_do <- data_diversity_pre %>% filter (pop=="c_lp_do_n012")
 
-lista_lynxpardinus <- inner_join(data_diversity_filtered_sm_filtered, data_diversity_filtered_do, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>% inner_join(., data_diversity_filtered_sm, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id" )) %>% select("unique_id")
+lista_lynxpardinus <- inner_join( data_diversity_pre_sm, data_diversity_pre_do, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "id_feature", "chr", "unique_id")) %>% select("unique_id")
 
 data_diversity_filtered_lynxpardinus <- data_diversity_pre %>% filter (specie=="lp") %>% filter(unique_id %in% lista_lynxpardinus$unique_id)
 
-data_diversity_filtered <- rbind(data_diversity_filtered_lynxlynx, data_diversity_filtered_lynxpardinus)
+
+# Ahora adjunto los datos de recombinación. 
+
+recombination_per_unit <- read.table(paste(wd_recom, "/recombination_rate_per_unit_all_info_sorted.bed", sep=""), header=F, na.strings = c("NA", "na"))
+colnames(recombination_per_unit) <- c("unique_id","recombination_rate")
+recombination_per_unit$unique_id <- as.factor(recombination_per_unit$unique_id)
+
+
+data_diversity_filtered <- rbind(data_diversity_filtered_lynxlynx, data_diversity_filtered_lynxpardinus) %>% full_join (., recombination_per_unit, by = "unique_id")   
 
 # Con los filtrados hemos perdido 251.736 unidades. Aqui entran los promotores que se han caido. 
 
 # Ordenar los factores. 
 
 data_diversity_filtered$Populations <- factor (data_diversity_filtered$Populations, levels=c("Kirov","Kirov_subsampled","Bialowieza","Norway", "Andujar","Donana"))
+
 data_diversity_filtered$chr <- factor(data_diversity_filtered$chr, levels = c("chrA1","chrC1","chrB1","chrA2","chrC2","chrB2","chrB3","chrB4","chrA3","chrD1","chrD3","chrD4","chrD2","chrF2","chrF1","chrE2","chrE1","chrX"))
 
 data_diversity_filtered$watterson_ave <- as.numeric(data_diversity_filtered$watterson_ave)
@@ -1715,21 +1701,7 @@ data_diversity_filtered$watterson_sd <- as.numeric(data_diversity_filtered$watte
 data_diversity_filtered$pairwise_sd <- as.numeric(data_diversity_filtered$pairwise_sd)
 data_diversity_filtered$tajimaD <- as.numeric(data_diversity_filtered$tajimaD)
 
-
-
-# Borro las que no necesito luego
-rm (data_diversity_filtered_sm)
-rm (data_diversity_filtered_sm_filtered)
-rm (data_diversity_filtered_do)
-rm (data_diversity_filtered_ki)
-rm (data_diversity_filtered_ki_filtered)
-rm (data_diversity_filtered_po)
-rm (data_diversity_filtered_no)
-rm (data_diversity)
-rm (data_diversity_filtered_lynxlynx)
-rm (data_diversity_filtered_lynxpardinus)
-rm (data_diversity_pre)
-
+write.table (data_diversity_filtered, paste(wd_out, "global.per.unit.averages.chr.all.regions.filtered.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 
 # 5/6/2018
 # Hemos decidido filtrar el 20% de sitios informativos/length.
@@ -1776,8 +1748,64 @@ rm (data_diversity_pre)
 #   geom_histogram(bins=1000) 
 # ggplot (data = filter (data_diversity,data_diversity$feature=="UCNE"), aes(length)) +
 #   geom_histogram(bins=1000) 
+### Otros sanity checks
+
+# SANITY CHECKS:
+
+# lncRNA <- data_diversity %>% filter (feature=="lncRNA")
+# 55885 observaciones
+
+# ggplot(lncRNA, aes(x=length))+
+#   geom_histogram(bins = 2000) +
+#  coord_cartesian(xlim=c(0, 3000))
+
+# sncRNA <- data_diversity %>% filter (feature=="ncRNA")
+# 21043 observaciones
+
+# ggplot(sncRNA, aes(x=length))+
+#   geom_histogram(bins = 2000) +
+#  coord_cartesian(xlim=c(0, 3000))
+
+# ncRNA <- inner_join(lncRNA, sncRNA, by = c("scaffold", "start_cero_based", "end", "length")) %>%  select ("scaffold", "start_cero_based", "end","feature.x","id_gene.x", "id.x", "feature.y","id_gene.y", "id.y" ) %>% unique
+# Son 14 los que coinciden. 
+
+# Algunas notas sobre los lncRNA y ncRNA
+# Infernal ("INFERence of RNA ALignment") is for searching DNA sequence databases for RNA structure and sequence similarities. It is an implementation of a special case of profile stochastic context-free grammars called covariance models (CMs). A CM is like a sequence profile, but it scores a combination of sequence consensus and RNA secondary structure consensus, so in many cases, it is more capable of identifying RNA homologs that conserve their secondary structure more than their primary sequence.
+
+# En su momento:
+# He sacado graficas para tel2m y telomero de 0 a 10m y hemos decidido quedarnos con tel2m.
+
+# Borro las que no necesito luego
+
+rm (data_diversity_pre_sm)
+rm (data_diversity_pre_do)
+rm (data_diversity_pre_ki)
+rm (data_diversity_pre_po)
+rm (data_diversity_pre_no)
+rm (data_diversity)
+rm (data_diversity_filtered_lynxlynx)
+rm (data_diversity_filtered_lynxpardinus)
+rm (data_diversity_pre)
+rm (lista_lynxlynx)
+rm (lista_lynxpardinus)
+
+```
+
+## Analisis de la diversidad
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
+wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
+
+data_diversity_filtered <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions.filtered.tsv", sep=""), header=T, na.strings = c("NA", "na"))
 
 
+str(data_diversity_filtered)
 
 # Tamaño de las unidades
 
@@ -1800,55 +1828,38 @@ for (pop in unique(data_diversity_filtered$Populations))
  
 ```
 
-##### Cuentas
+### Feature per chr
 
 ```{r}
 cuentas_perfeature_per_chr <- data_diversity_filtered %>% mutate (autosome_sexual = ifelse(chr=="chrX", "chrX" , ifelse(chr=="chrA1" | chr=="chrC1" | chr=="chrB1" | chr=="chrA2" | chr=="chrC2" | chr=="chrB2" | chr=="chrB3" | chr=="chrB4" | chr=="chrA3" | chr=="chrD1" | chr=="chrD3" | chr=="chrD4" | chr=="chrD2" | chr=="chrF2" | chr=="chrF1" | chr=="chrE2" | chr=="chrE1", "autosome", NA))) %>% dplyr::group_by(feature, autosome_sexual) %>% dplyr::summarise(total_count=n()) 
 
 write.csv(cuentas_perfeature_per_chr, paste (wd_output, "counts_autosome_vs_sexual.csv", sep="" ), quote = F, row.names = F)
+
 ```
 
 
+### General stats
 
-
-
-##### Otros sanity checks
-
-¿Cómo solapan lncRNA con ncRNA?
+A partir de ahora debería separar todo el rato cromosomas sexuales de no sexuales. 
 
 ```{r}
 
-lncRNA <- data_diversity %>% filter (feature=="lncRNA")
-# 55885 observaciones
+# Consideramos como autosomicas todas aquellas posiciones que no estén en un cromosoma sexual.
 
-ggplot(lncRNA, aes(x=length))+
-  geom_histogram(bins = 2000) +
-  coord_cartesian(xlim=c(0, 3000))
-
-sncRNA <- data_diversity %>% filter (feature=="ncRNA")
-# 21043 observaciones
-
-ggplot(sncRNA, aes(x=length))+
-  geom_histogram(bins = 2000) +
-  coord_cartesian(xlim=c(0, 3000))
-
-ncRNA <- inner_join(lncRNA, sncRNA, by = c("scaffold", "start_cero_based", "end", "length")) %>%  select ("scaffold", "start_cero_based", "end","feature.x","id_gene.x", "id.x", "feature.y","id_gene.y", "id.y" ) %>% unique
-# Son 14 los que coinciden. 
-
-# He sacado graficas para tel2m y telomero de 0 a 10m y hemos decidido quedarnos con tel2m.
-# Antes la clasificación incluía tel2m_tel10m de esta manera lo separamos en dos y replicamos las columnas de manera que una región que pertenece al 2m también aparece repetida para el 10m. 
-data_diversity_filtered <-  data_diversity_filtered %>%  mutate (., region=replace(region, region =="no_centr_no_tel", "nocentrnotel")) %>% separate_rows (data_diversity_filtered, region, sep="_")
-
+data_diversity_filtered_autosomal <- data_diversity_filtered %>% filter (chr!="chrX")
+data_diversity_filtered_sexual <- data_diversity_filtered %>% filter (chr=="chrX")
 
 ```
 
-Algunas notas sobre los lncRNA y ncRNA
-Infernal ("INFERence of RNA ALignment") is for searching DNA sequence databases for RNA structure and sequence similarities. It is an implementation of a special case of profile stochastic context-free grammars called covariance models (CMs). A CM is like a sequence profile, but it scores a combination of sequence consensus and RNA secondary structure consensus, so in many cases, it is more capable of identifying RNA homologs that conserve their secondary structure more than their primary sequence.
 
+#### Relation between recombination and diversity
 
+```{bash}
 
-#### General stats
+ggplot(data_diversity_filtered_autosomal,aes(recombination,watterson_ave))+
+  geom_smooth(method='lm',formula=y~x)
 
+```
 
 #### Empirical values per pop
 
@@ -1877,14 +1888,6 @@ diversity_stats_pop <- function(diversity_df)
                        wmean_pairwise_ave=mean(pairwise_ave,w=informative_sites),
                        wmean_tajimaD=mean(tajimaD,w =informative_sites),
   
-                       # wmean_var_watterson_ave = wtd.var(watterson_ave,informative_sites),
-                       # wmean_var_pairwise_ave = wtd.var(pairwise_ave,informative_sites),
-                       # wmean_var_tajimaD = wtd.var(tajimaD,informative_sites),
-
-                       # wmean_sd_watterson_ave =  sqrt(wmean_var_watterson_ave),
-                       # wmean_sd_pairwise_ave =  sqrt(wmean_var_pairwise_ave),
-                       # wmean_sd_tajimaD =  sqrt(wmean_var_tajimaD),
-
                        q25_watterson_ave=quantile(watterson_ave,0.25),
                        q25_pairwise_ave=quantile(pairwise_ave,0.25),
                        q25_tajimaD=quantile(tajimaD,0.25),
@@ -1913,28 +1916,28 @@ diversity_stats_pop <- function(diversity_df)
                        upperw_pairwise_ave  = q75_pairwise_ave  + 1.5 * IQR_pairwise_ave) %>% 
   mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
-                            ifelse (pop == "c_ll_ki_n008", "Kirov_subsampled", 
                             ifelse (pop == "c_ll_no_n008", "Norway", 
                             ifelse (pop == "c_lp_sm_n019", "Andujar", 
-                            ifelse (pop == "c_lp_sm_n012", "Andujar_subsampled", 
-                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))))) %>% 
+                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
   mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
-                            ifelse (pop == "c_ll_ki_n013", "L.lynx", 
-                            ifelse (pop == "c_ll_ki_n008", "L.lynx",
-                            ifelse (pop == "c_ll_no_n008", "L.lynx", 
+                            ifelse (pop == "c_ll_ki_n013", "L.lynx",
+                            ifelse (pop == "c_ll_no_n008", "L.lynx",  
                             ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
-                            ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
-                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))))
+                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))
 
 
 
-diversity_stats_df$Populations <- factor (diversity_stats_df$Populations, levels=c("Kirov","Kirov_subsampled","Bialowieza","Norway", "Andujar", "Andujar_subsampled","Donana"))
+diversity_stats_df$Populations <- factor (diversity_stats_df$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
   
 return(diversity_stats_df)
 }
 
-stats_df_pop <- diversity_stats_pop(data_diversity_filtered)
-write.table(stats_df_pop, paste(wd_output,"stats_diversity_per_pop.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+stats_df_pop_autosomal <- diversity_stats_pop(data_diversity_filtered_autosomal)
+write.table(stats_df_pop_autosomal, paste(wd_output,"stats_diversity_per_pop_autosomal.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
+stats_df_pop_sexual <- diversity_stats_pop(data_diversity_filtered_sexual)
+write.table(stats_df_pop_sexual, paste(wd_output,"stats_diversity_per_pop_sexual.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 ```
 
@@ -1963,15 +1966,6 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
                        wmean_pairwise_ave=weighted.mean(pairwise_ave,w=informative_sites),
                        wmean_tajimaD=mean(tajimaD,w =informative_sites),
   
-                       wmean_var_watterson_ave = wtd.var(watterson_ave,informative_sites),
-                       wmean_var_pairwise_ave = wtd.var(pairwise_ave,informative_sites),
-                       wmean_var_tajimaD = wtd.var(tajimaD,informative_sites),
-  
-                       
-                       wmean_sd_watterson_ave =  sqrt(wmean_var_watterson_ave),
-                       wmean_sd_pairwise_ave =  sqrt(wmean_var_pairwise_ave),
-                       wmean_sd_tajimaD =  sqrt(wmean_var_tajimaD),
-
                        q25_watterson_ave=quantile(watterson_ave,0.25),
                        q25_pairwise_ave=quantile(pairwise_ave,0.25),
                        q25_tajimaD=quantile(tajimaD,0.25),
@@ -2000,29 +1994,24 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
                        upperw_pairwise_ave  = q75_pairwise_ave  + 1.5* IQR_pairwise_ave) %>% 
   mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
-                            ifelse (pop == "c_ll_ki_n008", "Kirov_subsampled", 
                             ifelse (pop == "c_ll_no_n008", "Norway", 
-                            ifelse (pop == "c_lp_sm_n019", "Andujar", 
-                            ifelse (pop == "c_lp_sm_n012", "Andujar_subsampled", 
-                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))))) %>% 
+                            ifelse (pop == "c_lp_sm_n019", "Andujar",  
+                            ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
   mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
                             ifelse (pop == "c_ll_ki_n013", "L.lynx", 
-                            ifelse (pop == "c_ll_ki_n008", "L.lynx",
                             ifelse (pop == "c_ll_no_n008", "L.lynx", 
-                            ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
-                            ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
-                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))))
+                            ifelse (pop == "c_lp_sm_n019", "L.pardinus",
+                            ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))
 
 
 
-diversity_stats_df_grouped$Populations <- factor (diversity_stats_df_grouped$Populations, levels=c("Kirov","Kirov_subsampled","Bialowieza","Norway", "Andujar", "Andujar_subsampled","Donana"))
+diversity_stats_df_grouped$Populations <- factor (diversity_stats_df_grouped$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar","Donana"))
 
-
- if("chr" %in% colnames(diversity_stats_df_grouped))
+if("chr" %in% colnames(diversity_stats_df_grouped))
 {diversity_stats_df_grouped$chr <- factor(diversity_stats_df_grouped$chr, levels = c("chrA1","chrC1","chrB1","chrA2","chrC2","chrB2","chrB3","chrB4","chrA3","chrD1","chrD3","chrD4","chrD2","chrF2","chrF1","chrE2","chrE1","chrX"))}
 
 
-  dataframename <- paste("stats_df", GROUP, sep ='_')
+  dataframename <- paste(DATAFRAME,"stats_df", GROUP, sep ='_')
   assign(dataframename,diversity_stats_df_grouped,.GlobalEnv)
   return (dataframename)
 
@@ -2031,7 +2020,8 @@ diversity_stats_df_grouped$Populations <- factor (diversity_stats_df_grouped$Pop
 
 for (GROUP in GROUPS)
 {
- diversity_stats_grouped(data_diversity_filtered, GROUP) 
+ diversity_stats_grouped(data_diversity_filtered_autosomal, GROUP) 
+ diversity_stats_grouped(data_diversity_filtered_sexual, GROUP) 
 }
 
 
