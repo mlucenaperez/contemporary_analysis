@@ -470,8 +470,7 @@ wc -l list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_informat
 # 1.171.301.858 list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information.bed
 ```
 
-# 3. Asigno tasa de recombinación a cada unidad
-
+# 4. Asigno tasa de recombinación a cada unidad
 
 Copio el bed con las coordenadas de versión 5 de la tasa de recombinación al servidor.
 
@@ -485,19 +484,80 @@ Primero he detectado que el archivo de la equivalencia no está ordenado, así q
 sort -k1,1 -k2,2n hglft_genome_6243_dcc890.bed > hglft_genome_6243_dcc890_sorted.bed
 ```
 
-
-
 Fusiono los dos archivos, quedandome con un valor de tasa de recombinación por unidad. También calculo la suma de bases de cada unidad que tengo representada, aunque despues seguramente lo borre.
 
 ```{bash}
 
-intersectBed -sorted -wao -a hglft_genome_6243_dcc890_sorted.bed -b list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted.bed | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$9,$10}' | sort -k1,1 -k2,2n -k3,3n -k6,6 |  groupBy -i stdin -g 1,2,3,4,5,6 -c 7 -o sum > recombination_rate_per_unit_all_info.bed
+intersectBed -sorted -wo -a hglft_genome_6243_dcc890_sorted.bed -b list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted.bed | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$9,$10}' > list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted_with_recombination_info.bed
+
+# Ahora separo este archivo en cromosomas, para que pueda tragarselo bedtools groupby 
+
+mkdir all_info_separate_by_cat_chr
+scp list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted_with_recombination_info.bed all_info_separate_by_cat_chr/
+
+awk '{print >> $1; close($1)}' ../list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted_with_recombination_info.bed  
+
+# Change name
+
+# Se podría hacer un loop, pero lo fui hacienco conforme salían, de uno en uno.
+
+chr=chrA3 # hecho!
+chr=chrB1 # hecho!
+chr=chrB2 # hecho!
+chr=chrB3 # hecho!
+chr=chrB4 # hecho!
+chr=chrC1 # hecho!
+chr=chrC2 # hecho!
+chr=chrD1 # hecho!
+chr=chrD2 # hecho!
+chr=chrD3 # hecho!
+chr=chrD4 # hecho!
+chr=chrE1 # hecho!
+chr=chrE2 # hecho!
+chr=chrE3 # hecho!
+chr=chrF1 # hecho!
+chr=chrF2 # hecho!
+chr=chrX # hecho!
+
+
+bedtools groupby -i $chr -g 1,2,3,4,5,6 -c 7 -o sum | sort -k1,1 -k2,2n -k3,3n -k6,6 > "$chr"_recombination_rate_per_unit_all_info_borrar.bed
+
+bedtools groupby -i "$chr"_recombination_rate_per_unit_all_info_borrar.bed -g 1,2,3,4,5,6 -c 7 -o sum > "$chr"_recombination_rate_per_unit_all_info_sorted.bed
+
+
+rm *borrar*
+
+cat *_recombination_rate_per_unit_all_info_sorted.bed | awk -v OFS='\t' '{print $6, $4}' | sort -u > recombination_rate_per_unit_all_info_sorted.bed
+# Con el sort -u me quitaría entradas identicas que se hayan podido producir porque haya discontinuidad en las bases que las forman y en medio haya otra unidad. 
+
+# Sanity checks
+
+wc -l recombination_rate_per_unit_all_info_sorted.bed 
+# 403029 recombination_rate_per_unit_all_info_sorted.bed
+
+# ¿Hay unidades que están en más de un cromosoma?
+
+sort -k1,1 recombination_rate_per_unit_all_info_sorted.bed | uniq -c | sort -k1,1n | tail
+
+# Nada! ¡¡¡Genial!!!
+
+# Lo muevo una carpeta arriba
+
+mv recombination_rate_per_unit_all_info_sorted.bed  ..
+
+# Elimino archivos intermedios pq ocupan mucho espacio. 
 
 ```
 
+# Archivo final
 
+El archivo final es: 
 
+/home/mlucena/recombination_analysis/recombination_rate_per_unit_all_info_sorted.bed
 
+Me lo bajo para poder hacer un join con mis archivos de diversidad
 
-
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/recombination_analysis/recombination_rate_per_unit_all_info_sorted.bed /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination/
+```
 
