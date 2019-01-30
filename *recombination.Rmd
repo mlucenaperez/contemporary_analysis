@@ -1,0 +1,563 @@
+---
+title: "*recombination"
+output: html_document
+---
+
+
+29/11/2018
+
+We would like to consider recombination in our analysis, first we created a file ...
+
+```{bash}
+
+# In server B:
+
+mkdir /home/mlucena/recombination_analysis
+
+
+scp /Users/marialucenaperez/Owncloud/publico/WG_diversity/recombination/linkage_map_cat.csv mlucena@genomics-b.ebd.csic.es:/home/mlucena/recombination_analysis
+```
+
+
+Download genome info
+Me meto en la siguiente pagina https://www.ncbi.nlm.nih.gov/assembly/GCF_000181335.2/#/st_Primary-Assembly
+
+Guardo el statistic report (Felis_catus_8.0_statistic_report_NCBI.txt) en la carpeta de /Users/marialucenaperez/Owncloud/publico/WG_diversity/recombination 
+
+```{bash}
+
+grep -v "#" Felis_catus_8.0_statistic_report_NCBI.txt | grep assembled-molecule | grep total-length | grep Primary | grep -v all | awk -v OFS='\t' '{print "chr"$3, $7}' > Felis_catus_8.0_chr_lenght
+
+# En servidor B:
+mkdir /home/mlucena/grupolince/reference_genomes/felis_catus_genome/felis_catus_genome_v8
+
+
+
+scp /Users/marialucenaperez/Owncloud/publico/WG_diversity/recombination/Felis_catus_8.0_chr_lenght mlucena@genomics-b.ebd.csic.es:/home/mlucena/grupolince/reference_genomes/felis_catus_genome/felis_catus_genome_v8
+
+
+
+```
+
+# Calculo de tasa de recombinación para cada par de valores 
+
+
+He calculado la tasa de recombinación para cada par de SNPs, algunas son negativas, debido a que el mapa físico y el mapa genético no coinciden
+
+```{bash}
+
+cd /home/mlucena/grupolince/reference_genomes/felis_catus_genome/felis_catus_genome_v8
+
+tail -n +2 Felis_catus_v8_linkage_map.csv | awk  '$1' | awk '$2' | awk  '$3' | awk '$4' | awk -v OFS='\t' '{print $3, $2-1, $2, $1, $4}' > Felis_catus_v8_linkage_map.bed
+# Estos awk eliminan si por casualidad hay algunos campos en blanco. Hemos comprobado que el cromosoma A1 tiene varios campos en blanco pra posición que no debería. 
+
+wc -l Felis_catus_v8_linkage_map.bed
+# 8347 Felis_catus_v8_linkage_map.bed
+
+# Creo una carpeta donde voy a hacer mis cuentas:
+
+mkdir recombination_rate_by_chr
+
+
+rm Felis_catus_v8_recombination_rate.csv
+# Lo elimino por si lo he creado antes
+
+# Copio el archivo de linkage map a esta carpeta, dejando uno original en la carpeta superior, donde mudaré el resultado final:
+
+scp Felis_catus_v8_linkage_map.bed recombination_rate_by_chr/
+
+
+cd recombination_rate_by_chr/
+
+
+# Separo el archivo por cromosoma, para que no coja dos ventanas seguidas que pertenezcan a distintos cromosomas:
+
+awk '{print >> $1; close($1)}' Felis_catus_v8_linkage_map.bed
+
+# Itero sobre esos archivos
+
+for file in chr*
+do
+echo $file
+
+for line in $(eval echo "{2..`wc -l $file | cut -d" " -f1`}")
+do
+
+CHR=$(awk -v line="$line" 'NR==line {print $1 }' $file)
+SNP_1=$(awk -v line="$line" 'NR==line-1 {print $3 }' $file)
+SNP_2=$(awk -v line="$line" 'NR==line {print $3 }' $file)
+cM_1=$(awk -v line="$line" 'NR==line-1 {print $4 }' $file)
+cM_2=$(awk -v line="$line" 'NR==line {print $4 }' $file)
+TYPE_CHR=$(awk -v line="$line" 'NR==line {print $5 }' $file)
+
+recombination_rate=($(echo "$cM_2 $cM_1 $SNP_2 $SNP_1" | awk '{printf "%f", ($1-$2)/($3-$4)*10^6}'))
+
+if [ -z ${CHR} ]; then  CHR=NA;  fi
+if [ -z ${SNP_1} ]; then  SNP_1=NA;  fi
+if [ -z ${SNP_2} ]; then  SNP_2=NA;  fi
+if [ -z ${cM_1} ]; then  cM_1=NA;  fi
+if [ -z ${cM_2} ]; then  cM_2=NA;  fi
+if [ -z ${recombination_rate} ]; then  recombination_rate=NA;  fi
+if [ -z ${TYPE_CHR} ]; then  TYPE_CHR=NA;  fi
+
+paste \
+<(echo $CHR ) \
+<(echo $TYPE_CHR ) \
+<(echo $SNP_1 ) \
+<(echo $SNP_2 ) \
+<(echo $cM_1 ) \
+<(echo $cM_2 ) \
+<(echo $recombination_rate) |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g'  >>   Felis_catus_v8_recombination_rate.csv
+
+unset CHR
+unset TYPE_CHR
+unset SNP_1
+unset SNP_2
+unset cM_1
+unset cM_2
+unset recombination_rate
+
+done
+done
+
+
+# Convierto este archivo tsv en un archivo bed
+
+# Elimino los valores negativos, y en algunos csos en los que teanto el mapap genetico como fisico está invertido le doy la vuelta a los valores. 
+
+
+grep -v "-" Felis_catus_v8_recombination_rate.tsv | awk -v OFS='\t' '{if ($4 < $3) print $1,$4,$3,$7,$2; else print $1,$3,$4,$7,$2}' > Felis_catus_v8_recombination_rate.bed
+	 
+
+```
+
+
+
+Hay 8328 comparaciones
+
+wc -l Felis_catus_v8_recombination_rate.bed
+7508 Felis_catus_v8_recombination_rate.bed
+
+En el txv tengo 8347 valores, por tanto tengo 19 comparaciones que no están, porque tengo 19 cromosomas y el primer valor no se puede comparar con nada. en el bed tengo 7508 porque me he quitado los negativos. 
+
+ 
+
+#1. Media de los valores de recombinación sacados por pares, para ventanas de 2Mb
+
+
+## 1.1 Coordinadas de las ventanas
+
+```{bash}
+
+bedtools makewindows -g /home/mlucena/grupolince/reference_genomes/felis_catus_genome/felis_catus_genome_v8/Felis_catus_8.0_chr_lenght -w 2000000 > Felis_catus_v8_window_2Mb.bed
+
+```
+
+
+## 1.2 Interseccion con los valores de recombinación por pares de SNPs
+
+```{bash}
+
+bedtools intersect -a Felis_catus_v8_window_2Mb.bed -b Felis_catus_v8_recombination_rate.bed -wa -wb > Felis_catus_v8_window_2Mb_recombination_rate_all_info.bed
+
+
+wc -l Felis_catus_v8_window_2Mb_recombination_rate_all_info.bed
+# 8762 Felis_catus_v8_window_2Mb_recombination_rate_all_info.bed
+
+```
+
+
+Si nos fijamos antes había 7508 comparaciones entre SNPs y se han unido en 8762 ventanas, ¿cómo puede haber más?
+
+Esto se explica porque en algunos caso la distancia entre SNPs es mayor que 2Mb y por tanto esos SNPs entran en varias ventanas:
+
+chrX	40000000	42000000	chrX	40743788	40906456	3.252023	sexual
+chrX	40000000	42000000	chrX	40906456	58053797	0.030850	sexual
+chrX	42000000	44000000	chrX	40906456	58053797	0.030850	sexual
+chrX	44000000	46000000	chrX	40906456	58053797	0.030850	sexual
+chrX	46000000	48000000	chrX	40906456	58053797	0.030850	sexual
+
+¿En cuantos casos se da?
+
+      2 102702382
+      2 107844371
+      2 107954747
+      2 108458000
+      2 114336110
+      2 118759612
+      2 119955181
+      2 121488811
+      2 123666431
+      2 129590914
+      2 129856240
+      2 129974429
+      2 131337524
+      2 131778353
+      2 141448318
+      2 15230862
+      2 154934278
+      2 156859483
+      2 156931853
+      2 16043847
+      2 160942986
+      2 163137303
+      2 16319598
+      2 165304751
+      2 178924258
+      2 179081367
+      2 18871570
+      2 192035002
+      2 195987013
+      2 21084933
+      2 214252092
+      2 21503913
+      2 21738417
+      2 21862258
+      2 22589326
+      2 22861748
+      2 26624374
+      2 27149678
+      2 27961808
+      2 28432663
+      2 28698958
+      2 30665751
+      2 34305583
+      2 35974337
+      2 36192673
+      2 39705547
+      2 39705547
+      2 3973551
+      2 39751886
+      2 41716610
+      2 43288459
+      2 43497272
+      2 45294578
+      2 45602246
+      2 50881631
+      2 53387241
+      2 53439405
+      2 55987777
+      2 59379886
+      2 63537894
+      2 69996111
+      2 69996111
+      2 70832005
+      2 71543205
+      2 71963830
+      2 72924077
+      2 73347510
+      2 74122692
+      2 81549935
+      2 87012661
+      2 87678252
+      2 87733011
+      2 87804547
+      2 89011503
+      2 89722827
+      2 90270513
+      2 90970998
+      2 94488019
+      2 95831989
+      2 971221
+      2 97708141
+      2 98207575
+      2 99194676
+      2 99194676
+      3 107935131
+      3 147135726
+      3 23948737
+      3 27401968
+      3 28899706
+      3 30527396
+      3 48325518
+      3 56927061
+      3 97734989
+      3 97923007
+      4 101232577
+      4 13388886
+      4 22425936
+      4 29046076
+      4 29954243
+      4 73873175
+      4 81170286
+      6 101275166
+      6 58053797
+      8 71993576
+     10 40906456
+
+Algunos, pero no muchos, de todas formas no se afectaría si agrupamos. así que agrupamos para ventanas.
+
+##1.3 Agrupamos en ventanas.
+
+```{bash}
+
+# Ahora calculamos el recombination rate para cada ventana de 2Mb de la siguiente manera:
+
+bedtools groupby -i Felis_catus_v8_window_2Mb_recombination_rate_all_info.bed -g 1,2,3 -c 7,8 -o mean,distinct > Felis_catus_v8_window_2Mb_recombination_rate.bed
+
+# Haciendo el groupby queda algo asi:
+# chrA1	0	2000000	0.353904	autosome
+# chrA1	2000000	4000000	1.733625167	autosome
+# chrA1	4000000	6000000	2.343208333	autosome
+# chrA1	6000000	8000000	7.432092824	autosome
+
+# ¡Genial!
+
+rm Felis_catus_v8_window_2Mb_recombination_rate_all_info.bed
+rm Felis_catus_v8_window_2Mb.bed
+rm Felis_catus_v8_recombination_rate.tsv
+```
+
+
+
+# 2. Catv8 to cat v5: LiftOver para transformar esta tasa de recombinación de v8 a v5 del genoma para que sean comparables con nuestras unidades. 
+
+Para hacer este liftOver, tenemos que pasar de la version felCat8 a la versión felCat5 (6.2, la nuestra),en la página web http://rohsdb.cmb.usc.edu/GBshape/cgi-bin/hgLiftOver.
+
+Copio a local
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/recombination_analysis/Felis_catus_v8_window_2Mb_recombination_rate.bed /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination 
+```
+
+Meto este archivo Felis_catus_v8_window_2Mb_recombination_rate.bed) en liftOver pasando de v8 a v5. 
+Minimum ratio of bases that must remap: 0.8
+Successfully converted 1160 records: View Conversions
+Conversion failed on 27 records.    Display failure file    Explain failure messages
+
+
+Las regiones que han fallado en la conversión, son:
+chrA1	86000000	88000000	0.075628	autosome
+chrA1	88000000	90000000	0.4130146667	autosome
+chrA3	30000000	32000000	1.2466412	autosome
+chrB1	96000000	98000000	0.596053	autosome
+chrB1	192000000	194000000	0.09761325	autosome
+chrB1	200000000	202000000	2.2444055	autosome
+chrB2	10000000	12000000	4.638532615	autosome
+chrB2	12000000	14000000	7.9302656	autosome
+chrB3	28000000	30000000	0	autosome
+chrB3	146000000	148000000	3.9208705	autosome
+chrC1	0	2000000	16.1224402	autosome
+chrC1	98000000	100000000	3.810719222	autosome
+chrC2	84000000	86000000	1.9685322	autosome
+chrC2	86000000	88000000	2.6012076	autosome
+chrD2	88000000	88096124	2.9224215	autosome
+chrD3	16000000	18000000	1.9717296	autosome
+chrD3	26000000	28000000	0.552016	autosome
+chrD3	32000000	34000000	0.175396	autosome
+chrD4	28000000	30000000	0.1762234	autosome
+chrD4	92000000	94000000	2.99246325	autosome
+chrE2	8000000	10000000	4.7189235	autosome
+chrE3	16000000	18000000	0.4099955	autosome
+chrX	0	2000000	19.67587725	sexual
+chrX	44000000	46000000	0.03085	sexual
+chrX	48000000	50000000	0.03085	sexual
+chrX	80000000	82000000	0.056941	sexual
+chrX	82000000	84000000	0.056941	sexual
+
+El archivo generado es:
+
+hglft_genome_6243_dcc890.bed
+
+
+# 3. Lynx to catv5. Transformar coordenadas de lince a gato. 
+
+Voy a usar solo las unidades que tienen sintenia. 
+
+
+## 2.1 Sacar las unidades para las que tenemos sintenia con cromosoma de gato en una lista
+
+Primero saco la lista de las unidades para las que tengo información de cromosoma:
+
+```{bash}
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+
+for file in *per.unit.averages.chr_filtered.tsv
+do
+echo $file
+awk -v OFS='\t' '{print $1, $2, $3, $11"_"$7}' $file >> /home/mlucena/recombination_analysis/list_of_units_with_chr_info_in_lynx.txt
+done
+
+
+for file in *per.unit.averages.chr_filtered.tsv
+do
+echo $file
+wc -l $file
+done
+
+# 429583 c_ll_no_n008.per.unit.averages.chr_filtered.tsv
+# 429465 c_ll_ki_n008.per.unit.averages.chr_filtered.tsv
+# 429404 c_ll_ki_n013.per.unit.averages.chr_filtered.tsv
+# 429273 c_ll_po_n008.per.unit.averages.chr_filtered.tsv
+# 429226 c_lp_sm_n019.per.unit.averages.chr_filtered.tsv
+# 429202 c_lp_sm_n012.per.unit.averages.chr_filtered.tsv
+# 428630 c_lp_do_n012.per.unit.averages.chr_filtered.tsv
+
+cd /home/mlucena/recombination_analysis/
+
+sort -k1,1 -k2,2n list_of_units_with_chr_info_in_lynx.txt | uniq  >  list_of_units_with_chr_info_in_lynx_no_duplicates.txt
+
+wc -l list_of_units_with_chr_info_in_lynx_no_duplicates.txt
+# 430165 list_of_units_with_chr_info_in_lynx_no_duplicates.txt
+
+rm list_of_units_with_chr_info_in_lynx.txt
+
+```
+
+## 2.2 Intersect de esas unidades con coordenadas gato: SINTENIA
+
+
+```{bash}
+cd /home/mlucena/recombination_analysis/
+
+intersectBed -sorted -wo -a /home/mlucena/recombination_analysis/list_of_units_with_chr_info_in_lynx_no_duplicates.txt -b /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed > /home/mlucena/recombination_analysis/list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_lynx_coordinates_information.bed
+
+```
+
+¿Qué pinta tiene este archivo?
+
+
+lp23.s00001     0       15011   intergenic_region_1_intergenic  lp23.s00001     3930    3931    TCL=AAA:chrA3:15104377-15104378:NO      1
+lp23.s00001     0       15011   intergenic_region_1_intergenic  lp23.s00001     3931    3932    TCL=TTT:chrA3:15104378-15104379:NO      1
+lp23.s00001     0       15011   intergenic_region_1_intergenic  lp23.s00001     4059    4060    TCL=AAA:chrA3:15104506-15104507:NO      1
+lp23.s00001     0       15011   intergenic_region_1_intergenic  lp23.s00001     4060    4061    TCL=AAA:chrA3:15104507-15104508:NO      1
+lp23.s00001     0       15011   intergenic_region_1_intergenic  lp23.s00001     4061    4062    TCL=GGG:chrA3:15104508-15104509:NO      1
+
+
+
+## 2.3 Hacer group by con las posiciones de gato
+
+```{bash}
+
+# Primero compruebo cual es el tamaño máximo de una unidad en lince.
+
+awk '{print $3-$2,$1,$2,$3,$4}' /home/mlucena/recombination_analysis/list_of_units_with_chr_info_in_lynx_no_duplicates.txt | sort -k1,1n | tail 
+# 940956 lp23.s10433 631672 1572628 intergenic_region_17624_intergenic
+
+# La más grande es más pequeña que nuestras unidades de 2Mb que hemos usado para establecer la tasa de recombinación, asi que en principio es posible una vez pasadas a gato, tener solo dos coordenadas de gato. Primero vamos a ver si estas unidades, una vez pasadas a gato, corresponden a cromosomas de gato distintos, lo cual sería un problema. 
+
+
+# Primero vamos a ver si hay más de un cromosoma en algunas unidades:
+
+awk -v OFS='\t' '{split ($8, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2], $4 }' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_lynx_coordinates_information.bed | sort -k4,4 | bedtools groupby -i stdin -g 4 -c 1 -o distinct -delim ";" > lista_chr_per_unit
+
+# YUHUUU no hay!!
+
+
+# Fusiono en base a la unidad, siempre que esté en el mismo cromosoma.
+
+awk -v OFS='\t' '{split ($8, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2], $4 }' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_lynx_coordinates_information.bed >
+list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information.bed
+
+sort -k1,1 -k2,2n list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information.bed > list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted.bed
+
+```
+
+Este archivo tiene esta pinta
+
+chrA1   329     330     intergenic_region_54349_intergenic
+chrA1   369     370     intergenic_region_54349_intergenic
+chrA1   370     371     intergenic_region_54349_intergenic
+chrA1   371     372     intergenic_region_54349_intergenic
+chrA1   372     373     intergenic_region_54349_intergenic
+chrA1   373     374     intergenic_region_54349_intergenic
+
+¿Cuantas bases tengo?
+
+```{bash}
+wc -l list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information.bed
+# 1.171.301.858 list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information.bed
+```
+
+# 4. Asigno tasa de recombinación a cada unidad
+
+Copio el bed con las coordenadas de versión 5 de la tasa de recombinación al servidor.
+
+```{bash}
+scp /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination/hglft_genome_6243_dcc890.bed mlucena@genomics-b.ebd.csic.es://home/mlucena/recombination_analysis/
+```
+
+Primero he detectado que el archivo de la equivalencia no está ordenado, así que tengo que ordenarlo
+
+```{bash}
+sort -k1,1 -k2,2n hglft_genome_6243_dcc890.bed > hglft_genome_6243_dcc890_sorted.bed
+```
+
+Fusiono los dos archivos, quedandome con un valor de tasa de recombinación por unidad. También calculo la suma de bases de cada unidad que tengo representada, aunque despues seguramente lo borre.
+
+```{bash}
+
+intersectBed -sorted -wo -a hglft_genome_6243_dcc890_sorted.bed -b list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted.bed | awk -v OFS='\t' '{print $1,$2,$3,$4,$5,$9,$10}' > list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted_with_recombination_info.bed
+
+# Ahora separo este archivo en cromosomas, para que pueda tragarselo bedtools groupby 
+
+mkdir all_info_separate_by_cat_chr
+scp list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted_with_recombination_info.bed all_info_separate_by_cat_chr/
+
+awk '{print >> $1; close($1)}' ../list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_information_sorted_with_recombination_info.bed  
+
+# Change name
+
+# Se podría hacer un loop, pero lo fui hacienco conforme salían, de uno en uno.
+
+chr=chrA3 # hecho!
+chr=chrB1 # hecho!
+chr=chrB2 # hecho!
+chr=chrB3 # hecho!
+chr=chrB4 # hecho!
+chr=chrC1 # hecho!
+chr=chrC2 # hecho!
+chr=chrD1 # hecho!
+chr=chrD2 # hecho!
+chr=chrD3 # hecho!
+chr=chrD4 # hecho!
+chr=chrE1 # hecho!
+chr=chrE2 # hecho!
+chr=chrE3 # hecho!
+chr=chrF1 # hecho!
+chr=chrF2 # hecho!
+chr=chrX # hecho!
+
+
+bedtools groupby -i $chr -g 1,2,3,4,5,6 -c 7 -o sum | sort -k1,1 -k2,2n -k3,3n -k6,6 > "$chr"_recombination_rate_per_unit_all_info_borrar.bed
+
+bedtools groupby -i "$chr"_recombination_rate_per_unit_all_info_borrar.bed -g 1,2,3,4,5,6 -c 7 -o sum > "$chr"_recombination_rate_per_unit_all_info_sorted.bed
+
+
+rm *borrar*
+
+cat *_recombination_rate_per_unit_all_info_sorted.bed | awk -v OFS='\t' '{print $6, $4}' | sort -u > recombination_rate_per_unit_all_info_sorted.bed
+# Con el sort -u me quitaría entradas identicas que se hayan podido producir porque haya discontinuidad en las bases que las forman y en medio haya otra unidad. 
+
+# Sanity checks
+
+wc -l recombination_rate_per_unit_all_info_sorted.bed 
+# 403029 recombination_rate_per_unit_all_info_sorted.bed
+
+# ¿Hay unidades que están en más de un cromosoma?
+
+sort -k1,1 recombination_rate_per_unit_all_info_sorted.bed | uniq -c | sort -k1,1n | tail
+
+# Nada! ¡¡¡Genial!!!
+
+# Lo muevo una carpeta arriba
+
+mv recombination_rate_per_unit_all_info_sorted.bed  ..
+
+# Elimino archivos intermedios pq ocupan mucho espacio. 
+
+```
+
+# Archivo final
+
+El archivo final es: 
+
+/home/mlucena/recombination_analysis/recombination_rate_per_unit_all_info_sorted.bed
+
+Me lo bajo para poder hacer un join con mis archivos de diversidad
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/recombination_analysis/recombination_rate_per_unit_all_info_sorted.bed /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination/
+```
+
