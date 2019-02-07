@@ -408,13 +408,16 @@ B) then realigns the reads in these regions using a consensus model that takes a
 
 ```{r, engine=bash, eval=FALSE}
 
+java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T RealignerTargetCreator -nt 24 -R $REF -I c_lp_sm_0450_recal_round-1.bam -o ${i}_realignertargetcreator.intervals
+
+
 for i in ${ARRAY_MERGED_BAM_SAMPLE_NAME[@]}
 do
 echo "${i}"
 # RealignerTargetCreator
 # rm ${i}_sorted.bam
 # rm ${i}_sorted_rmdup.bam
-java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T RealignerTargetCreator -nt 24 -R $REF -fixMisencodedQuals -I ${i}_sorted_rmdup_sorted.bam -o ${i}_realignertargetcreator.intervals
+java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T RealignerTargetCreator -nt 24 -R $REF -I ${i}_sorted_rmdup_sorted.bam -o ${i}_realignertargetcreator.intervals
 # IndelRealigner
 java -jar /home/tmp/Software/GATK_3.4/GenomeAnalysisTK.jar -T IndelRealigner -R $REF -fixMisencodedQuals -targetIntervals ${i}_realignertargetcreator.intervals -I ${i}_sorted_rmdup_sorted.bam -o ${i}_sorted_rmdup_sorted_indelrealigner.bam
 done
