@@ -99,7 +99,15 @@ data_diversity <- read.table(paste(wd_out, "global.per.unit.averages.chr.all.reg
   # Creo un identificador único para luego poder filtrar por este cuando tenga que sacar los comunes a todas las poblaciones. 
   mutate (., chr = ifelse (chr.x == chr.y, as.character(chr.x), "PROBLEMA")) %>% 
   select (-c(chr.x, chr.y)) %>% 
-  mutate (unique_id = paste (id,feature, sep="_"))
+  mutate (., unique_id = paste (id,feature, sep="_")) %>% 
+  #Haciendo este mutate lo que hago es modificar el valor de watterson para tener en ucenta el tamaño poblacional verdadero de la población (chr) cuando consideramos la diferencia entre machos y hembras. En el xls modif_a_watterson_chrX viene explicado. 
+  mutate (., watterson_modif = ifelse (chr=="chrX" & pop == "c_ll_ki_n013", watterson_ave * 1.09, 
+                               ifelse (chr=="chrX" & pop == "c_ll_po_n008", watterson_ave * 1.12,
+                               ifelse (chr=="chrX" & pop == "c_ll_no_n008", watterson_ave * 1.15,
+                               ifelse (chr=="chrX" & pop == "c_lp_sm_n019", watterson_ave * 1.07, 
+                               ifelse (chr=="chrX" & pop == "c_lp_do_n012", watterson_ave * 1.10, watterson_ave)))))) %>% 
+  mutate (., watterson_ave=watterson_modif) %>% 
+  select (., -watterson_modif)
 
 
 unique(data_diversity$pop)
@@ -123,7 +131,7 @@ unique(data_diversity$Populations)
 
 
 data_diversity_pre <- data_diversity %>%  
-  filter (., informative_sites>=100) %>% 
+  filter (., informative_sites>=50) %>% 
   filter (., informative_sites/length>=0.20) %>% 
   filter (., !(feature=="promoter_gene_250")) %>% 
   filter (., !(feature=="promoter_gene_500")) %>% 
@@ -176,10 +184,11 @@ data_diversity_filtered$chr <- factor(data_diversity_filtered$chr, levels = c("c
 
 data_diversity_filtered$watterson_ave <- as.numeric(data_diversity_filtered$watterson_ave)
 data_diversity_filtered$watterson_sd <- as.numeric(data_diversity_filtered$watterson_sd)
+data_diversity_filtered$pairwise_ave <- as.numeric(data_diversity_filtered$pairwise_ave)
 data_diversity_filtered$pairwise_sd <- as.numeric(data_diversity_filtered$pairwise_sd)
 data_diversity_filtered$tajimaD <- as.numeric(data_diversity_filtered$tajimaD)
 
-write.table (data_diversity_filtered, paste(wd_out, "global.per.unit.averages.chr.all.regions.filtered.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (data_diversity_filtered, paste(wd_out, "global.per.unit.averages.chr.all.regions.filtered.watterson.modif.chrX.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 
 # 5/6/2018
 # Hemos decidido filtrar el 20% de sitios informativos/length.
@@ -274,6 +283,8 @@ rm (c_lp_sm_n019)
 
 ```
 
+# -------------------------------------------------
+
 # Analisis de la diversidad
 
 ```{r}
@@ -282,10 +293,11 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 
+
 wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
 wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
 
-data_diversity_filtered <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions.filtered.tsv", sep=""), header=T, na.strings = c("NA", "na"))
+data_diversity_filtered <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions.filtered.watterson.modif.chrX.tsv", sep=""), header=T, na.strings = c("NA", "na"))
 
 
 # str(data_diversity_filtered)
@@ -1409,7 +1421,7 @@ return (tmp_group)
 }
 
 
-ITERATION=1000
+ITERATION=100
 
 
 # Genero las tablas
@@ -1568,11 +1580,18 @@ calculus_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, nam
 # Dataframe Kirov-Norway
 calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity,c_ll_no_n008_diversity, deparse(substitute(c_ll_ki_n013_diversity)),deparse(substitute(c_ll_no_n008_diversity)))
 
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_autosomal_diversity,c_ll_no_n008_autosomal_diversity, deparse(substitute(c_ll_ki_n013_autosomal_diversity)),deparse(substitute(c_ll_no_n008_autosomal_diversity)))
+
+
 # Dataframe Kirov-Poland
 calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity,c_ll_po_n008_diversity, deparse(substitute(c_ll_ki_n013_diversity)),deparse(substitute(c_ll_po_n008_diversity)))
 
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_autosomal_diversity,c_ll_po_n008_autosomal_diversity, deparse(substitute(c_ll_ki_n013_autosomal_diversity)),deparse(substitute(c_ll_po_n008_autosomal_diversity)))
+
 # Dataframe Sierra_Morena-Doñana
 calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_diversity,c_lp_do_n012_diversity, deparse(substitute(c_lp_sm_n019_diversity)),deparse(substitute(c_lp_do_n012_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_autosomal_diversity,c_lp_do_n012_autosomal_diversity, deparse(substitute(c_lp_sm_n019_autosomal_diversity)),deparse(substitute(c_lp_do_n012_autosomal_diversity)))
 
 
 # write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
@@ -2190,6 +2209,7 @@ Exploro el ratio de ganancia vs. la recombination rate, para ver si las zonas co
 ```{r}
 
 INDEXES=c("ratio_pairwise_average_corrected", "ratio_watterson_average_corrected")
+
 COMPARISONS=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
 
 for (COMPARISON in COMPARISONS)
@@ -2206,8 +2226,36 @@ ggplot(get(COMPARISON) %>% filter(chr!="chrX"), aes_string("recombination_rate.x
   geom_smooth()
     ggsave(paste (wd_output,NAME_POP1,"_",NAME_POP2,"_recomb_vs_",INDEX,".pdf", sep="" ), device="pdf")
 
+    
+    
 }
 }
+
+# Voy a hacer un lm
+
+library("lme4")
+
+ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_po_n008_diversity <- lmList(ratio_pairwise_average_corrected ~ recombination_rate.x | feature, data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity)
+
+sink(paste (wd_output,"lm_ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_per_feature_c_ll_ki_n013_c_ll_po_n008.txt"))
+print(summary(ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_po_n008_diversity))
+sink()
+
+ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_no_n008_diversity <- lmList(ratio_pairwise_average_corrected ~ recombination_rate.x | feature, data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity)
+
+sink(paste (wd_output,"lm_ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_per_feature_c_ll_ki_n013_c_ll_no_n008.txt"))
+print(summary(ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_no_n008_diversity))
+sink()
+
+ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_lp_sm_n019_c_lp_do_n012_diversity  <- lmList(ratio_pairwise_average_corrected ~ recombination_rate.x | feature, data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity)
+
+sink(paste (wd_output,"lm_ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_per_feature_c_lp_sm_n019_c_lp_do_n012.txt"))
+print(summary(ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_lp_sm_n019_c_lp_do_n012_diversity))
+sink()
+
+# Una manera de visualizarlo es esta:
+
+xyplot(ratio_pairwise_average_corrected ~ recombination_rate.x, groups=feature, data=data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity, type='l')
 
 
 ```
@@ -2231,13 +2279,13 @@ Tengo que copiarlas a la terminal y de ahí guardarlas a mano.
 
 library(VennDiagram)
 
-pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008 <- data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity %>%  filter(ratio_pairwise_average_corrected>1) %>% select (unique_id) %>% rename (c_ll_ki_n013_c_ll_no_n008=unique_id) 
+pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008 <- data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity %>%  filter(ratio_pairwise_average_corrected>1) %>% select (unique_id) %>% select (c_ll_ki_n013_c_ll_no_n008=unique_id) 
 pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008_list <- lapply(as.list(pairwise_ratio_above_one_c_ll_ki_n013_c_ll_no_n008), function(x) x[x != ""])
 
-pairwise_ratio_above_one_c_ll_ki_n013_c_ll_po_n008 <- data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity %>%  filter(ratio_pairwise_average_corrected>1) %>% select (unique_id) %>% rename (c_ll_ki_n013_c_ll_po_n008=unique_id)
+pairwise_ratio_above_one_c_ll_ki_n013_c_ll_po_n008 <- data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity %>%  filter(ratio_pairwise_average_corrected>1) %>% select (unique_id) %>% select (c_ll_ki_n013_c_ll_po_n008=unique_id)
 pairwise_ratio_above_one_c_ll_ki_n013_c_ll_po_n008_list <- lapply(as.list(pairwise_ratio_above_one_c_ll_ki_n013_c_ll_po_n008), function(x) x[x != ""])
 
-pairwise_ratio_above_one_c_lp_sm_n019_c_lp_do_n012 <- data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity %>%  filter(ratio_pairwise_average_corrected>1) %>% select (unique_id) %>% rename (c_lp_sm_n019_c_lp_do_n012=unique_id)
+pairwise_ratio_above_one_c_lp_sm_n019_c_lp_do_n012 <- data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity %>%  filter(ratio_pairwise_average_corrected>1) %>% select (unique_id) %>% select (c_lp_sm_n019_c_lp_do_n012=unique_id)
 pairwise_ratio_above_one_c_lp_sm_n019_c_lp_do_n012_list <- lapply(as.list(pairwise_ratio_above_one_c_lp_sm_n019_c_lp_do_n012), function(x) x[x != ""])
 
 
@@ -2575,6 +2623,7 @@ bootleneck_vs_non_bootleneck_ratio_median_chr <- function(POP1, POP2, name_POP1,
 bootleneck_vs_non_bootleneck_ratio_median_chr(c_ll_ki_n013_stats_chr,c_ll_no_n008_stats_chr, deparse(substitute(c_ll_ki_n013_stats_chr)),deparse(substitute(c_ll_no_n008_stats_chr)))
 write.table(ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr, paste(wd_output,"ratio_median_autosomal_chr_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
+
 # Dataframe Kirov-Poland
 bootleneck_vs_non_bootleneck_ratio_median_chr(c_ll_ki_n013_stats_chr,c_ll_po_n008_stats_chr, deparse(substitute(c_ll_ki_n013_stats_chr)),deparse(substitute(c_ll_po_n008_stats_chr)))
 write.table(ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr, paste(wd_output,"ratio_median_autosomal_chr_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
@@ -2691,6 +2740,7 @@ write.table(ratio_median_c_ll_ki_n013_stats_region_chr_c_ll_po_n008_stats_region
 bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_lp_sm_n019_stats_region_chr, c_lp_do_n012_stats_region_chr, deparse(substitute(c_lp_sm_n019_stats_region_chr)),deparse(substitute(c_lp_do_n012_stats_region_chr)))
 write.table(ratio_median_c_lp_sm_n019_stats_region_chr_c_lp_do_n012_stats_region_chr, paste(wd_output,"ratio_median_autosomal_region_chr_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
+
 ```
 
 
@@ -2701,10 +2751,12 @@ library( gplots)
 
 # ls(pattern="ratio_median")  y selecciono los que tienen comparación a pares
 DATAFRAMES=c(
-"ratio_median_c_ll_ki_n013_ave_diversity_autosomal_feature_chr_c_ll_no_n008_ave_diversity_autosomal_feature_chr", "ratio_median_c_ll_ki_n013_ave_diversity_autosomal_feature_chr_c_ll_po_n008_ave_diversity_autosomal_feature_chr", "ratio_median_c_ll_ki_n013_ave_diversity_autosomal_feature_region_c_ll_no_n008_ave_diversity_autosomal_feature_region", "ratio_median_c_ll_ki_n013_ave_diversity_autosomal_feature_region_c_ll_po_n008_ave_diversity_autosomal_feature_region", "ratio_median_c_ll_ki_n013_ave_diversity_autosomal_region_chr_c_ll_no_n008_ave_diversity_autosomal_region_chr", "ratio_median_c_ll_ki_n013_ave_diversity_autosomal_region_chr_c_ll_po_n008_ave_diversity_autosomal_region_chr", "ratio_median_c_lp_sm_n019_ave_diversity_autosomal_feature_chr_c_lp_do_n012_ave_diversity_autosomal_feature_chr", "ratio_median_c_lp_sm_n019_ave_diversity_autosomal_feature_region_c_lp_do_n012_ave_diversity_autosomal_feature_region", "ratio_median_c_lp_sm_n019_ave_diversity_autosomal_region_chr_c_lp_do_n012_ave_diversity_autosomal_region_chr")
+"ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_no_n008_stats_feature_chr", "ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_po_n008_stats_feature_chr", "ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr")
 
 
-INDICE=c("ratio_median_pairwise", "ratio_median_watterson")
+
+
+INDICE=c("ratio_median_pairwise_corrected", "ratio_median_watterson_corrected")
 #########################################################
 ### A) Installing and loading required packages
 #########################################################
@@ -2730,7 +2782,10 @@ for (DATA in DATAFRAMES)
   {
 
     DATAFRAME=as.data.frame(get(DATA))
+    DATAFRAME$chr <- factor (DATAFRAME$chr, levels=c( "chrD4","chrE1","chrE3","chrF1","chrF2","chrB4","chrD2","chrE2","chrA3","chrB3","chrC1","chrD1","chrD3","chrA2","chrB2","chrA1","chrC2","chrB1","chrX"))
     
+    DATAFRAME$feature <- factor (DATAFRAME$feature, levels=c("UCNE","CDS","lncRNA","ncRNA","promoter_gene_1000","promoter_lncRNA_1000","3UTR","5UTR","intron","intron_lncRNA","intergenic"))
+
     POP1=as.character(DATAFRAME$pop.x[1])
     POP2=as.character(DATAFRAME$pop.y[1])
     
@@ -2744,45 +2799,34 @@ for (DATA in DATAFRAMES)
 ### C) Customizing and plotting the heat map
 #########################################################
 
-# creates a own color palette from red to green
-#my_palette <- colorRampPalette(c("red", "yellow", "green"))(n = 299)
-
-# (optional) defines the color breaks manually for a "skewed" color transition
-#col_breaks = c(seq(-1,0,length=100),  # for red
-#  seq(0.01,0.8,length=100),           # for yellow
-#  seq(0.81,1,length=100))             # for green
-
 # creates a 5 x 5 inch image
 png(paste(wd_output,"heatmap_",names(DATAFRAME)[2],"_",names(DATAFRAME)[3],"_",INDEX,"_",POP1,"_",POP2,".png", sep=""),    # create PNG for the heat map        
-  width = 5*300,        # 5 x 300 pixels
-  height = 5*300,
+  width = 5*500,        # 5 x 300 pixels
+  height = 5*500,
   res = 300,            # 300 pixels per inch
   pointsize = 8)        # smaller font size
 
 heatmap.2(temp.data.frame.diversity,
-  cellnote = temp.data.frame.counts,  # same data set for cell labels
+  cellnote = temp.data.frame.counts,  
   main = paste(INDEX,POP1,POP2, sep=" "), # heat map title
   notecol="black",      # change font color of cell labels to black
-  density.info="none",  # turns off density plot inside color legend
+  # density.info="none",  # turns off density plot inside color legend
   trace="none",         # turns off trace lines inside the heat map
-  margins =c(12,9),     # widens margins around plot
+  margins =c(20,10),     # widens margins around plot
   # col=my_palette,       # use on color palette defined earlier
   # breaks=col_breaks,    # enable color transition at specified limits
-  dendrogram="none",     # only draw a row dendrogram
-  Colv="NA",             # turn off column clustering
-  sepwidth=c(0.01,0.01),
-  sepcolor="black",
-  colsep=1:ncol(temp.data.frame.diversity),
-  rowsep=1:nrow(temp.data.frame.diversity),
-  cexRow=0.075)            
-
+  dendrogram="none", 
+  Rowv=FALSE,
+  Colv=FALSE)           # turn off column clustering
+  
 dev.off()               # close the PNG device
 
   }
 }  
   
-```
 
+
+```
 
 # ------
 
@@ -2793,13 +2837,23 @@ Solo puedo unir la que sea solo agrupadas por cromosoma.
 
 ```{r}
 
-DATAFRAMES=c("ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr","ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr","ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr")
+# Creo tablas con la información de gato. Como son tablas resumen, solo las puedo unir cuando tenga información de cromosoma. 
 
 ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate), by="chr")
+
 ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate), by="chr")
+
 ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr_cat_info <- left_join(ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_lp_sm_n019") %>% select(chr,mean_recombination_rate), by="chr")
 
 # En realidad da igual la población que escoja, todos tienen la misma tasa de recombinación
+
+# Creo las tablas de interacción teniendo en cuenta la feature y el cromosoma.
+
+ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_po_n008_stats_feature_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_po_n008_stats_feature_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate), by="chr")
+
+ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_no_n008_stats_feature_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_no_n008_stats_feature_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate), by="chr")
+
+ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr_cat_info <- left_join(ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_lp_sm_n019") %>% select(chr,mean_recombination_rate), by="chr")
 
 ```
 
@@ -2868,6 +2922,31 @@ ggplot (as.data.frame(get(DATAFRAME)), aes_string("mean_recombination_rate", IND
 }
 
 
+####
+
+
+DATAFRAMES=c("ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_po_n008_stats_feature_chr_cat_info","ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_no_n008_stats_feature_chr_cat_info","ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr_cat_info")
+INDEXES=c("ratio_median_pairwise_corrected", "ratio_median_watterson_corrected") 
+
+for (DATAFRAME in DATAFRAMES)
+{
+  
+POP1=as.character(as.data.frame(get(DATAFRAME)) %>% select(pop.x) %>% .[1,1])
+POP2=as.character(as.data.frame(get(DATAFRAME)) %>% select(pop.y) %>% .[1,1])
+
+for (INDEX in INDEXES)
+  {
+
+ggplot (filter(get(DATAFRAME), chr!="chrX"), aes(mean_recombination_rate, ratio_median_pairwise_corrected, fill=feature, colour=feature)) +
+          geom_point() +
+  geom_smooth(method = "lm") +
+    facet_grid(feature~.)
+  ggsave(paste(wd_output, "recombination_rate_vs_",INDEX,"_",POP1,"_",POP2,"_by_feature_and_chr.pdf", sep=""), device = pdf)
+
+
+}
+}
+
 ```
 
 
@@ -2925,6 +3004,8 @@ ggplot(data_diversity_c_ll_ki_n013_autosomal_diversity_c_ll_po_n008_autosomal_di
 
 d <- density(data_diversity_c_ll_ki_n013_autosomal_diversity_c_ll_po_n008_autosomal_diversity$ratio_corrected_by_watterson_average_intergenic_per_unit) # returns the density data 
 plot(d)
+
+
 ```
 
 
