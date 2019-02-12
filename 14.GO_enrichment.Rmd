@@ -1,0 +1,58 @@
+---
+title: "14.GO_enrichment"
+output: html_document
+---
+
+Este es el script donde realizo el GO term enrichment analysis y el pathway enrichment analysis. 
+
+Lo primero que hago es pedirle a Godoy una lista donde cada gen tenga asociado su GO-term. El me pasa una carpeta donde hay varios archivos.
+
+GO2LYNPC.txt
+GO2LYPA.LYPA23C.APPRIS.fatigo.genes.txt
+GO2LYPA.LYPA23C.APPRIS.fatigo.txt
+GO_enrichment.docx
+genes2transcript2go.list.txt
+lp23.allgenes.fatigo.txt
+lp23.allgenes.goterms
+lp23.allgenes.id
+
+En el archivo docx, se explica los pasos que siguió Godoy para hacer el enrichment. Lo que deduzco es que las que se llaman lp23* son listas antiguas, y despues están las GO2LYPA que sólo contienen las isoformas principales. 
+
+Lo distintos archivos son:
+
+GO2LYNPC.txt --> Tiene el nombre del gen, el GO_term, el GO_name y el GO_type; parece que incluye todas las isoformas.
+GO2LYPA.LYPA23C.APPRIS.fatigo.genes.txt --> Creo q es el que tengo que usar. Nombre de gen, GO_ACC, GO_name y el GO_type.
+GO2LYPA.LYPA23C.APPRIS.fatigo.txt --> Igual pero con proteinas.
+GO_enrichment.docx --> Archivo docx donde se explica el procedimiento.
+genes2transcript2go.list.txt --> Creo que es la carpeta que tiene el nombre de gen, isoforma principal y proteina y despues GO term y sus características.
+
+Los lp23 son antiguos sin la isoforma principal.
+
+Lo primero que voy a hacer es cargar nuestros archivos
+
+```{r}
+
+tabla_all_genes_GO_term <- read.table ("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_annotation/GO2LYPA.LYPA23C.APPRIS.fatigo.genes.txt", sep="\t", header = T)
+
+geneID2GO <- readMappings(file = system.file("examples/geneid2go.map", package = "topGO"))
+
+```
+
+
+
+
+```{bash}
+
+
+
+sampleGOdata <- new("topGOdata",
+                     description = "Simple session", ontology = "BP",
+                     allGenes = geneList, geneSel = topDiffGenes,
+                     nodeSize = 10,
+                     annot = annFUN.db, affyLib = affyLib)
+                     
+                     
+BPterms <- ls(GOBPTerm)
+
+```
+
