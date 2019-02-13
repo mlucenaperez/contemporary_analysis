@@ -157,11 +157,10 @@ Me quedo solo con el KO
 
 
 ```{bash}
+
 cd /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/
 
 awk '{print $2}' genes_of_interes_KO_ratio_above_1_CDS.txt | tail -n+2 > KO_ratio_above_1_CDS.txt
-
-
 
 ```
 
