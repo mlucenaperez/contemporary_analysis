@@ -32,27 +32,141 @@ Lo primero que voy a hacer es cargar nuestros archivos
 
 ```{r}
 
-tabla_all_genes_GO_term <- read.table ("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_annotation/GO2LYPA.LYPA23C.APPRIS.fatigo.genes.txt", sep="\t", header = T)
 
-geneID2GO <- readMappings(file = system.file("examples/geneid2go.map", package = "topGO"))
+library(topGO)
+library (dplyr)
+library (plyr)
+library(tidyr)
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
+
+tabla_all_genes_GO_term_complete_info <- read.table (paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes.txt"), sep="\t", header = T) %>% select (., GENE_NAME, GO_ACC) %>% mutate (GO_ACC=as.character(GO_ACC))
+
+# Convert  data frame in a list of list based on a Key value
+# geneID2GO <- readMappings(file = system.file("examples/geneid2go.map", package = "topGO"))
+list_of_list_all_genes_GO_term <- dlply(tabla_all_genes_GO_term_complete_info, .(GENE_NAME), function(x)x$GO_ACC)
+list_of_list_all_genes_GO_term_chr <- lapply(list_of_list_all_genes_GO_term, function(x) as.character(unlist(x)))
+
+str(head(list_of_list_all_genes_GO_term_chr))
+
+# Guardo los nombres de los genes en cuestión. 
+geneNames <- names(list_of_list_all_genes_GO_term_chr)
+
+###############
+
+# Tabla de genes de interes
+
+protein_of_interest_duplicates_dataframe <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS.txt", header=T) %>%  separate(genes_in_common_lynx_lynx_lynx_pardinus, c("genes"), "_") 
+
+
+# Elimino los dos últimos caracteres que son el nombre de la proteina.
+gene_of_interest_duplicates_list_pre <- substr(protein_of_interest_duplicates_dataframe$genes,1,nchar(protein_of_interest_duplicates_dataframe$genes)-2)
+
+
+# Lo convierto en lista
+gene_of_interest_duplicates_list <- as.list(as.data.frame(gene_of_interest_duplicates_list_pre))
+
+# Hago una lista con 0 y 1 con los genes que tengo que filtrar
+geneList <- factor(as.integer(geneNames %in% gene_of_interest_duplicates_list))
+
+# Asigno esa lista a cada gen (pongo header)
+names(geneList) <- as.factor(geneNames)
+str(geneList)
+
+
+
+GOdata <- new("topGOdata", ontology = "BP", description = "Analysis of CDS with a ratio above 1", allGenes = geneList,
+               annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
+
+
+
+description (GOdata)
+termStat(GOdata)
+
+test.stat <- new("weight01Count", testStatistic = GOFisherTest, name = "Fisher test")
+resultFisher <- getSigGroups(GOdata, test.stat)
+
+head(score(resultFisher))
+hist(score(resultFisher))
+geneData(resultFisher)
+
+allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=20 )
 
 ```
 
 
 
+Pathway enrichment
 
 ```{bash}
 
+cd /GRUPOS/grupolince/Lyp_annotation_Apr14_final
 
+Voy a seleccionar los KO que son los nombres de proteinas comunes a todos
 
-sampleGOdata <- new("topGOdata",
-                     description = "Simple session", ontology = "BP",
-                     allGenes = geneList, geneSel = topDiffGenes,
-                     nodeSize = 10,
-                     annot = annFUN.db, affyLib = affyLib)
-                     
-                     
-BPterms <- ls(GOBPTerm)
+grep "ko_group" LYPA23C.all.fix.nr.gff3 > all_mRNA
+
+# sanity check
+# all ko groups
+grep -o '\bko_group=\w*' all_mRNA | wc -l
+#10213
+# All parent_id
+grep -o '\bParent=\w*' all_mRNA | wc -l
+#10213
+
+# Igual! perfecto, los podemos juntar
+
+paste <(grep -o '\bParent=\w*' all_mRNA) <(grep -o '\bko_group=\w*' all_mRNA) | sed 's/Parent=//g' | sed 's/ko_group=//g' > genes_to_KO.txt
+
+rm all_mRNA
 
 ```
+
+Me lo bajo a mi carpeta
+
+
+```{bash}
+scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/Lyp_annotation_Apr14_final/genes_to_KO.txt /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation
+```
+
+Intersección con mi archivo de genes de interes
+
+```{r}
+# Archivo de equivalencias KO con genes
+
+genes_to_KO.list <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/genes_to_KO.txt", header=F)
+
+
+# Archivo de genes de interes
+
+protein_of_interest_duplicates_dataframe <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS.txt", header=T) %>%  separate(genes_in_common_lynx_lynx_lynx_pardinus, c("genes"), "_") 
+
+# Elimino los dos últimos caracteres que son el nombre de la proteina.
+gene_of_interest_duplicates_dataframe <- as.data.frame(substr(protein_of_interest_duplicates_dataframe$genes,1,nchar(protein_of_interest_duplicates_dataframe$genes)-2))
+
+colnames(gene_of_interest_duplicates_dataframe) <-c("genes_of_interest")
+
+## Uno las dos tablas
+genes_of_interest_KO <- inner_join(genes_to_KO.list, gene_of_interest_duplicates_dataframe, by=c("V1"="genes_of_interest")) %>%  distinct(V1,V2, .keep_all = TRUE)
+
+write.table(genes_of_interest_KO, paste0(wd,"genes_of_interes_KO_ratio_above_1_CDS.txt"), row.names = F, quote = F)
+
+```
+
+Me quedo solo con el KO
+
+
+```{bash}
+cd /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/
+
+awk '{print $2}' genes_of_interes_KO_ratio_above_1_CDS.txt | tail -n+2 > KO_ratio_above_1_CDS.txt
+
+
+
+```
+
+
+
+
+
 
