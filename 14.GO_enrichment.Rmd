@@ -40,6 +40,8 @@ library(tidyr)
 
 wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
 
+wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
+
 tabla_all_genes_GO_term_complete_info <- read.table (paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes.txt"), sep="\t", header = T) %>% select (., GENE_NAME, GO_ACC) %>% mutate (GO_ACC=as.character(GO_ACC))
 
 # Convert  data frame in a list of list based on a Key value
@@ -150,6 +152,23 @@ colnames(gene_of_interest_duplicates_dataframe) <-c("genes_of_interest")
 genes_of_interest_KO <- inner_join(genes_to_KO.list, gene_of_interest_duplicates_dataframe, by=c("V1"="genes_of_interest")) %>%  distinct(V1,V2, .keep_all = TRUE)
 
 write.table(genes_of_interest_KO, paste0(wd,"genes_of_interes_KO_ratio_above_1_CDS.txt"), row.names = F, quote = F)
+
+
+
+# Nuevo archivo de interes 
+
+protein_of_interest <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_genes_of_interest_lynx_lynx_high_diversity_ratio_1.txt", header=T) %>%  separate(unique_id, c("genes"), "_") 
+
+tabla_genes_interes <- as.data.frame(substr(protein_of_interest$genes,1,nchar(protein_of_interest$genes)-2))
+names(tabla_genes_interes) <- ("genes_of_interest")
+
+## Uno las dos tablas
+genes_of_interest_KO <- inner_join(genes_to_KO.list, tabla_genes_interes, by=c("V1"="genes_of_interest")) %>%  distinct(V1,V2, .keep_all = TRUE)
+
+write.table(genes_of_interest_KO, paste0(wd_output,"genes_of_interes_KO_high_diversity_ratio_1.txt"), row.names = F, quote = F)
+
+
+
 
 ```
 
