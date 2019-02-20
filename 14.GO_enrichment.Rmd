@@ -3,6 +3,9 @@ title: "14.GO_enrichment"
 output: html_document
 ---
 
+
+# GO term enrichment
+
 Este es el script donde realizo el GO term enrichment analysis y el pathway enrichment analysis. 
 
 Lo primero que hago es pedirle a Godoy una lista donde cada gen tenga asociado su GO-term. El me pasa una carpeta donde hay varios archivos.
@@ -30,22 +33,26 @@ Los lp23 son antiguos sin la isoforma principal.
 
 Lo primero que voy a hacer es cargar nuestros archivos
 
+## Load information for GO enrichment
+
 ```{r}
-
-
 library(topGO)
 library (dplyr)
 library (plyr)
 library(tidyr)
 
-wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
+# Working directory
 
-wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
+wd_input <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
+
+# Tabla con la información de GO term para cada gen.
 
 tabla_all_genes_GO_term_complete_info <- read.table (paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes.txt"), sep="\t", header = T) %>% select (., GENE_NAME, GO_ACC) %>% mutate (GO_ACC=as.character(GO_ACC))
 
 # Convert  data frame in a list of list based on a Key value
 # geneID2GO <- readMappings(file = system.file("examples/geneid2go.map", package = "topGO"))
+
 list_of_list_all_genes_GO_term <- dlply(tabla_all_genes_GO_term_complete_info, .(GENE_NAME), function(x)x$GO_ACC)
 list_of_list_all_genes_GO_term_chr <- lapply(list_of_list_all_genes_GO_term, function(x) as.character(unlist(x)))
 
@@ -54,57 +61,20 @@ str(head(list_of_list_all_genes_GO_term_chr))
 # Guardo los nombres de los genes en cuestión. 
 geneNames <- names(list_of_list_all_genes_GO_term_chr)
 
-###############
-
-# Tabla de genes de interes
-
-protein_of_interest_duplicates_dataframe <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS.txt", header=T) %>%  separate(genes_in_common_lynx_lynx_lynx_pardinus, c("genes"), "_") 
-
-
-# Elimino los dos últimos caracteres que son el nombre de la proteina.
-gene_of_interest_duplicates_list_pre <- substr(protein_of_interest_duplicates_dataframe$genes,1,nchar(protein_of_interest_duplicates_dataframe$genes)-2)
-
-
-# Lo convierto en lista
-gene_of_interest_duplicates_list <- as.list(as.data.frame(gene_of_interest_duplicates_list_pre))
-
-# Hago una lista con 0 y 1 con los genes que tengo que filtrar
-geneList <- factor(as.integer(geneNames %in% gene_of_interest_duplicates_list))
-
-# Asigno esa lista a cada gen (pongo header)
-names(geneList) <- as.factor(geneNames)
-str(geneList)
-
-
-
-GOdata <- new("topGOdata", ontology = "BP", description = "Analysis of CDS with a ratio above 1", allGenes = geneList,
-               annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
-
-
-
-description (GOdata)
-termStat(GOdata)
-
-test.stat <- new("weight01Count", testStatistic = GOFisherTest, name = "Fisher test")
-resultFisher <- getSigGroups(GOdata, test.stat)
-
-head(score(resultFisher))
-hist(score(resultFisher))
-geneData(resultFisher)
-
-allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=20 )
-
 ```
 
+# Pathway enrichment
 
+No hace falta hacer este chunk, pq solo se tiene que hacer una vez.
 
-Pathway enrichment
+## Previous work
+
+Voy a seleccionar los KO que son los nombres de proteinas comunes a todos
+
 
 ```{bash}
 
 cd /GRUPOS/grupolince/Lyp_annotation_Apr14_final
-
-Voy a seleccionar los KO que son los nombres de proteinas comunes a todos
 
 grep "ko_group" LYPA23C.all.fix.nr.gff3 > all_mRNA
 
@@ -126,60 +96,334 @@ rm all_mRNA
 
 Me lo bajo a mi carpeta
 
-
 ```{bash}
 scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/Lyp_annotation_Apr14_final/genes_to_KO.txt /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation
 ```
 
-Intersección con mi archivo de genes de interes
+## Load KO information for pathway enrichment
 
-```{r}
+```{bash}
 # Archivo de equivalencias KO con genes
 
 genes_to_KO.list <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/genes_to_KO.txt", header=F)
+```
 
 
-# Archivo de genes de interes
+# Files of interest
 
-protein_of_interest_duplicates_dataframe <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS.txt", header=T) %>%  separate(genes_in_common_lynx_lynx_lynx_pardinus, c("genes"), "_") 
+```{r}
 
-# Elimino los dos últimos caracteres que son el nombre de la proteina.
-gene_of_interest_duplicates_dataframe <- as.data.frame(substr(protein_of_interest_duplicates_dataframe$genes,1,nchar(protein_of_interest_duplicates_dataframe$genes)-2))
+# Tabla de genes de interes
 
-colnames(gene_of_interest_duplicates_dataframe) <-c("genes_of_interest")
+# Tenemos 4 listas. 
 
-## Uno las dos tablas
-genes_of_interest_KO <- inner_join(genes_to_KO.list, gene_of_interest_duplicates_dataframe, by=c("V1"="genes_of_interest")) %>%  distinct(V1,V2, .keep_all = TRUE)
+# 1. Aquellas unidades con ratios mayores de uno  comunes a las tres comparaciones (con dos especies).
+# /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS.txt 
 
-write.table(genes_of_interest_KO, paste0(wd,"genes_of_interes_KO_ratio_above_1_CDS.txt"), row.names = F, quote = F)
+# 2. Aquellas unidades con ratios mayores de uno en la comparación de las dos poblaciones de lynx lynx. 
+# /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_for_venn_lynx_lynx_ratio_above_1_CDS.txt
 
+# 3. Unidades con un ratio similar a 1 y diversidad alta comunes a las tres comparaciones (con dos especies).
+# /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1.txt
 
-
-# Nuevo archivo de interes 
-
-protein_of_interest <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_genes_of_interest_lynx_lynx_high_diversity_ratio_1.txt", header=T) %>%  separate(unique_id, c("genes"), "_") 
-
-tabla_genes_interes <- as.data.frame(substr(protein_of_interest$genes,1,nchar(protein_of_interest$genes)-2))
-names(tabla_genes_interes) <- ("genes_of_interest")
-
-## Uno las dos tablas
-genes_of_interest_KO <- inner_join(genes_to_KO.list, tabla_genes_interes, by=c("V1"="genes_of_interest")) %>%  distinct(V1,V2, .keep_all = TRUE)
-
-write.table(genes_of_interest_KO, paste0(wd_output,"genes_of_interes_KO_high_diversity_ratio_1.txt"), row.names = F, quote = F)
-
-
-
+# 4. Unidades con un ratio similar a 1 y diversidad alta en la comparación de las dos poblaciones de lynx lynx. 
+# /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_genes_of_interest_lynx_lynx_high_diversity_ratio_1.txt
 
 ```
 
-Me quedo solo con el KO
-
+Voy a procesarla para que esté disponible para que se la trague R más facil
 
 ```{bash}
 
-cd /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/
+cd /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/
 
-awk '{print $2}' genes_of_interes_KO_ratio_above_1_CDS.txt | tail -n+2 > KO_ratio_above_1_CDS.txt
+tail -n+2 list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed_noduplicates.txt
+
+tail -n+2 list_for_venn_lynx_lynx_ratio_above_1_CDS.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates.txt
+
+tail -n+2 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_trimmed_noduplicates.txt
+
+tail -n+2 list_genes_of_interest_lynx_lynx_high_diversity_ratio_1.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_trimmed_noduplicates.txt
+
+```
+
+
+## 1. Aquellas unidades con ratios mayores de uno  comunes a las tres comparaciones (con dos especies).
+
+
+list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed_noduplicates.txt
+
+
+###  Loading my files
+
+```{r}
+file_input <- "list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed_noduplicates.txt"
+file_output <- "list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed_noduplicates"
+description <- "Analysis of CDS with a ratio above 1 lynx lynx & lynx pardinus"
+```
+
+
+```{r}
+
+# Genes de interes
+gene_of_interest <- as.data.frame(read.table(paste0(wd_input, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
+
+# Lo convierto en tabla y lo proceso para GO analysis.
+gene_of_interest_list <- unlist(gene_of_interest$V1)
+
+# Hago una lista con 0 y 1 con los genes que tengo que filtrar
+geneList <- factor(as.integer(geneNames %in% gene_of_interest_list))
+
+# Asigno esa lista a cada gen (pongo header)
+names(geneList) <- as.factor(geneNames)
+
+str(geneList)
+
+```
+
+###  GO analysis 
+
+```{r}
+
+GOdata <- new("topGOdata", ontology = "BP", description = "Analysis of CDS with a ratio above 1 lynx lynx & lynx pardinus", allGenes = geneList,
+               annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
+
+description (GOdata)
+termStat(GOdata)
+
+test.stat <- new("weight01Count", testStatistic = GOFisherTest, name = "Fisher test")
+resultFisher <- getSigGroups(GOdata, test.stat)
+
+head(score(resultFisher))
+hist(score(resultFisher))
+geneData(resultFisher)
+
+allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=50 )
+
+write.table(allRes, paste0(wd, file_output, "_results_GO.txt"), quote = F, row.names = F)
+
+```
+
+###  Pathway enrichment
+
+
+Intersección con mi archivos de genes de interes
+
+```{r}
+## Uno las dos tablas genes de interes, y KO term. 
+genes_of_interest_KO <- inner_join(genes_to_KO.list, gene_of_interest) %>%  distinct(V1,V2, .keep_all = TRUE)
+write.table(genes_of_interest_KO$V2, paste0(wd, file_output, "_results_KO.txt"), quote = F, row.names = F, col.names = F)
+
+```
+
+
+
+## 2. Aquellas unidades con ratios mayores de uno en la comparación de las dos poblaciones de lynx lynx. 
+
+list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates.txt
+
+### Loading my files
+
+```{r}
+file_input <- "list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates.txt"
+file_output <- "list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates"
+description <- "Analysis of CDS with a ratio above 1 lynx lynx"
+
+```
+
+
+
+```{r}
+
+# Genes de interes
+
+gene_of_interest <- as.data.frame(read.table(paste0(wd_input, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
+
+
+# Lo convierto en tabla y lo proceso para GO analysis.
+gene_of_interest_list <- unlist(gene_of_interest$V1)
+
+# Hago una lista con 0 y 1 con los genes que tengo que filtrar
+geneList <- factor(as.integer(geneNames %in% gene_of_interest_list))
+
+# Asigno esa lista a cada gen (pongo header)
+names(geneList) <- as.factor(geneNames)
+
+str(geneList)
+
+```
+
+### GO analysis 
+
+```{r}
+
+GOdata <- new("topGOdata", ontology = "BP", description = description, allGenes = geneList,
+               annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
+
+description (GOdata)
+termStat(GOdata)
+
+test.stat <- new("weight01Count", testStatistic = GOFisherTest, name = "Fisher test")
+resultFisher <- getSigGroups(GOdata, test.stat)
+
+head(score(resultFisher))
+hist(score(resultFisher))
+geneData(resultFisher)
+
+allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=50 )
+
+write.table(allRes, paste0(wd, file_output, "_results_GO.txt"), quote = F, row.names = F)
+
+```
+
+###  Pathway enrichment
+
+
+Intersección con mi archivos de genes de interes
+
+```{r}
+## Uno las dos tablas genes de interes, y KO term. 
+genes_of_interest_KO <- inner_join(genes_to_KO.list, gene_of_interest) %>%  distinct(V1,V2, .keep_all = TRUE)
+write.table(genes_of_interest_KO$V2, paste0(wd, file_output, "_results_KO.txt"), quote = F, row.names = F, col.names = F)
+
+```
+
+
+## 3. Aquellas unidades con ratios mayores de uno en la comparación de las dos poblaciones de lynx lynx. 
+
+list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates.txt
+
+
+### Loading my files
+
+```{r}
+file_input <- "list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_trimmed_noduplicates.txt"
+file_output <- "list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_trimmed_noduplicates"
+description <- "Analysis of CDS with a ratio over 1 and high diversity lynx lynx & lynx pardinus"
+
+```
+
+
+```{r}
+
+# Genes de interes
+gene_of_interest <- as.data.frame(read.table(paste0(wd_input, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
+
+# Lo convierto en tabla y lo proceso para GO analysis.
+gene_of_interest_list <- unlist(gene_of_interest$V1)
+
+# Hago una lista con 0 y 1 con los genes que tengo que filtrar
+geneList <- factor(as.integer(geneNames %in% gene_of_interest_list))
+
+# Asigno esa lista a cada gen (pongo header)
+names(geneList) <- as.factor(geneNames)
+
+str(geneList)
+
+```
+
+### GO analysis 
+
+```{r}
+
+GOdata <- new("topGOdata", ontology = "BP", description = description, allGenes = geneList,
+               annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
+
+description (GOdata)
+termStat(GOdata)
+
+test.stat <- new("weight01Count", testStatistic = GOFisherTest, name = "Fisher test")
+resultFisher <- getSigGroups(GOdata, test.stat)
+
+head(score(resultFisher))
+hist(score(resultFisher))
+geneData(resultFisher)
+
+allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=50 )
+
+write.table(allRes, paste0(wd, file_output, "_results_GO.txt"), quote = F, row.names = F)
+
+```
+
+###  Pathway enrichment
+
+
+Intersección con mi archivos de genes de interes
+
+```{r}
+## Uno las dos tablas genes de interes, y KO term. 
+genes_of_interest_KO <- inner_join(genes_to_KO.list, gene_of_interest) %>%  distinct(V1,V2, .keep_all = TRUE)
+write.table(genes_of_interest_KO$V2, paste0(wd, file_output, "_results_KO.txt"), quote = F, row.names = F, col.names = F)
+
+```
+
+
+## 4. Aquellas unidades con ratios mayores de uno en la comparación de las dos poblaciones de lynx lynx. 
+
+list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates.txt
+
+### Loading my files
+
+```{r}
+file_input <- "list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_trimmed_noduplicates.txt"
+file_output <- "list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_trimmed_noduplicates"
+description <- "Analysis of CDS with a ratio over 1 and high diversity lynx lynx"
+
+```
+
+
+```{r}
+
+# Genes de interes
+gene_of_interest <- as.data.frame(read.table(paste0(wd_input, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
+
+
+# Lo convierto en tabla y lo proceso para GO analysis.
+gene_of_interest_list <- unlist(gene_of_interest$V1)
+
+# Hago una lista con 0 y 1 con los genes que tengo que filtrar
+geneList <- factor(as.integer(geneNames %in% gene_of_interest_list))
+
+# Asigno esa lista a cada gen (pongo header)
+names(geneList) <- as.factor(geneNames)
+
+str(geneList)
+
+```
+
+### GO analysis 
+
+```{r}
+
+GOdata <- new("topGOdata", ontology = "BP", description = description, allGenes = geneList,
+               annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
+
+description (GOdata)
+termStat(GOdata)
+
+test.stat <- new("weight01Count", testStatistic = GOFisherTest, name = "Fisher test")
+resultFisher <- getSigGroups(GOdata, test.stat)
+
+head(score(resultFisher))
+hist(score(resultFisher))
+geneData(resultFisher)
+
+allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=50 )
+
+write.table(allRes, paste0(wd, file_output, "_results_GO.txt"), quote = F, row.names = F)
+
+```
+
+
+###  Pathway enrichment
+
+
+Intersección con mi archivos de genes de interes
+
+```{r}
+## Uno las dos tablas genes de interes, y KO term. 
+genes_of_interest_KO <- inner_join(genes_to_KO.list, gene_of_interest) %>%  distinct(V1,V2, .keep_all = TRUE)
+write.table(genes_of_interest_KO$V2, paste0(wd, file_output, "_results_KO.txt"), quote = F, row.names = F, col.names = F)
 
 ```
 
