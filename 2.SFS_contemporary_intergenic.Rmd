@@ -1161,7 +1161,28 @@ diversity_only_in_common <- filter(diversity, windows_identity %in% windows_in_c
 
 rm (diversity)
 
-####
+#########
+
+
+# Corrección de la diversidada para las ventanas que son X, en el caso de watterson (mirar oja de calculo con la correción de watterson en owncloud).
+
+diversity_only_in_common <- diversity_only_in_common %>% 
+  mutate ( watterson_ave_corrected = 
+                           ifelse (population == "c_ll_po_n008" & window_type=="Xchr", tW_per_site*1.12,
+                           ifelse (population == "c_ll_ur_n006" & window_type=="Xchr", tW_per_site*1.14, 
+                           ifelse (population == "c_ll_ki_n013" & window_type=="Xchr", tW_per_site*1.09, 
+                           ifelse (population == "c_ll_la_n006" & window_type=="Xchr", tW_per_site*1.10, 
+                           ifelse (population == "c_ll_no_n008" & window_type=="Xchr", tW_per_site*1.15, 
+                           ifelse (population == "c_ll_cr_n006" & window_type=="Xchr", tW_per_site*1.06, 
+                           ifelse (population == "c_ll_to-c_ll_ka-c_ll_og_n008" & window_type=="Xchr", tW_per_site*1.12, 
+                           ifelse (population == "c_ll_tu_n006" & window_type=="Xchr", tW_per_site*1.06, 
+                           ifelse (population == "c_ll_vl_n008" & window_type=="Xchr", tW_per_site*1.12,  
+                           ifelse (population == "c_ll_ya_n008" & window_type=="Xchr", tW_per_site*1.20, tW_per_site))))))))))) 
+
+
+diversity_only_in_common$tW_per_site <- diversity_only_in_common$watterson_ave_corrected
+
+  ####
 
 # Ahora bajamos divergencia
 
@@ -1464,7 +1485,7 @@ summary_boot_ratio_X_autosomic$Populations <- factor (summary_boot_ratio_X_autos
 
 
 
-write.table(summary_boot_mean_autosomic, "/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/diversity_per_pop_windows_mean_stderror_autosomic.tsv", row.names = F, quote = F)
+write.table(summary_boot_mean_autosomic, "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/diversity_per_pop_windows_mean_stderror_autosomic.tsv", row.names = F, quote = F)
 
 cols <- c("Carpathians"=brewer.pal(12,"Paired")[9], 
            "Kirov"=brewer.pal(12,"Paired")[1],  
@@ -1497,7 +1518,7 @@ for (INDICE in unique(summary_boot_mean_autosomic$index))
    ylab (paste(INDICE, sep="")) +  
    theme_light() +
    theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/autosomic_mean_",INDICE,"_boot.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/autosomic_mean_",INDICE,"_boot.pdf", sep=""),  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
 
  }
 
@@ -1514,7 +1535,7 @@ for (INDICE in unique(summary_boot_ratio_X_autosomic$index))
    ylab (paste(INDICE, sep="")) + 
    theme_light() +
    theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/ratio_X_autosomic_",INDICE,"_boot.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/ratio_X_autosomic_",INDICE,"_boot.pdf", sep=""),   width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
 
  }
 
@@ -1533,7 +1554,7 @@ for (INDICE in unique(summary_boot_mean_autosomic$index))
    ylab (paste(INDICE, sep="")) +  
    theme_light() +
    theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/autosomic_mean_",INDICE,"_boot_color.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/autosomic_mean_",INDICE,"_boot_color.pdf", sep=""),  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
 
  }
 
@@ -1552,11 +1573,12 @@ for (INDICE in unique(summary_boot_ratio_X_autosomic$index))
    ylab (paste(INDICE, sep="")) +  
    theme_light() +
    theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/ratio_X_autosomic_",INDICE,"_boot_color.pdf", sep=""), device = pdf,  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/ratio_X_autosomic_",INDICE,"_boot_color.pdf", sep=""),   width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
 
  }
 
 ```
+
 # Population density vs diversity
 
 ```{r}
