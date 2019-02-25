@@ -337,6 +337,9 @@ all.equal.default      all.equal.formula      all.equal.POSIXt       allfreq    
 
 # Divergence --> substitutions
 
+
+OJO! he movido algunos de los archivos a una ruta anterior --> check "7b.Divergence"
+
 VCF creado por Dani. Email:
 
 Hola María,
@@ -488,6 +491,8 @@ La he cagado y tendría que haber sacado un archivo con todas las ventanas de es
 cd /home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs
 
 cat *.unfolded-lr.postprob.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions | awk '{print $1,$2,$3}' | sort -k1,1 -k2,2n -k3,3n | uniq 
+
+# o con makewindow (la herramienta de bedtools).
 
 ```
 
