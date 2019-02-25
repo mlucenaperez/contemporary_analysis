@@ -164,6 +164,11 @@ lista_lynxpardinus <- inner_join( data_diversity_pre_sm, data_diversity_pre_do, 
 
 data_diversity_filtered_lynxpardinus <- data_diversity_pre %>% filter (specie=="lp") %>% filter(unique_id %in% lista_lynxpardinus$unique_id)
 
+# Con los filtrados hemos perdido 251.736 unidades. Aqui entran los promotores que se han caido. 
+
+
+
+####### Adjunto tasa de recombinación #########
 
 # Ahora adjunto los datos de recombinación. 
 
@@ -174,7 +179,8 @@ recombination_per_unit$unique_id <- as.factor(recombination_per_unit$unique_id)
 
 data_diversity_filtered <- rbind(data_diversity_filtered_lynxlynx, data_diversity_filtered_lynxpardinus) %>% left_join (., recombination_per_unit, by = "unique_id")   
 
-# Con los filtrados hemos perdido 251.736 unidades. Aqui entran los promotores que se han caido. 
+
+
 
 # Ordenar los factores. 
 
