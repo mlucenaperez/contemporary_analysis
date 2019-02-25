@@ -1,0 +1,188 @@
+---
+title: "7b.Divergence_wg"
+output: html_document
+---
+
+# Windows analysis
+
+Vamos a lanzar la divergencia por ventanas de 50Kb. En principio no vamos a usarlas para ningun calculo, pero ya hice el script y lo lancé así que voy a dejar que corra por si lo necesitamos para algun análisis en algún momento. 
+
+
+Divergence --> substitutions
+
+VCF creado por Dani. 
+
+Dani creo dos archivos, un para lynx lynx (check scrip 7.Divergence) y otro para lynx pardinus (para este análisis concreto), con las sustituciones con respecto a Rufus. 
+Son archivos sin NAs, Indels o multialelic, y se llaman: *_SNPs.positions_class_callable_universe (ej. c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe).
+
+Lo que hice en su momento es usar este archivo para los cálculos por ventana. 
+
+Tengo que hacer ventanas de 50000pb contando el número de posiciones callable y las sustituciones en estas. 
+
+Debo reportar:
+
+1. Scaffold
+2. Win start, win end
+3. Win center
+4. Number of substitutions
+5. Number of callable sites
+
+¿Cómo es el archivo?
+
+Scaffold Position Reference Alternative c_ll_ki_0090 c_lr_zz_0001 Class
+lp23.s00001	1	C	.	0/0	0/0	 Invariable
+lp23.s00001	2	T	.	0/0	0/0	 Invariable
+lp23.s00001	3	T	.	0/0	0/0	 Invariable
+lp23.s00001	4	G	.	0/0	0/0	 Invariable
+lp23.s00001	5	T	.	0/0	0/0	 Invariable
+lp23.s00001	7	G	.	0/0	0/0	 Invariable
+lp23.s00001	8	T	.	0/0	0/0	 Invariable
+lp23.s00001	9	T	.	0/0	0/0	 Invariable
+lp23.s00001	10	G	.	0/0	0/0	 Invariable
+
+
+--> Disclaimer del script "7.Divergence": OJO! si lo quieres volver a correr lo suyo es general unas ventanas con todas las posibles y correrlo sobre eso en lugar de sobre el de una población concreta. Nosotros lo hicimos sobre carpatos y kirov, pero como faltaban 4 ventanas las hemos añadido. Ver adding new windows al final. 
+
+Como lo voy a volver a correr, lo hago bien desde el principio. 
+
+## Genero las ventanas.
+
+```{bash}
+cd /home/mlucena/divergence/whole_genome_analysis
+
+bedtools makewindows -g /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated -w 50000 > Lynx_pardinus_window_50Kb.bed
+
+```
+
+Ahora muevo los archivos ya modificados a una ruta anterior para poder usarlos. 
+
+Hay uno que ya está procesado que es el de lynx lynx (check "7.Divergence"). Voy a hacer lo mismo con lynx pardinus.
+
+## Divergencia por ventanas
+
+```{bash}
+
+# Primero lo hago cero based.Y convierto todas las "SUSBSTITUTIONS" en 1 y lo demás en 0, para que me sea muy comodo hacer el slidding window. 
+
+WD="/home/mlucena/divergence/"
+FILE_DANI="/home/mlucena/divergence/c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe"
+FILE_DANI_MODIF="c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized"
+POP="c_lp"
+
+
+# Modifico el archivo de Dani:
+tail -n+2  $FILE_DANI | awk '{if ($7=="Substitution") print $1, $2-1, "1"; else print $1, $2-1, "0"}' > $WD/$FILE_DANI_MODIF
+
+
+# Ahora, calculo la divergencia por ventanas.
+
+# Lo que en awk llamo sum son los callable sites y los que llamos count son las substituciones.
+
+# Voy a volver a correr el archivo con c_ll para que sea exactamente igual. Porque he visto que en el archivo calculado para filogeografía creo que faltan algunas ventanas. 
+
+FILE_DANI_MODIF="c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized"
+POP="c_ll"
+
+FILE_DANI_MODIF="c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized"
+POP="c_lp"
+
+
+while read CHR WinStart WinStop 
+
+do
+
+echo "Window: " "$CHR" "$WinStart"-"$WinStop"
+
+grep $CHR $FILE_DANI_MODIF | awk -v CHR="$CHR" -v WinStart="$WinStart" -v WinStop="$WinStop" '$2>WinStop { exit } $2>=WinStart && $2<=WinStop{sum+=$3;count++;}END{print CHR, WinStart, WinStop, count, sum, sum/count} ' >> $POP.divergence_with_rufus
+
+done < <(cat /home/mlucena/divergence/whole_genome_analysis/Lynx_pardinus_window_50Kb.bed)
+
+# Cuando acabe borrar: $FILE_DANI_MODIF
+
+
+```
+
+
+
+# Divergencia por unidades
+
+## Lista de unidades y coordenadas
+
+Este script está sacado en parte del script de recombinación, donde calculaba las unidades. 
+
+```{bash}
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+
+for file in *per.unit.averages.chr_filtered.tsv
+do
+echo $file
+awk -v OFS='\t' '{print $1, $2, $3, $11"_"$7}' $file >> /home/mlucena/divergence/per_unit/list_of_units_with_chr_info_in_lynx.txt
+done
+
+cd /home/mlucena/divergence/per_unit/
+
+sort -k1,1 -k2,2n list_of_units_with_chr_info_in_lynx.txt | uniq  >  list_of_units_with_chr_info_in_lynx_no_duplicates.txt
+
+wc -l list_of_units_with_chr_info_in_lynx_no_duplicates.txt
+# 430165 list_of_units_with_chr_info_in_lynx_no_duplicates.txt
+
+rm list_of_units_with_chr_info_in_lynx.txt
+
+
+```
+
+## Asigno tasa de divergencia por unidad.
+
+```{bash}
+
+# Primero lo hago cero based.Y convierto todas las "SUSBSTITUTIONS" en 1 y lo demás en 0, para que me sea muy comodo hacer el slidding window. 
+
+WD="/home/mlucena/divergence/per_unit/"
+FILE_DANI="/home/mlucena/divergence/c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe"
+
+
+# Modifico el archivo de Dani: 
+### YA ESTA MODIFICADOS PQ LO MODIFIQUE PARA EL ANALISIS POR VENTANAS
+# tail -n+2  $FILE_DANI | awk '{if ($7=="Substitution") print $1, $2-1, "1"; else print $1, $2-1, "0"}' > $WD/$FILE_DANI_MODIF
+
+
+# Ahora, calculo la divergencia por ventanas.
+
+# Lo que en awk llamo sum son los callable sites y los que llamos count son las substituciones.
+
+# Voy a volver a correr el archivo con c_ll para que sea exactamente igual. Porque he visto que en el archivo calculado para filogeografía creo que faltan algunas ventanas. 
+
+FILE_DANI_MODIF="../c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized"
+POP="c_ll_per_unit"
+
+FILE_DANI_MODIF="../c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized"
+POP="c_lp_per_unit"
+
+
+while read CHR WinStart WinStop ID_gene
+
+do
+
+echo "Window: " "$CHR" "$WinStart"-"$WinStop"
+
+grep $CHR $FILE_DANI_MODIF | awk -v CHR="$CHR" -v WinStart="$WinStart" -v WinStop="$WinStop" -v ID_gene="$ID_gene" '$2>WinStop { exit } $2>=WinStart && $2<=WinStop{sum+=$3;count++;}END{print CHR, WinStart, WinStop, ID_gene count, sum, sum/count} ' >> $POP.divergence_with_rufus
+
+done < <(cat list_of_units_with_chr_info_in_lynx_no_duplicates.txt)
+
+# Cuando acabe borrar: $FILE_DANI_MODIF
+
+
+```
+
+
+
+# Download last divergence file
+
+```{bash}
+scp  mlucena@genomics-b.ebd.csic.es://home/mlucena/divergence/intergenic_analysis/c_ll_per_unit.divergence_with_rufus /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/divergence/
+
+scp  mlucena@genomics-b.ebd.csic.es://home/mlucena/divergence/intergenic_analysis/c_lp_per_unit.divergence_with_rufus /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/divergence/
+
+```
+
