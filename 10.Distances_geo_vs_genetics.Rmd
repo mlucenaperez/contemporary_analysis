@@ -24,8 +24,8 @@ library(vegan)
 # Este archivo tiene en ocasiones una sola entrada que engloba a varios individuos. Para hacer unnest necesito un lista y lo logro con transform. 
 sequence_samples <- read.csv("/Users/marialucenaperez/Dropbox/PhD/2017-08-31_sample_sequenced_sample_information_modif.csv", header=T, sep=";")
 
-wd <- "/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/Geo_distances/"
-geo_distances <- read.csv("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/Geo_distances/distance_winkel_tripel_to_modify_in_R.csv", sep=";") %>% 
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/Geo_distances/"
+geo_distances <- read.csv("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/Geo_distances/distance_winkel_tripel_to_modify_in_R.csv", sep=";") %>% 
   mutate(Ind1=as.character(Ind1),
          Ind2=as.character(Ind2)) %>% 
   transform(Ind2 = strsplit(Ind2,",")) %>%
@@ -123,7 +123,7 @@ library(tibble)
 # First I remove them from the geographical distance matrix. 
 geo_distances_complete_matrix_no_drift <- geo_distances_complete_matrix %>% 
   as.data.frame (.) %>%  
-dplyr:: select(-starts_with("c_ll_no")) %>% 
+  dplyr:: select(-starts_with("c_ll_no")) %>% 
   dplyr::select(-starts_with("c_ll_po")) %>% 
   dplyr::select(-starts_with("c_ll_ba")) %>% 
   dplyr::select(-starts_with("h_ll_ba")) %>% 
@@ -150,10 +150,6 @@ genetic_distances_matrix_no_drift <- genetic_distances_matrix %>%
     column_to_rownames('id') %>% data.matrix(.)
   
 
-
-
-
-
 mantel(as.dist(geo_distances_complete_matrix_no_drift), as.dist(genetic_distances_matrix_no_drift))
 mantel(as.dist(geo_distances_complete_matrix), as.dist(genetic_distances_matrix))
 
@@ -170,23 +166,25 @@ mantel(as.dist(geo_distances_complete_matrix), as.dist(genetic_distances_matrix)
  geo_genetic_distances <- melt(geo_distances_complete_matrix)  %>% 
   rename(ind1=Var1, ind2=Var2, distances_km_Winkel_Tripel=value) %>% 
   mutate (pair_ind=paste(ind1,ind2, sep="-")) %>% 
-  full_join ((melt(genetic_distances_matrix) %>%   mutate (pair_ind=paste(Var1,Var2, sep="-"))),., by ="pair_ind" ) %>% 
+  full_join ((melt(genetic_distances_matrix) %>%   
+  mutate (pair_ind=paste(Var1,Var2, sep="-"))),., by ="pair_ind" ) %>% 
   rename (genetic_distance=value, geographic_distance=distances_km_Winkel_Tripel) %>% 
   mutate (pop1=substr(ind1, 0, 7)) %>% 
   mutate (pop2=substr(ind2, 0, 7)) %>% 
-  mutate (area_pop1 =  ifelse (pop1 == "c_ll_po" | pop1 == "c_ll_ur" | pop1 == "c_ll_ki" | pop1 == "c_ll_la" | pop1 == "c_ll_no" | pop1 == "c_ll_ba" | pop1 == "h_ll_ba" | 
-                                     pop1 == "c_ll_cr" , "West" , 
-                           ifelse (pop1 == "c_ll_to" | pop1 == "c_ll_tu" | pop1 == "c_ll_ka" | pop1 == "c_ll_og" | pop1 == "c_ll_vl" | pop1 == "c_ll_ya", "East", NA))) %>% 
-  mutate (area_pop2 =  ifelse (pop2 == "c_ll_po" | pop2 == "c_ll_ur" | pop2 == "c_ll_ki" | pop2 == "c_ll_la" | pop2 == "c_ll_no" | pop2 == "c_ll_ba" | pop2 == "h_ll_ba" | 
-                                     pop2 == "c_ll_cr" , "West" , 
-                           ifelse (pop2 == "c_ll_to" | pop2 == "c_ll_tu" | pop2 == "c_ll_ka" | pop2 == "c_ll_og" | pop2 == "c_ll_vl" | pop2 == "c_ll_ya", "East", NA))) %>% 
-  mutate (comparison = ifelse (area_pop1 == "West" & area_pop2 =="West", "West-West",
-                       ifelse (area_pop1=="West" & area_pop2 =="East", "West-East",
-                       ifelse (area_pop1=="East" & area_pop2 =="West", "West-East",
-                       ifelse (area_pop1=="East" & area_pop2 =="East", "East-East", NA))))) %>% 
+  mutate (area_pop1 =  
+            ifelse (pop1 == "c_ll_po" | pop1 == "c_ll_ur" | pop1 == "c_ll_ki" | pop1 == "c_ll_la" | pop1 == "c_ll_no" | pop1 == "c_ll_ba" | pop1 == "h_ll_ba" | pop1 == "c_ll_cr" , "West" , 
+            ifelse (pop1 == "c_ll_to" | pop1 == "c_ll_tu" | pop1 == "c_ll_ka" | pop1 == "c_ll_og" | pop1 == "c_ll_vl" | pop1 == "c_ll_ya", "East", NA))) %>% 
+  mutate (area_pop2 =  
+            ifelse (pop2 == "c_ll_po" | pop2 == "c_ll_ur" | pop2 == "c_ll_ki" | pop2 == "c_ll_la" | pop2 == "c_ll_no" | pop2 == "c_ll_ba" | pop2 == "h_ll_ba" | pop2 == "c_ll_cr" , "West" , 
+            ifelse (pop2 == "c_ll_to" | pop2 == "c_ll_tu" | pop2 == "c_ll_ka" | pop2 == "c_ll_og" | pop2 == "c_ll_vl" | pop2 == "c_ll_ya", "East", NA))) %>% 
+  mutate (comparison = 
+            ifelse (area_pop1 == "West" & area_pop2 =="West", "West-West",
+            ifelse (area_pop1=="West" & area_pop2 =="East", "West-East",
+            ifelse (area_pop1=="East" & area_pop2 =="West", "West-East",
+            ifelse (area_pop1=="East" & area_pop2 =="East", "East-East", NA))))) %>% 
   mutate (self_comparison =ifelse (ind1==ind2, "SELF", "DISTINCT")) %>% 
   filter(self_comparison!="SELF") %>% 
- filter(pop1 != "c_ll_ba" , pop1!="h_ll_ba", pop2 != "c_ll_ba" , pop2!="h_ll_ba")  %>% 
+ filter(pop1 != "c_ll_ba" , pop1!="h_ll_ba", pop2 != "c_ll_ba" , pop2!="h_ll_ba") %>% 
  filter(pop1 != "c_ll_no" , pop1!="c_ll_po", pop2 != "c_ll_no" , pop2!="c_ll_po") #%>% filter(pop1 != "c_ll_cr" , pop2 != "c_ll_cr") 
 
 
