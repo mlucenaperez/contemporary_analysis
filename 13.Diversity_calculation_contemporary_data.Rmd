@@ -489,7 +489,7 @@ tabla_data_temporal_diversity_pre  <- get(DATAFRAME) %>%
   mutate (recombination_category = ifelse (recombination_rate <=1, "<=1",
                                    ifelse (recombination_rate <=2, "<=2",
                                    ifelse (recombination_rate <= 3, "<=3", 
-                                   ifelse (recombination_rate > 3 & recombination_rate <=7, ">3&<=7",
+                                   ifelse (recombination_rate <=7, "<=7",
                                    ifelse (recombination_rate > 7, ">7", NA))))))
 
 # & recombination_rate <=10, ">7&<=10",
