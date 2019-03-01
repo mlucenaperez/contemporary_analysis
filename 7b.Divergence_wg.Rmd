@@ -102,8 +102,6 @@ done < <(cat /home/mlucena/divergence/whole_genome_analysis/Lynx_pardinus_window
 
 ```
 
-
-
 # Divergencia por unidades
 
 ## Lista de unidades y coordenadas
@@ -132,46 +130,226 @@ rm list_of_units_with_chr_info_in_lynx.txt
 
 ```
 
-## Asigno tasa de divergencia por unidad.
+NO LO HAGO ASI PORQUE TARDA MUCHISIMO!
+
+<!-- ## Asigno tasa de divergencia por unidad. -->
+
+<!-- ```{bash} -->
+
+<!-- # Primero lo hago cero based.Y convierto todas las "SUSBSTITUTIONS" en 1 y lo demás en 0, para que me sea muy comodo hacer el slidding window.  -->
+
+
+
+<!-- FILE_DANI_MODIF="c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized" -->
+<!-- POP="c_ll" -->
+
+<!-- FILE_DANI_MODIF="c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized" -->
+<!-- POP="c_lp_DIVERGENCE_PER_UNIT_OLD" -->
+
+<!-- ## PRUEBA 1: -->
+
+<!-- while read CHR WinStart WinStop ID_gene -->
+
+<!-- do -->
+
+<!-- echo "Window: " "$CHR" "$WinStart"-"$WinStop" -->
+
+<!-- grep $CHR $FILE_DANI_MODIF | awk -v CHR="$CHR" -v WinStart="$WinStart" -v WinStop="$WinStop" '$2>WinStop { exit } $2>=WinStart && $2<=WinStop{sum+=$3;count++;}END{print CHR, WinStart, WinStop, count, sum, sum/count} ' >> $POP.divergence_with_rufus -->
+
+<!-- done < <(cat /home/mlucena/divergence/list_of_units_with_chr_info_in_lynx_no_duplicates_per_scaffold/list_of_units_with_chr_info_in_lynx_no_duplicates.bed) -->
+
+<!-- # Ahora, calculo la divergencia por ventanas. -->
+
+<!-- # Lo que en awk llamo sum son los callable sites y los que llamos count son las substituciones. -->
+
+<!-- # Voy a volver a correr el archivo con c_ll para que sea exactamente igual. Porque he visto que en el archivo calculado para filogeografía creo que faltan algunas ventanas.  -->
+
+
+
+<!-- # Cuando acabe borrar: $FILE_DANI_MODIF -->
+
+<!-- # Como tarda tanto de la manera que lo estaba haciendo por ventanas, vamos a probar a hacerlo de otra forma, usando bedtools intersect. -->
+<!-- # Para ello voy a hacer un loop para tener cada uno de los fragmentos que tengo que cortar -->
+<!-- # El loop tiene que iterar tantas lineas como ventanas tenga. ¿cuantas son? -->
+<!-- wc -l list_of_units_with_chr_info_in_lynx_no_duplicates.txt -->
+<!-- # 430165 list_of_units_with_chr_info_in_lynx_no_duplicates.txt -->
+
+<!-- ## PRUEBA 2: -->
+
+<!-- awk -v OFS='\t' '{print $1, $2, $2+1, $3}' c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized > c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized.bed -->
+
+<!-- awk -v OFS='\t' '{print $1, $2, $2+1, $3}' c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized > c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized.bed -->
+
+
+<!-- FILE="c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized.bed" -->
+
+<!-- COUNTER=1 -->
+<!-- while [  $COUNTER -lt 430165 ];  -->
+<!-- do -->
+<!-- echo $COUNTER -->
+<!-- sed "${COUNTER}q;d" list_of_units_with_chr_info_in_lynx_no_duplicates.txt | bedops --intersect $FILE - | awk '{sum+=$4;count++;}END{print count, sum, sum/count}' >> divergence_file_c_ll -->
+<!-- let COUNTER=COUNTER+1  -->
+<!-- done -->
+
+
+
+<!-- bedops --intersect $FILE list_of_units_with_chr_info_in_lynx_no_duplicates.txt -->
+
+<!-- ``` -->
+
+
+# Separo por scaffolds
+
 
 ```{bash}
 
-# Primero lo hago cero based.Y convierto todas las "SUSBSTITUTIONS" en 1 y lo demás en 0, para que me sea muy comodo hacer el slidding window. 
+cd /home/mlucena/divergence/
 
-WD="/home/mlucena/divergence/per_unit/"
-FILE_DANI="/home/mlucena/divergence/c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe"
+NEW_FOLDER=("c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized_by_scaffold") 
+NEW_FOLDER=("c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized_by_scaffold")
 
+## c_ll_ki
 
-# Modifico el archivo de Dani: 
-### YA ESTA MODIFICADOS PQ LO MODIFIQUE PARA EL ANALISIS POR VENTANAS
-# tail -n+2  $FILE_DANI | awk '{if ($7=="Substitution") print $1, $2-1, "1"; else print $1, $2-1, "0"}' > $WD/$FILE_DANI_MODIF
+cd c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized_by_scaffold
+mv c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized.bed .
 
+awk '{print >> $1; close($1)}' c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized.bed
 
-# Ahora, calculo la divergencia por ventanas.
-
-# Lo que en awk llamo sum son los callable sites y los que llamos count son las substituciones.
-
-# Voy a volver a correr el archivo con c_ll para que sea exactamente igual. Porque he visto que en el archivo calculado para filogeografía creo que faltan algunas ventanas. 
-
-FILE_DANI_MODIF="../c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized"
-POP="c_ll_per_unit"
-
-FILE_DANI_MODIF="../c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized"
-POP="c_lp_per_unit"
+for file in lp23*
+do
+echo $file
+mv $file ${file/lp23/c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized_lp23}
+done
 
 
-while read CHR WinStart WinStop ID_gene
+## c_lp_sm
+
+cd c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized_by_scaffold
+mv c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized.bed .
+
+awk '{print >> $1; close($1)}' c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized.bed
+
+for file in lp23*
+do
+echo $file
+mv $file ${file/lp23/c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized_lp23}
+done
+
+
+
+## También separamos por scaffold el archivo de unidades de interes
+
+mkdir list_of_units_with_chr_info_in_lynx_no_duplicates_per_scaffold/
+mv list_of_units_with_chr_info_in_lynx_no_duplicates.txt list_of_units_with_chr_info_in_lynx_no_duplicates_per_scaffold/
+mv list_of_units_with_chr_info_in_lynx_no_duplicates.txt list_of_units_with_chr_info_in_lynx_no_duplicates.bed
+
+awk '{print >> $1; close($1)}' list_of_units_with_chr_info_in_lynx_no_duplicates.bed
+
+
+```
+
+## Calculo por unidades
+
+Intersecto las ventanas por unidades con la divergencia
+
+```{bash}
+
+cd /home/mlucena/divergence/
+
+## Variables
+
+UNITS_FOLDER=/home/mlucena/divergence/list_of_units_with_chr_info_in_lynx_no_duplicates_per_scaffold
+
+DIVERGENCE_PER_BASE_FOLDER=/home/mlucena/divergence
+
+POP=c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized
+# POP=c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe_summarized
+
+
+for iteration in {1..10}
+do
+
+SCAFFOLD_START=$( echo '1 + 4170 * ('$iteration' - 1)' | bc)
+SCAFFOLD_END=$( echo '4170 * '$iteration | bc )
+
+for SCAFFOLD_NUMBER in $(seq -s " " -f %05g $SCAFFOLD_START $SCAFFOLD_END) # esta manera de hacer seq te va a sacar siempre 5 cifras.
+do
+
+SCAFFOLD=$(echo "lp23.s"$SCAFFOLD_NUMBER)
+
+echo "---------------------$SCAFFOLD---------------------"
+
+#For each unit
+
+cd "$DIVERGENCE_PER_BASE_FOLDER"/"$POP"_by_scaffold
+
+while read LOCATION WIND_START WIND_STOP ID_GENE;
 
 do
 
-echo "Window: " "$CHR" "$WinStart"-"$WinStop"
+#echo "--------$SCAFFOLD:$FEATURE--------"
 
-grep $CHR $FILE_DANI_MODIF | awk -v CHR="$CHR" -v WinStart="$WinStart" -v WinStop="$WinStop" -v ID_gene="$ID_gene" '$2>WinStop { exit } $2>=WinStart && $2<=WinStop{sum+=$3;count++;}END{print CHR, WinStart, WinStop, ID_gene count, sum, sum/count} ' >> $POP.divergence_with_rufus
+DIVERGENCE_PER_UNIT=$(cat "$SCAFFOLD" | bedtools intersect -a stdin -b <(echo -e "$LOCATION\t$WIND_START\t$WIND_STOP") | awk '{sum+=$4;count++;}END{print count, sum, sum/count}')
 
-done < <(cat list_of_units_with_chr_info_in_lynx_no_duplicates.txt)
+#Before printing check all variables are full, if empty use NA
+if [ -z "${LOCATION}" ]; then  LOCATION=NA;  fi
+if [ -z "${WIND_START}" ]; then  WIND_START=NA;  fi
+if [ -z "${WIND_STOP}" ]; then  WIND_STOP=NA;  fi
+if [ -z "${ID_GENE}" ]; then  ID_GENE=NA;  fi
+if [ -z "${DIVERGENCE_PER_UNIT}" ]; then  DIVERGENCE_PER_UNIT=NA;  fi
 
-# Cuando acabe borrar: $FILE_DANI_MODIF
 
+#Paste averages, and standatd deviations
+
+paste \
+<(echo "$LOCATION" ) \
+<(echo "$WIND_START" ) \
+<(echo "$WIND_STOP" ) \
+<(echo "$ID_GENE" ) \
+<(echo "$DIVERGENCE_PER_UNIT") |\
+sed 's/ /\t/g'| sed 's/\t\+/\t/g'  >>  "$DIVERGENCE_PER_BASE_FOLDER"/"$POP".divergence_iteration"$iteration".tsv
+
+#Reset all (but POP,SPECIE or EPOCH (those should be the same during the whole iteration and if you remove POP the loop won't work)) variables before next iteration
+
+unset LOCATION
+unset WIND_START
+unset WIND_STOP
+unset ID_GENE
+unset DIVERGENCE_PER_UNIT
+
+
+done < <(cat "$UNITS_FOLDER"/"$SCAFFOLD" ) 
+
+done &
+
+done
+
+# Uno todos los archivos de las distintas iteraciones
+
+
+# Create headers for the outfile
+# echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch" > $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
+
+grep lp23.s41604 c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe
+```
+
+## Merge different iterations
+
+```{bash}
+
+mkdir iterations_to_rm_when_everything_is_correct
+mv *_iteration*.tsv  iterations_to_rm_when_everything_is_correct 
+cd iterations_to_rm_when_everything_is_correct
+
+echo -e "scaffold\tstart_cero_based\tend\tid_gene\tinformative_sites\tsubstitutions\tdivergence" > header.annotation
+
+POPS=($(ls *tsv | cut -d"." -f 1 | sort | uniq))
+rm *.divergence.tsv
+for POP in "${POPS[@]}"
+do
+echo $POP
+cat "$POP".positions_class_callable_universe_summarized.divergence_iteration{1..10}.tsv | cat header.annotation - >> "$POP".divergence.tsv
+done
 
 ```
 
