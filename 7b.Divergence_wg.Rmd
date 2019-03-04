@@ -330,7 +330,8 @@ done
 # Create headers for the outfile
 # echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch" > $DIVERSITY_PER_UNIT_FOLDER"$POP".per.unit.averages.tsv
 
-grep lp23.s41604 c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe
+# grep lp23.s41604 c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.positions_class_callable_universe
+
 ```
 
 ## Merge different iterations
@@ -358,9 +359,9 @@ done
 # Download last divergence file
 
 ```{bash}
-scp  mlucena@genomics-b.ebd.csic.es://home/mlucena/divergence/intergenic_analysis/c_ll_per_unit.divergence_with_rufus /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/divergence/
 
-scp  mlucena@genomics-b.ebd.csic.es://home/mlucena/divergence/intergenic_analysis/c_lp_per_unit.divergence_with_rufus /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/divergence/
+scp  mlucena@genomics-b.ebd.csic.es://home/mlucena/divergence/c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.divergence.tsv /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/divergence/
+scp  mlucena@genomics-b.ebd.csic.es://home/mlucena/divergence/c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.divergence.tsv /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/divergence/
 
 ```
 
