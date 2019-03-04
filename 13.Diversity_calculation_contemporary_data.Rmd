@@ -22,6 +22,7 @@ library(tidyr)
 wd_in <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/raw_tables/"
 wd_out <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
 wd_recom <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination"
+wd_diver <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/divergence"
 
 # Ojo! antes de correr esto, asegurarme que no lo he corrido antes porque si no estoy haciendo append a las tablas viejas y no creando nuevas. --> YA NO PASA ESTO PQ LO TENGO EN CARPETAS DISTINTAS!!!!
 
@@ -167,6 +168,20 @@ data_diversity_filtered_lynxpardinus <- data_diversity_pre %>% filter (specie=="
 # Con los filtrados hemos perdido 251.736 unidades. Aqui entran los promotores que se han caido. 
 
 
+####### Adjunto tasa de divergencia #########
+
+divergence_per_unit_lynx_lynx <- read.table(paste(wd_diver, "/c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.divergence.tsv", sep=""), header=T, fill = TRUE) %>% rename("informative_sites_substitutions"="informative_sites") %>% rename("unique_id"="id_gene")
+# empty_divergence_per_unit_lynx_lynx <- subset(divergence_per_unit_lynx_lynx, is.na(divergence_per_unit_lynx_lynx$divergence))
+# rm(empty_divergence_per_unit_lynx_lynx)
+
+divergence_per_unit_lynx_pardinus <- read.table(paste(wd_diver, "/c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.divergence.tsv", sep=""), header=T, fill = TRUE) %>% rename("informative_sites_substitutions"="informative_sites") %>% rename("unique_id"="id_gene")
+# empty_divergence_per_unit_lynx_pardinus <- subset(divergence_per_unit_lynx_pardinus, is.na(divergence_per_unit_lynx_pardinus$divergence))
+# rm(empty_divergence_per_unit_lynx_pardinus)
+
+
+data_diversity_filtered_lynxlynx_divergence <- data_diversity_filtered_lynxlynx %>% left_join (., divergence_per_unit_lynx_lynx)
+data_diversity_filtered_lynxpardinus_divergence <- data_diversity_filtered_lynxpardinus %>%  left_join (., divergence_per_unit_lynx_pardinus)
+
 
 ####### Adjunto tasa de recombinación #########
 
@@ -177,8 +192,7 @@ colnames(recombination_per_unit) <- c("unique_id","recombination_rate")
 recombination_per_unit$unique_id <- as.factor(recombination_per_unit$unique_id)
 
 
-data_diversity_filtered <- rbind(data_diversity_filtered_lynxlynx, data_diversity_filtered_lynxpardinus) %>% left_join (., recombination_per_unit, by = "unique_id")   
-
+data_diversity_filtered <- rbind(data_diversity_filtered_lynxlynx_divergence, data_diversity_filtered_lynxpardinus_divergence) %>% left_join (., recombination_per_unit, by = "unique_id")   
 
 
 
@@ -755,12 +769,17 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
                        upperw_watterson_ave_corrected = q75_watterson_ave_corrected + 1.5 * IQR_watterson_ave_corrected,
                        upperw_pairwise_ave_corrected  = q75_pairwise_ave_corrected  + 1.5 * IQR_pairwise_ave_corrected,
                        
-                       # Valores corregidos
+                       # Valores recombinación
                        
                        mean_recombination_rate=mean(recombination_rate, na.rm=TRUE),
-                       wmean_recombination_rate=weighted.mean(recombination_rate,w=informative_sites, na.rm=TRUE)
-
-                       ) %>% 
+                       wmean_recombination_rate=weighted.mean(recombination_rate,w=informative_sites, na.rm=TRUE),
+                       
+                       # Valores divergencia
+                       
+                       mean_divergence_rate=mean(divergence, na.rm=TRUE),
+                       wmean_divergence_rate=weighted.mean(divergence,w=informative_sites_substitutions, na.rm=TRUE)
+                      
+                     ) %>% 
   mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
                             ifelse (pop == "c_ll_no_n008", "Norway", 
@@ -897,8 +916,20 @@ diversity_stats_doble_grouped <- function(DATAFRAME, GROUP1, GROUP2)
                        lowerw_pairwise_ave_corrected  = q25_pairwise_ave_corrected  - 1.5 * IQR_pairwise_ave_corrected,
 
                        upperw_watterson_ave_corrected = q75_watterson_ave_corrected + 1.5 * IQR_watterson_ave_corrected,
-                       upperw_pairwise_ave_corrected  = q75_pairwise_ave_corrected  + 1.5 * IQR_pairwise_ave_corrected
+                       upperw_pairwise_ave_corrected  = q75_pairwise_ave_corrected  + 1.5 * IQR_pairwise_ave_corrected,
                        
+                       # Valores recombinación
+                       
+                       mean_recombination_rate=mean(recombination_rate, na.rm=TRUE),
+                       wmean_recombination_rate=weighted.mean(recombination_rate,w=informative_sites, na.rm=TRUE),
+                       
+                       # Valores divergencia
+                       
+                       mean_divergence_rate=mean(divergence, na.rm=TRUE),
+                       wmean_divergence_rate=weighted.mean(divergence,w=informative_sites_substitutions, na.rm=TRUE)
+                      
+                       
+
                        ) %>% 
   mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
@@ -1306,12 +1337,41 @@ A nivel de chr podemos sacar muchas cosillas. Vamos a hacer un join de las tabla
 # Cargo la tabla con la información de gato.
 cat_chr_info <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/cat_chr_gene_content_recombination_all_information.txt", header=T, na.strings = c("NA", "na"), dec=",")
 
-# La filtro para hacer plots a posteriori. 
-cat_chr_info_filtered <- cat_chr_info %>% filter(., chr!="chrX") %>% select (SizeMb_v8, GC_content, percentage_genes, cM.Mb)
 
 # Creo tablas con la información de diversidad y de cromosomas. 
-stas_df_pop_chr_plus_extra_info <- right_join(x = cat_chr_info, y = stats_df_pop_chr, by="chr") 
-stas_df_pop_chr_plus_extra_info$pop <- factor (stas_df_pop_chr_plus_extra_info$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
+stas_df_pop_chr_plus_cat_info <- right_join(x = cat_chr_info, y = stats_df_pop_chr, by="chr") 
+stas_df_pop_chr_plus_cat_info$pop <- factor (stas_df_pop_chr_plus_extra_info$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
+
+```
+
+#### Chromosome divergence
+
+Voy a sacar la divergencia por cromosoma porque no la tengo
+
+```{r}
+
+average_divergence_per_pop <- data_diversity_filtered_ave_corrected %>% 
+             dplyr::group_by_("Species","chr") %>%
+             dplyr::summarise(mean_divergence=mean(divergence,na.rm=TRUE)) 
+
+
+  
+  if("chr" %in% colnames(average_divergence_per_pop)){average_divergence_per_pop$chr <- factor(average_divergence_per_pop$chr, levels = c("chrA1","chrC1","chrB1","chrA2","chrB2","chrC2","chrA3","chrB3","chrB4","chrD1","chrD2","chrD3","chrD4","chrE1","chrE2","chrF1","chrF2","chrX"))}
+
+
+ggplot (average_divergence_per_pop, aes(chr, mean_divergence, fill=Species, color=Species)) +
+  geom_point()
+
+# Hacemos la tablas
+
+average_divergence_per_pop_spread <- average_divergence_per_pop %>% tidyr::spread(., Species, mean_divergence ) %>% as.data.frame(.) %>% dplyr::rename(., "L.lynx_divergence"="L.lynx") %>% dplyr::rename(.,"L.pardinus_divergence"="L.pardinus")
+
+# Lo uno a los datos de gato
+
+cat_chr_info_divergence <- right_join(x = cat_chr_info, y = average_divergence_per_pop_spread, by="chr") 
+
+# Lo uno también con los datos de diversidad
+stas_df_pop_chr_plus_extra_info <- right_join(stas_df_pop_chr_plus_cat_info, average_divergence_per_pop, by=c("chr", "Species") )
 
 ```
 
@@ -1319,6 +1379,11 @@ stas_df_pop_chr_plus_extra_info$pop <- factor (stas_df_pop_chr_plus_extra_info$P
 ### General plots cat info
 
 ```{r}
+
+# La filtro para hacer plots
+
+cat_chr_info_filtered <- cat_chr_info_divergence %>% filter(., chr!="chrX") %>% select (SizeMb_v8, GC_content, percentage_genes, cM.Mb, L.lynx_divergence, L.pardinus_divergence)
+
 
 # Hago una matriz de correlación entre las variables
 
@@ -1458,6 +1523,20 @@ ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("mea
 
 }
 
+
+# Diversidad vs divergence
+
+for (INDEX in INDEXES)
+  {
+ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("mean_divergence", INDEX, fill="Species" , colour="Species")) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid(~pop) +
+  theme(axis.text.x = element_text(angle = 90))+
+  theme_bw() +  #theme selection for background and lines
+  ggsave(paste(wd_output, "divergence_vs_",INDEX,".pdf", sep=""))
+
+}
 
 ```
 
@@ -1711,7 +1790,7 @@ Aquí tengo los ratios de las unidades particulares.
 # Cuidado porque aquí estoy asumiendo que la region es igual, y esto parece que es asi, pero no estoy 100% segura de que no haya podido pasar que en una población se haya definido como telomérico y en otra no por falta de bases. 
 
 calculus_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_POP1, name_POP2){
-  data_diversity_POP1_POP2 <- inner_join (POP1, POP2, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id", "recombination_rate", "recombination_category", "type_chr")) %>%  
+  data_diversity_POP1_POP2 <- inner_join (POP1, POP2, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id", "recombination_rate", "recombination_category", "type_chr", "divergence", "informative_sites_substitutions", "substitutions")) %>%  
     mutate (ratio_pairwise_average = pairwise_ave.y/pairwise_ave.x) %>% 
     mutate (ratio_watterson_average = watterson_ave.y/watterson_ave.x) %>% 
     mutate (ratio_pairwise_average_corrected = pairwise_ave_corrected.y/pairwise_ave_corrected.x) %>%
@@ -2472,6 +2551,40 @@ for (DATAFRAME in DATAFRAMES)
 
 ### Plots interacción per unit
 
+
+#### Ratio vs. divergence
+
+Exploro el ratio de ganancia vs. la tasa de divergencia, para ver si las zonas con más divergencia ganan mas diversidad. 
+
+
+```{r}
+
+INDEXES=c("ratio_pairwise_average", "ratio_watterson_average")
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+# Plot de los valores de divergencia con logaritmo frente a la diversidad. 
+
+for (DATAFRAME in DATAFRAMES)
+{
+for (INDEX in INDEXES)
+  {
+
+  NAME_POP1 <- as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
+  NAME_POP2 <- as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
+
+ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("divergence", sprintf("log(%s)", INDEX))) + 
+  geom_point() + 
+  facet_grid(~feature)+
+  geom_smooth(method = "lm")
+    ggsave(paste (wd_output,NAME_POP1,"_",NAME_POP2,"_diverg_vs_",INDEX,".pdf", sep="" ))
+}
+  }
+    
+    
+
+```
+
 #### Ratio vs. recombination
 
 Exploro el ratio de ganancia vs. la recombination rate, para ver si las zonas con más recombinación ganan menos diversidad que zonas con más baja recombinación. 
@@ -2787,6 +2900,26 @@ for(i in DATAFRAMES){
 }
 
 
+```
+
+
+#### 3D Plot divergence and recombination vs ratio
+
+```{r}
+library(plotly)
+
+# data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity
+
+plot_ly(x=filter(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity,feature=="UCNE")$divergence,
+        y=filter(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity,feature=="UCNE")$recombination_rate,
+        z=filter(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity,feature=="UCNE")$ratio_watterson_average)
+
+
+plot_ly(x=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$divergence,
+        y=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$recombination_rate,
+        z=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$ratio_watterson_average, 
+        color = ~data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$feature, 
+        mode = "markers",marker=list(opacity=0.5))
 ```
 
 ####  Plot boot data for each group
@@ -3156,7 +3289,6 @@ bootleneck_vs_non_bootleneck_ratio_median_feature_chr <- function(dataframe_POP1
   dataframename <- paste ("ratio_median", name_POP1, name_POP2,  sep="_")
   assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
   
-  
 }
 
 # Create data frame
@@ -3345,6 +3477,8 @@ ggplot (get(DATAFRAME), aes_string("feature", INDEX, fill="type_chr", colour="ty
 }
 }
 
+
+
 ```
 
 
@@ -3452,21 +3586,21 @@ Solo puedo unir la que sea solo agrupadas por cromosoma.
 
 # Creo tablas con la información de gato. Como son tablas resumen, solo las puedo unir cuando tenga información de cromosoma. 
 
-ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate), by="chr")
+ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate, mean_divergence_rate), by="chr") 
 
-ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate), by="chr")
+ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate, mean_divergence_rate), by="chr") 
 
-ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr_cat_info <- left_join(ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_lp_sm_n019") %>% select(chr,mean_recombination_rate), by="chr")
+ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr_cat_info <- left_join(ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_lp_sm_n019") %>% select(chr,mean_recombination_rate, mean_divergence_rate), by="chr") 
 
 # En realidad da igual la población que escoja, todos tienen la misma tasa de recombinación
 
 # Creo las tablas de interacción teniendo en cuenta la feature y el cromosoma.
 
-ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_po_n008_stats_feature_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_po_n008_stats_feature_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate), by="chr")
+ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_po_n008_stats_feature_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_po_n008_stats_feature_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate, mean_divergence_rate), by="chr")
 
-ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_no_n008_stats_feature_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_no_n008_stats_feature_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate), by="chr")
+ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_no_n008_stats_feature_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_no_n008_stats_feature_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate, mean_divergence_rate), by="chr")
 
-ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr_cat_info <- left_join(ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_lp_sm_n019") %>% select(chr,mean_recombination_rate), by="chr")
+ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr_cat_info <- left_join(ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_lp_sm_n019") %>% select(chr,mean_recombination_rate, mean_divergence_rate), by="chr")
 
 ```
 
@@ -3517,11 +3651,11 @@ ggplot (as.data.frame(get(DATAFRAME) %>% filter (chr!="chrX")), aes_string("Size
   geom_point(aes_string(fill="chr" , colour="chr")) +
   geom_smooth(method = "lm") +
   theme_bw()   #theme selection for background and lines
-  ggsave(paste(wd_output, "cat_size_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""), device = pdf)
+  ggsave(paste(wd_output, "cat_size_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""))
 
 }
     
-# Diversidad vs tamaño
+# Ratio vs tamaño
 
 
 for (INDEX in INDEXES)
@@ -3530,11 +3664,11 @@ ggplot (as.data.frame(get(DATAFRAME) %>% filter (chr!="chrX")), aes_string("perc
   geom_point(aes_string(fill="chr" , colour="chr")) +
   geom_smooth(method = "lm") +
   theme_bw()   #theme selection for background and lines
-  ggsave(paste(wd_output, "cat_gene-content_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""), device = pdf)
+  ggsave(paste(wd_output, "cat_gene-content_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""))
 
 }
     
-# Diversidad vs chr recombination
+# Ratio vs chr recombination
 
 for (INDEX in INDEXES)
   {
@@ -3542,11 +3676,11 @@ ggplot (as.data.frame(get(DATAFRAME) %>% filter (chr!="chrX")), aes_string("cM.M
   geom_point(aes_string(fill="chr" , colour="chr")) +
   geom_smooth(method = "lm") +
   theme_bw()   #theme selection for background and lines
-  ggsave(paste(wd_output, "cat_chr-recomb_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""), device = pdf)
+  ggsave(paste(wd_output, "cat_chr-recomb_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""))
 
 }
 
-# Diversidad vs calculated recombination
+# Ratio vs calculated recombination
 
 for (INDEX in INDEXES)
   {
@@ -3554,7 +3688,19 @@ ggplot (as.data.frame(get(DATAFRAME)), aes_string("mean_recombination_rate", IND
   geom_point(aes_string(fill="chr" , colour="chr")) +
   geom_smooth(method = "lm") +
   theme_bw()   #theme selection for background and lines
-  ggsave(paste(wd_output, "cat_calculated-recomb_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""), device = pdf)
+  ggsave(paste(wd_output, "cat_calculated-recomb_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""))
+}
+
+  # Ratio vs calculated divergence
+
+for (INDEX in INDEXES)
+  {
+ggplot (as.data.frame(get(DATAFRAME)), aes_string("mean_divergence_rate", INDEX)) +
+  geom_point(aes_string(fill="chr" , colour="chr")) +
+  geom_smooth(method = "lm") +
+  theme_bw()   #theme selection for background and lines
+  ggsave(paste(wd_output, "divergence_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""))
+
 
 }
 }
@@ -3575,11 +3721,18 @@ POP2=as.character(as.data.frame(get(DATAFRAME)) %>% select(pop.y) %>% .[1,1])
 for (INDEX in INDEXES)
   {
 
-ggplot (filter(get(DATAFRAME), chr!="chrX"), aes(mean_recombination_rate, ratio_median_pairwise_corrected, fill=feature, colour=feature)) +
+ggplot (filter(get(DATAFRAME), chr!="chrX"), aes(mean_divergence_rate, ratio_median_pairwise_corrected, fill=feature, colour=feature)) +
           geom_point() +
   geom_smooth(method = "lm") +
-    facet_grid(feature~.)
-  ggsave(paste(wd_output, "recombination_rate_vs_",INDEX,"_",POP1,"_",POP2,"_by_feature_and_chr.pdf", sep=""), device = pdf)
+    facet_grid(~feature)
+  ggsave(paste(wd_output, "recombination_rate_vs_",INDEX,"_",POP1,"_",POP2,"_by_feature_and_chr.pdf", sep=""))
+  
+ggplot (filter(get(DATAFRAME), chr!="chrX"), aes(mean_divergence_rate, ratio_median_pairwise_corrected, fill=feature, colour=feature)) +
+          geom_point() +
+  geom_smooth(method = "lm") +
+    facet_grid(~feature)
+  ggsave(paste(wd_output, "divergence_rate_vs_",INDEX,"_",POP1,"_",POP2,"_by_feature_and_chr.pdf", sep=""))
+  
 
 
 }
@@ -3743,14 +3896,6 @@ You’re being reminded of the formula of the two models that you’re comparing
 Then, you find a Chi-Square value, the associated degrees of freedom and the pvalue2.
 You would report this result the following way:
 “… politeness affected pitch (χ2(1)=11.62, 
-
-# GO term enrichmnt
-
-```{r}
-
-# https://geneontology.github.io/docs/guide-go-evidence-codes/
-
-```
 
 
 
