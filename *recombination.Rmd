@@ -443,7 +443,7 @@ awk '{print $3-$2,$1,$2,$3,$4}' /home/mlucena/recombination_analysis/list_of_uni
 awk -v OFS='\t' '{split ($8, a, ":"); split(a[3],b, "-"); print a[2], b[1], b[2], $4 }' list_of_units_with_chr_info_in_lynx_no_duplicates_cat_coordinates_lynx_coordinates_information.bed | sort -k4,4 | bedtools groupby -i stdin -g 4 -c 1 -o distinct -delim ";" > lista_chr_per_unit
 
 # YUHUUU no hay!!
-
+## OJO $ creo que si!¢
 
 # Fusiono en base a la unidad, siempre que esté en el mismo cromosoma.
 
@@ -537,15 +537,35 @@ wc -l recombination_rate_per_unit_all_info_sorted.bed
 
 # ¿Hay unidades que están en más de un cromosoma?
 
-sort -k1,1 recombination_rate_per_unit_all_info_sorted.bed | uniq -c | sort -k1,1n | tail
+awk '{print $1}' recombination_rate_per_unit_all_info_sorted.bed | sort | uniq -c | sort -k1,1n | tail 
 
-# Nada! ¡¡¡Genial!!!
+wc -l recombination_rate_per_unit_all_info_sorted.bed
+# 403029 recombination_rate_per_unit_all_info_sorted.bed
+
+# Si, hay unidades que están en más de uno. Así que me lo quito.
+
+awk '{print $1}' recombination_rate_per_unit_all_info_sorted.bed | sort | uniq -c | sort -k1,1n | grep -v "^      1" | awk '{print $2}' > duplicated_elements
+wc-l duplicated_elements
+# 3076 duplicated_elements
+
+# Primero voy a seleccionar ocurrencias unicas para hacer el archivo más pequeño
+sort -u -k1,1 recombination_rate_per_unit_all_info_sorted.bed > recombination_rate_per_unit_all_info_sorted_filtered_one_ocurrence.bed
+
+# Elimino lo que esté duplicado. 
+grep -v -f duplicated_elements recombination_rate_per_unit_all_info_sorted_filtered_one_ocurrence.bed > recombination_rate_per_unit_all_info_sorted_filtered_uniq.bed
+
+
+# Sanity
+wc -l  recombination_rate_per_unit_all_info_sorted_filtered_uniq.bed
+396683 recombination_rate_per_unit_all_info_sorted_filtered_uniq.bed
+
+awk '{print $1}' recombination_rate_per_unit_all_info_sorted_filtered_uniq.bed | sort | uniq -c | sort -k1,1n | tail 
 
 # Lo muevo una carpeta arriba
 
-mv recombination_rate_per_unit_all_info_sorted.bed  ..
+# Elimino archivos intermedios
 
-# Elimino archivos intermedios pq ocupan mucho espacio. 
+rm recombination_rate_per_unit_all_info_sorted_filtered_one_ocurrence.bed
 
 ```
 
@@ -553,11 +573,35 @@ mv recombination_rate_per_unit_all_info_sorted.bed  ..
 
 El archivo final es: 
 
-/home/mlucena/recombination_analysis/recombination_rate_per_unit_all_info_sorted.bed
+/home/mlucena/recombination_analysis/recombination_rate_per_unit_all_info_sorted_filtered_uniq.bed
+
+En el solo tienen información de recombinación aquellas unidades que tiene solo asignada una misma tasa. Por ejemplo el caso de la región intergenica que comento abajo se cae del analisis. 
 
 Me lo bajo para poder hacer un join con mis archivos de diversidad
 
 ```{bash}
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/recombination_analysis/recombination_rate_per_unit_all_info_sorted.bed /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination/
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/recombination_analysis/recombination_rate_per_unit_all_info_sorted_filtered_uniq.bed /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination/
+```
+
+El caso de la región: intergenic_region_52439. Esta región estaba aqui:
+
+lp23.s31338                0 70414  70414 27359             43055 intergenic          -     . intergenic_region_52439 intergenic_region_52439      
+ 
+Era brutal, tenía 50 ocurrencias, he sacado la sintenia con gato y he mirado en cuantos cromosomas está y es barbaro. Esto hay que eliminarlo. 
+
+```{bash}
+awk -v OFS='\t' '$3<=70414 {split ($4, a, ":"); split(a[3],b, "-"); print a[2] }' lp23.s31338 | sort -k1,1 | uniq -c
+
+#     10 chrA1
+#   2276 chrB1
+#      3 chrB4
+#     15 chrC1
+#    102 chrD1
+#    877 chrD2
+#   2795 chrE2
+#     64 chrE3
+#     15 chrF1
+#   1421 chrX
+
 ```
 
