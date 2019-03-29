@@ -78,11 +78,24 @@ data_diversity_raw <-rbind(c_ll_ki_n013,c_ll_po_n008,c_ll_no_n008,c_lp_sm_n019,c
 # write.table (c_lp_do_n012, paste(wd_out, "c_ll_do_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 # write.table (c_lp_sm_n019, paste(wd_out, "c_ll_sm_n019.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 #write.table (c_lp_sm_n012, paste(wd_out, "c_ll_sm_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+```
+
+## Cargar tablas y filtrarlas. 
 
 
-# Los submuestreados los he quitado. 
+```{r}
 
-data_diversity <- data_diversity_raw 
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+wd_in <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/raw_tables/"
+wd_out <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
+wd_recom <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination"
+wd_diver <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/divergence"
+
+
+# data_diversity <- data_diversity_raw 
 # En teoría debería de funcionar llamando a la tabla anterior, pero como no funciona no le doy más vueltas. Me he descargado la raw y la he vuelto a cargar, que así funcionaba antes, y así ha funcionado ahora. 
 
 data_diversity <- read.table(paste(wd_out, "global.per.unit.averages.chr.all.regions.tsv", sep=""), header=T, na.strings = c("NA", "na")) %>%  
@@ -142,44 +155,38 @@ data_diversity <- read.table(paste(wd_out, "global.per.unit.averages.chr.all.reg
 # En primer lugar vamos a sacar una lista para que luego la podamos filtrar. 
 
 
-all_lncRNA <- data_diversity %>% filter (feature=="lncRNA"| feature=="intron_lncRNA" ) %>% mutate(id2=id) %>% separate (id2,c("a", "b", "c", "d", "e"), "_", extra = "drop") %>% mutate(new_id=paste(c,d, sep="_")) %>% select (-c(a,b,c,d,e)) 
+all_lncRNA <- data_diversity %>% ungroup(.) %>% dplyr::filter (pop=="c_ll_ki_n013") %>%  dplyr::filter (feature=="lncRNA"| feature=="intron_lncRNA" ) %>% mutate(id2=id) %>% separate (id2,c("a", "b", "c", "d", "e"), "_", extra = "drop") %>% mutate(new_id=paste(c,d, sep="_")) %>% select (-c(a,b,c,d,e)) 
 
-# Selecciono todos los que tienen más de un transcrito, y me quedo con el más grande.
+# Selecciono todos los que tienen más de un transcrito.
+all_lncRNA_sum_lenght_repeted <- all_lncRNA %>% as.data.frame(.) %>% dplyr::group_by (id_gene, new_id) %>% dplyr::summarise (sum_length = sum(length)) %>% dplyr::group_by(id_gene) %>% dplyr::filter(n()>1)
 
-all_lncRNA_sum_lenght_repeted <- all_lncRNA %>% dplyr::group_by (id_gene, new_id) %>% summarise (sum_length = sum(length)) %>% group_by(id_gene) %>% filter(n()>1)
+# Me quedo con el más largo, y añado la información que se pierde al hacer el resumen de la identidad del transcrito. 
+all_lncRNA_sum_lenght_repeted_large_length <- all_lncRNA_sum_lenght_repeted %>% dplyr::summarise(sum_length = max(sum_length))  %>%  dplyr::inner_join(., all_lncRNA_sum_lenght_repeted, by=c("id_gene", "sum_length"))
 
+# Elimino duplicados en caso de que haya más de un transcrito con la misma longitud, quedandome con uno al azar--> Esta tabla sería la buena, con la que me tengo que quedar, asi que hago antijoin para lograr lo que tengo que tirar. 
+all_lncRNA_sum_lenght_repeted_large_length_no_duplicates <- all_lncRNA_sum_lenght_repeted_large_length[!duplicated(all_lncRNA_sum_lenght_repeted_large_length$id_gene),]
 
-# Como tengo que hacer antijoin primero me quedo con los que tienen la length más pequeña, como al filtrar tb se quedaba si habia dos con igual length de esta manera filtro solo y me quedo solo con los que de verdad tienen más pequeña.
-
-all_lncRNA_sum_lenght_repeted_small_length <- all_lncRNA_sum_lenght_repeted %>% summarise(sum_length = min(sum_length)) %>% dplyr::inner_join(all_lncRNA_sum_lenght,.) %>% group_by(id_gene) %>% filter(n()==1)
-# Recupero la tabla grande para hacer antijoin
-
-all_lncRNA_sum_lenght_repeted_small_length_uniq_id <- inner_join(all_lncRNA, all_lncRNA_sum_lenght_repeted_small_legth, by=c("id_gene", "new_id")) %>% select("unique_id")
-
-
-# Selecciono uno de los dos al azar cuando los dos transcritos son igual de grandes.
-all_lncRNA_sum_lenght_repeted_same_length <- dplyr::anti_join(all_lncRNA_sum_lenght_repeted, all_lncRNA_sum_lenght_repeted_small_legth, by="id_gene") 
-# keep only one randomly
-all_lncRNA_sum_lenght_repeted_same_length <- all_lncRNA_sum_lenght_repeted_same_legth[!duplicated(all_lncRNA_sum_lenght_repeted_same_legth$id_gene),]
-
-all_lncRNA_sum_lenght_repeted_same_length_uniq_id  <- inner_join(all_lncRNA, all_lncRNA_sum_lenght_repeted_same_legth, by=c("id_gene", "new_id")) %>% select("unique_id")
+# Selecciono el id de todos estos.
+all_lncRNA_sum_lenght_repeted_large_length_no_duplicates_unique_id  <- dplyr::anti_join(all_lncRNA, all_lncRNA_sum_lenght_repeted_large_length_no_duplicates, by=c("id_gene", "new_id")) %>% dplyr::select("unique_id")
 
 
+data_diversity_pre <- data_diversity %>% ungroup(.) %>%  
+  dplyr::anti_join(all_lncRNA_sum_lenght_repeted_large_length_no_duplicates_unique_id,by="unique_id") %>% 
+  dplyr::filter (., informative_sites>=50) %>% 
+  dplyr::filter (., informative_sites/length>=0.20) %>% 
+  dplyr::filter (., !(feature=="promoter_gene_250")) %>% 
+  dplyr::filter (., !(feature=="promoter_gene_500")) %>% 
+  dplyr::filter (., !(feature=="promoter_gene_1000" & length < 1000)) %>% 
+  dplyr::filter (., !(feature=="promoter_lncRNA_250")) %>% 
+  dplyr::filter (., !(feature=="promoter_lncRNA_500")) %>% 
+  dplyr::filter (., !(feature=="promoter_lncRNA_1000" & length < 1000)) 
 
 
-data_diversity_pre <- data_diversity %>%  
-  dplyr::anti_join(all_lncRNA_sum_lenght_repeted_small_length_uniq_id,by="unique_id") %>% 
-  dplyr::anti_join(all_lncRNA_sum_lenght_repeted_same_length_uniq_id,by="unique_id") %>% 
-  filter (., informative_sites>=50) %>% 
-  filter (., informative_sites/length>=0.20) %>% 
-  filter (., !(feature=="promoter_gene_250")) %>% 
-  filter (., !(feature=="promoter_gene_500")) %>% 
-  filter (., !(feature=="promoter_gene_1000" & length < 1000)) %>% 
-  filter (., !(feature=="promoter_lncRNA_250")) %>% 
-  filter (., !(feature=="promoter_lncRNA_500")) %>% 
-  filter (., !(feature=="promoter_lncRNA_1000" & length < 1000)) 
+# Sanity check de que nada con las mismas coordenadas y con las misma longitud y strandness y frame se va a contar doble, pq no debería. 
+# kk1 <- data_diversity_pre %>% mutate (position=paste(scaffold,start_cero_based,end, length, feature, strandness, frame, id_gene)) 
+# kk2 <- as.data.frame(table (kk3$position)) %>% filter(Freq>5)
 
-# 2003073; 2248581-2003073=245508 
+
 
 # Saco la lista de elementos comunes a todas las unidades para cada especie. 
 
