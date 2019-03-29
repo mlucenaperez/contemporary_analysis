@@ -80,7 +80,7 @@ data_diversity_raw <-rbind(c_ll_ki_n013,c_ll_po_n008,c_ll_no_n008,c_lp_sm_n019,c
 #write.table (c_lp_sm_n012, paste(wd_out, "c_ll_sm_n012.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 ```
 
-## Cargar tablas y filtrarlas. 
+## Cargar tablas 
 
 
 ```{r}
@@ -93,7 +93,7 @@ wd_in <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/raw_table
 wd_out <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
 wd_recom <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination"
 wd_diver <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/divergence"
-
+wd_GC <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/GC_content"
 
 # data_diversity <- data_diversity_raw 
 # En teoría debería de funcionar llamando a la tabla anterior, pero como no funciona no le doy más vueltas. Me he descargado la raw y la he vuelto a cargar, que así funcionaba antes, y así ha funcionado ahora. 
@@ -143,14 +143,11 @@ data_diversity <- read.table(paste(wd_out, "global.per.unit.averages.chr.all.reg
 # Compruebo que efectivamente no hay ningún cromosoma que no encaje. 
 # unique(data_diversity$chr)
 # Está bien!
+```
 
+## Filtering por tamaño y transcritos
 
-# Sanity checks de que no hay duplicados:
-# filter (data_diversity, pop=="c_ll_ki_n013") %>% nrow
-# 450064
-# filter (data_diversity, pop=="c_ll_ki_n013") %>% select(id_feature) %>% unique() %>% nrow
-# 450064
-
+```{r}
 # Ojo los lncRNA tienen más de un trasncrito, así que hay que eliminarlo. 
 # En primer lugar vamos a sacar una lista para que luego la podamos filtrar. 
 
@@ -211,24 +208,43 @@ lista_lynxpardinus <- dplyr::inner_join( data_diversity_pre_sm, data_diversity_p
 data_diversity_filtered_lynxpardinus <- data_diversity_pre %>% dplyr::filter (specie=="lp") %>% dplyr::filter(unique_id %in% lista_lynxpardinus$unique_id)
 
 # Con los filtrados hemos perdido 251.736 unidades. Aqui entran los promotores que se han caido. 
+```
 
+## Adding divergence rate
 
-####### Adjunto tasa de divergencia #########
+```{r}
 
-divergence_per_unit_lynx_lynx <- read.table(paste(wd_diver, "/c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.divergence.tsv", sep=""), header=T, fill = TRUE) %>% rename("informative_sites_substitutions"="informative_sites") %>% rename("unique_id"="id_gene")
+divergence_per_unit_lynx_lynx <- read.table(paste(wd_diver, "/c_ll_ki_0090_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.divergence.tsv", sep=""), header=T, fill = TRUE) %>% dplyr::rename("informative_sites_substitutions"="informative_sites") %>% dplyr::rename("unique_id"="id_gene")
 # empty_divergence_per_unit_lynx_lynx <- subset(divergence_per_unit_lynx_lynx, is.na(divergence_per_unit_lynx_lynx$divergence))
 # rm(empty_divergence_per_unit_lynx_lynx)
 
-divergence_per_unit_lynx_pardinus <- read.table(paste(wd_diver, "/c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.divergence.tsv", sep=""), header=T, fill = TRUE) %>% rename("informative_sites_substitutions"="informative_sites") %>% rename("unique_id"="id_gene")
+divergence_per_unit_lynx_pardinus <- read.table(paste(wd_diver, "/c_lp_sm_0298_plus_c_lr_zz_0001_recal_round-1_25x_SNPs.divergence.tsv", sep=""), header=T, fill = TRUE) %>% dplyr::rename("informative_sites_substitutions"="informative_sites") %>% dplyr::rename("unique_id"="id_gene")
 # empty_divergence_per_unit_lynx_pardinus <- subset(divergence_per_unit_lynx_pardinus, is.na(divergence_per_unit_lynx_pardinus$divergence))
 # rm(empty_divergence_per_unit_lynx_pardinus)
 
 
 data_diversity_filtered_lynxlynx_divergence <- data_diversity_filtered_lynxlynx %>% dplyr::left_join (., divergence_per_unit_lynx_lynx)
 data_diversity_filtered_lynxpardinus_divergence <- data_diversity_filtered_lynxpardinus %>%  dplyr::left_join (., divergence_per_unit_lynx_pardinus)
+```
+
+## Adding GC content
+
+```{r}
+
+GC_content_per_unit_lynx_lynx <- read.table(paste(wd_GC, "/list_of_units_with_chr_info_in_lynx_no_duplicates.GC_content.ll.bed", sep=""), header=F, fill = TRUE) %>% dplyr::rename("scaffold"="V1", "start_cero_based"="V2", "end"="V3", "unique_id"="V4", "GC_content"="V6") %>% select(-c("V5", "V7",	"V8",	"V9",	"V10",	"V11",	"V12","V13")) 
 
 
-####### Adjunto tasa de recombinación #########
+GC_content_per_unit_lynx_pardinus <- read.table(paste(wd_GC, "/list_of_units_with_chr_info_in_lynx_no_duplicates.GC_content.lp.bed", sep=""), header=F, fill = TRUE) %>% dplyr::rename("scaffold"="V1", "start_cero_based"="V2", "end"="V3", "unique_id"="V4", "GC_content"="V6") %>% select(-c("V5", "V7",	"V8",	"V9",	"V10",	"V11",	"V12","V13")) 
+
+
+data_diversity_filtered_lynxlynx_divergence_GC <- data_diversity_filtered_lynxlynx_divergence %>% dplyr::left_join (., GC_content_per_unit_lynx_lynx)
+data_diversity_filtered_lynxpardinus_divergence_GC <- data_diversity_filtered_lynxpardinus_divergence %>%  dplyr::left_join (., GC_content_per_unit_lynx_pardinus)
+```
+
+
+## Adding recombination rate
+
+```{r}
 
 # Ahora adjunto los datos de recombinación. 
 
@@ -236,11 +252,7 @@ recombination_per_unit <- read.table(paste(wd_recom, "/recombination_rate_per_un
 colnames(recombination_per_unit) <- c("unique_id","recombination_rate")
 recombination_per_unit$unique_id <- as.factor(recombination_per_unit$unique_id)
 
-
-data_diversity_filtered <- rbind(data_diversity_filtered_lynxlynx_divergence, data_diversity_filtered_lynxpardinus_divergence) %>% left_join (., recombination_per_unit, by = "unique_id")   
-
-
-
+data_diversity_filtered <- rbind(data_diversity_filtered_lynxlynx_divergence_GC, data_diversity_filtered_lynxpardinus_divergence_GC) %>% left_join (., recombination_per_unit, by = "unique_id")   
 # Ordenar los factores. 
 
 data_diversity_filtered$Populations <- factor (data_diversity_filtered$Populations, levels=c("Kirov","Kirov_subsampled","Bialowieza","Norway", "Andujar","Donana"))
