@@ -97,6 +97,10 @@ data_diversity <- read.table(paste(wd_out, "global.per.unit.averages.chr.all.reg
   # Anoto qué es cada región 
   mutate (., region = ifelse (tel2m_percentage >= 0.75, "Telomere_2m", 
                        ifelse (centr_percentage >= 0.75, "Centromere", "Arm" )))  %>% 
+  # Ahora elimino la barra baja que encuentro en algunos de los lncRNA
+  #mutate(new_id=ifelse(feature=="lncRNA", substr(.$id_gene,start=1,stop=13), as.character(id_gene))) %>% 
+  #select(-id_gene) %>% 
+  #dplyr::rename(id_gene = new_id) %>% 
   # Creo un identificador único para luego poder filtrar por este cuando tenga que sacar los comunes a todas las poblaciones. 
   mutate (., chr = ifelse (chr.x == chr.y, as.character(chr.x), "PROBLEMA")) %>% 
   select (-c(chr.x, chr.y)) %>% 
@@ -107,14 +111,18 @@ data_diversity <- read.table(paste(wd_out, "global.per.unit.averages.chr.all.reg
                                ifelse (chr=="chrX" & pop == "c_ll_no_n008", watterson_ave * 1.15,
                                ifelse (chr=="chrX" & pop == "c_lp_sm_n019", watterson_ave * 1.07, 
                                ifelse (chr=="chrX" & pop == "c_lp_do_n012", watterson_ave * 1.10, watterson_ave)))))) %>% 
-  mutate (., watterson_ave=watterson_modif) %>% 
-  select (., -watterson_modif)
+  select (., -watterson_ave) %>% 
+  dplyr::rename(watterson_ave = watterson_modif) %>% 
+  dplyr::rowwise() %>%
+ # los promotores de los lncRNA siguen llamandose igual, y ojo que están sacados de la notación de los propios lncrNA pero sin tener en cuenta los distintos transcritos. 
+  dplyr::mutate(new_id = ifelse ( feature=="lncRNA" | feature =="intron_lncRNA",substr(as.character(id_gene), start = 1, stop = 13),as.character(id_gene))) %>% 
+  select (.,-id_gene) %>% 
+  dplyr::rename(id_gene = new_id)
+                                     
 
-
-unique(data_diversity$pop)
-
-unique(data_diversity$Populations)
-
+#View(data_diversity)
+#unique(data_diversity$pop)
+#unique(data_diversity$Populations)
 
 #¡Ojo! el filtro que estás aplicando se está quedando con las que para la Tajima son NA. Si las quieres eliminar ¡ojo!
 # 2248581
@@ -130,8 +138,38 @@ unique(data_diversity$Populations)
 # filter (data_diversity, pop=="c_ll_ki_n013") %>% select(id_feature) %>% unique() %>% nrow
 # 450064
 
+# Ojo los lncRNA tienen más de un trasncrito, así que hay que eliminarlo. 
+# En primer lugar vamos a sacar una lista para que luego la podamos filtrar. 
+
+
+all_lncRNA <- data_diversity %>% filter (feature=="lncRNA"| feature=="intron_lncRNA" ) %>% mutate(id2=id) %>% separate (id2,c("a", "b", "c", "d", "e"), "_", extra = "drop") %>% mutate(new_id=paste(c,d, sep="_")) %>% select (-c(a,b,c,d,e)) 
+
+# Selecciono todos los que tienen más de un transcrito, y me quedo con el más grande.
+
+all_lncRNA_sum_lenght_repeted <- all_lncRNA %>% dplyr::group_by (id_gene, new_id) %>% summarise (sum_length = sum(length)) %>% group_by(id_gene) %>% filter(n()>1)
+
+
+# Como tengo que hacer antijoin primero me quedo con los que tienen la length más pequeña, como al filtrar tb se quedaba si habia dos con igual length de esta manera filtro solo y me quedo solo con los que de verdad tienen más pequeña.
+
+all_lncRNA_sum_lenght_repeted_small_length <- all_lncRNA_sum_lenght_repeted %>% summarise(sum_length = min(sum_length)) %>% dplyr::inner_join(all_lncRNA_sum_lenght,.) %>% group_by(id_gene) %>% filter(n()==1)
+# Recupero la tabla grande para hacer antijoin
+
+all_lncRNA_sum_lenght_repeted_small_length_uniq_id <- inner_join(all_lncRNA, all_lncRNA_sum_lenght_repeted_small_legth, by=c("id_gene", "new_id")) %>% select("unique_id")
+
+
+# Selecciono uno de los dos al azar cuando los dos transcritos son igual de grandes.
+all_lncRNA_sum_lenght_repeted_same_length <- dplyr::anti_join(all_lncRNA_sum_lenght_repeted, all_lncRNA_sum_lenght_repeted_small_legth, by="id_gene") 
+# keep only one randomly
+all_lncRNA_sum_lenght_repeted_same_length <- all_lncRNA_sum_lenght_repeted_same_legth[!duplicated(all_lncRNA_sum_lenght_repeted_same_legth$id_gene),]
+
+all_lncRNA_sum_lenght_repeted_same_length_uniq_id  <- inner_join(all_lncRNA, all_lncRNA_sum_lenght_repeted_same_legth, by=c("id_gene", "new_id")) %>% select("unique_id")
+
+
+
 
 data_diversity_pre <- data_diversity %>%  
+  dplyr::anti_join(all_lncRNA_sum_lenght_repeted_small_length_uniq_id,by="unique_id") %>% 
+  dplyr::anti_join(all_lncRNA_sum_lenght_repeted_same_length_uniq_id,by="unique_id") %>% 
   filter (., informative_sites>=50) %>% 
   filter (., informative_sites/length>=0.20) %>% 
   filter (., !(feature=="promoter_gene_250")) %>% 
@@ -152,18 +190,18 @@ data_diversity_pre_no <- data_diversity_pre %>% filter (pop=="c_ll_no_n008")
 data_diversity_pre_po <- data_diversity_pre %>% filter (pop=="c_ll_po_n008")
 
 
-lista_lynxlynx <- inner_join(data_diversity_pre_ki, data_diversity_pre_no, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id")) %>% inner_join(., data_diversity_pre_po, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id" ))  %>% select("unique_id")
+lista_lynxlynx <- dplyr::inner_join(data_diversity_pre_ki, data_diversity_pre_no, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id")) %>% dplyr::inner_join(., data_diversity_pre_po, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id" ))  %>% select("unique_id")
 
-data_diversity_filtered_lynxlynx <- data_diversity_pre %>% filter (specie=="ll") %>% filter(unique_id %in% lista_lynxlynx$unique_id)
+data_diversity_filtered_lynxlynx <- data_diversity_pre %>% dplyr::filter (specie=="ll") %>% dplyr::filter(unique_id %in% lista_lynxlynx$unique_id)
 
 # Ahora para pardinus:
 
-data_diversity_pre_sm <- data_diversity_pre %>% filter (pop=="c_lp_sm_n019")
-data_diversity_pre_do <- data_diversity_pre %>% filter (pop=="c_lp_do_n012")
+data_diversity_pre_sm <- data_diversity_pre %>% dplyr::filter (pop=="c_lp_sm_n019")
+data_diversity_pre_do <- data_diversity_pre %>% dplyr::filter (pop=="c_lp_do_n012")
 
-lista_lynxpardinus <- inner_join( data_diversity_pre_sm, data_diversity_pre_do, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id")) %>% select("unique_id")
+lista_lynxpardinus <- dplyr::inner_join( data_diversity_pre_sm, data_diversity_pre_do, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id")) %>% dplyr::select("unique_id")
 
-data_diversity_filtered_lynxpardinus <- data_diversity_pre %>% filter (specie=="lp") %>% filter(unique_id %in% lista_lynxpardinus$unique_id)
+data_diversity_filtered_lynxpardinus <- data_diversity_pre %>% dplyr::filter (specie=="lp") %>% dplyr::filter(unique_id %in% lista_lynxpardinus$unique_id)
 
 # Con los filtrados hemos perdido 251.736 unidades. Aqui entran los promotores que se han caido. 
 
@@ -179,15 +217,15 @@ divergence_per_unit_lynx_pardinus <- read.table(paste(wd_diver, "/c_lp_sm_0298_p
 # rm(empty_divergence_per_unit_lynx_pardinus)
 
 
-data_diversity_filtered_lynxlynx_divergence <- data_diversity_filtered_lynxlynx %>% left_join (., divergence_per_unit_lynx_lynx)
-data_diversity_filtered_lynxpardinus_divergence <- data_diversity_filtered_lynxpardinus %>%  left_join (., divergence_per_unit_lynx_pardinus)
+data_diversity_filtered_lynxlynx_divergence <- data_diversity_filtered_lynxlynx %>% dplyr::left_join (., divergence_per_unit_lynx_lynx)
+data_diversity_filtered_lynxpardinus_divergence <- data_diversity_filtered_lynxpardinus %>%  dplyr::left_join (., divergence_per_unit_lynx_pardinus)
 
 
 ####### Adjunto tasa de recombinación #########
 
 # Ahora adjunto los datos de recombinación. 
 
-recombination_per_unit <- read.table(paste(wd_recom, "/recombination_rate_per_unit_all_info_sorted.bed", sep=""), header=F, na.strings = c("NA", "na"))
+recombination_per_unit <- read.table(paste(wd_recom, "/recombination_rate_per_unit_all_info_sorted_filtered_uniq.bed", sep=""), header=F, na.strings = c("NA", "na"))
 colnames(recombination_per_unit) <- c("unique_id","recombination_rate")
 recombination_per_unit$unique_id <- as.factor(recombination_per_unit$unique_id)
 
