@@ -217,20 +217,20 @@ done
 
 Ahora que ya tengo los VCF por población para las dos especies lo que tengo que hacer es generar el archivo map y ped de cada población.
 
-# Generate ped and map file
+## Generate ped and map file
 
 ```{bash}
 
 cd /home/mlucena/recent_demographic_reconstruction
 
 
-VCFs=$(ls *.c_l*more_than_*000_SNPS.vcf)
+VCFs=$(ls *.c_l*more_than_2000_SNPS.vcf)
 
 for VCF_per_pop in ${VCFs[@]}
 do 
 echo $VCF_per_pop
 declare POP=$(echo $VCF_per_pop | cut -d "." -f4 )
-/opt/plink_1.9/plink_1.9 --vcf $VCF_per_pop --maf 0.05 --recode --out "${POP}" --const-fid 0 --allow-extra-chr
+/opt/plink_1.9/plink_1.9 --vcf $VCF_per_pop --maf 0.05 --recode --out "${POP}"_maf005 --const-fid 0 --allow-extra-chr
 done
 
 
@@ -238,7 +238,7 @@ done
 ```
 
 
-# Copy to UBUNTU local
+## Copy to UBUNTU local
 
 SNeP sólo corre en Ubunto 14.04 o en windows, por tanto me he tenido que crear una máquina virtual en local que tenga instalado ubuntu. Así que lo primero que tngo que hacer es bajarme los archivos a este ordenador. 
 
@@ -255,26 +255,23 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstructi
 
 ```
 
-# SNeP
+## SNeP
 
 ```{bash}
 
 cd /home/maria/SneP
 
-SNeP1.1 -ped c_ll_ki_intergenic_filtered_more_than_2000_SNPS.ped -out ./c_ll_ki_intergenic_filtered_more_than_2000_SNPS -ld -recrate 1.9e-8  -svedf -samplesize 1 --> lanzado
-SNeP1.1 -ped c_ll_ki_intergenic_filtered_more_than_1000_SNPS.ped -out ./c_ll_ki_intergenic_filtered_more_than_1000_SNPS -ld -recrate 1.9e-8  -svedf -samplesize 1
-
-
 for PED_FILE in *.ped
 do
 declare POP=$(echo $PED_FILE | cut -d "." -f 1)
-declare SAMPLE_SIZE=$(grep $POP sample_size_file.csv | cut -d"," -f 2)
+#declare SAMPLE_SIZE=$(grep $POP sample_size_file.csv | cut -d"," -f 2)
 SNePv1.1 -ped $PED_FILE -out ./$POP -ld -recrate 1.9e-8  -svedf -samplesize 1
 done
 
+# Otras variantes del script están en mi máquina virtual en UBUNTU.
 ```
 
-# Copy back to the server & to mac local
+## Copy back to the server & to mac local
 
 ```{bash}
 # Copy to server
@@ -290,8 +287,7 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstructi
 ```
 
 
-
-# R representation
+## R representation
 
 ```{r}
 # Leo la tabla de Ne.
@@ -319,5 +315,182 @@ for (i in 1:length(finsNeAll))
  
 
 ```
+
+# Stairway plot
+
+Vamos a correr un programa que se llama stairway plot que genera un skyline plot demográfico. Este programa corre en java. Como entrada necesita: numero de sitios monomórficos + polimorficos, el sfs, y el número de alelos (numero de individuos * 2). Todos estos datos los tengo en el espectro de frecuencias alélicas, que aunque está espresado en likelihood, el programa lo acepta. 
+
+Para que corra tienes que generar un archivos txt que el programa transforma en sh usando java, y despues este .sh se lanza. 
+Un ejemplo de un archivo de entrada es este (en mi ordenador):
+
+
+```{bash}
+cat /Users/marialucenaperez/Documents/stair_way_plot/stairway_plot_v2/two-epoch.blueprint 
+#example blueprint file
+#input setting
+popid: two-epoch # id of the population (no white space)
+nseq: 30 # number of sequences
+L: 10000000 # total number of observed nucleic sites, including polymorphic and monomorphic
+whether_folded: false # whethr the SFS is folded (true or false)
+SFS: 9513.26	3796.47	2106.24	1351.505	962.91	736.865	597.75	499.845	429.99	381.62	341.965	310.27	284.87	261.28	242.11	230.055	217.975	204.48	197.28	185.545	176.055	167.62	161.55	154.935	147.83	142.17	137.31	133.3	124.955   # snp frequency spectrum: number of singleton, number of doubleton, etc. (separated by white space)
+#smallest_size_of_SFS_bin_used_for_estimation: 2 # default is 1; to ignore singletons, change this number to 2
+#largest_size_of_SFS_bin_used_for_estimation: 28 # default is n-1; to ignore singletons, change this number to nseq-2
+pct_training: 0.67 # percentage of sites for training
+nrand: 7	15	22	28 # number of random break points for each try (separated by white space)
+project_dir: two-epoch # project directory
+stairway_plot_dir: stairway_plot_es # directory to the stairway plot files
+ninput: 200 # number of input files to be created for each estimation
+#output setting
+mu: 1.2e-8 # assumed mutation rate per site per generation
+year_per_generation: 24 # assumed generation time (in years)
+#plot setting
+plot_title: two-epoch # title of the plot
+xrange: 0.1,10000 # Time (1k year) range; format: xmin,xmax; "0,0" for default
+yrange: 0,0 # Ne (1k individual) range; format: xmin,xmax; "0,0" for default
+xspacing: 2 # X axis spacing
+yspacing: 2 # Y axis spacing
+fontsize: 12 # Font size
+```
+
+Los parámetros que cambiamos son:
+popid --> nombre de la población.
+nseq --> numero de individuos * 2
+L --> numero total de sitios incluyendo ambos, monomórficos y polimórficos.
+whether_folded --> en mi caso, false, porque tengo un unfolded.
+pct_training --> se deja igual.
+nrand --> se calcula según la formula: number of random break points for each try (separated by white space). We suggest to use 4 numbers, roughly (nseq-2)/4, (nseq-2)/2, (nseq-2)*3/4, nseq-2. The range of the numbers is between 1 and nseq-2. The smaller the number, the more likely the estimation may underfit the training data. The larger the number, the more likely the estimation may overfit the training data. Stairway plot will pick the best number (among the numbers specified here) to control overfitting based on the remaining 1-pct_training sites used as testing data.
+project_dir --> en esta carpeta se guarda el resultado.
+stairway_plot_dir --> no se toca.
+ninput --> no se toca.
+mu --> mutation_rate, en mi caso voy a poner la de lince: 6e-9
+year_per_generation --> 5 en mi caso.
+plot_title --> nombre del plot
+xrange --> no se toca
+yrange --> no se toca
+xspacing --> no se toca
+yspacing --> no se toca
+fontsize --> no se toca
+
+Lo primero que voy a hacer es hacerme uno base para poder modificarlo.
+
+## Template generation
+
+Creo un template para poder completarlo
+
+nano POPULATION.blueprint
+
+```{}
+#!/bin/sh
+
+#define parameters which are passed in
+POP=$1
+NSEQ=$2
+NSITES=$3
+
+#define the template.
+cat  << EOF
+popid: $POP
+nseq: $NSEQ
+L: $NSITES
+whether_folded: false 
+SFS: $SFS
+#smallest_size_of_SFS_bin_used_for_estimation: 2 
+#largest_size_of_SFS_bin_used_for_estimation: 28 
+pct_training: 0.67 
+nrand: $NRAD
+project_dir: $POP/
+stairway_plot_dir: stairway_plot_es 
+ninput: 200 
+#output setting
+mu: 6e-9
+year_per_generation: 5
+#plot setting
+plot_title: $POP
+xrange: 0.1,10000 
+yrange: 0,0 
+xspacing: 2 
+yspacing: 2 
+fontsize: 12
+EOF
+
+```
+
+
+Ahora hago un loop para que rellene los campos que tiene que modificar
+
+## Loop for generating the files
+
+Primero miro la carpeta donde están mis sfs.
+
+```{bash}
+locate *intergenic_sfs*sfs
+/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/c_ll_cr_n006.unfolded-lr.sfs
+/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/c_ll_ki_n013.unfolded-lr.sfs
+/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/c_ll_la_n006.unfolded-lr.sfs
+/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/c_ll_no_n008.unfolded-lr.sfs
+/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/c_ll_po_n008.unfolded-lr.sfs
+/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/c_ll_to-c_ll_ka-c_ll_og_n008.unfolded-lr.sfs
+/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/c_ll_tu_n006.unfolded-lr.sfs
+/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/c_ll_ur_n006.unfolded-lr.sfs
+/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/c_ll_vl_n008.unfolded-lr.sfs
+/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/c_ll_ya_n008.unfolded-lr.sfs
+/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs/x_ll_ba_n003.unfolded-lr.sfs
+```
+
+Ahora por cada uno de los sfs, debo hacer el loop correspondiente:
+
+```{bash}
+
+# El script para que rellene los campos serían este:
+cd /home/mlucena/recent_demographic_reconstruction/stairway_plot
+RUTA_SFS="/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs"
+
+for SFS_FILE in $RUTA_SFS/*sfs;
+do
+
+SFS_FILE_NAME=${SFS_FILE/\/home\/mlucena\/ANGSD_analysis\/intergenic_analysis\/intergenic_sfs\//}  
+POP=${SFS_FILE_NAME/\.unfolded\-lr\.sfs/}
+echo $POP
+NSEQ=`echo ${POP: -3}*2 | bc`
+NSITES=`gawk '{for(i=1;i<=NF;i++)s+=$i;printf("%.0f\n", s)}' $SFS_FILE`
+SFS=`cat $SFS_FILE | cut -d" " -f 2- $SFS_FILE | rev | sed -e 's/^[ \t]*//' | cut -d" " -f 2- | rev`
+NRAD1=`echo $(( (NSEQ -2) / 4 ))`
+NRAD2=`echo $(( (NSEQ -2) / 2 ))`
+NRAD3=`echo $(( (NSEQ -2) * 3/4 ))`
+NRAD4=`echo $(( NSEQ -2 ))`
+NRAD=`echo $NRAD1 $NRAD2 $NRAD3 $NRAD4`
+
+mkdir $POP
+cd $POP
+
+scp -r ../stairway_plot_es .
+
+../POPULATION.blueprint """$POP""" """$NSEQ""" """$NSITES""" """$SFS""" """$NRAD""" > $POP.blueprint
+# Así creo las carpetas
+java -cp ../stairway_plot_es Stairbuilder $POP.blueprint
+# Voy a lanzar de una en una, porque quiero lanzar varias a la vez. 
+# HOW TO RUN THE ANALYSIS
+echo RUN $POP!
+
+chmod 700 $POP.blueprint.sh
+./$POP.blueprint.sh
+
+cd ..
+touch $POP.borrar
+
+done
+
+
+```
+
+# Run the analysis
+
+
+
+```{bash}
+./two-epoch_c_ll_ya_n008.blueprint.sh 
+```
+
+
 
 
