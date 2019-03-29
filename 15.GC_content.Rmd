@@ -3,52 +3,39 @@ title: "15.GC_content"
 output: html_document
 ---
 
+# GC content calculation
+
+Calculo la GC content basandome en esta discusión
 https://www.biostars.org/p/47047/
+
+## Lista de unidades
+
+Las copio del script de divergencia:
+
 ```{bash}
 
 mkdir GC_content
-cd GC_content/
+cd /home/mlucena/GC_content/
 
-bedtools nuc -fi /home/mlucena/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa -bed /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3 > LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.GC_content.gff
+scp /home/mlucena/divergence/list_of_units_with_chr_info_in_lynx_no_duplicates_per_scaffold/list_of_units_with_chr_info_in_lynx_no_duplicates.bed .
 
+# Como hice un sort en la ultima linea tiene el cabecero:
+
+head -n -1 list_of_units_with_chr_info_in_lynx_no_duplicates.bed > temp.bed
+mv temp.bed list_of_units_with_chr_info_in_lynx_no_duplicates.bed
+
+bedtools nuc -fi /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa -bed /home/mlucena/GC_content/list_of_units_with_chr_info_in_lynx_no_duplicates.bed > list_of_units_with_chr_info_in_lynx_no_duplicates.GC_content.lp.bed
+bedtools nuc -fi /GRUPOS/grupolince/reference_genomes/lynx_lynx_genome/LynxLynx_SNVsOnly.fa -bed /home/mlucena/GC_content/list_of_units_with_chr_info_in_lynx_no_duplicates.bed > list_of_units_with_chr_info_in_lynx_no_duplicates.GC_content.ll.bed
 
 ```
 
 
+# Download GC content file
+
+```{bash}
+
+scp  mlucena@genomics-b.ebd.csic.es:/home/mlucena/GC_content/list_of_units_with_chr_info_in_lynx_no_duplicates.GC_content.lp.bed /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/GC_content
+scp  mlucena@genomics-b.ebd.csic.es:/home/mlucena/GC_content/list_of_units_with_chr_info_in_lynx_no_duplicates.GC_content.ll.bed /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/GC_content
 
 
-https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
-```{r}
-library(GenomicRanges)
-library(rtracklayer)
-library(Rsamtools)
-
-GTFfile = "/home/ryand/Documents/Misc/Mus_musculus/Ensembl/GRCm38.71/Annotation/Mus_musculus.GRCm38.71.gtf"
-FASTAfile = "/home/ryand/Documents/Misc/Mus_musculus/Ensembl/GRCm38.71/Sequence/Mus_musculus.GRCm38.71.dna.toplevel.fa"
-
-#Load the annotation and reduce it
-GTF <- import.gff(GTFfile, format="gtf", genome="GRCm38.71", asRangedData=F, feature.type="exon")
-grl <- reduce(split(GTF, elementMetadata(GTF)$gene_id))
-reducedGTF <- unlist(grl, use.names=T)
-elementMetadata(reducedGTF)$gene_id <- rep(names(grl), elementLengths(grl))
-
-#Open the fasta file
-FASTA <- FaFile(FASTAfile)
-open(FASTA)
-
-#Add the GC numbers
-elementMetadata(reducedGTF)$nGCs <- letterFrequency(getSeq(FASTA, reducedGTF), "GC")[,1]
-elementMetadata(reducedGTF)$widths <- width(reducedGTF)
-
-#Create a list of the ensembl_id/GC/length
-calc_GC_length <- function(x) {
-    nGCs = sum(elementMetadata(x)$nGCs)
-    width = sum(elementMetadata(x)$widths)
-    c(width, nGCs/width)
-}
-output <- t(sapply(split(reducedGTF, elementMetadata(reducedGTF)$gene_id), calc_GC_length))
-colnames(output) <- c("Length", "GC")
-
-write.table(output, file="GC_lengths.tsv", sep="\t")
 ```
-
