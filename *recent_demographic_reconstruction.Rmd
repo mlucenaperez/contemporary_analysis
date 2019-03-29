@@ -443,12 +443,13 @@ Ahora por cada uno de los sfs, debo hacer el loop correspondiente:
 
 # El script para que rellene los campos serían este:
 cd /home/mlucena/recent_demographic_reconstruction/stairway_plot
-RUTA_SFS="/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs"
+# RUTA_SFS="/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs" # para boreal
+# RUTA_SFS="/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs" # para pardinus
 
-for SFS_FILE in $RUTA_SFS/*sfs;
+for SFS_FILE in $RUTA_SFS/c_lp*sfs;
 do
 
-SFS_FILE_NAME=${SFS_FILE/\/home\/mlucena\/ANGSD_analysis\/intergenic_analysis\/intergenic_sfs\//}  
+SFS_FILE_NAME=`echo $SFS_FILE | rev | cut -d"/" -f 1 | rev ` 
 POP=${SFS_FILE_NAME/\.unfolded\-lr\.sfs/}
 echo $POP
 NSEQ=`echo ${POP: -3}*2 | bc`
