@@ -74,7 +74,7 @@ cat ll_perspecies.trimmed_filtered1.ann.IBDseq.ibd | java -jar ibdne.07May18.6a4
 Dead end. Siguiente aproximación.
 (Primero limpio la carpeta porque nada de lo que hay aquí me va a servir).
 
-# SNeP
+# 1. SNeP
 
 Para esta aproximación necesito un archivo ped y un archivo map. El programa me puede calcular el archivo de ld. 
 Leer manual y artículo de Barbato donde presentan el método. 
@@ -282,7 +282,7 @@ scp /home/maria/SneP/*Ne* mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_de
 
 mkdir /Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/recent_demographic_reconstruction
 
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/*NeAll /Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/*NeAll /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/SNeP/
 
 ```
 
@@ -296,7 +296,7 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstructi
 library(ggplot2)
 library(RColorBrewer)
 
-wd <- "/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/"
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/SNeP/"
 
 
 finsNeAll = list.files(path = wd, pattern="*NeAll$")
@@ -316,7 +316,7 @@ for (i in 1:length(finsNeAll))
 
 ```
 
-# Stairway plot
+# 2. Stairway plot
 
 Vamos a correr un programa que se llama stairway plot que genera un skyline plot demográfico. Este programa corre en java. Como entrada necesita: numero de sitios monomórficos + polimorficos, el sfs, y el número de alelos (numero de individuos * 2). Todos estos datos los tengo en el espectro de frecuencias alélicas, que aunque está espresado en likelihood, el programa lo acepta. 
 
@@ -486,10 +486,12 @@ done
 
 # Run the analysis
 
-
-
 ```{bash}
 ./two-epoch_c_ll_ya_n008.blueprint.sh 
+
+# Para pintar solo el plot
+
+java -Xmx1g -cp stairway_plot_es/ Stairpainter c_lp_sm_n012.blueprint
 ```
 
 
