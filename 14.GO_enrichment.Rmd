@@ -72,37 +72,37 @@ No hace falta hacer este chunk, pq solo se tiene que hacer una vez.
 Voy a seleccionar los KO que son los nombres de proteinas comunes a todos
 
 
-```{bash}
+<!-- ```{bash} -->
 
-cd /GRUPOS/grupolince/Lyp_annotation_Apr14_final
+<!-- cd /GRUPOS/grupolince/Lyp_annotation_Apr14_final -->
 
-grep "ko_group" LYPA23C.all.fix.nr.gff3 > all_mRNA
+<!-- grep "ko_group" LYPA23C.all.fix.nr.gff3 > all_mRNA -->
 
-# sanity check
-# all ko groups
-grep -o '\bko_group=\w*' all_mRNA | wc -l
-#10213
-# All parent_id
-grep -o '\bParent=\w*' all_mRNA | wc -l
-#10213
+<!-- # sanity check -->
+<!-- # all ko groups -->
+<!-- grep -o '\bko_group=\w*' all_mRNA | wc -l -->
+<!-- #10213 -->
+<!-- # All parent_id -->
+<!-- grep -o '\bParent=\w*' all_mRNA | wc -l -->
+<!-- #10213 -->
 
-# Igual! perfecto, los podemos juntar
+<!-- # Igual! perfecto, los podemos juntar -->
 
-paste <(grep -o '\bParent=\w*' all_mRNA) <(grep -o '\bko_group=\w*' all_mRNA) | sed 's/Parent=//g' | sed 's/ko_group=//g' > genes_to_KO.txt
+<!-- paste <(grep -o '\bParent=\w*' all_mRNA) <(grep -o '\bko_group=\w*' all_mRNA) | sed 's/Parent=//g' | sed 's/ko_group=//g' > genes_to_KO.txt -->
 
-rm all_mRNA
+<!-- rm all_mRNA -->
 
-```
+<!-- ``` -->
 
-Me lo bajo a mi carpeta
+<!-- Me lo bajo a mi carpeta -->
 
-```{bash}
-scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/Lyp_annotation_Apr14_final/genes_to_KO.txt /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation
-```
+<!-- ```{bash} -->
+<!-- scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/Lyp_annotation_Apr14_final/genes_to_KO.txt /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation -->
+<!-- ``` -->
 
 ## Load KO information for pathway enrichment
 
-```{bash}
+```{r}
 # Archivo de equivalencias KO con genes
 
 genes_to_KO.list <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/genes_to_KO.txt", header=F)
@@ -137,9 +137,9 @@ Voy a procesarla para que esté disponible para que se la trague R más facil
 
 cd /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/
 
-tail -n+2 list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed_noduplicates.txt
+#tail -n+2 list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed_noduplicates.txt
 
-tail -n+2 list_for_venn_lynx_lynx_ratio_above_1_CDS.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates.txt
+#tail -n+2 list_for_venn_lynx_lynx_ratio_above_1_CDS.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates.txt
 
 tail -n+2 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_trimmed_noduplicates.txt
 
@@ -148,10 +148,9 @@ tail -n+2 list_genes_of_interest_lynx_lynx_high_diversity_ratio_1.txt | cut -d"_
 ```
 
 
-## 1. Aquellas unidades con ratios mayores de uno  comunes a las tres comparaciones (con dos especies).
+## 1. Aquellas unidades con ratios mayores de uno comunes a las tres comparaciones (con dos especies).
 
 
-list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed_noduplicates.txt
 
 
 ###  Loading my files
@@ -220,7 +219,6 @@ write.table(genes_of_interest_KO$V2, paste0(wd, file_output, "_results_KO.txt"),
 
 ## 2. Aquellas unidades con ratios mayores de uno en la comparación de las dos poblaciones de lynx lynx. 
 
-list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates.txt
 
 ### Loading my files
 
@@ -289,9 +287,8 @@ write.table(genes_of_interest_KO$V2, paste0(wd, file_output, "_results_KO.txt"),
 ```
 
 
-## 3. Aquellas unidades con ratios mayores de uno en la comparación de las dos poblaciones de lynx lynx. 
+## 3. Aquellas unidades con ratios ~uno y diversidad en las tres comparaciones
 
-list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates.txt
 
 
 ### Loading my files
@@ -326,7 +323,7 @@ str(geneList)
 
 ```{r}
 
-GOdata <- new("topGOdata", ontology = "BP", description = description, allGenes = geneList,
+GOdata <- new("topGOdata", ontology = "MF", description = description, allGenes = geneList,
                annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
 
 description (GOdata)
@@ -339,9 +336,9 @@ head(score(resultFisher))
 hist(score(resultFisher))
 geneData(resultFisher)
 
-allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=50 )
+allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=50, numChar=300 )
 
-write.table(allRes, paste0(wd, file_output, "_results_GO.txt"), quote = F, row.names = F)
+write.table(allRes, paste0(wd, file_output, "_results_GO_MF.txt"), quote = F, row.names = F)
 
 ```
 
@@ -360,7 +357,6 @@ write.table(genes_of_interest_KO$V2, paste0(wd, file_output, "_results_KO.txt"),
 
 ## 4. Aquellas unidades con ratios mayores de uno en la comparación de las dos poblaciones de lynx lynx. 
 
-list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates.txt
 
 ### Loading my files
 
@@ -408,9 +404,9 @@ head(score(resultFisher))
 hist(score(resultFisher))
 geneData(resultFisher)
 
-allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=50 )
+allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=50, numChar=300 )
 
-write.table(allRes, paste0(wd, file_output, "_results_GO.txt"), quote = F, row.names = F)
+write.table(allRes, paste0(wd, file_output, "_results_GO_BP.txt"), quote = F, row.names = F)
 
 ```
 
