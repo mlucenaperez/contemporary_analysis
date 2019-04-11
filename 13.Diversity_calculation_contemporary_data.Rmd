@@ -1108,11 +1108,11 @@ ggplot(data_diversity_autosomes_filtered_ave_corrected,aes(recombination_rate,pa
 ```{r}
 
 ggplot(data_diversity_autosomes_filtered_ave_corrected,aes(region,recombination_rate))+
-  geom_boxplot() +
+  geom_boxplot() + #geom_violin
   scale_color_viridis(discrete=TRUE) +
   scale_fill_viridis(discrete=TRUE) +
 
- ggsave(paste (wd_output, "boxplot_violin_plot/","recombination_rate_per_region.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
+ ggsave(paste (wd_output, "boxplot_violin_plot/","recombination_rate_per_region.pdf", sep="" ))
 
 ```
 
@@ -1885,6 +1885,72 @@ for (DATAFRAME in DATAFRAMES)
    }
 }
 
+
+#####################
+# Plot para main:
+
+ ggplot(data=stats_df_pop_feature_boostrapped %>% filter(.,type_chr=="autosomes"), aes_string(x="Populations",y="mean_pairwise_boot", fill="Populations", color="Populations")) +
+      geom_point() +
+      geom_errorbar(aes(ymin=(mean_pairwise_boot-sd_pairwise_boot), ymax=(mean_pairwise_boot+sd_pairwise_boot))) +
+      # Con este facet soy capaz de separar autosomas de chr chrXes.
+      facet_grid(Species~feature,  scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      scale_color_viridis(discrete=TRUE) +
+      scale_fill_viridis(discrete=TRUE) +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))+
+   scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+   
+    ggsave(paste (wd_output,"mean_pairwise_boot_per_feature_autosomes_both_species.pdf", sep="" ), device="pdf")
+
+
+ggplot(data=stats_df_pop_feature_boostrapped %>% filter(.,type_chr=="autosomes"), aes_string(x="Populations",y="mean_watterson_boot", fill="Populations", color="Populations")) +
+      geom_point() +
+      geom_errorbar(aes(ymin=(mean_watterson_boot-sd_watterson_boot), ymax=(mean_watterson_boot+sd_watterson_boot))) +
+      # Con este facet soy capaz de separar autosomas de chr chrXes.
+      facet_grid(Species~feature,  scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      scale_color_viridis(discrete=TRUE) +
+      scale_fill_viridis(discrete=TRUE) +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))+scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+    ggsave(paste (wd_output,"mean_watterson_boot_per_feature_autosomes_both_species.pdf", sep="" ), device="pdf")
+
+## Chr x
+
+ ggplot(data=stats_df_pop_feature_boostrapped %>% filter(.,type_chr=="chrX"), aes_string(x="Populations",y="mean_pairwise_boot", fill="Populations", color="Populations")) +
+      geom_point() +
+      geom_errorbar(aes(ymin=(mean_pairwise_boot-sd_pairwise_boot), ymax=(mean_pairwise_boot+sd_pairwise_boot))) +
+      # Con este facet soy capaz de separar autosomas de chr chrXes.
+      facet_grid(Species~feature,  scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      scale_color_viridis(discrete=TRUE) +
+      scale_fill_viridis(discrete=TRUE) +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))+
+   scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+    ggsave(paste (wd_output,"mean_pairwise_boot_per_feature_chrX_both_species.pdf", sep="" ), device="pdf")
+
+
+ggplot(data=stats_df_pop_feature_boostrapped %>% filter(.,type_chr=="chrX"), aes_string(x="Populations",y="mean_watterson_boot", fill="Populations", color="Populations")) +
+      geom_point() +
+      geom_errorbar(aes(ymin=(mean_watterson_boot-sd_watterson_boot), ymax=(mean_watterson_boot+sd_watterson_boot))) +
+      # Con este facet soy capaz de separar autosomas de chr chrXes.
+      facet_grid(Species~feature,  scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      scale_color_viridis(discrete=TRUE) +
+      scale_fill_viridis(discrete=TRUE) +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))+scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+    ggsave(paste (wd_output,"mean_watterson_boot_per_feature_chrX_both_species.pdf", sep="" ), device="pdf")
+
+
+
+
 # Corro lo mismo xa la tabla con chr que no tengo que separar entre autosomas y chrXes
 
 DATAFRAMES=c("stats_df_pop_chr_boostrapped") 
@@ -2549,757 +2615,7 @@ ratio_watterson_average_summary <- ratio_watterson_average  %>%
 ```
 
 
-
-# ---------------------------------
-
-#### Diversity pop1 vs pop2
-
-```{r}
-
-library(data.table)
-library(ggplot2)
-
-# En primer lugar hacemos los density plot de las diversidades para cada población. Como ya los habíamos explorado, vemos que eran bimodales, así que con este código fabrico una tablita que recoge el punto más bajo en ese density plot y lo guarda para usarlo despues como punto de corte. 
-
-# Vamos a intentar sacar el punto más bajo en la distribución de los density plot. 
-
-# Todo esta hecho para watterson
-
-DATAFRAMES=c("c_ll_ki_n013_diversity","c_ll_no_n008_diversity", "c_ll_po_n008_diversity", "c_lp_sm_n019_diversity", "c_lp_do_n012_diversity")
-
-for (DATAFRAME in DATAFRAMES)
-{
-  
-  
-POP=get(DATAFRAME) %>% select(pop) %>% mutate(pop=as.character(pop)) %>% .[1,1] 
-  
-maxY1_position <- which.max(density(log(get(DATAFRAME)$watterson_ave))$y)
-maxX1_value <- density(log(get(DATAFRAME)$watterson_ave))$x[maxY1_position] 
-
-maxY_value <- max(density(log(get(DATAFRAME)$watterson_ave))$y[density(log(get(DATAFRAME)$watterson_ave))$x>(maxX1_value+3)])
-
-maxY2_position <- which(density(log(get(DATAFRAME)$watterson_ave))$y == maxY_value)
-maxX2_value <- density(log(get(DATAFRAME)$watterson_ave))$x[maxY2_position] 
-
-DensityWatterson.Y <- density(log(get(DATAFRAME)$watterson_ave))$y
-DensityWatterson.X <- density(log(get(DATAFRAME)$watterson_ave))$x
-
-minY_value <- min(DensityWatterson.Y[DensityWatterson.X < maxX2_value & DensityWatterson.X > maxX1_value])
-minY_position <- which(DensityWatterson.Y == minY_value)
-minX_value <- density(log(get(DATAFRAME)$watterson_ave))$x[minY_position] 
-
-
-ggplot(get(DATAFRAME), aes(log(watterson_ave))) + 
-   geom_density() + 
-   scale_color_viridis(discrete=TRUE) +
-   scale_fill_viridis(discrete=TRUE) +
-   geom_vline(xintercept = density(log(get(DATAFRAME)$watterson_ave))$x[minY_position]) +
-  ggsave(paste0(wd_output, POP,"_density_watterson.pdf"))
-
-
-assign(paste0(POP,"_density_min_value"), c(POP,minX_value))
-
-}
-
-# Uno las distintas tablas de puntos de corte. 
-
-density_min_values <- as.data.frame(rbind (c_lp_sm_n019_density_min_value,c_lp_do_n012_density_min_value, c_ll_ki_n013_density_min_value, c_ll_po_n008_density_min_value, c_ll_no_n008_density_min_value)) 
-names(density_min_values) <- c("pop", "min_density_value")
-density_min_values$min_density_value <- as.numeric(as.character(density_min_values$min_density_value))
-
-
-rm (c_lp_sm_n019_density_min_value)
-rm (c_lp_do_n012_density_min_value)
-rm (c_ll_ki_n013_density_min_value)
-rm (c_ll_po_n008_density_min_value)
-rm (c_ll_no_n008_density_min_value) 
-
-```
-
-#####  GOterm enrichment & dataset prep
-
-```{r}
-
-
-# Ahora vamos a intentar sacar las unidades que quedan por encima de ese minimo en la distribución para ambas poblaciones: serían valores que con alta diversidad en las dos poblaciones. Además queremos que esos valores tengan un ratio similar a uno: tienen alta diveridad y en las dos poblaciones, muy parecida. 
-
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
-
-for (DATAFRAME in DATAFRAMES) 
-{
-  
-  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-  
-  min_non_bootleneck_pop_value <- as.numeric(density_min_values %>% filter(pop==POP1) %>% .[1,2] )
-  min_bootleneck_pop_value <- as.numeric(density_min_values %>% filter(pop==POP2) %>% .[1,2] )
-
-  ## DATASET GO term enrichment and pathway enrichment
-  
-  list_of_genes_GOterm <- get(DATAFRAME) %>% filter(., log(watterson_ave.x)>min_non_bootleneck_pop_value & log(watterson_ave.y)>min_bootleneck_pop_value & ratio_watterson_average>0.6 & ratio_watterson_average<1.4 & feature=="CDS") %>% select ( unique_id)
-  assign(paste0(POP1, "_", POP2,"_list_of_genes_of_interest_high_diversity_ratio_1_CDS"), list_of_genes_GOterm)
-  
-  ## DATASET HD  
-  
-  list_of_genes_HD <- get(DATAFRAME) %>% filter(., log(watterson_ave.x)>min_non_bootleneck_pop_value & log(watterson_ave.y)>min_bootleneck_pop_value) %>% select ( unique_id)
-  assign(paste0(POP1, "_", POP2,"_list_of_units_of_interest_HD"), list_of_genes_HD)
-  
-  ## DATASET LD_W
-      
-  list_of_genes_LD_W <- get(DATAFRAME) %>% filter(., log(watterson_ave.x)>min_non_bootleneck_pop_value & log(watterson_ave.y)<min_bootleneck_pop_value) %>% select ( unique_id)
-  assign(paste0(POP1, "_", POP2,"_list_of_units_of_interest_LD_W"), list_of_genes_LD_W)
-
-######
-  # Aqui categorizo las unidades que tienen uan alta diversidad y ni pierden ni ganan diversidad (HD (high diversity)), las unidades que tiene baja diversidad en la non-bottleneck pero ganan en la bottleneck (LD_W (low diversity win)), las que tienen alta diversidad en la non bottleneck pero baja en la bottleneck (HD_L), y las que tienen baja diversidad en ambas (LD). 
-
-  data_diversity_categories <- get(DATAFRAME) %>% 
-  mutate (evolution_category=
-            ifelse (log(watterson_ave.x)>min_non_bootleneck_pop_value & log(watterson_ave.y)>min_bootleneck_pop_value, "HD",
-            ifelse (log(watterson_ave.x)>min_non_bootleneck_pop_value & log(watterson_ave.y)<min_bootleneck_pop_value, "LD_G",
-            ifelse (log(watterson_ave.x)<min_non_bootleneck_pop_value & log(watterson_ave.y)<min_bootleneck_pop_value, "LD",
-            ifelse (log(watterson_ave.x)<min_non_bootleneck_pop_value & log(watterson_ave.y)>min_bootleneck_pop_value, "HD_L",NA))))) %>% 
-  mutate (diversity_category=
-            ifelse (log(watterson_ave.y)>min_bootleneck_pop_value, "HD",
-            ifelse (log(watterson_ave.y)<min_bootleneck_pop_value, "LD",NA)))
-
-data_diversity_categories$evolution_category <- factor (data_diversity_categories$evolution_category, levels=c("HD_L", "HD", "LD", "LD_G"))
-data_diversity_categories$diversity_category <- factor (data_diversity_categories$diversity_category, levels=c("HD", "LD"))
-
-  assign(paste0("data_diversity_",POP1, "_diversity_", POP2,"_diversity_categories"), data_diversity_categories)
-
-  }
-
-
-# Los uno
-
-# Los que van a servir para hacer GO termn.
-
-list_genes_of_interest_lynx_lynx_high_diversity_ratio_1 <- inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS, c_ll_ki_n013_c_ll_po_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS)
-
-list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1 <- inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS, c_ll_ki_n013_c_ll_po_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS) %>% inner_join(., c_lp_sm_n019_c_lp_do_n012_list_of_genes_of_interest_high_diversity_ratio_1_CDS)
-
-write.table(list_genes_of_interest_lynx_lynx_high_diversity_ratio_1, paste0(wd_output,"list_genes_of_interest_lynx_lynx_high_diversity_ratio_1.txt" ), quote = F, row.names = F)
-
-write.table(list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1, paste0(wd_output,"list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1.txt" ), quote = F, row.names = F)
-
-# Los que son HD en todas las poblaciones.
-
-colnames(c_ll_ki_n013_c_ll_no_n008_list_of_units_of_interest_HD) <- "c_ll_ki_n013_c_ll_no_n008_HD"
-colnames(c_ll_ki_n013_c_ll_po_n008_list_of_units_of_interest_HD) <- "c_ll_ki_n013_c_ll_po_n008_HD"
-colnames(c_lp_sm_n019_c_lp_do_n012_list_of_units_of_interest_HD) <- "c_lp_sm_n019_c_lp_do_n012_HD"
-
-colnames(c_ll_ki_n013_c_ll_no_n008_list_of_units_of_interest_LD_W) <- "c_ll_ki_n013_c_ll_no_n008_LD_G"
-colnames(c_ll_ki_n013_c_ll_po_n008_list_of_units_of_interest_LD_W) <- "c_ll_ki_n013_c_ll_po_n008_LD_G"
-colnames(c_lp_sm_n019_c_lp_do_n012_list_of_units_of_interest_LD_W) <- "c_lp_sm_n019_c_lp_do_n012_LD_G"
-
-
-```
-
-
-##### Diversity plot pop1 vs pop2
-
-```{r}
-
-# Plot de diversidad de una población frente a otra, con el corte de los valores más bajos en el density plot para ambos casos, y graficamente ploteados esos cortes. 
-
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
-
-for (DATAFRAME in DATAFRAMES) 
-{
- 
-  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-  
-  min_non_bootleneck_pop_value <- as.numeric(density_min_values %>% filter(pop==POP1) %>% .[1,2] )
-  min_bootleneck_pop_value <- as.numeric(density_min_values %>% filter(pop==POP2) %>% .[1,2] )
-
-  DATAFRAME_modif <- get(DATAFRAME) %>% mutate (col=ifelse(log(watterson_ave.x)>min_non_bootleneck_pop_value & log(watterson_ave.y)>min_bootleneck_pop_value & ratio_watterson_average>0.6 & ratio_watterson_average<1.4 & feature=="CDS", "interesting_genes", "shit"))
-
-  
-   ggplot(data=DATAFRAME_modif, aes(x=log(watterson_ave.y) ,y=log(watterson_ave.x), fill=col, colour=col)) +
-    geom_point(alpha = 1/100) +
-    geom_abline(intercept = 0) +
-    geom_hline(yintercept= min_non_bootleneck_pop_value) +
-    geom_vline(xintercept = min_bootleneck_pop_value) +
-    facet_wrap(~feature) +
-    scale_color_viridis(discrete=TRUE) +
-    scale_fill_viridis(discrete=TRUE) +
-    theme(legend.position="none") 
-   # scale_color_manual(values=c("#999999", "#E69F00"))
-   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson.pdf", sep=""))
-   
-    ggplot(data=DATAFRAME_modif, aes(x=log(watterson_ave.y) ,y=log(watterson_ave.x), fill=col, colour=col)) +
-    geom_point(alpha = 1/100) +
-    geom_abline(intercept = 0) +
-    geom_hline(yintercept= min_non_bootleneck_pop_value) +
-    geom_vline(xintercept = min_bootleneck_pop_value) +
-    scale_color_viridis(discrete=TRUE) +
-    scale_fill_viridis(discrete=TRUE) +
-    facet_wrap(~feature, scales = "free" ) +
-    theme(legend.position="none") 
-   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson_scalefree.pdf", sep=""))
-
-} 
-
-
-# Un pequeño codigo para plotear el density plot al lado de una nube de puntos. 
-# #marginal density of x - plot on top
-# plot_top <- ggplot(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(watterson_ave.y)) + 
-#   geom_density(alpha=.5) + 
-#   theme(legend.position = "none")
-# 
-# #marginal density of y - plot on the right
-# plot_right <-ggplot(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(watterson_ave.x)) + 
-#   geom_density(alpha=.5) + 
-#   theme(legend.position = "none")
-# 
-# #arrange the plots together, with appropriate height and width for each row and column
-# grid.arrange(plot_top, empty, scatter, plot_right, ncol=2, nrow=2, widths=c(4, 1), heights=c(1, 4))
-
-
-```
-
-##### Stats de divergence, recombination and GC content by feature, taking into consideration categories.
-
-```{r}
-
-divergence_recomb_and_GC_by_evol_category <- function(DATAFRAME)
-{
-  
-  POP1=DATAFRAME %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-  POP2=DATAFRAME %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-
-  
-  div_recom_GC_by_categ_summary <- 
-             DATAFRAME %>% dplyr::filter (type_chr=="autosomes") %>% 
-             dplyr::group_by(feature, diversity_category, evolution_category) %>%
-             dplyr::summarise(
-                       total_count=n(), 
-             
-                       # Distribución sin corregir
-                       
-                       mean_divergence=mean(divergence, na.rm = T),
-                       stdev_divergence=sqrt(var(divergence, na.rm = T)),
-
-                       mean_recombination_rate=mean(recombination_rate,  na.rm = T),
-                       stdev_recombination_rate=sqrt(var(recombination_rate, na.rm = T)),
-
-                       mean_GC_content=mean(GC_content,  na.rm = T),
-                       stdev_GC_content=sqrt(var(GC_content, na.rm = T)))
-
-return(div_recom_GC_by_categ_summary)
-
-}
-
-# Creo las tablas
-
-c_ll_ki_n013_diversity_c_ll_no_n008_diver_recomb_GC_evol_caterogy <- divergence_recomb_and_GC_by_evol_category(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories) 
-
-c_ll_ki_n013_diversity_c_ll_po_n008_diver_recomb_GC_evol_caterogy <- divergence_recomb_and_GC_by_evol_category(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories) 
-
-c_lp_sm_n019_diversity_c_lp_do_n012_diver_recomb_GC_evol_caterogy <- divergence_recomb_and_GC_by_evol_category(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories) 
-
-
-```
-
-
-
-# ---------------------------------
-
-### Plots interacción per unit
-
-#### Boxplot Categories (HD,LD) vs. divergence
-
-```{r}
-
-# De esta manera ploteo la media. 
-p1 <- ggplot(aes(y = mean_divergence, x = factor(evolution_category)), data = c_ll_ki_n013_diversity_c_ll_no_n008_diver_recomb_GC_evol_caterogy %>% filter(diversity_category=="HD"))
-p1 + facet_grid(rows = vars(feature) ) + geom_errorbar(aes(ymax = mean_divergence + stdev_divergence, ymin = mean_divergence - stdev_divergence),
-                position = "dodge") + geom_point() + stat_compare_means(method="wilcox.test", label="p.signif")
-
-
-library("ggpubr")
-library("cowplot")
-
-
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories")
-
-
-
-for (DATAFRAME in DATAFRAMES) {
-
-  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-  
-  sts_HD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD"))$divergence)$stats  # Compute lower and upper whisker limits
-
-  HD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")) , 
-                  x = "evolution_category", y = "divergence", palette = "jco", outlier.shape = NA) + 
-    facet_grid(rows = vars(feature) ) + 
-    coord_cartesian(ylim = c(0,max(sts_HD)*1.05)) +
-    scale_color_viridis(discrete=TRUE) +
-    scale_fill_viridis(discrete=TRUE) +
-    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_HD)-(max(sts_HD)*0.075), label.x=1.5) + 
-    theme(strip.text.y = element_text(angle = 0))
- 
-
-  sts_LD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD"))$divergence)$stats  # Compute lower and upper whisker limits
-
-  LD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD")) , 
-                  x = "evolution_category", y = "divergence", palette = "jco",  outlier.shape = NA) + 
-    facet_grid(rows = vars(feature) ) + 
-    coord_cartesian(ylim = c(0,max(sts_LD)*1.05)) +
-    scale_color_viridis(discrete=TRUE) +
-    scale_fill_viridis(discrete=TRUE) +
-    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_LD)-(max(sts_LD)*0.075), label.x=1.5) +  
-    scale_y_continuous(position = "right") +     
-    theme(strip.background = element_blank(),strip.text.y = element_blank())
-
-
-  HD_LD <- ggdraw() +
-  draw_plot(LD, x = .6, y = 0, width = 0.4, height = 1) +
-  draw_plot(HD, x = 0, y = 0, width = .55, height = 1)
-
-save_plot(paste(wd_output,POP1,"_",POP2,"_diverg_by_category.pdf",sep=""), HD_LD, ncol=2, nrow=5)
-}
-  
-```
-
-#### Boxplot Categories (HD,LD) vs. recombination
-
-```{r}
-
-library("ggpubr")
-library("cowplot")
-
-
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories")
-
-
-for (DATAFRAME in DATAFRAMES) {
-
-  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-  
-  sts_HD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD"))$recombination_rate)$stats  # Compute lower and upper whisker limits
-
-  HD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")) , 
-                  x = "evolution_category", y = "recombination_rate", palette = "jco", outlier.shape = NA) + 
-    facet_grid(rows = vars(feature) ) + 
-    coord_cartesian(ylim = c(0,max(sts_HD)*1.05)) + 
-    scale_color_viridis(discrete=TRUE) +
-    scale_fill_viridis(discrete=TRUE) +
-    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_HD)-(max(sts_HD)*0.075), label.x=1.5) + 
-    theme(strip.text.y = element_text(angle = 0))
- 
-
-  sts_LD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD"))$recombination_rate)$stats  # Compute lower and upper whisker limits
-
-  LD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD")) , 
-                  x = "evolution_category", y = "recombination_rate", palette = "jco",  outlier.shape = NA) + 
-    facet_grid(rows = vars(feature) ) + 
-    coord_cartesian(ylim = c(0,max(sts_LD)*1.05)) + 
-    scale_color_viridis(discrete=TRUE) +
-    scale_fill_viridis(discrete=TRUE) +
-    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_LD)-(max(sts_LD)*0.075), label.x=1.5) +  
-    scale_y_continuous(position = "right") + 
-    theme(strip.background = element_blank(),strip.text.y = element_blank())
-
-HD_LD <- ggdraw() +
-  draw_plot(LD, x = .6, y = 0, width = 0.4, height = 1) +
-  draw_plot(HD, x = 0, y = 0, width = .55, height = 1)
-
-save_plot(paste(wd_output,POP1,"_",POP2,"_recomb_by_category.pdf",sep=""), HD_LD, ncol=2, nrow=5)
-}
-```
-
-
-
-#### Boxplot Categories (HD,LD) vs. GC content
-
-```{r}
-
-library("ggpubr")
-library("cowplot")
-
-
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories")
-
-
-for (DATAFRAME in DATAFRAMES) {
-
-  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-  
-  sts_HD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD"))$GC_content)$stats  # Compute lower and upper whisker limits
-
-  HD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")) , 
-                  x = "evolution_category", y = "GC_content", palette = "jco", outlier.shape = NA) + 
-    facet_grid(rows = vars(feature) ) + 
-    coord_cartesian(ylim = c(0,max(sts_HD)*1.05)) + 
-    scale_color_viridis(discrete=TRUE) +
-    scale_fill_viridis(discrete=TRUE) +
-    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_HD)-(max(sts_HD)*0.075), label.x=1.5) + 
-    theme(strip.text.y = element_text(angle = 0))
- 
-
-  sts_LD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD"))$GC_content)$stats  # Compute lower and upper whisker limits
-
-  LD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD")) , 
-                  x = "evolution_category", y = "GC_content", palette = "jco",  outlier.shape = NA) + 
-    facet_grid(rows = vars(feature) ) + 
-    coord_cartesian(ylim = c(0,max(sts_LD)*1.05)) + 
-    scale_color_viridis(discrete=TRUE) +
-    scale_fill_viridis(discrete=TRUE) +
-    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_LD)-(max(sts_LD)*0.075), label.x=1.5) +  
-    scale_y_continuous(position = "right") + 
-    theme(strip.background = element_blank(),strip.text.y = element_blank())
-
-HD_LD <- ggdraw() +
-  draw_plot(LD, x = .6, y = 0, width = 0.4, height = 1) +
-  draw_plot(HD, x = 0, y = 0, width = .55, height = 1)
-
-save_plot(paste(wd_output,POP1,"_",POP2,"_GCcontent_by_category.pdf",sep=""), HD_LD, ncol=2, nrow=5)
-}
-```
-
-
-
-#### Ratio vs. divergence
-
-Exploro el ratio de ganancia vs. la tasa de divergencia, para ver si las zonas con más divergencia ganan mas diversidad. 
-
-
-```{r}
-
-INDEXES=c("ratio_pairwise_average", "ratio_watterson_average")
-
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
-
-# Plot de los valores de divergencia con logaritmo frente a la diversidad. 
-
-for (DATAFRAME in DATAFRAMES)
-{
-for (INDEX in INDEXES)
-  {
-
-  NAME_POP1 <- as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
-  NAME_POP2 <- as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
-
-ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("divergence", sprintf("log(%s)", INDEX))) + 
-  geom_point() + 
-  facet_grid(~feature)+
-  geom_smooth(method = "lm")
-    ggsave(paste (wd_output,NAME_POP1,"_",NAME_POP2,"_diverg_vs_",INDEX,".pdf", sep="" ))
-}
-  }
-    
-    
-
-```
-
-#### Ratio vs. recombination
-
-Exploro el ratio de ganancia vs. la recombination rate, para ver si las zonas con más recombinación ganan menos diversidad que zonas con más baja recombinación. 
-
-```{r}
-
-INDEXES=c("ratio_pairwise_average", "ratio_watterson_average")
-
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
-
-# Plot de los valores de recombinación con logaritmo frente a la diversidad. 
-
-for (DATAFRAME in DATAFRAMES)
-{
-for (INDEX in INDEXES)
-  {
-
-  NAME_POP1 <- as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
-  NAME_POP2 <- as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
-
-ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("recombination_rate", sprintf("log(%s)", INDEX))) + 
-  geom_point() + 
-  facet_grid(~feature)+
-  geom_smooth(method = "lm")
-    ggsave(paste (wd_output,NAME_POP1,"_",NAME_POP2,"_recomb_vs_",INDEX,".pdf", sep="" ), device="pdf")
-
-ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("recombination_rate", sprintf("log(%s)", INDEX))) + 
-  geom_point() + 
-  facet_grid(~feature)+
-  geom_smooth(method = "lm")
-    ggsave(paste (wd_output,NAME_POP1,"_",NAME_POP2,"_recomb_vs_",INDEX,".pdf", sep="" ), device="pdf")
-}
-  }
-    
-    
-# Boxplot de recombinación por categorías frente a diversidad.
-
-for (DATAFRAME in DATAFRAMES)
-  {
-  
-  NAME_POP1 <- as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
-  NAME_POP2 <- as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
-
-# Compute boxplot statistics to rm outliers
-sts <- boxplot.stats(get(DATAFRAME)$ratio_pairwise_average)$stats  # Compute lower and upper whisker limits
-# Now to achieve full expanded view of the multiple boxplots, it is useful to modify the y-axis limit of the plot inside coord_cartesian() function as below,
-
-ggplot(get(DATAFRAME) %>% filter(!is.na(recombination_category)), aes_string("recombination_category", "ratio_pairwise_average"))+
-  geom_boxplot(outlier.shape = NA) +
-  coord_cartesian(ylim = c(sts[2]/2,max(sts)*1.05)) +
-  facet_grid(~feature) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-ggsave(paste (wd_output,NAME_POP1,"_",NAME_POP2,"_recomb_vs_ratio_pairwise_average_boxplot.pdf", sep="" ), device="pdf")
-
-# Compute boxplot statistics to rm outliers
-sts <- boxplot.stats(get(DATAFRAME)$ratio_watterson_average)$stats  # Compute lower and upper whisker limits
-# Now to achieve full expanded view of the multiple boxplots, it is useful to modify the y-axis limit of the plot inside coord_cartesian() function as below,
-
-ggplot(get(DATAFRAME) %>% filter(!is.na(recombination_category)), aes_string("recombination_category", "ratio_watterson_average"))+
-  geom_boxplot(outlier.shape = NA) +
-  coord_cartesian(ylim = c(sts[2]/2,max(sts)*1.05)) +
-  facet_grid(~feature)+
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggsave(paste (wd_output,NAME_POP1,"_",NAME_POP2,"_recomb_vs_ratio_watterson_average_boxplot.pdf", sep="" ), device="pdf")
-
-}
-
-
-# Voy a hacer un lm
-
-library("lme4")
-
-
-ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_po_n008_diversity <- lmList(log(ratio_pairwise_average_corrected) ~ recombination_rate | feature, data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity)
-
-sink(paste (wd_output,"lm_ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_per_feature_c_ll_ki_n013_c_ll_po_n008.txt"))
-print(summary(ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_po_n008_diversity))
-sink()
-
-ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_no_n008_diversity <- lmList(log(ratio_pairwise_average_corrected) ~ recombination_rate | feature, data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity)
-
-sink(paste (wd_output,"lm_ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_per_feature_c_ll_ki_n013_c_ll_no_n008.txt"))
-print(summary(ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_no_n008_diversity))
-sink()
-
-ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_lp_sm_n019_c_lp_do_n012_diversity  <- lmList(log(ratio_pairwise_average_corrected) ~ recombination_rate | feature, data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity)
-
-sink(paste (wd_output,"lm_ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_per_feature_c_lp_sm_n019_c_lp_do_n012.txt"))
-print(summary(ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_lp_sm_n019_c_lp_do_n012_diversity))
-sink()
-
-
-```
-
-
-#### Venh-diagram
-
-Sobre estas tablas que acabo de crear donde están TODAS las unidades y el ratio entre par de poblaciones, voy a sacar todas las unidades con un ratio mayor que uno y voy a hacer un diagrama de Venh. 
-
-
-Ojo!
-
-Tengo que copiarlas a la terminal y de ahí guardarlas a mano. 
-
-
-```{r}
-
-# https://stackoverflow.com/questions/8713994/venn-diagram-proportional-and-color-shading-with-semi-transparency
-# https://rstudio-pubs-static.s3.amazonaws.com/13301_6641d73cfac741a59c0a851feb99e98b.html
-# Al final uso --> https://www.r-bloggers.com/working-with-venn-diagrams/
-
-library(VennDiagram)
-
-# All features:
-
-
-c_ll_ki_n013_c_ll_no_n008list_of_units_of_interest_HD_list <- lapply(as.list(c_ll_ki_n013_c_ll_no_n008_list_of_units_of_interest_HD), function(x) x[x != ""])
-c_ll_ki_n013_c_ll_po_n008list_of_units_of_interest_HD_list <- lapply(as.list(c_ll_ki_n013_c_ll_po_n008_list_of_units_of_interest_HD), function(x) x[x != ""])
-c_lp_sm_n019_c_lp_do_n012list_of_units_of_interest_HD_list <- lapply(as.list(c_lp_sm_n019_c_lp_do_n012_list_of_units_of_interest_HD), function(x) x[x != ""])
-
-list_units_of_interest_lynx_lynx_lynx_pardinus_HD <- c(c_ll_ki_n013_c_ll_no_n008list_of_units_of_interest_HD_list, c_ll_ki_n013_c_ll_po_n008list_of_units_of_interest_HD_list, c_lp_sm_n019_c_lp_do_n012list_of_units_of_interest_HD_list)
-
-
-c_ll_ki_n013_c_ll_no_n008list_of_units_of_interest_LD_W_list <- lapply(as.list(c_ll_ki_n013_c_ll_no_n008_list_of_units_of_interest_LD_W), function(x) x[x != ""])
-c_ll_ki_n013_c_ll_po_n008list_of_units_of_interest_LD_W_list <- lapply(as.list(c_ll_ki_n013_c_ll_po_n008_list_of_units_of_interest_LD_W), function(x) x[x != ""])
-c_lp_sm_n019_c_lp_do_n012list_of_units_of_interest_LD_W_list <- lapply(as.list(c_lp_sm_n019_c_lp_do_n012_list_of_units_of_interest_LD_W), function(x) x[x != ""])
-
-list_units_of_interest_lynx_lynx_lynx_pardinus_LD_W <- c(c_ll_ki_n013_c_ll_no_n008list_of_units_of_interest_LD_W_list, c_ll_ki_n013_c_ll_po_n008list_of_units_of_interest_LD_W_list, c_lp_sm_n019_c_lp_do_n012list_of_units_of_interest_LD_W_list)
-
-
-# Now we can plot a Venn diagram with the VennDiagram R package, as follows:
-
-
-VENN.LIST <- list_units_of_interest_lynx_lynx_lynx_pardinus_HD
-venn.plot <- venn.diagram(VENN.LIST , 
-                          filename = NULL,
-                          scaled = TRUE,
-                          fill=c("palegreen", "steelblue1", "pink"), 
-                          lty = "blank", 
-                          cex = 1,
-                          alpha=c(0.3,0.3, 0.3), 
-                          cat.fontface=4, main="Genes with HD bootleneck & non bootleneck")
-
-
-
-
-
-# To plot the venn diagram we will use the grid.draw() function to plot the venn diagram
-grid.draw(venn.plot)
-
-VENN.LIST <- list_units_of_interest_lynx_lynx_lynx_pardinus_LD_W
-venn.plot <- venn.diagram(VENN.LIST , 
-                          filename = NULL,
-                          scaled = TRUE,
-                          fill=c("palegreen", "steelblue1", "pink"), 
-                          lty = "blank", 
-                          cex = 1,
-                          alpha=c(0.3,0.3, 0.3), 
-                          cat.fontface=4, main="Genes with gain in diversity in bootleneck vs non bootleneck")
-
-
-
-
-
-# To plot the venn diagram we will use the grid.draw() function to plot the venn diagram
-grid.draw(venn.plot)
-
-
-```
-
-
-#### Boxplot ratio per unit
-
-No corro esto porque creo que NO es útil.
-Lo que representa es el boxplot de los ratios y se ve que hay algunos valores muy extremos. 
-
-Los ratios que voy a representar son:
-"ratio_pairwise_average", "ratio_watterson_average", "ratio_corrected_by_pairwise_average_intergenic_per_unit", "ratio_corrected_by_watterson_average_intergenic_per_unit"
-No estoy haciendo esta vez: 
-"ratio_corrected_by_pairwise_average_intergenic_weighted", "ratio_corrected_by_watterson_average_intergenic_weighted"
-Primero los voy a representar en boxplot para chr, feature, y región , luego voy a hacer una tabla con la media de los ratios y su bootstrap. 
-
-```{r}
-
-library(rlang)
-# Ratio de la diversidad población bootleneck frente non bootleneck
-## BOXPLOT
-
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity", "data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity", "data_diversity_c_lp_sm_n019_autosomes_diversity_c_lp_do_n012_autosomes_diversity")
-
-INDICES=c("ratio_watterson_average", "ratio_pairwise_average")
-
-GROUPS=c("feature", "chr")
-
-
-myplot <- function(data, title){
-  for (INDEX in INDICES){
-    for (GROUP in GROUPS){
-  pdf(paste(wd_output, "boxplot_violin_plot/",title,"_",GROUP,"_",INDEX,"_boxplot.pdf", sep=""))
-  plot <- ggplot(data=data, aes_string(x=GROUP, y = INDEX)) +
-        geom_boxplot() +
-        #scale_y_continuous(trans = 'log10') +
-        theme_bw() +  #theme selection for background and lines
-        theme(axis.line.x = element_line(color="black", size = 0.5),
-              axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))+
-  labs(title = paste (title,  sep=""))
-  print (plot)
-  dev.off()
-}}}
-
-
-
-myplot2 <- function(data, title){
-  for (INDEX in INDICES){
-    for (GROUP in GROUPS){
-  pdf(paste(wd_output, "boxplot_violin_plot/",title,"_",GROUP,"_",INDEX,"_violin.pdf", sep=""))
-  plot <- ggplot(data=data, aes_string(x=GROUP, y = INDEX)) +
-        geom_violin() +
-        #scale_y_continuous(trans = 'log10') +
-        theme_bw() +  #theme selection for background and lines
-        theme(axis.line.x = element_line(color="black", size = 0.5),
-              axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))+
-  labs(title = paste (title, sep=""))
-  print (plot)
-  dev.off()
-}}}
-
-
-
-for(i in DATAFRAMES){
-  print(myplot(get(i), i))
-  print(myplot2(get(i), i))
-
-}
-
-
-```
-
-
-#### 3D Plot divergence and recombination vs ratio
-
-```{r}
-library(plotly)
-
-# data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity
-
-plot_ly(x=filter(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity,feature=="UCNE")$divergence,
-        y=filter(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity,feature=="UCNE")$recombination_rate,
-        z=filter(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity,feature=="UCNE")$ratio_watterson_average)
-
-
-plot_ly(x=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$divergence,
-        y=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$recombination_rate,
-        z=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$ratio_watterson_average, 
-        color = ~data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$feature, 
-        mode = "markers",marker=list(opacity=0.5))
-```
-
-####  Plot boot data for each group
-
-No lo hago
-
-```{r}
-
-library(rlang)
-
-DATAFRAMES=c("ratio_boot_c_ll_ki_n013_c_ll_no_n008_feature", "ratio_boot_c_ll_ki_n013_c_ll_po_n008_feature", "ratio_boot_c_lp_sm_n019_c_lp_do_n012_feature") 
-
-# "ratio_boot_c_ll_ki_n013_c_ll_no_n008_chr", "ratio_boot_c_ll_ki_n013_c_ll_po_n008_chr", "ratio_boot_c_lp_sm_n019_c_lp_do_n012_chr",  "ratio_boot_c_ll_ki_n013_c_ll_no_n008_region", "ratio_boot_c_ll_ki_n013_c_ll_po_n008_region", "ratio_boot_c_lp_sm_n019_c_lp_do_n012_region") 
-
-INDICES=c("ratio_watterson_boot", "ratio_pairwise_boot")
-
-
-
-
-myplot3 <- function(data,title){
-  for (INDEX in INDICES)
-  {
-    print (INDEX)
-  pdf(paste(wd_output,title,"_",INDEX,".pdf", sep=""))
-  plot <- ggplot(data=data, aes_string(x=colnames(data)[1],y=paste("mean_",INDEX,sep=""), fill="chr_type", colour="chr_type")) +
-        geom_point() +
-        geom_errorbar(aes_string(ymin=paste("mean_",INDEX,"-sd_",INDEX,sep=""), ymax=paste("mean_",INDEX,"+sd_",INDEX,sep=""))) +
-        #scale_y_continuous(trans = 'log10') +
-        theme_bw() +  #theme selection for background and lines
-        theme(axis.line.x = element_line(color="black", size = 0.5),
-              axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))
-  # labs(title = paste (title, "scale_y_transformed", sep=""))
-  print (plot)
-  dev.off() 
-    
-  }
-}
-
-
-for(i in DATAFRAMES){
-  print(myplot3(get(i), i))
-}
-
-
-```
-# -----------------
+# -------------------------------------------------------------------------------------
 
 
 ### Global
@@ -3315,7 +2631,7 @@ POPS=c("c_ll_ki_n013","c_ll_no_n008","c_ll_po_n008", "c_lp_do_n012", "c_lp_sm_n0
 
 # Feature
 for (POP in POPS)
-{print (POP)
+  {print (POP)
     data.frame <-  stats_df_pop_feature  %>%  filter (pop==as.character(POP))
     assign(paste(POP,"_stats_feature", sep=""), data.frame)
   rm (data.frame)}
@@ -3704,6 +3020,7 @@ bootleneck_vs_non_bootleneck_ratio_median_feature_region <- function(dataframe_P
 bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_ll_ki_n013_stats_feature_region,c_ll_no_n008_stats_feature_region, deparse(substitute(c_ll_ki_n013_stats_feature_region)),deparse(substitute(c_ll_no_n008_stats_feature_region)))
 write.table(ratio_median_c_ll_ki_n013_stats_feature_region_c_ll_no_n008_stats_feature_region, paste(wd_output,"ratio_median_feature_region_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
+
 # Dataframe Kirov-Poland
 
 bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_ll_ki_n013_stats_feature_region,c_ll_po_n008_stats_feature_region, deparse(substitute(c_ll_ki_n013_stats_feature_region)),deparse(substitute(c_ll_po_n008_stats_feature_region)))
@@ -3882,13 +3199,13 @@ png(paste(wd_output,"heatmap_",names(DATAFRAME)[1],"_",names(DATAFRAME)[3],"_",I
   pointsize = 8)        # smaller font size
 
 
-my_palette <- colorRampPalette(c("yellow", "orange", "red"))(n = 1000)
+# my_palette <- colorRampPalette(c("yellow", "orange", "red"))(n = 1000)
 # colors = c(seq(-3,-2,length=100),seq(-2,0.5,length=100),seq(0.5,6,length=100))
 
     
 heatmap.2(temp.data.frame.diversity,
   cellnote = temp.data.frame.counts,  
-  col=my_palette, 
+  col=viridis_pal(), 
   #breaks=colors,
   main = paste(INDEX,POP1,POP2, sep=" "), # heat map title
   notecol="black",      # change font color of cell labels to black
@@ -4057,6 +3374,1197 @@ ggplot (as.data.frame(get(DATAFRAME) %>% filter (chr!="chrX")), aes_string("mean
 
 ```
 
+
+# ---------------------------------
+
+#### Diversity pop1 vs pop2
+
+```{r}
+
+library(data.table)
+library(ggplot2)
+
+# En primer lugar hacemos los density plot de las diversidades para cada población. Como ya los habíamos explorado, vemos que eran bimodales, así que con este código fabrico una tablita que recoge el punto más bajo en ese density plot y lo guarda para usarlo despues como punto de corte. 
+
+# Vamos a intentar sacar el punto más bajo en la distribución de los density plot. 
+
+# Todo esta hecho para watterson
+
+DATAFRAMES=c("c_ll_ki_n013_diversity","c_ll_no_n008_diversity", "c_ll_po_n008_diversity", "c_lp_sm_n019_diversity", "c_lp_do_n012_diversity")
+
+for (DATAFRAME in DATAFRAMES)
+{
+  
+  
+POP=get(DATAFRAME) %>% select(pop) %>% mutate(pop=as.character(pop)) %>% .[1,1] 
+  
+maxY1_position <- which.max(density(log(get(DATAFRAME)$watterson_ave))$y)
+maxX1_value <- density(log(get(DATAFRAME)$watterson_ave))$x[maxY1_position] 
+
+maxY_value <- max(density(log(get(DATAFRAME)$watterson_ave))$y[density(log(get(DATAFRAME)$watterson_ave))$x>(maxX1_value+3)])
+
+maxY2_position <- which(density(log(get(DATAFRAME)$watterson_ave))$y == maxY_value)
+maxX2_value <- density(log(get(DATAFRAME)$watterson_ave))$x[maxY2_position] 
+
+DensityWatterson.Y <- density(log(get(DATAFRAME)$watterson_ave))$y
+DensityWatterson.X <- density(log(get(DATAFRAME)$watterson_ave))$x
+
+minY_value <- min(DensityWatterson.Y[DensityWatterson.X < maxX2_value & DensityWatterson.X > maxX1_value])
+minY_position <- which(DensityWatterson.Y == minY_value)
+minX_value <- density(log(get(DATAFRAME)$watterson_ave))$x[minY_position] 
+
+
+ggplot(get(DATAFRAME), aes(log(watterson_ave))) + 
+   geom_density() + 
+   scale_color_viridis(discrete=TRUE) +
+   scale_fill_viridis(discrete=TRUE) +
+   geom_vline(xintercept = density(log(get(DATAFRAME)$watterson_ave))$x[minY_position]) +
+  ggsave(paste0(wd_output, POP,"_density_watterson.pdf"))
+
+
+assign(paste0(POP,"_density_min_value"), c(POP,minX_value))
+
+}
+
+# Uno las distintas tablas de puntos de corte. 
+
+density_min_values <- as.data.frame(rbind (c_lp_sm_n019_density_min_value,c_lp_do_n012_density_min_value, c_ll_ki_n013_density_min_value, c_ll_po_n008_density_min_value, c_ll_no_n008_density_min_value)) 
+names(density_min_values) <- c("pop", "min_density_value")
+density_min_values$min_density_value <- as.numeric(as.character(density_min_values$min_density_value))
+
+
+rm (c_lp_sm_n019_density_min_value)
+rm (c_lp_do_n012_density_min_value)
+rm (c_ll_ki_n013_density_min_value)
+rm (c_ll_po_n008_density_min_value)
+rm (c_ll_no_n008_density_min_value) 
+
+```
+
+#####  GOterm enrichment & dataset prep
+
+```{r}
+
+
+# Ahora vamos a intentar sacar las unidades que quedan por encima de ese minimo en la distribución para ambas poblaciones: serían valores que con alta diversidad en las dos poblaciones. Además queremos que esos valores tengan un ratio similar a uno: tienen alta diveridad y en las dos poblaciones, muy parecida. 
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+for (DATAFRAME in DATAFRAMES) 
+{
+  
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  min_non_bootleneck_pop_value <- as.numeric(density_min_values %>% filter(pop==POP1) %>% .[1,2] )
+  min_bootleneck_pop_value <- as.numeric(density_min_values %>% filter(pop==POP2) %>% .[1,2] )
+
+  ## DATASET GO term enrichment and pathway enrichment
+  
+  list_of_genes_GOterm <- get(DATAFRAME) %>% filter(., log(watterson_ave.x)>min_non_bootleneck_pop_value & log(watterson_ave.y)>min_bootleneck_pop_value & ratio_watterson_average>0.6 & ratio_watterson_average<1.4 & feature=="CDS") %>% select ( unique_id)
+  assign(paste0(POP1, "_", POP2,"_list_of_genes_of_interest_high_diversity_ratio_1_CDS"), list_of_genes_GOterm)
+  
+  ## DATASET D-D  
+  
+  list_of_genes_D_D <- get(DATAFRAME) %>% filter(., log(watterson_ave.x)>min_non_bootleneck_pop_value & log(watterson_ave.y)>min_bootleneck_pop_value & feature=="CDS") %>% select ( unique_id)
+  
+  assign(paste0(POP1, "_", POP2,"_list_CDS_D_D"), list_of_genes_D_D)
+  
+  list_of_intergenic_D_D <-  get(DATAFRAME) %>% filter(., log(watterson_ave.x)>min_non_bootleneck_pop_value & log(watterson_ave.y)>min_bootleneck_pop_value & feature=="Intergenic") %>% select ( unique_id)
+  
+  assign(paste0(POP1, "_", POP2,"_list_intergenic_D_D"), list_of_intergenic_D_D)
+  
+  
+  ## DATASET ND-D
+      
+  list_of_genes_ND_D <- get(DATAFRAME) %>% filter(., log(watterson_ave.x)>min_non_bootleneck_pop_value & log(watterson_ave.y)<min_bootleneck_pop_value & feature=="CDS") %>% select ( unique_id)
+  assign(paste0(POP1, "_", POP2,"_list_CDS_ND_D"), list_of_genes_ND_D)
+
+######
+  # Aqui categorizo las unidades que tienen uan alta diversidad y ni pierden ni ganan diversidad (HD (high diversity)), las unidades que tiene baja diversidad en la non-bottleneck pero ganan en la bottleneck (LD_W (low diversity win)), las que tienen alta diversidad en la non bottleneck pero baja en la bottleneck (HD_L), y las que tienen baja diversidad en ambas (LD). 
+
+  data_diversity_categories <- get(DATAFRAME) %>% 
+  mutate (evolution_category=
+            ifelse (log(watterson_ave.x)>min_non_bootleneck_pop_value & log(watterson_ave.y)>min_bootleneck_pop_value, "D-D",
+            ifelse (log(watterson_ave.x)>min_non_bootleneck_pop_value & log(watterson_ave.y)<min_bootleneck_pop_value, "ND-D",
+            ifelse (log(watterson_ave.x)<min_non_bootleneck_pop_value & log(watterson_ave.y)<min_bootleneck_pop_value, "ND-ND",
+            ifelse (log(watterson_ave.x)<min_non_bootleneck_pop_value & log(watterson_ave.y)>min_bootleneck_pop_value, "D-ND",NA))))) %>% 
+  mutate (diversity_category=
+            ifelse (log(watterson_ave.y)>min_bootleneck_pop_value, "HD",
+            ifelse (log(watterson_ave.y)<min_bootleneck_pop_value, "LD",NA)))
+
+data_diversity_categories$evolution_category <- factor (data_diversity_categories$evolution_category, levels=c("D-ND", "D-D", "ND-ND", "ND-D"))
+data_diversity_categories$diversity_category <- factor (data_diversity_categories$diversity_category, levels=c("HD", "LD"))
+
+  assign(paste0("data_diversity_",POP1, "_diversity_", POP2,"_diversity_categories"), data_diversity_categories)
+
+  }
+
+
+# Los uno
+
+# Los que van a servir para hacer GO termn.
+
+list_genes_of_interest_lynx_lynx_high_diversity_ratio_1 <- inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS, c_ll_ki_n013_c_ll_po_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS)
+
+list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1 <- inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS, c_ll_ki_n013_c_ll_po_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS) %>% inner_join(., c_lp_sm_n019_c_lp_do_n012_list_of_genes_of_interest_high_diversity_ratio_1_CDS)
+
+write.table(list_genes_of_interest_lynx_lynx_high_diversity_ratio_1, paste0(wd_output,"list_genes_of_interest_lynx_lynx_high_diversity_ratio_1.txt" ), quote = F, row.names = F)
+
+write.table(list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1, paste0(wd_output,"list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1.txt" ), quote = F, row.names = F)
+
+# Los que son D-D en todas las poblaciones: CDS
+
+colnames(c_ll_ki_n013_c_ll_no_n008_list_CDS_D_D) <- "c_ll_ki_n013_c_ll_no_n008_D_D"
+colnames(c_ll_ki_n013_c_ll_po_n008_list_CDS_D_D) <- "c_ll_ki_n013_c_ll_po_n008_D_D"
+colnames(c_lp_sm_n019_c_lp_do_n012_list_CDS_D_D) <- "c_lp_sm_n019_c_lp_do_n012_D_D"
+
+
+# Los que son D-D en todas las poblaciones: Intergenic
+
+colnames(c_ll_ki_n013_c_ll_no_n008_list_intergenic_D_D) <- "c_ll_ki_n013_c_ll_no_n008_D_D"
+colnames(c_ll_ki_n013_c_ll_po_n008_list_intergenic_D_D) <- "c_ll_ki_n013_c_ll_po_n008_D_D"
+colnames(c_lp_sm_n019_c_lp_do_n012_list_intergenic_D_D) <- "c_lp_sm_n019_c_lp_do_n012_D_D"
+
+# Los que son ND-D en todas las poblaciones: Intergenic
+
+colnames(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D) <- "c_ll_ki_n013_c_ll_no_n008_ND_D"
+colnames(c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D) <- "c_ll_ki_n013_c_ll_po_n008_ND_D"
+colnames(c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D) <- "c_lp_sm_n019_c_lp_do_n012_ND_D"
+
+
+
+```
+
+
+##### Diversity plot pop1 vs pop2
+
+```{r}
+
+# Plot de diversidad de una población frente a otra, con el corte de los valores más bajos en el density plot para ambos casos, y graficamente ploteados esos cortes. 
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+for (DATAFRAME in DATAFRAMES) 
+{
+ 
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  min_non_bootleneck_pop_value <- as.numeric(density_min_values %>% filter(pop==POP1) %>% .[1,2] )
+  min_bootleneck_pop_value <- as.numeric(density_min_values %>% filter(pop==POP2) %>% .[1,2] )
+
+  #DATAFRAME_modif <- get(DATAFRAME) %>% mutate (col=ifelse(log(watterson_ave.x)>min_non_bootleneck_pop_value & log(watterson_ave.y)>min_bootleneck_pop_value & ratio_watterson_average>0.6 & ratio_watterson_average<1.4 & feature=="CDS", "interesting_genes", "shit"))
+
+  
+#   ggplot(data=DATAFRAME_modif, aes(x=log(watterson_ave.y) ,y=log(watterson_ave.x) )) +
+                                    #, fill=col, colour=col)) +
+#    geom_point(alpha = 1/100, color='grey41') +
+#    geom_abline(intercept = 0, color='grey20') +
+#    geom_hline(yintercept= min_non_bootleneck_pop_value, color='grey20') +
+#    geom_vline(xintercept = min_bootleneck_pop_value, color='grey20') +
+#    facet_wrap(~feature) +
+#    #scale_color_viridis(discrete=TRUE) +
+#    #scale_fill_viridis(discrete=TRUE) +
+#    theme_light()
+#    theme(legend.position="none") 
+#   # scale_color_manual(values=c("#999999", "#E69F00"))
+#   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson.pdf", sep=""))
+   
+ggplot(data=DATAFRAME_modif, aes(x=log(watterson_ave.y) ,y=log(watterson_ave.x) )) +
+                                     #fill=col, colour=col)) +
+    geom_point(alpha = 1/100, color='grey41') +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value, color='grey20') +
+    #scale_color_viridis(discrete=TRUE) +
+    #scale_fill_viridis(discrete=TRUE) +
+    facet_wrap(~feature, scales = "free" ) +
+    theme_light()  +
+    theme(legend.position="none") +
+  labs (title=paste0(POP1,"_",POP2)) +
+   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson_scalefree.pdf", sep=""))
+
+} 
+
+
+# Un pequeño codigo para plotear el density plot al lado de una nube de puntos. 
+# #marginal density of x - plot on top
+# plot_top <- ggplot(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(watterson_ave.y)) + 
+#   geom_density(alpha=.5) + 
+#   theme(legend.position = "none")
+# 
+# #marginal density of y - plot on the right
+# plot_right <-ggplot(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(watterson_ave.x)) + 
+#   geom_density(alpha=.5) + 
+#   theme(legend.position = "none")
+# 
+# #arrange the plots together, with appropriate height and width for each row and column
+# grid.arrange(plot_top, empty, scatter, plot_right, ncol=2, nrow=2, widths=c(4, 1), heights=c(1, 4))
+
+
+```
+
+
+##### Venh-diagram
+
+Sobre estas tablas que acabo de crear donde están TODAS las unidades y el ratio entre par de poblaciones, voy a sacar todas las unidades con un ratio mayor que uno y voy a hacer un diagrama de Venh. 
+
+
+Ojo!
+
+Tengo que copiarlas a la terminal y de ahí guardarlas a mano. 
+
+
+```{r}
+
+# https://stackoverflow.com/questions/8713994/venn-diagram-proportional-and-color-shading-with-semi-transparency
+# https://rstudio-pubs-static.s3.amazonaws.com/13301_6641d73cfac741a59c0a851feb99e98b.html
+# Al final uso --> https://www.r-bloggers.com/working-with-venn-diagrams/
+
+library(VennDiagram)
+
+# All features:
+
+# CDS
+
+
+c_ll_ki_n013_c_ll_no_n008_list_CDS_D_D_list <- lapply(as.list(c_ll_ki_n013_c_ll_no_n008_list_CDS_D_D), function(x) x[x != ""])
+c_ll_ki_n013_c_ll_po_n008_list_CDS_D_D_list <- lapply(as.list(c_ll_ki_n013_c_ll_po_n008_list_CDS_D_D), function(x) x[x != ""])
+c_lp_sm_n019_c_lp_do_n012_list_CDS_D_D_list <- lapply(as.list(c_lp_sm_n019_c_lp_do_n012_list_CDS_D_D), function(x) x[x != ""])
+
+ll_lp_list_CDS_D_D <- c(c_ll_ki_n013_c_ll_no_n008_list_CDS_D_D_list, c_ll_ki_n013_c_ll_po_n008_list_CDS_D_D_list, c_lp_sm_n019_c_lp_do_n012_list_CDS_D_D_list)
+
+
+# Intergenic
+c_ll_ki_n013_c_ll_no_n008_list_intergenic_D_D_list <- lapply(as.list(c_ll_ki_n013_c_ll_no_n008_list_intergenic_D_D), function(x) x[x != ""])
+c_ll_ki_n013_c_ll_po_n008_list_intergenic_D_D_list <- lapply(as.list(c_ll_ki_n013_c_ll_po_n008_list_intergenic_D_D), function(x) x[x != ""])
+c_lp_sm_n019_c_lp_do_n012_list_intergenic_D_D_list <- lapply(as.list(c_lp_sm_n019_c_lp_do_n012_list_intergenic_D_D), function(x) x[x != ""])
+
+ll_lp_list_intergenic_D_D <- c(c_ll_ki_n013_c_ll_no_n008_list_intergenic_D_D_list, c_ll_ki_n013_c_ll_po_n008_list_intergenic_D_D_list, c_lp_sm_n019_c_lp_do_n012_list_intergenic_D_D_list)
+
+
+
+# c_ll_ki_n013_c_ll_no_n008list_of_units_of_interest_ND_D_list <- lapply(as.list(c_ll_ki_n013_c_ll_no_n008_list_of_units_of_interest_ND_D), function(x) x[x != ""])
+# c_ll_ki_n013_c_ll_po_n008list_of_units_of_interest_ND_D_list <- lapply(as.list(c_ll_ki_n013_c_ll_po_n008_list_of_units_of_interest_ND_D), function(x) x[x != ""])
+# c_lp_sm_n019_c_lp_do_n012list_of_units_of_interest_ND_D_list <- lapply(as.list(c_lp_sm_n019_c_lp_do_n012_list_of_units_of_interest_ND_D), function(x) x[x != ""])
+# 
+# list_units_of_interest_lynx_lynx_lynx_pardinus_ND_D <- c(c_ll_ki_n013_c_ll_no_n008list_of_units_of_interest_ND_D_list, c_ll_ki_n013_c_ll_po_n008list_of_units_of_interest_ND_D_list, c_lp_sm_n019_c_lp_do_n012list_of_units_of_interest_ND_D_list)
+
+
+# Now we can plot a Venn diagram with the VennDiagram R package, as follows:
+
+
+VENN.LIST <- ll_lp_list_CDS_D_D
+venn.plot <- venn.diagram(VENN.LIST , 
+                          filename = NULL,
+                          scaled = TRUE,
+                          fill=c("palegreen", "steelblue1", "pink"), 
+                          lty = "blank", 
+                          cex = 1,
+                          print.mode=c("raw", "percent"),
+                          alpha=c(0.3,0.3, 0.3), 
+                          cat.fontface=4, main="Genes with diversity in bottleneck & non-bottleneck")
+
+
+
+
+
+# To plot the venn diagram we will use the grid.draw() function to plot the venn diagram
+grid.draw(venn.plot)
+
+
+# Intergenic:
+
+ 
+VENN.LIST <- ll_lp_list_intergenic_D_D
+venn.plot <- venn.diagram(VENN.LIST , 
+                          filename = NULL,
+                          scaled = TRUE,
+                          fill=c("palegreen", "steelblue1", "pink"), 
+                          lty = "blank", 
+                          cex = 1,
+                          print.mode=c("raw", "percent"),
+                          alpha=c(0.3,0.3, 0.3), 
+                          cat.fontface=4, main="Intergenic with diversity in bottleneck & non-bottleneck")
+
+grid.draw(venn.plot)
+
+
+
+```
+
+
+#---------------------------------
+
+##### Stats de divergence, recombination and GC content by feature, taking into consideration categories.
+
+###### Recombinación divergencia y GC content para cada categoría evolutiva. 
+
+```{r}
+divergence_recomb_and_GC_by_evol_category <- function(DATAFRAME)
+{
+  
+  POP1=DATAFRAME %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=DATAFRAME %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+   
+  div_recom_GC_by_categ_summary <- 
+             DATAFRAME %>% dplyr::filter (type_chr=="autosomes") %>% 
+             dplyr::group_by(diversity_category, evolution_category) %>%
+             dplyr::summarise(
+                       total_count=n(), 
+             
+                       # Distribución sin corregir
+                       
+                       mean_divergence=mean(divergence, na.rm = T),
+                       stdev_divergence=sqrt(var(divergence, na.rm = T)),
+
+                       mean_recombination_rate=mean(recombination_rate,  na.rm = T),
+                       stdev_recombination_rate=sqrt(var(recombination_rate, na.rm = T)),
+
+                       mean_GC_content=mean(GC_content,  na.rm = T),
+                       stdev_GC_content=sqrt(var(GC_content, na.rm = T)))
+  
+  
+write.table(div_recom_GC_by_categ_summary, paste0(wd_output,paste0("stats_diversity_comparison_",POP1, "_", POP2,"_genomic_variables.csv") ), quote = F, row.names=F )
+
+return(div_recom_GC_by_categ_summary)
+
+}
+  
+# Creo las tablas
+
+c_ll_ki_n013_diversity_c_ll_no_n008_diver_recomb_GC_evol_category <- divergence_recomb_and_GC_by_evol_category(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories) 
+
+c_ll_ki_n013_diversity_c_ll_po_n008_diver_recomb_GC_evol_category <- divergence_recomb_and_GC_by_evol_category(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories) 
+
+c_lp_sm_n019_diversity_c_lp_do_n012_diver_recomb_GC_evol_category <- divergence_recomb_and_GC_by_evol_category(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories) 
+
+```
+
+
+###### Recombinación divergencia y GC content para cada categoría evolutiva y para cada feature 
+
+```{r}
+divergence_recomb_and_GC_by_evol_category_by_feature <- function(DATAFRAME)
+{
+  
+  POP1=DATAFRAME %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=DATAFRAME %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+   
+  div_recom_GC_by_categ_summary_feature <- 
+             DATAFRAME %>% dplyr::filter (type_chr=="autosomes") %>% 
+             dplyr::group_by(feature, diversity_category, evolution_category) %>%
+             dplyr::summarise(
+                       total_count=n(), 
+             
+                       # Distribución sin corregir
+                       
+                       mean_divergence=mean(divergence, na.rm = T),
+                       stdev_divergence=sqrt(var(divergence, na.rm = T)),
+
+                       mean_recombination_rate=mean(recombination_rate,  na.rm = T),
+                       stdev_recombination_rate=sqrt(var(recombination_rate, na.rm = T)),
+
+                       mean_GC_content=mean(GC_content,  na.rm = T),
+                       stdev_GC_content=sqrt(var(GC_content, na.rm = T)))
+  
+  
+write.table(div_recom_GC_by_categ_summary_feature, paste0(wd_output,paste0("stats_diversity_comparison_",POP1, "_", POP2,"_genomic_variables_per_feature.csv") ), quote = F, row.names=F )
+
+diversity_comparison_stats_df <- div_recom_GC_by_categ_summary_feature %>% ungroup () %>% select (evolution_category, feature, total_count) %>% spread(.,evolution_category, total_count )
+  
+assign(paste0("stats_data_diversity_",POP1, "_diversity_", POP2,"_diversity_categories"), diversity_comparison_stats_df)
+  
+write.table(diversity_comparison_stats_df, paste0(wd_output,paste0("stats_diversity_comparison_",POP1, "_", POP2,"_number_per_feature.csv") ), quote = F, row.names=F )
+
+return(div_recom_GC_by_categ_summary_feature)
+}
+
+
+# Creo las tablas
+
+c_ll_ki_n013_diversity_c_ll_no_n008_diver_recomb_GC_evol_caterogy_by_feature <- divergence_recomb_and_GC_by_evol_category_by_feature(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories) 
+
+c_ll_ki_n013_diversity_c_ll_po_n008_diver_recomb_GC_evol_caterogy_by_feature <- divergence_recomb_and_GC_by_evol_category_by_feature(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories) 
+
+c_lp_sm_n019_diversity_c_lp_do_n012_diver_recomb_GC_evol_caterogy_by_feature <- divergence_recomb_and_GC_by_evol_category_by_feature(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories) 
+
+
+```
+
+
+
+# ---------------------------------
+
+### Plots interacción per unit
+
+
+#### Ratio vs. divergence
+
+No corro esta parte
+
+Exploro el ratio de ganancia vs. la tasa de divergencia, para ver si las zonas con más divergencia ganan mas diversidad. 
+
+
+```{r}
+
+INDEXES=c("ratio_pairwise_average", "ratio_watterson_average")
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+# Plot de los valores de divergencia con logaritmo frente a la diversidad. 
+
+for (DATAFRAME in DATAFRAMES)
+{
+for (INDEX in INDEXES)
+  {
+
+  NAME_POP1 <- as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
+  NAME_POP2 <- as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
+
+ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("divergence", sprintf("log(%s)", INDEX))) + 
+  geom_point() + 
+  facet_grid(~feature)+
+  geom_smooth(method = "lm")
+    ggsave(paste (wd_output,NAME_POP1,"_",NAME_POP2,"_diverg_vs_",INDEX,".pdf", sep="" ))
+}
+  }
+    
+    
+
+```
+
+#### Ratio vs. recombination
+ 
+No corro esta parte
+ 
+Exploro el ratio de ganancia vs. la recombination rate, para ver si las zonas con más recombinación ganan menos diversidad que zonas con más baja recombinación. 
+
+```{r}
+
+INDEXES=c("ratio_pairwise_average", "ratio_watterson_average")
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+# Plot de los valores de recombinación con logaritmo frente a la diversidad. 
+
+for (DATAFRAME in DATAFRAMES)
+{
+for (INDEX in INDEXES)
+  {
+
+  NAME_POP1 <- as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
+  NAME_POP2 <- as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
+
+ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("recombination_rate", sprintf("log(%s)", INDEX))) + 
+  geom_point() + 
+  facet_grid(~feature)+
+  geom_smooth(method = "lm")
+    ggsave(paste (wd_output,NAME_POP1,"_",NAME_POP2,"_recomb_vs_",INDEX,".pdf", sep="" ), device="pdf")
+
+ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("recombination_rate", sprintf("log(%s)", INDEX))) + 
+  geom_point() + 
+  facet_grid(~feature)+
+  geom_smooth(method = "lm")
+    ggsave(paste (wd_output,NAME_POP1,"_",NAME_POP2,"_recomb_vs_",INDEX,".pdf", sep="" ), device="pdf")
+}
+  }
+    
+    
+# Boxplot de recombinación por categorías frente a diversidad.
+
+for (DATAFRAME in DATAFRAMES)
+  {
+  
+  NAME_POP1 <- as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
+  NAME_POP2 <- as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
+
+# Compute boxplot statistics to rm outliers
+sts <- boxplot.stats(get(DATAFRAME)$ratio_pairwise_average)$stats  # Compute lower and upper whisker limits
+# Now to achieve full expanded view of the multiple boxplots, it is useful to modify the y-axis limit of the plot inside coord_cartesian() function as below,
+
+ggplot(get(DATAFRAME) %>% filter(!is.na(recombination_category)), aes_string("recombination_category", "ratio_pairwise_average"))+
+  geom_boxplot(outlier.shape = NA) +
+  coord_cartesian(ylim = c(sts[2]/2,max(sts)*1.05)) +
+  facet_grid(~feature) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+ggsave(paste (wd_output,NAME_POP1,"_",NAME_POP2,"_recomb_vs_ratio_pairwise_average_boxplot.pdf", sep="" ), device="pdf")
+
+# Compute boxplot statistics to rm outliers
+sts <- boxplot.stats(get(DATAFRAME)$ratio_watterson_average)$stats  # Compute lower and upper whisker limits
+# Now to achieve full expanded view of the multiple boxplots, it is useful to modify the y-axis limit of the plot inside coord_cartesian() function as below,
+
+ggplot(get(DATAFRAME) %>% filter(!is.na(recombination_category)), aes_string("recombination_category", "ratio_watterson_average"))+
+  geom_boxplot(outlier.shape = NA) +
+  coord_cartesian(ylim = c(sts[2]/2,max(sts)*1.05)) +
+  facet_grid(~feature)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggsave(paste (wd_output,NAME_POP1,"_",NAME_POP2,"_recomb_vs_ratio_watterson_average_boxplot.pdf", sep="" ), device="pdf")
+
+}
+
+
+# Voy a hacer un lm
+
+library("lme4")
+
+
+ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_po_n008_diversity <- lmList(log(ratio_pairwise_average_corrected) ~ recombination_rate | feature, data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity)
+
+sink(paste (wd_output,"lm_ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_per_feature_c_ll_ki_n013_c_ll_po_n008.txt"))
+print(summary(ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_po_n008_diversity))
+sink()
+
+ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_no_n008_diversity <- lmList(log(ratio_pairwise_average_corrected) ~ recombination_rate | feature, data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity)
+
+sink(paste (wd_output,"lm_ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_per_feature_c_ll_ki_n013_c_ll_no_n008.txt"))
+print(summary(ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_no_n008_diversity))
+sink()
+
+ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_lp_sm_n019_c_lp_do_n012_diversity  <- lmList(log(ratio_pairwise_average_corrected) ~ recombination_rate | feature, data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity)
+
+sink(paste (wd_output,"lm_ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_per_feature_c_lp_sm_n019_c_lp_do_n012.txt"))
+print(summary(ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_lp_sm_n019_c_lp_do_n012_diversity))
+sink()
+
+
+```
+
+#### Boxplot Categories vs. divergence
+
+NUNCA USAR  stat_compare_means
+
+Empleo el wilcox.test (por defecto tiene paired=F). Es un test para medidas no parametricas para comparación de rank. 
+
+Explicacion: https://en.wikipedia.org/wiki/Mann–Whitney_U_test
+https://data.library.virginia.edu/the-wilcoxon-rank-sum-test/
+Check also: https://stats.stackexchange.com/questions/250468/wilcoxon-mann-whitney-test-giving-surprising-results
+
+In statistics, the Mann–Whitney U test (also called the Mann–Whitney–Wilcoxon (MWW), Wilcoxon rank-sum test, or Wilcoxon–Mann–Whitney test) is a nonparametric test of the null hypothesis that it is equally likely that a randomly selected value from one sample will be less than or greater than a randomly selected value from a second sample.
+
+Unlike the t-test it does not require the assumption of normal distributions. It is nearly as efficient as the t-test on normal distributions.
+
+This test can be used to determine whether two independent samples were selected from populations having the same distribution; a similar nonparametric test used on dependent samples is the Wilcoxon signed-rank test.
+
+-->  “true location shift is not equal to 0”. That’s another way of saying “the distribution of one population is shifted to the left or right of the other,” which implies different medians.
+--> The Wilcoxon statistic is returned as W. This is NOT an estimate of the difference in medians.
+
+--> wilcox.test function provides this information when we set conf.int = TRUE.
+
+wilcox.test(weight ~ company, data = dat, conf.int = TRUE)
+
+	Wilcoxon rank sum test
+
+data:  weight by company
+W = 13, p-value = 0.04988
+alternative hypothesis: true location shift is not equal to 0
+95 percent confidence interval:
+ -8.5 -0.1
+sample estimates:
+difference in location 
+                 -4.65 
+
+This returns a “difference in location” measure of -4.65. The documentation for the wilcox.test function states this “does not estimate the difference in medians (a common misconception) but rather the median of the difference between a sample from x and a sample from y.”
+
+
+
+Nota: https://stackoverflow.com/questions/54842012/different-p-value-in-ggplot2-stat-compare-means-and-wilcox-test
+According to help(wilcox.test), if the samples contain less than 50 values (as in your case), the exact p-value is computed (unless you specify otherwise).
+
+stat_compare_means has a method.args argument but it doesn't seem to pass the exact = TRUE specification correctly. Instead you can compute the p-value exactly how you want it first and then add it to the plot
+Por tanto, los p-values son una aproximacion normal (In one case the p-value is exact and in the other it is a normal approximation.)
+
+```{r}
+library("ggpubr")
+library("cowplot")
+
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories")
+
+fun_mean <- function(x){return(round(data.frame(y=mean(x),label=mean(x,na.rm=T)),digit=5))}
+
+
+for (DATAFRAME in DATAFRAMES) {
+
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  sts_HD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD"))$divergence)$stats  # Compute lower and upper whisker limits
+
+
+  HD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")) , 
+                  x = "evolution_category", y = "divergence", palette = "jco", outlier.shape = NA) + 
+    coord_cartesian(ylim = c(0,max(sts_HD)*1.05)) +
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_HD)-(max(sts_HD)*0.075), label.x=1.5) + 
+    theme(strip.text.y = element_text(angle = 0))
+ 
+
+  sts_LD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD"))$divergence)$stats  # Compute lower and upper whisker limits
+
+  LD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD")) , 
+                  x = "evolution_category", y = "divergence", palette = "jco",  outlier.shape = NA) + 
+    coord_cartesian(ylim = c(0,max(sts_LD)*1.05)) +
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_LD)-(max(sts_LD)*0.075), label.x=1.5) +  
+    scale_y_continuous(position = "right") +     
+    theme(strip.background = element_blank(),strip.text.y = element_blank())
+
+
+  HD_LD <- ggdraw() +
+  draw_plot(LD, x = .6, y = 0, width = 0.4, height = 1) +
+  draw_plot(HD, x = 0, y = 0, width = .55, height = 1)
+
+save_plot(paste(wd_output,POP1,"_",POP2,"_diverg.pdf",sep=""), HD_LD, ncol=2, nrow=5)
+}
+  
+```
+
+
+#### Boxplot Categories vs. divergence per feature
+
+```{r}
+
+# De esta manera ploteo la media. 
+# p1 <- ggplot(aes(y = mean_divergence, x = factor(evolution_category)), data = c_ll_ki_n013_diversity_c_ll_no_n008_diver_recomb_GC_evol_caterogy %>% filter(diversity_category=="HD"))
+# p1 + facet_grid(rows = vars(feature) ) + geom_errorbar(aes(ymax = mean_divergence + stdev_divergence, ymin = mean_divergence - stdev_divergence),
+#                 position = "dodge") + geom_point() + stat_compare_means(method="wilcox.test", label="p.signif")
+
+ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")) ,aes(evolution_category,divergence)) + 
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = mean_se, geom = "errorbar") +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label.y = 0.006, label.x = 0.6) + # label="p.signif", 
+    theme(strip.text.y = element_text(angle = 0))
+ 
+
+
+library("ggpubr")
+library("cowplot")
+
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories")
+
+fun_mean <- function(x){return(round(data.frame(y=mean(x),label=mean(x,na.rm=T)),digit=5))}
+
+
+for (DATAFRAME in DATAFRAMES) {
+
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+############### HD ############### 
+  
+## Boxplot
+  
+  sts_HD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD"))$divergence)$stats  # Compute lower and upper whisker limits
+
+  HD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")) , 
+                  x = "evolution_category", y = "divergence", palette = "jco", outlier.shape = NA) + 
+    facet_grid(rows = vars(feature) ) + 
+    coord_cartesian(ylim = c(0,max(sts_HD)*1.05)) +
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_HD)-(max(sts_HD)*0.075), label.x=1.5) + 
+    theme(strip.text.y = element_text(angle = 0))
+ 
+## Mean
+  
+  HD_mean <- ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")) ,aes(evolution_category,divergence)) + 
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = mean_se, geom = "errorbar") +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label.y = 0.006, label.x = 0.6) + # label="p.signif", 
+    theme(strip.text.y = element_text(angle = 0))  +
+    ggsave(paste(wd_output,POP1,"_",POP2,"_diverg_by_category_mean_HD.pdf",sep=""))
+
+  
+  
+  
+############### LD ############### 
+  
+## Boxplot
+  
+
+  sts_LD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD"))$divergence)$stats  # Compute lower and upper whisker limits
+
+  LD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD")) , 
+                  x = "evolution_category", y = "divergence", palette = "jco",  outlier.shape = NA) + 
+    facet_grid(rows = vars(feature) ) + 
+    coord_cartesian(ylim = c(0,max(sts_LD)*1.05)) +
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_LD)-(max(sts_LD)*0.075), label.x=1.5) +  
+    scale_y_continuous(position = "right") +     
+    theme(strip.background = element_blank(),strip.text.y = element_blank())
+
+
+## Mean
+ 
+    
+LD_mean <- ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD")) ,aes(evolution_category,divergence)) + 
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = mean_se, geom = "errorbar") +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label.y = 0.006, label.x = 0.6) + # label="p.signif", 
+    theme(strip.text.y = element_text(angle = 0))  +
+  ggsave(paste(wd_output,POP1,"_",POP2,"_diverg_by_category_mean_LD.pdf",sep=""))
+  
+  
+  
+  
+## Merge together boxplot  
+  
+  HD_LD <- ggdraw() +
+  draw_plot(LD, x = .6, y = 0, width = 0.4, height = 1) +
+  draw_plot(HD, x = 0, y = 0, width = .55, height = 1)
+save_plot(paste(wd_output,POP1,"_",POP2,"_diverg_by_category.pdf",sep=""), HD_LD, ncol=2, nrow=5)
+
+}
+  
+```
+```{r}
+install.packages("ggsignif")
+
+
+ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")) ,aes(evolution_category,divergence)) +
+    facet_grid(col = vars(feature) ) + 
+    scale_color_viridis(option = "A", discrete=TRUE) +
+    scale_fill_viridis(option = "A",discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point", size=3) +
+    stat_summary(fun.data = mean_se, geom = "errorbar") +
+    #stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+  stat_signif(comparisons = list(c("D-ND", "D-D"), test="wilcox.test", test.args=list(alternative="less"))) +
+     #            map_signif_level=TRUE)  
+  #stat_compare_means(method="wilcox.test", label="p.signif", label.y = 0.008, label.x = 1.2,  method.args = list(alternative = "less", paired = FALSE)) + # label="p.signif", 
+    theme_gray() +
+    theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) 
+ 
+
+my_comparisons <- list(c("D-ND", "D-D"))
+
+ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")), aes(evolution_category,divergence)) +
+  coord_cartesian(ylim = c(0,max(sts_HD)*2.3)) +
+  facet_grid(col = vars(feature) ) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", test.args=list(alternative="less"),map_signif_level=TRUE, y_position=max(sts_HD)*2.1, tip_length=0, linetype="blank") +
+  theme_
+  theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) 
+
+
+
+#wilcox.test(divergence ~ evolution_category, data=get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")%>% filter(feature=="CDS"),paired = FALSE,  conf.int = TRUE, alternative="less")
+
+
+
+
+-(max(sts_HD)*0.075)
+
+
+
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories")
+
+fun_mean <- function(x){return(round(data.frame(y=mean(x),label=mean(x,na.rm=T)),digit=5))}
+
+
+for (DATAFRAME in DATAFRAMES) {
+
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  sts_HD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD"))$divergence)$stats  # Compute lower and upper whisker limits
+
+
+  HD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")) , 
+                  x = "evolution_category", y = "divergence", palette = "jco", outlier.shape = NA) + 
+    coord_cartesian(ylim = c(0,max(sts_HD)*1.05)) +
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_HD)-(max(sts_HD)*0.075), label.x=1.5) + 
+    theme(strip.text.y = element_text(angle = 0))
+ 
+
+  sts_LD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD"))$divergence)$stats  # Compute lower and upper whisker limits
+
+  LD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD")) , 
+                  x = "evolution_category", y = "divergence", palette = "jco",  outlier.shape = NA) + 
+    coord_cartesian(ylim = c(0,max(sts_LD)*1.05)) +
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_LD)-(max(sts_LD)*0.075), label.x=1.5) +  
+    scale_y_continuous(position = "right") +     
+    theme(strip.background = element_blank(),strip.text.y = element_blank())
+
+
+  HD_LD <- ggdraw() +
+  draw_plot(LD, x = .6, y = 0, width = 0.4, height = 1) +
+  draw_plot(HD, x = 0, y = 0, width = .55, height = 1)
+
+save_plot(paste(wd_output,POP1,"_",POP2,"_diverg.pdf",sep=""), HD_LD, ncol=2, nrow=5)
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### Boxplot Categories vs. recombination
+
+```{r}
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories")
+
+
+for (DATAFRAME in DATAFRAMES) {
+
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  sts_HD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD"))$recombination_rate)$stats  # Compute lower and upper whisker limits
+
+  HD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")) , 
+                  x = "evolution_category", y = "recombination_rate", palette = "jco", outlier.shape = NA) + 
+    coord_cartesian(ylim = c(0,max(sts_HD)*1.05)) + 
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_HD)-(max(sts_HD)*0.075), label.x=1.5) + 
+    theme(strip.text.y = element_text(angle = 0))
+ 
+
+  sts_LD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD"))$recombination_rate)$stats  # Compute lower and upper whisker limits
+
+  LD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD")) , 
+                  x = "evolution_category", y = "recombination_rate", palette = "jco",  outlier.shape = NA) + 
+    coord_cartesian(ylim = c(0,max(sts_LD)*1.05)) + 
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_LD)-(max(sts_LD)*0.075), label.x=1.5) +  
+    scale_y_continuous(position = "right") + 
+    theme(strip.background = element_blank(),strip.text.y = element_blank())
+
+HD_LD <- ggdraw() +
+  draw_plot(LD, x = .6, y = 0, width = 0.4, height = 1) +
+  draw_plot(HD, x = 0, y = 0, width = .55, height = 1)
+
+save_plot(paste(wd_output,POP1,"_",POP2,"_recomb.pdf",sep=""), HD_LD, ncol=2, nrow=5)
+}
+```
+
+#### Boxplot Categories vs. recombination per feature
+
+```{r}
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories")
+
+
+for (DATAFRAME in DATAFRAMES) {
+
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  sts_HD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD"))$recombination_rate)$stats  # Compute lower and upper whisker limits
+
+  HD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")) , 
+                  x = "evolution_category", y = "recombination_rate", palette = "jco", outlier.shape = NA) + 
+    facet_grid(rows = vars(feature) ) + 
+    coord_cartesian(ylim = c(0,max(sts_HD)*1.05)) + 
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_HD)-(max(sts_HD)*0.075), label.x=1.5) + 
+    theme(strip.text.y = element_text(angle = 0))
+ 
+
+  sts_LD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD"))$recombination_rate)$stats  # Compute lower and upper whisker limits
+
+  LD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD")) , 
+                  x = "evolution_category", y = "recombination_rate", palette = "jco",  outlier.shape = NA) + 
+    facet_grid(rows = vars(feature) ) + 
+    coord_cartesian(ylim = c(0,max(sts_LD)*1.05)) + 
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_LD)-(max(sts_LD)*0.075), label.x=1.5) +  
+    scale_y_continuous(position = "right") + 
+    theme(strip.background = element_blank(),strip.text.y = element_blank())
+
+HD_LD <- ggdraw() +
+  draw_plot(LD, x = .6, y = 0, width = 0.4, height = 1) +
+  draw_plot(HD, x = 0, y = 0, width = .55, height = 1)
+
+save_plot(paste(wd_output,POP1,"_",POP2,"_recomb_by_category.pdf",sep=""), HD_LD, ncol=2, nrow=5)
+}
+```
+
+#### Boxplot Categories vs. GC content
+
+```{r}
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories")
+
+
+for (DATAFRAME in DATAFRAMES) {
+
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  sts_HD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD"))$GC_content)$stats  # Compute lower and upper whisker limits
+
+  HD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")) , 
+                  x = "evolution_category", y = "GC_content", palette = "jco", outlier.shape = NA) + 
+    coord_cartesian(ylim = c(0,max(sts_HD)*1.05)) + 
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_HD)-(max(sts_HD)*0.075), label.x=1.5) + 
+    theme(strip.text.y = element_text(angle = 0))
+ 
+
+  sts_LD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD"))$GC_content)$stats  # Compute lower and upper whisker limits
+
+  LD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD")) , 
+                  x = "evolution_category", y = "GC_content", palette = "jco",  outlier.shape = NA) + 
+    coord_cartesian(ylim = c(0,max(sts_LD)*1.05)) + 
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_LD)-(max(sts_LD)*0.075), label.x=1.5) +  
+    scale_y_continuous(position = "right") + 
+    theme(strip.background = element_blank(),strip.text.y = element_blank())
+
+HD_LD <- ggdraw() +
+  draw_plot(LD, x = .6, y = 0, width = 0.4, height = 1) +
+  draw_plot(HD, x = 0, y = 0, width = .55, height = 1)
+
+save_plot(paste(wd_output,POP1,"_",POP2,"_GCcontent.pdf",sep=""), HD_LD, ncol=2, nrow=5)
+}
+```
+
+#### Boxplot Categories vs. GC content per feature
+
+```{r}
+
+library("ggpubr")
+library("cowplot")
+
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories")
+
+
+for (DATAFRAME in DATAFRAMES) {
+
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  sts_HD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD"))$GC_content)$stats  # Compute lower and upper whisker limits
+
+  HD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD")) , 
+                  x = "evolution_category", y = "GC_content", palette = "jco", outlier.shape = NA) + 
+    facet_grid(rows = vars(feature) ) + 
+    coord_cartesian(ylim = c(0,max(sts_HD)*1.05)) + 
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_HD)-(max(sts_HD)*0.075), label.x=1.5) + 
+    theme(strip.text.y = element_text(angle = 0))
+ 
+
+  sts_LD <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD"))$GC_content)$stats  # Compute lower and upper whisker limits
+
+  LD <- ggboxplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD")) , 
+                  x = "evolution_category", y = "GC_content", palette = "jco",  outlier.shape = NA) + 
+    facet_grid(rows = vars(feature) ) + 
+    coord_cartesian(ylim = c(0,max(sts_LD)*1.05)) + 
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+    stat_summary(fun.y = mean, geom="point",colour="darkred", size=3) +
+    stat_summary(fun.data = fun_mean, geom="text", vjust=-0.7) +
+    stat_compare_means(method="wilcox.test", label="p.signif", label.y = max(sts_LD)-(max(sts_LD)*0.075), label.x=1.5) +  
+    scale_y_continuous(position = "right") + 
+    theme(strip.background = element_blank(),strip.text.y = element_blank())
+
+HD_LD <- ggdraw() +
+  draw_plot(LD, x = .6, y = 0, width = 0.4, height = 1) +
+  draw_plot(HD, x = 0, y = 0, width = .55, height = 1)
+
+save_plot(paste(wd_output,POP1,"_",POP2,"_GCcontent_by_category.pdf",sep=""), HD_LD, ncol=2, nrow=5)
+}
+```
+
+
+#### Boxplot ratio per unit
+
+No corro esto porque creo que NO es útil.
+Lo que representa es el boxplot de los ratios y se ve que hay algunos valores muy extremos. 
+
+Los ratios que voy a representar son:
+"ratio_pairwise_average", "ratio_watterson_average", "ratio_corrected_by_pairwise_average_intergenic_per_unit", "ratio_corrected_by_watterson_average_intergenic_per_unit"
+No estoy haciendo esta vez: 
+"ratio_corrected_by_pairwise_average_intergenic_weighted", "ratio_corrected_by_watterson_average_intergenic_weighted"
+Primero los voy a representar en boxplot para chr, feature, y región , luego voy a hacer una tabla con la media de los ratios y su bootstrap. 
+
+```{r}
+
+library(rlang)
+# Ratio de la diversidad población bootleneck frente non bootleneck
+## BOXPLOT
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity", "data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity", "data_diversity_c_lp_sm_n019_autosomes_diversity_c_lp_do_n012_autosomes_diversity")
+
+INDICES=c("ratio_watterson_average", "ratio_pairwise_average")
+
+GROUPS=c("feature", "chr")
+
+
+myplot <- function(data, title){
+  for (INDEX in INDICES){
+    for (GROUP in GROUPS){
+  pdf(paste(wd_output, "boxplot_violin_plot/",title,"_",GROUP,"_",INDEX,"_boxplot.pdf", sep=""))
+  plot <- ggplot(data=data, aes_string(x=GROUP, y = INDEX)) +
+        geom_boxplot() +
+        #scale_y_continuous(trans = 'log10') +
+        theme_bw() +  #theme selection for background and lines
+        theme(axis.line.x = element_line(color="black", size = 0.5),
+              axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))+
+  labs(title = paste (title,  sep=""))
+  print (plot)
+  dev.off()
+}}}
+
+
+
+myplot2 <- function(data, title){
+  for (INDEX in INDICES){
+    for (GROUP in GROUPS){
+  pdf(paste(wd_output, "boxplot_violin_plot/",title,"_",GROUP,"_",INDEX,"_violin.pdf", sep=""))
+  plot <- ggplot(data=data, aes_string(x=GROUP, y = INDEX)) +
+        geom_violin() +
+        #scale_y_continuous(trans = 'log10') +
+        theme_bw() +  #theme selection for background and lines
+        theme(axis.line.x = element_line(color="black", size = 0.5),
+              axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))+
+  labs(title = paste (title, sep=""))
+  print (plot)
+  dev.off()
+}}}
+
+
+
+for(i in DATAFRAMES){
+  print(myplot(get(i), i))
+  print(myplot2(get(i), i))
+
+}
+
+
+```
+
+
+#### 3D Plot divergence and recombination vs ratio
+
+```{r}
+library(plotly)
+
+# data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity
+
+plot_ly(x=filter(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity,feature=="UCNE")$divergence,
+        y=filter(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity,feature=="UCNE")$recombination_rate,
+        z=filter(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity,feature=="UCNE")$ratio_watterson_average)
+
+
+plot_ly(x=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$divergence,
+        y=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$recombination_rate,
+        z=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$ratio_watterson_average, 
+        color = ~data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$feature, 
+        mode = "markers",marker=list(opacity=0.5))
+```
+
+####  Plot boot data for each group
+
+No lo hago
+
+```{r}
+
+library(rlang)
+
+DATAFRAMES=c("ratio_boot_c_ll_ki_n013_c_ll_no_n008_feature", "ratio_boot_c_ll_ki_n013_c_ll_po_n008_feature", "ratio_boot_c_lp_sm_n019_c_lp_do_n012_feature") 
+
+# "ratio_boot_c_ll_ki_n013_c_ll_no_n008_chr", "ratio_boot_c_ll_ki_n013_c_ll_po_n008_chr", "ratio_boot_c_lp_sm_n019_c_lp_do_n012_chr",  "ratio_boot_c_ll_ki_n013_c_ll_no_n008_region", "ratio_boot_c_ll_ki_n013_c_ll_po_n008_region", "ratio_boot_c_lp_sm_n019_c_lp_do_n012_region") 
+
+INDICES=c("ratio_watterson_boot", "ratio_pairwise_boot")
+
+
+
+
+myplot3 <- function(data,title){
+  for (INDEX in INDICES)
+  {
+    print (INDEX)
+  pdf(paste(wd_output,title,"_",INDEX,".pdf", sep=""))
+  plot <- ggplot(data=data, aes_string(x=colnames(data)[1],y=paste("mean_",INDEX,sep=""), fill="chr_type", colour="chr_type")) +
+        geom_point() +
+        geom_errorbar(aes_string(ymin=paste("mean_",INDEX,"-sd_",INDEX,sep=""), ymax=paste("mean_",INDEX,"+sd_",INDEX,sep=""))) +
+        #scale_y_continuous(trans = 'log10') +
+        theme_bw() +  #theme selection for background and lines
+        theme(axis.line.x = element_line(color="black", size = 0.5),
+              axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))
+  # labs(title = paste (title, "scale_y_transformed", sep=""))
+  print (plot)
+  dev.off() 
+    
+  }
+}
+
+
+for(i in DATAFRAMES){
+  print(myplot3(get(i), i))
+}
+
+
+```
 
 
 # ----------------------------------------------------------------
