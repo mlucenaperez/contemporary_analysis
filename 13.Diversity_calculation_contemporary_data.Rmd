@@ -4454,7 +4454,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
   geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank") + # test.args=list(alternative="less")
-  theme_minimal()+
+  theme_minimal() +
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
   ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_LD_feature_watterson.pdf",sep=""))
 
@@ -6265,6 +6265,77 @@ HD_LD <- ggdraw() +
 save_plot(paste(wd_output,POP1,"_",POP2,"_GCcontent_by_category.pdf",sep=""), HD_LD, ncol=2, nrow=5)
 }
 ```
+
+
+# -------------------------------------------------
+
+# Ven diagram Pi vs Watterson
+
+```{r}
+# CDS
+
+
+c_ll_ki_n013_c_ll_no_n008_list_CDS_D_D_list_watterson <- lapply(as.list(c_ll_ki_n013_c_ll_no_n008_list_CDS_D_D_watterson), function(x) x[x != ""])
+c_ll_ki_n013_c_ll_po_n008_list_CDS_D_D_list_watterson <- lapply(as.list(c_ll_ki_n013_c_ll_po_n008_list_CDS_D_D_watterson), function(x) x[x != ""])
+c_lp_sm_n019_c_lp_do_n012_list_CDS_D_D_list_watterson <- lapply(as.list(c_lp_sm_n019_c_lp_do_n012_list_CDS_D_D_watterson), function(x) x[x != ""])
+
+
+
+lp_list_CDS_D_D_watterson_pairwise <- c(c_lp_sm_n019_c_lp_do_n012_list_CDS_D_D_list_watterson, c_lp_sm_n019_c_lp_do_n012_list_CDS_D_D_list_pairwise)
+
+VENN.LIST <- lp_list_CDS_D_D_watterson_pairwise
+venn.plot <- venn.diagram(VENN.LIST , 
+                          filename = NULL,
+                          scaled = TRUE,
+                          fill=c("palegreen", "steelblue1"), 
+                          lty = "blank", 
+                          cex = 1,
+                          print.mode=c("raw", "percent"),
+                          #alpha=c(0.3,0.3, 0.3), 
+                          cat.fontface=4, main="Lynx pardinus diversity for pi and watterson")
+
+grid.draw(venn.plot)
+
+##
+
+ll_ki_po_list_CDS_D_D_watterson_pairwise <- c(c_ll_ki_n013_c_ll_po_n008_list_CDS_D_D_list_watterson, c_ll_ki_n013_c_ll_po_n008_list_CDS_D_D_list_pairwise)
+
+VENN.LIST <- ll_ki_po_list_CDS_D_D_watterson_pairwise
+venn.plot <- venn.diagram(VENN.LIST , 
+                          filename = NULL,
+                          scaled = TRUE,
+                          fill=c("palegreen", "steelblue1"), 
+                          lty = "blank", 
+                          cex = 1,
+                          print.mode=c("raw", "percent"),
+                          #alpha=c(0.3,0.3, 0.3), 
+                          cat.fontface=4, main="Lynx kirov and poland diversity for pi and watterson")
+
+grid.draw(venn.plot)
+
+##
+
+ll_ki_no_list_CDS_D_D_watterson_pairwise <- c(c_ll_ki_n013_c_ll_no_n008_list_CDS_D_D_list_watterson, c_ll_ki_n013_c_ll_no_n008_list_CDS_D_D_list_pairwise)
+
+VENN.LIST <- ll_ki_no_list_CDS_D_D_watterson_pairwise
+venn.plot <- venn.diagram(VENN.LIST , 
+                          filename = NULL,
+                          scaled = TRUE,
+                          fill=c("palegreen", "steelblue1"), 
+                          lty = "blank", 
+                          cex = 1,
+                          print.mode=c("raw", "percent"),
+                          #alpha=c(0.3,0.3, 0.3), 
+                          cat.fontface=4, main="Lynx kirov and norway diversity for pi and watterson")
+
+grid.draw(venn.plot)
+
+
+
+```
+
+
+
 
 
 # -------------------------------------------------
