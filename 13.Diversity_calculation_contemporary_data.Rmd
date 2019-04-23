@@ -3571,19 +3571,19 @@ for (DATAFRAME in DATAFRAMES)
   DATAFRAME_modif <- get(DATAFRAME) %>% mutate (col=ifelse(log(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log(watterson_ave.y)>min_bootleneck_pop_value_watterson & ratio_watterson_average>0.6 & ratio_watterson_average<1.4 & feature=="CDS", "interesting_genes", "shit"))
 
   
-#   ggplot(data=DATAFRAME_modif, aes(x=log(watterson_ave.y) ,y=log(watterson_ave.x) )) +
+   ggplot(data=DATAFRAME_modif, aes(x=log(watterson_ave.y) ,y=log(watterson_ave.x) )) +
                                     #, fill=col, colour=col)) +
-#    geom_point(alpha = 1/100, color='grey41') +
-#    geom_abline(intercept = 0, color='grey20') +
-#    geom_hline(yintercept= min_non_bootleneck_pop_value, color='grey20') +
-#    geom_vline(xintercept = min_bootleneck_pop_value, color='grey20') +
-#    facet_wrap(~feature) +
-#    #scale_color_viridis(discrete=TRUE) +
-#    #scale_fill_viridis(discrete=TRUE) +
-#    theme_light()
-#    theme(legend.position="none") 
-#   # scale_color_manual(values=c("#999999", "#E69F00"))
-#   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson.pdf", sep=""))
+    geom_point(alpha = 1/100, color='grey41') +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_watterson, color='grey20') +
+    facet_wrap(~feature) +
+    #scale_color_viridis(discrete=TRUE) +
+    #scale_fill_viridis(discrete=TRUE) +
+    theme_light() +
+    theme(legend.position="none") +
+   # scale_color_manual(values=c("#999999", "#E69F00"))
+   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson.pdf", sep=""), width = 7, height = 7)
    
 ggplot(data=DATAFRAME_modif, aes(x=log(watterson_ave.y) ,y=log(watterson_ave.x) )) +
                                      #fill=col, colour=col)) +
@@ -5011,19 +5011,19 @@ for (DATAFRAME in DATAFRAMES)
   DATAFRAME_modif <- get(DATAFRAME) %>% mutate (col=ifelse(log(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & ratio_pairwise_average>0.6 & ratio_pairwise_average<1.4 & feature=="CDS", "interesting_genes", "shit"))
 
   
-#   ggplot(data=DATAFRAME_modif, aes(x=log(pairwise_ave.y) ,y=log(pairwise_ave.x) )) +
+   ggplot(data=DATAFRAME_modif, aes(x=log(pairwise_ave.y) ,y=log(pairwise_ave.x) )) +
                                     #, fill=col, colour=col)) +
-#    geom_point(alpha = 1/100, color='grey41') +
-#    geom_abline(intercept = 0, color='grey20') +
-#    geom_hline(yintercept= min_non_bootleneck_pop_value, color='grey20') +
-#    geom_vline(xintercept = min_bootleneck_pop_value, color='grey20') +
-#    facet_wrap(~feature) +
-#    #scale_color_viridis(discrete=TRUE) +
-#    #scale_fill_viridis(discrete=TRUE) +
-#    theme_light()
-#    theme(legend.position="none") 
-#   # scale_color_manual(values=c("#999999", "#E69F00"))
-#   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise.pdf", sep=""))
+    geom_point(alpha = 1/100, color='grey41') +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
+     facet_wrap(~feature) +
+    #scale_color_viridis(discrete=TRUE) +
+    #scale_fill_viridis(discrete=TRUE) +
+    theme_light() +
+    theme(legend.position="none") + 
+    scale_color_manual(values=c("#999999", "#E69F00")) +
+    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise.pdf", sep=""), width = 7, height = 7)
    
 ggplot(data=DATAFRAME_modif, aes(x=log(pairwise_ave.y) ,y=log(pairwise_ave.x) )) +
                                      #fill=col, colour=col)) +
