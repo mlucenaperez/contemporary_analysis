@@ -102,6 +102,15 @@ Voy a seleccionar los KO que son los nombres de proteinas comunes a todos
 
 ## Load KO information for pathway enrichment
 
+From reactome webpage: https://reactome.org/userguide/analysis
+Entities:
+If your data is a single column of identifiers such as UniProt IDs, gene symbols or ChEBI IDs, they are mapped to pathways and over-representation and pathway-topology analyses are run. Over-representation analysis is a statistical (hypergeometric distribution) test that determines whether certain Reactome pathways are over-represented (enriched) in the submitted data. It answers the question ‘Does my list contain more proteins for pathway X than would be expected by chance?’ This test produces a probability score, which is corrected for false discovery rate using the Benjamani-Hochberg method.
+
+Reactions:
+Pathway topology analysis considers the connectivity between molecules that is represented by the pathway steps (which we refer to as reactions) in the pathway. It groups all the molecules represented in each reaction as a pathway ‘unit’. If any of these molecules are represented in your query set, this is considered a match to that reaction. This may give a better indication of the proportion of the pathway that matches your data, rather than the number of molecules that are common between your data and the pathway. It may also indicate that your data matches the start, end or a particular branch of a pathway process. This test does not have a probability score.
+
+
+
 ```{r}
 # Archivo de equivalencias KO con genes
 
