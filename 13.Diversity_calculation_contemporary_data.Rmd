@@ -366,10 +366,10 @@ rm (c_lp_sm_n019)
 
 ```{r}
 library(viridis)
-library(dplyr)
 library(ggplot2)
 library(tidyr)
 library(plyr)
+library(dplyr)
 
 
 wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
@@ -3478,7 +3478,7 @@ for (DATAFRAME in DATAFRAMES)
   ## DATASET GO term enrichment and pathway enrichment watterson
   
   list_of_genes_GOterm_watterson <- get(DATAFRAME) %>% filter(., log(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log(watterson_ave.y) > min_bootleneck_pop_value_watterson & ratio_watterson_average > 0.6 & ratio_watterson_average < 1.4 & feature=="CDS") %>% select (unique_id)
-  assign(paste0(POP1, "_", POP2,"_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson"), list_of_genes_GOterm)
+  assign(paste0(POP1, "_", POP2,"_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson"), list_of_genes_GOterm_watterson)
   
   ## DATASET D-D  _watterson
   
@@ -3733,12 +3733,19 @@ divergence_recomb_and_GC_by_evol_category_watterson <- function(DATAFRAME)
                        
                        mean_divergence=mean(divergence, na.rm = T),
                        stdev_divergence=sqrt(var(divergence, na.rm = T)),
+                       
+                       median_divergence=median(divergence, na.rm = T),
 
                        mean_recombination_rate=mean(recombination_rate,  na.rm = T),
                        stdev_recombination_rate=sqrt(var(recombination_rate, na.rm = T)),
 
+                       median_recombination_rate=median(recombination_rate,  na.rm = T),
+
                        mean_GC_content=mean(GC_content,  na.rm = T),
-                       stdev_GC_content=sqrt(var(GC_content, na.rm = T)))
+                       stdev_GC_content=sqrt(var(GC_content, na.rm = T)),
+  
+                       median_GC_content=median(GC_content,  na.rm = T))
+
   
   
 write.table(div_recom_GC_by_categ_summary_watterson, paste0(wd_output,paste0("stats_diversity_comparison_",POP1, "_", POP2,"_genomic_variables_watterson.csv") ), quote = F, row.names=F )
@@ -3778,12 +3785,20 @@ divergence_recomb_and_GC_by_evol_category_by_feature_watterson <- function(DATAF
                        
                        mean_divergence=mean(divergence, na.rm = T),
                        stdev_divergence=sqrt(var(divergence, na.rm = T)),
+                       
+                       median_divergence=median(divergence, na.rm = T),
 
                        mean_recombination_rate=mean(recombination_rate,  na.rm = T),
                        stdev_recombination_rate=sqrt(var(recombination_rate, na.rm = T)),
+                       
+                       median_recombination_rate=median(recombination_rate,  na.rm = T),
 
                        mean_GC_content=mean(GC_content,  na.rm = T),
-                       stdev_GC_content=sqrt(var(GC_content, na.rm = T)))
+                       stdev_GC_content=sqrt(var(GC_content, na.rm = T)),
+                       
+                       median_GC_content=median(GC_content,  na.rm = T))
+
+                  
   
   
 write.table(div_recom_GC_by_categ_summary_feature_watterson, paste0(wd_output,paste0("stats_diversity_comparison_",POP1, "_", POP2,"_genomic_variables_per_feature_watterson.csv") ), quote = F, row.names=F )
@@ -3991,6 +4006,38 @@ According to help(wilcox.test), if the samples contain less than 50 values (as i
 
 stat_compare_means has a method.args argument but it doesn't seem to pass the exact = TRUE specification correctly. Instead you can compute the p-value exactly how you want it first and then add it to the plot
 Por tanto, los p-values son una aproximacion normal (In one case the p-value is exact and in the other it is a normal approximation.)
+### Boxplot generales
+
+```{r}
+
+
+# Divergence
+
+wilcox.test(divergence ~ diversity_category, data = data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson, conf.int = TRUE, alternative = "greater")
+
+wilcox.test(divergence ~ diversity_category, data = data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson, conf.int = TRUE, alternative = "greater")
+
+wilcox.test(divergence ~ diversity_category, data = data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson, conf.int = TRUE, alternative = "greater")
+
+# Recombination
+
+wilcox.test(recombination_rate ~ diversity_category, data = data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson, conf.int = TRUE, alternative = "greater")
+
+wilcox.test(recombination_rate ~ diversity_category, data = data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson, conf.int = TRUE, alternative = "greater")
+
+wilcox.test(recombination_rate ~ diversity_category, data = data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson, conf.int = TRUE, alternative = "greater")
+
+
+# GC content
+
+wilcox.test(GC_content ~ diversity_category, data = data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson, conf.int = TRUE, alternative = "less")
+
+wilcox.test(GC_content ~ diversity_category, data = data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson, conf.int = TRUE, alternative = "less")
+
+wilcox.test(GC_content ~ diversity_category, data = data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson, conf.int = TRUE, alternative = "less")
+
+
+```
 
 
 #### Boxplot categories vs. divergence
@@ -4023,10 +4070,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.0075, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.0075, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_HD_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_HD_watterson_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
 
@@ -4034,10 +4081,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
   coord_cartesian(ylim = c(0,max(sts_HD_watterson)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater"))  + 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_HD_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_HD_watterson_alternative_greater.pdf",sep=""))
 
 
 #############################################
@@ -4053,10 +4100,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.0075, tip_length=0, linetype="blank") + # test.args=list(alternative="less")  map_signif_level=TRUE, 
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.0075, tip_length=0, linetype="blank", test.args=list(alternative="greater"))  + 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_LD_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_LD_watterson_alternative_greater.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -4065,13 +4112,14 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_watterson)*2.3)) +
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater"))  + 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_LD_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_LD_watterson_alternative_greater.pdf",sep=""))
 
 
 }
+
 ```
 #### Boxplot categories vs. divergence by features
 
@@ -4102,10 +4150,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.0075, map_signif_level=TRUE, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.0075, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_HD_features_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_HD_features_watterson_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
 
@@ -4113,10 +4161,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
   coord_cartesian(ylim = c(0,max(sts_HD_watterson)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, map_signif_level=TRUE, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_HD_features_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_HD_features_watterson_alternative_greater.pdf",sep=""))
 
 
 #############################################
@@ -4132,10 +4180,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.0075, map_signif_level=TRUE, tip_length=0, linetype="blank") + # test.args=list(alternative="less")  
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.0075, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_LD_features_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_LD_features_watterson_alternative_greater.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -4144,13 +4192,14 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_watterson)*2.3)) +
   facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, map_signif_level=TRUE, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_LD_features_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_LD_features_watterson_alternative_greater.pdf",sep=""))
 
 
 }
+
 ```
 
 
@@ -4180,10 +4229,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=5, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=5, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_HD_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_HD_watterson_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
 
@@ -4191,10 +4240,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
   coord_cartesian(ylim = c(0,max(sts_HD_watterson)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_HD_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_HD_watterson_alternative_greater.pdf",sep=""))
 
 
 #############################################
@@ -4210,10 +4259,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=5, tip_length=0, linetype="blank") + # test.args=list(alternative="less")  map_signif_level=TRUE, 
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=5, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_LD_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_LD_watterson_alternative_greater.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -4222,10 +4271,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_watterson)*2.3)) +
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_LD_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_LD_watterson_alternative_greater.pdf",sep=""))
 
 
 }
@@ -4256,10 +4305,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=9, tip_length=0,map_signif_level=TRUE, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=9, tip_length=0,map_signif_level=TRUE, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_HD_feature_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_HD_feature_watterson_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
 
@@ -4267,10 +4316,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
   coord_cartesian(ylim = c(0,max(sts_HD_watterson)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_HD_feature_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_HD_feature_watterson_alternative_greater.pdf",sep=""))
 
 
 #############################################
@@ -4286,10 +4335,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=9, tip_length=0, map_signif_level=TRUE,linetype="blank") + # test.args=list(alternative="less")  map_signif_level=TRUE, 
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=9, tip_length=0, map_signif_level=TRUE,linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_LD_feature_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_LD_feature_watterson_alternative_greater.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -4298,10 +4347,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_watterson)*2.3)) +
   facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_LD_feature_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_LD_feature_watterson_alternative_greater.pdf",sep=""))
 
 
 }
@@ -4334,10 +4383,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.8, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.8, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_HD_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_HD_watterson_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
 
@@ -4345,10 +4394,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
   coord_cartesian(ylim = c(0,max(sts_HD_watterson)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_HD_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_HD_watterson_alternative_greater.pdf",sep=""))
 
 
 #############################################
@@ -4364,10 +4413,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.8, tip_length=0, linetype="blank") + # test.args=list(alternative="less")  map_signif_level=TRUE, 
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.8, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_LD_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_LD_watterson_alternative_greater.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -4376,10 +4425,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_watterson)*2.3)) +
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_LD_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_LD_watterson_alternative_greater.pdf",sep=""))
 
 
 }
@@ -4411,10 +4460,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.9, tip_length=0, map_signif_level=TRUE,linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.9, tip_length=0, map_signif_level=TRUE,linetype="blank",  test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_HD_feature_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_HD_feature_watterson_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
 
@@ -4422,10 +4471,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
   coord_cartesian(ylim = c(0,max(sts_HD_watterson)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank",  test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_HD_feature_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_HD_feature_watterson_alternative_greater.pdf",sep=""))
 
 
 #############################################
@@ -4441,10 +4490,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.9, tip_length=0,map_signif_level=TRUE, linetype="blank") + # test.args=list(alternative="less")  map_signif_level=TRUE, 
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.9, tip_length=0,map_signif_level=TRUE, linetype="blank",  test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_LD_feature_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_LD_feature_watterson_alternative_greater.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -4453,10 +4502,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_watterson)*2.3)) +
   facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank",  test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal() +
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_LD_feature_watterson.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_LD_feature_watterson_greater.pdf",sep=""))
 
 
 }
@@ -4918,7 +4967,7 @@ for (DATAFRAME in DATAFRAMES)
   ## DATASET GO term enrichment and pathway enrichment pairwise
   
   list_of_genes_GOterm_pairwise <- get(DATAFRAME) %>% filter(., log(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log(pairwise_ave.y) > min_bootleneck_pop_value_pairwise & ratio_pairwise_average > 0.6 & ratio_pairwise_average < 1.4 & feature=="CDS") %>% select (unique_id)
-  assign(paste0(POP1, "_", POP2,"_list_of_genes_of_interest_high_diversity_ratio_1_CDS_pairwise"), list_of_genes_GOterm)
+  assign(paste0(POP1, "_", POP2,"_list_of_genes_of_interest_high_diversity_ratio_1_CDS_pairwise"), list_of_genes_GOterm_pairwise)
   
   ## DATASET D-D  _pairwise
   
@@ -5173,12 +5222,19 @@ divergence_recomb_and_GC_by_evol_category_pairwise <- function(DATAFRAME)
                        
                        mean_divergence=mean(divergence, na.rm = T),
                        stdev_divergence=sqrt(var(divergence, na.rm = T)),
+                       
+                       median_divergence=median(divergence, na.rm = T),
 
                        mean_recombination_rate=mean(recombination_rate,  na.rm = T),
                        stdev_recombination_rate=sqrt(var(recombination_rate, na.rm = T)),
 
+                       median_recombination_rate=median(recombination_rate,  na.rm = T),
+
                        mean_GC_content=mean(GC_content,  na.rm = T),
-                       stdev_GC_content=sqrt(var(GC_content, na.rm = T)))
+                       stdev_GC_content=sqrt(var(GC_content, na.rm = T)),
+                                              
+                       median_GC_content=median(GC_content,  na.rm = T))
+
   
   
 write.table(div_recom_GC_by_categ_summary_pairwise, paste0(wd_output,paste0("stats_diversity_comparison_",POP1, "_", POP2,"_genomic_variables_pairwise.csv") ), quote = F, row.names=F )
@@ -5196,6 +5252,7 @@ c_ll_ki_n013_diversity_c_ll_po_n008_diver_recomb_GC_evol_category_pairwise <- di
 c_lp_sm_n019_diversity_c_lp_do_n012_diver_recomb_GC_evol_category_pairwise <- divergence_recomb_and_GC_by_evol_category_pairwise(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise) 
 
 ```
+
 
 
 ###### Recombinación divergencia y GC content para cada categoría evolutiva y para cada feature 
@@ -5219,11 +5276,18 @@ divergence_recomb_and_GC_by_evol_category_by_feature_pairwise <- function(DATAFR
                        mean_divergence=mean(divergence, na.rm = T),
                        stdev_divergence=sqrt(var(divergence, na.rm = T)),
 
+                       median_divergence=median(divergence, na.rm = T),
+
                        mean_recombination_rate=mean(recombination_rate,  na.rm = T),
                        stdev_recombination_rate=sqrt(var(recombination_rate, na.rm = T)),
+                                              
+                       median_recombination_rate=median(recombination_rate,  na.rm = T),
 
                        mean_GC_content=mean(GC_content,  na.rm = T),
-                       stdev_GC_content=sqrt(var(GC_content, na.rm = T)))
+                       stdev_GC_content=sqrt(var(GC_content, na.rm = T)),
+                       
+                       median_GC_content=median(GC_content,  na.rm = T))
+
   
   
 write.table(div_recom_GC_by_categ_summary_feature_pairwise, paste0(wd_output,paste0("stats_diversity_comparison_",POP1, "_", POP2,"_genomic_variables_per_feature_pairwise.csv") ), quote = F, row.names=F )
@@ -5250,6 +5314,41 @@ c_lp_sm_n019_diversity_c_lp_do_n012_diver_recomb_GC_evol_caterogy_by_feature_pai
 
 ```
 
+###### $$ POR AQUI Cuentas con los valores
+
+```{r}
+# Divergence
+
+c_ll_ki_n013_diversity_c_ll_po_n008_diver_recomb_GC_evol_caterogy_by_feature_pairwise %>%  ungroup (.) %>% as.data.frame() %>% dplyr::select(median_divergence,feature, evolution_category) %>% spread(evolution_category, median_divergence) %>% mutate(DELTA_HD=abs(as.numeric(.[[3]])-as.numeric(.[[2]]))) %>% mutate(DELTA_LD=abs(as.numeric(.[[5]])-as.numeric(.[[4]]))) %>% dplyr::select (feature, DELTA_HD,DELTA_LD )
+  
+c_ll_ki_n013_diversity_c_ll_no_n008_diver_recomb_GC_evol_caterogy_by_feature_pairwise %>%  ungroup (.) %>% as.data.frame() %>% dplyr::select(median_divergence,feature, evolution_category) %>% spread(evolution_category, median_divergence) %>% mutate(DELTA_HD=abs(as.numeric(.[[3]])-as.numeric(.[[2]]))) %>% mutate(DELTA_LD=abs(as.numeric(.[[5]])-as.numeric(.[[4]]))) %>% dplyr::select (feature, DELTA_HD,DELTA_LD )
+
+
+c_lp_sm_n019_diversity_c_lp_do_n012_diver_recomb_GC_evol_caterogy_by_feature_pairwise %>%  ungroup (.) %>% as.data.frame() %>% dplyr::select(median_divergence,feature, evolution_category) %>% spread(evolution_category, median_divergence) %>% mutate(DELTA_HD=abs(as.numeric(.[[3]])-as.numeric(.[[2]]))) %>% mutate(DELTA_LD=abs(as.numeric(.[[5]])-as.numeric(.[[4]]))) %>% dplyr::select (feature, DELTA_HD,DELTA_LD )
+
+
+
+# Recombination
+
+c_ll_ki_n013_diversity_c_ll_po_n008_diver_recomb_GC_evol_caterogy_by_feature_pairwise %>%  ungroup (.) %>% as.data.frame() %>% dplyr::select(median_recombination_rate,feature, evolution_category) %>% spread(evolution_category, median_recombination_rate) %>% mutate(DELTA_HD=abs(as.numeric(.[[3]])-as.numeric(.[[2]]))) %>% mutate(DELTA_LD=abs(as.numeric(.[[5]])-as.numeric(.[[4]]))) %>% dplyr::select (feature, DELTA_HD,DELTA_LD )
+
+c_ll_ki_n013_diversity_c_ll_no_n008_diver_recomb_GC_evol_caterogy_by_feature_pairwise %>%  ungroup (.) %>% as.data.frame() %>% dplyr::select(median_recombination_rate,feature, evolution_category) %>% spread(evolution_category, median_recombination_rate) %>% mutate(DELTA_HD=abs(as.numeric(.[[3]])-as.numeric(.[[2]]))) %>% mutate(DELTA_LD=abs(as.numeric(.[[5]])-as.numeric(.[[4]]))) %>% dplyr::select (feature, DELTA_HD,DELTA_LD )
+
+c_lp_sm_n019_diversity_c_lp_do_n012_diver_recomb_GC_evol_caterogy_by_feature_pairwise %>%  ungroup (.) %>% as.data.frame() %>% dplyr::select(median_recombination_rate,feature, evolution_category) %>% spread(evolution_category, median_recombination_rate) %>% mutate(DELTA_HD=abs(as.numeric(.[[3]])-as.numeric(.[[2]]))) %>% mutate(DELTA_LD=abs(as.numeric(.[[5]])-as.numeric(.[[4]]))) %>% dplyr::select (feature, DELTA_HD,DELTA_LD )
+
+
+# GC content
+
+c_ll_ki_n013_diversity_c_ll_po_n008_diver_recomb_GC_evol_caterogy_by_feature_pairwise %>%  ungroup (.) %>% as.data.frame() %>% dplyr::select(median_GC_content,feature, evolution_category) %>% spread(evolution_category, median_GC_content) %>% mutate(DELTA_HD=abs(as.numeric(.[[3]])-as.numeric(.[[2]]))) %>% mutate(DELTA_LD=abs(as.numeric(.[[5]])-as.numeric(.[[4]]))) %>% dplyr::select (feature, DELTA_HD,DELTA_LD )
+
+c_ll_ki_n013_diversity_c_ll_no_n008_diver_recomb_GC_evol_caterogy_by_feature_pairwise %>%  ungroup (.) %>% as.data.frame() %>% dplyr::select(median_GC_content,feature, evolution_category) %>% spread(evolution_category, median_GC_content) %>% mutate(DELTA_HD=abs(as.numeric(.[[3]])-as.numeric(.[[2]]))) %>% mutate(DELTA_LD=abs(as.numeric(.[[5]])-as.numeric(.[[4]]))) %>% dplyr::select (feature, DELTA_HD,DELTA_LD )
+
+c_lp_sm_n019_diversity_c_lp_do_n012_diver_recomb_GC_evol_caterogy_by_feature_pairwise %>%  ungroup (.) %>% as.data.frame() %>% dplyr::select(median_GC_content,feature, evolution_category) %>% spread(evolution_category, median_GC_content) %>% mutate(DELTA_HD=abs(as.numeric(.[[3]])-as.numeric(.[[2]]))) %>% mutate(DELTA_LD=abs(as.numeric(.[[5]])-as.numeric(.[[4]]))) %>% dplyr::select (feature, DELTA_HD,DELTA_LD )
+
+
+
+
+```
 
 
 # ---------------------------------
@@ -5432,7 +5531,38 @@ According to help(wilcox.test), if the samples contain less than 50 values (as i
 
 stat_compare_means has a method.args argument but it doesn't seem to pass the exact = TRUE specification correctly. Instead you can compute the p-value exactly how you want it first and then add it to the plot
 Por tanto, los p-values son una aproximacion normal (In one case the p-value is exact and in the other it is a normal approximation.)
+### Boxplot generales
 
+```{r}
+
+
+# Divergence
+
+wilcox.test(divergence ~ diversity_category, data = data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise, conf.int = TRUE, alternative = "greater")
+
+wilcox.test(divergence ~ diversity_category, data = data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise, conf.int = TRUE, alternative = "greater")
+
+wilcox.test(divergence ~ diversity_category, data = data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise, conf.int = TRUE, alternative = "greater")
+
+# Recombination
+
+wilcox.test(recombination_rate ~ diversity_category, data = data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise, conf.int = TRUE, alternative = "greater")
+
+wilcox.test(recombination_rate ~ diversity_category, data = data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise, conf.int = TRUE, alternative = "greater")
+
+wilcox.test(recombination_rate ~ diversity_category, data = data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise, conf.int = TRUE, alternative = "greater")
+
+
+# GC content
+
+wilcox.test(GC_content ~ diversity_category, data = data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise, conf.int = TRUE, alternative = "less")
+
+wilcox.test(GC_content ~ diversity_category, data = data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise, conf.int = TRUE, alternative = "less")
+
+wilcox.test(GC_content ~ diversity_category, data = data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise, conf.int = TRUE, alternative = "less")
+
+
+```
 
 #### Boxplot categories vs. divergence
 
@@ -5464,10 +5594,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.0075, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.0075, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_HD_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_HD_pairwise_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
 
@@ -5475,10 +5605,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
   coord_cartesian(ylim = c(0,max(sts_HD_pairwise)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_HD_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_HD_pairwise_alternative_greater.pdf",sep=""))
 
 
 #############################################
@@ -5494,10 +5624,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.0075, tip_length=0, linetype="blank") + # test.args=list(alternative="less")  map_signif_level=TRUE, 
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.0075, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_LD_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_LD_pairwise_alternative_greater.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -5506,10 +5636,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_pairwise)*2.3)) +
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_LD_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_LD_pairwise_alternative_greater.pdf",sep=""))
 
 
 }
@@ -5543,10 +5673,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.0075, map_signif_level=TRUE, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.0075, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_HD_features_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_HD_features_pairwise_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
 
@@ -5554,10 +5684,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
   coord_cartesian(ylim = c(0,max(sts_HD_pairwise)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, map_signif_level=TRUE, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_HD_features_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_HD_features_pairwise_alternative_greater.pdf",sep=""))
 
 
 #############################################
@@ -5573,10 +5703,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.0075, map_signif_level=TRUE, tip_length=0, linetype="blank") + # test.args=list(alternative="less")  
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.0075, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_LD_features_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_LD_features_pairwise_alternative_greater.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -5585,10 +5715,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_pairwise)*2.3)) +
   facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, map_signif_level=TRUE, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_LD_features_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_LD_features_pairwise_alternative_greater.pdf",sep=""))
 
 
 }
@@ -5621,10 +5751,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=5, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=5, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_HD_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_HD_pairwise_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
 
@@ -5632,10 +5762,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
   coord_cartesian(ylim = c(0,max(sts_HD_pairwise)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_HD_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_HD_pairwise_alternative_greater.pdf",sep=""))
 
 
 #############################################
@@ -5651,10 +5781,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=5, tip_length=0, linetype="blank") + # test.args=list(alternative="less")  map_signif_level=TRUE, 
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=5, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_LD_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_LD_pairwise_alternative_greater.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -5663,10 +5793,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_pairwise)*2.3)) +
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_LD_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_LD_pairwise_alternative_greater.pdf",sep=""))
 
 
 }
@@ -5697,10 +5827,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=9, tip_length=0,map_signif_level=TRUE, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=9, tip_length=0,map_signif_level=TRUE, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_HD_feature_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_HD_feature_pairwise_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
 
@@ -5708,10 +5838,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
   coord_cartesian(ylim = c(0,max(sts_HD_pairwise)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_HD_feature_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_HD_feature_pairwise_alternative_greater.pdf",sep=""))
 
 
 #############################################
@@ -5727,10 +5857,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=9, tip_length=0, map_signif_level=TRUE,linetype="blank") + # test.args=list(alternative="less")  map_signif_level=TRUE, 
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=9, tip_length=0, map_signif_level=TRUE,linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_LD_feature_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_LD_feature_pairwise_alternative_greater.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -5739,10 +5869,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_pairwise)*2.3)) +
   facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_LD_feature_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_LD_feature_pairwise_alternative_greater.pdf",sep=""))
 
 
 }
@@ -5775,10 +5905,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.8, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.8, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_HD_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_HD_pairwise_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
 
@@ -5786,10 +5916,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
   coord_cartesian(ylim = c(0,max(sts_HD_pairwise)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_HD_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_HD_pairwise_alternative_greater.pdf",sep=""))
 
 
 #############################################
@@ -5805,10 +5935,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.8, tip_length=0, linetype="blank") + # test.args=list(alternative="less")  map_signif_level=TRUE, 
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.8, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_LD_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_LD_pairwise_alternative_greater.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -5817,10 +5947,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_pairwise)*2.3)) +
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_LD_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_LD_pairwise_alternative_greater.pdf",sep=""))
 
 
 }
@@ -5852,10 +5982,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.9, tip_length=0, map_signif_level=TRUE,linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.9, tip_length=0, map_signif_level=TRUE,linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_HD_feature_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_HD_feature_pairwise_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
 
@@ -5863,10 +5993,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
   coord_cartesian(ylim = c(0,max(sts_HD_pairwise)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_HD_feature_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_HD_feature_pairwise_alternative_greater.pdf",sep=""))
 
 
 #############################################
@@ -5882,10 +6012,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   stat_summary(fun.y = mean, geom="point", size=3) +
   stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.9, tip_length=0,map_signif_level=TRUE, linetype="blank") + # test.args=list(alternative="less")  map_signif_level=TRUE, 
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.9, tip_length=0,map_signif_level=TRUE, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_LD_feature_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_LD_feature_pairwise_alternative_greater.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -5894,10 +6024,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_pairwise)*2.3)) +
   facet_grid(col = vars(feature) ) +
   geom_boxplot(outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank") + # test.args=list(alternative="less")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   theme_minimal()+
   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_text(angle = 75, hjust = 1)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_LD_feature_pairwise.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_LD_feature_pairwise_alternative_greater.pdf",sep=""))
 
 
 }
