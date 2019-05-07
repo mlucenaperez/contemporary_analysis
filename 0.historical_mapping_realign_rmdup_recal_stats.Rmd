@@ -5,6 +5,15 @@ output: html_document
 
 # Pipeline for contemporary samples
 
+
+########################################
+Actualización 07/05/2019
+
+Estas muestras se van a volver a remapear. Todo lo relativo a partir de ahora a muestras antiguas o históricas pasa a estar en el proyecto historical_ancient_diversity. 
+Todo excepto los análisis de lince boreal de la peninsula ibérica que están en el proyecto que se llama ancient_analysis. 
+
+########################################
+
 ##  Overview & variable definition
 
 This is the pipeline for Illumina read merging and bwa mapping of modern libraries generated using the double stranded protocol. Merged and unmerged PE reads are mapped.
