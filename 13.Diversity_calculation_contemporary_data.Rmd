@@ -586,7 +586,7 @@ assign (tabla_data_temporal_diversity_pre_name, tabla_data_temporal_diversity_pr
 
 ```
 
-# Fusiono tablas
+## Merge autosomic and chrX data
 
 ```{r}
 
@@ -597,13 +597,181 @@ c_lp_sm_n019_diversity <- rbind (c_lp_sm_n019_autosomes_diversity, c_lp_sm_n019_
 c_lp_do_n012_diversity <- rbind (c_lp_do_n012_autosomes_diversity, c_lp_do_n012_chrX_diversity )
 
 
+```
+
+## Density plot watterson
+
+```{r}
+
+library(data.table)
+library(ggplot2)
+
+# En primer lugar hacemos los density plot de las diversidades para cada población. Como ya los habíamos explorado, vemos que eran bimodales, así que con este código fabrico una tablita que recoge el punto más bajo en ese density plot y lo guarda para usarlo despues como punto de corte. 
+
+# Vamos a intentar sacar el punto más bajo en la distribución de los density plot. 
+
+# Todo esta hecho para watterson
+
+DATAFRAMES=c("c_ll_ki_n013_diversity","c_ll_no_n008_diversity", "c_ll_po_n008_diversity", "c_lp_sm_n019_diversity", "c_lp_do_n012_diversity")
+
+for (DATAFRAME in DATAFRAMES)
+{
+  
+  
+POP=get(DATAFRAME) %>% dplyr::select(pop) %>% dplyr::mutate(pop=as.character(pop)) %>% .[1,1] 
+  
+maxY1_position <- which.max(density(log10(get(DATAFRAME)$watterson_ave))$y)
+maxX1_value <- density(log10(get(DATAFRAME)$watterson_ave))$x[maxY1_position] 
+
+maxY_value <- max(density(log10(get(DATAFRAME)$watterson_ave))$y[density(log10(get(DATAFRAME)$watterson_ave))$x>(maxX1_value+3)])
+
+maxY2_position <- which(density(log10(get(DATAFRAME)$watterson_ave))$y == maxY_value)
+maxX2_value <- density(log10(get(DATAFRAME)$watterson_ave))$x[maxY2_position] 
+
+DensityWatterson.Y <- density(log10(get(DATAFRAME)$watterson_ave))$y
+DensityWatterson.X <- density(log10(get(DATAFRAME)$watterson_ave))$x
+
+minY_value <- min(DensityWatterson.Y[DensityWatterson.X < maxX2_value & DensityWatterson.X > maxX1_value])
+minY_position <- which(DensityWatterson.Y == minY_value)
+minX_value <- density(log10(get(DATAFRAME)$watterson_ave))$x[minY_position] 
+
+
+ggplot(get(DATAFRAME), aes(log10(watterson_ave))) + 
+   geom_density() + 
+   scale_color_viridis(discrete=TRUE) +
+   scale_fill_viridis(discrete=TRUE) +
+   geom_vline(xintercept = density(log10(get(DATAFRAME)$watterson_ave))$x[minY_position]) +
+  ggsave(paste0(wd_output, POP,"_density_watterson.pdf"))
+
+
+assign(paste0(POP,"_density_min_value_watterson"), c(POP,minX_value))
+
+}
+
+# Uno las distintas tablas de puntos de corte. 
+
+density_min_values_watterson <- as.data.frame(rbind (c_lp_sm_n019_density_min_value_watterson, c_lp_do_n012_density_min_value_watterson, c_ll_ki_n013_density_min_value_watterson, c_ll_po_n008_density_min_value_watterson, c_ll_no_n008_density_min_value_watterson)) 
+names(density_min_values_watterson) <- c("pop", "min_density_value_watterson")
+density_min_values_watterson$min_density_value_watterson <- as.numeric(as.character(density_min_values_watterson$min_density_value_watterson))
+
+
+rm (c_lp_sm_n019_density_min_value_watterson)
+rm (c_lp_do_n012_density_min_value_watterson)
+rm (c_ll_ki_n013_density_min_value_watterson)
+rm (c_ll_po_n008_density_min_value_watterson)
+rm (c_ll_no_n008_density_min_value_watterson) 
+
+
+```
+
+
+## Density plot pairwise
+
+```{r}
+
+library(data.table)
+library(ggplot2)
+
+# En primer lugar hacemos los density plot de las diversidades para cada población. Como ya los habíamos explorado, vemos que eran bimodales, así que con este código fabrico una tablita que recoge el punto más bajo en ese density plot y lo guarda para usarlo despues como punto de corte. 
+
+# Vamos a intentar sacar el punto más bajo en la distribución de los density plot. 
+
+# Todo esta hecho para pairwise
+
+DATAFRAMES=c("c_ll_ki_n013_diversity","c_ll_no_n008_diversity", "c_ll_po_n008_diversity", "c_lp_sm_n019_diversity", "c_lp_do_n012_diversity")
+
+for (DATAFRAME in DATAFRAMES)
+{
+  
+  
+POP=get(DATAFRAME) %>% dplyr::select(pop) %>% dplyr::mutate(pop=as.character(pop)) %>% .[1,1] 
+  
+maxY1_position <- which.max(density(log10(get(DATAFRAME)$pairwise_ave))$y)
+maxX1_value <- density(log10(get(DATAFRAME)$pairwise_ave))$x[maxY1_position] 
+
+maxY_value <- max(density(log10(get(DATAFRAME)$pairwise_ave))$y[density(log10(get(DATAFRAME)$pairwise_ave))$x>(maxX1_value+3)])
+
+maxY2_position <- which(density(log10(get(DATAFRAME)$pairwise_ave))$y == maxY_value)
+maxX2_value <- density(log10(get(DATAFRAME)$pairwise_ave))$x[maxY2_position] 
+
+Densitypairwise.Y <- density(log10(get(DATAFRAME)$pairwise_ave))$y
+Densitypairwise.X <- density(log10(get(DATAFRAME)$pairwise_ave))$x
+
+minY_value <- min(Densitypairwise.Y[Densitypairwise.X < maxX2_value & Densitypairwise.X > maxX1_value])
+minY_position <- which(Densitypairwise.Y == minY_value)
+minX_value <- density(log10(get(DATAFRAME)$pairwise_ave))$x[minY_position] 
+
+
+ggplot(get(DATAFRAME), aes(log10(pairwise_ave))) + 
+   geom_density() + 
+   scale_color_viridis(discrete=TRUE) +
+   scale_fill_viridis(discrete=TRUE) +
+   geom_vline(xintercept = density(log10(get(DATAFRAME)$pairwise_ave))$x[minY_position]) +
+  ggsave(paste0(wd_output, POP,"_density_pairwise.pdf"))
+
+
+assign(paste0(POP,"_density_min_value_pairwise"), c(POP,minX_value))
+
+}
+
+# Uno las distintas tablas de puntos de corte. 
+
+density_min_values_pairwise <- as.data.frame(rbind (c_lp_sm_n019_density_min_value_pairwise, c_lp_do_n012_density_min_value_pairwise, c_ll_ki_n013_density_min_value_pairwise, c_ll_po_n008_density_min_value_pairwise, c_ll_no_n008_density_min_value_pairwise)) 
+names(density_min_values_pairwise) <- c("pop", "min_density_value_pairwise")
+density_min_values_pairwise$min_density_value_pairwise <- as.numeric(as.character(density_min_values_pairwise$min_density_value_pairwise))
+
+
+rm (c_lp_sm_n019_density_min_value_pairwise)
+rm (c_lp_do_n012_density_min_value_pairwise)
+rm (c_ll_ki_n013_density_min_value_pairwise)
+rm (c_ll_po_n008_density_min_value_pairwise)
+rm (c_ll_no_n008_density_min_value_pairwise) 
+
+
+```
+
+
+## Fusiono tablas y cambio valores pequeños por cero
+
+```{r}
+
 # Hago una tabla con la media para cada grupo y para cada población. 
 
-data_diversity_autosomes_filtered_ave_corrected <- rbind (c_ll_ki_n013_autosomes_diversity, c_ll_no_n008_autosomes_diversity, c_ll_po_n008_autosomes_diversity,  c_lp_sm_n019_autosomes_diversity, c_lp_do_n012_autosomes_diversity)
 
-data_diversity_chrX_filtered_ave_corrected <- rbind (c_ll_ki_n013_chrX_diversity, c_ll_no_n008_chrX_diversity, c_ll_po_n008_chrX_diversity,  c_lp_sm_n019_chrX_diversity, c_lp_do_n012_chrX_diversity)
+### Autosomas
+
+data_diversity_autosomes_filtered_ave_corrected <- rbind (c_ll_ki_n013_autosomes_diversity, c_ll_no_n008_autosomes_diversity, c_ll_po_n008_autosomes_diversity,  c_lp_sm_n019_autosomes_diversity, c_lp_do_n012_autosomes_diversity) %>% 
+# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
+mutate (watterson_cero = ifelse (pop=="c_lp_sm_n019"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_sm_n019")$min_density_value_watterson) | 
+                                   pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson) | 
+                                   pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson) | 
+                                   pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson) | 
+                                   pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
+  mutate (pairwise_cero = ifelse (pop=="c_lp_sm_n019"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_sm_n019")$min_density_value_pairwise) | 
+                                   pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise) | 
+                                   pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise) | 
+                                   pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise) | 
+                                   pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),0,pairwise_ave)) 
+
+### ChrX
+
+data_diversity_chrX_filtered_ave_corrected <- rbind (c_ll_ki_n013_chrX_diversity, c_ll_no_n008_chrX_diversity, c_ll_po_n008_chrX_diversity,  c_lp_sm_n019_chrX_diversity, c_lp_do_n012_chrX_diversity) %>% 
+# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
+ mutate (watterson_cero = ifelse (pop=="c_lp_sm_n019"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_sm_n019")$min_density_value_watterson) | 
+                                   pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson) | 
+                                   pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson) | 
+                                   pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson) | 
+                                   pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
+  mutate (pairwise_cero = ifelse (pop=="c_lp_sm_n019"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_sm_n019")$min_density_value_pairwise) | 
+                                   pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise) | 
+                                   pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise) | 
+                                   pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise) | 
+                                   pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise), 0 ,pairwise_ave)) 
+# Uno ambas tablas
 
 data_diversity_filtered_ave_corrected <- rbind (data_diversity_autosomes_filtered_ave_corrected, data_diversity_chrX_filtered_ave_corrected)
+
+
 
 
 # rm (data_diversity_filtered)
@@ -622,7 +790,6 @@ data_diversity_filtered_ave_corrected <- rbind (data_diversity_autosomes_filtere
 
 
 ```
-
 
 # -----------------------------------------------------------------
 
@@ -679,7 +846,7 @@ diversity_stats_pop <- function(diversity_df)
                        upperw_pairwise_ave  = q75_pairwise_ave  + 1.5 * IQR_pairwise_ave,
                        
                        
-                       # Valores corregidos
+                       # Valores considerando los ceros
                        
                        mean_watterson_ave_corrected=mean(watterson_ave_corrected),
                        mean_pairwise_ave_corrected=mean(pairwise_ave_corrected),
@@ -733,6 +900,12 @@ return(diversity_stats_df)
 
 stats_df_pop_autosomes <- diversity_stats_pop(data_diversity_autosomes_filtered_ave_corrected) %>%  mutate (type_chr="autosomes")
 stats_df_pop_chrX <- diversity_stats_pop(data_diversity_chrX_filtered_ave_corrected) %>%  mutate (type_chr="chrX")
+
+# Con las tablas de media cero
+stats_df_pop_autosomes <- diversity_stats_pop(data_diversity_filtered_ave_corrected_values_below_min_0) %>%  mutate (type_chr="autosomes")
+stats_df_pop_chrX <- diversity_stats_pop(data_diversity_chrX_filtered_ave_corrected) %>%  mutate (type_chr="chrX")
+
+
 
 # Las fusiono y las guardo
 
@@ -3392,70 +3565,7 @@ ggplot (as.data.frame(get(DATAFRAME) %>% filter (chr!="chrX")), aes_string("mean
 
 # WATTERSON
 
-#### Diversity pop1 vs pop2
 
-```{r}
-
-library(data.table)
-library(ggplot2)
-
-# En primer lugar hacemos los density plot de las diversidades para cada población. Como ya los habíamos explorado, vemos que eran bimodales, así que con este código fabrico una tablita que recoge el punto más bajo en ese density plot y lo guarda para usarlo despues como punto de corte. 
-
-# Vamos a intentar sacar el punto más bajo en la distribución de los density plot. 
-
-# Todo esta hecho para watterson
-
-DATAFRAMES=c("c_ll_ki_n013_diversity","c_ll_no_n008_diversity", "c_ll_po_n008_diversity", "c_lp_sm_n019_diversity", "c_lp_do_n012_diversity")
-
-for (DATAFRAME in DATAFRAMES)
-{
-  
-  
-POP=get(DATAFRAME) %>% dplyr::select(pop) %>% dplyr::mutate(pop=as.character(pop)) %>% .[1,1] 
-  
-maxY1_position <- which.max(density(log(get(DATAFRAME)$watterson_ave))$y)
-maxX1_value <- density(log(get(DATAFRAME)$watterson_ave))$x[maxY1_position] 
-
-maxY_value <- max(density(log(get(DATAFRAME)$watterson_ave))$y[density(log(get(DATAFRAME)$watterson_ave))$x>(maxX1_value+3)])
-
-maxY2_position <- which(density(log(get(DATAFRAME)$watterson_ave))$y == maxY_value)
-maxX2_value <- density(log(get(DATAFRAME)$watterson_ave))$x[maxY2_position] 
-
-DensityWatterson.Y <- density(log(get(DATAFRAME)$watterson_ave))$y
-DensityWatterson.X <- density(log(get(DATAFRAME)$watterson_ave))$x
-
-minY_value <- min(DensityWatterson.Y[DensityWatterson.X < maxX2_value & DensityWatterson.X > maxX1_value])
-minY_position <- which(DensityWatterson.Y == minY_value)
-minX_value <- density(log(get(DATAFRAME)$watterson_ave))$x[minY_position] 
-
-
-ggplot(get(DATAFRAME), aes(log(watterson_ave))) + 
-   geom_density() + 
-   scale_color_viridis(discrete=TRUE) +
-   scale_fill_viridis(discrete=TRUE) +
-   geom_vline(xintercept = density(log(get(DATAFRAME)$watterson_ave))$x[minY_position]) +
-  ggsave(paste0(wd_output, POP,"_density_watterson.pdf"))
-
-
-assign(paste0(POP,"_density_min_value_watterson"), c(POP,minX_value))
-
-}
-
-# Uno las distintas tablas de puntos de corte. 
-
-density_min_values_watterson <- as.data.frame(rbind (c_lp_sm_n019_density_min_value_watterson, c_lp_do_n012_density_min_value_watterson, c_ll_ki_n013_density_min_value_watterson, c_ll_po_n008_density_min_value_watterson, c_ll_no_n008_density_min_value_watterson)) 
-names(density_min_values_watterson) <- c("pop", "min_density_value_watterson")
-density_min_values_watterson$min_density_value_watterson <- as.numeric(as.character(density_min_values_watterson$min_density_value_watterson))
-
-
-rm (c_lp_sm_n019_density_min_value_watterson)
-rm (c_lp_do_n012_density_min_value_watterson)
-rm (c_ll_ki_n013_density_min_value_watterson)
-rm (c_ll_po_n008_density_min_value_watterson)
-rm (c_ll_no_n008_density_min_value_watterson) 
-
-
-```
 
 #####  GOterm enrichment & dataset prep
 
@@ -3477,23 +3587,23 @@ for (DATAFRAME in DATAFRAMES)
 
   ## DATASET GO term enrichment and pathway enrichment watterson
   
-  list_of_genes_GOterm_watterson <- get(DATAFRAME) %>% filter(., log(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log(watterson_ave.y) > min_bootleneck_pop_value_watterson & ratio_watterson_average > 0.6 & ratio_watterson_average < 1.4 & feature=="CDS") %>% select (unique_id)
+  list_of_genes_GOterm_watterson <- get(DATAFRAME) %>% filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) > min_bootleneck_pop_value_watterson & ratio_watterson_average > 0.6 & ratio_watterson_average < 1.4 & feature=="CDS") %>% select (unique_id)
   assign(paste0(POP1, "_", POP2,"_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson"), list_of_genes_GOterm_watterson)
   
   ## DATASET D-D  _watterson
   
-  list_of_genes_D_D_watterson <- get(DATAFRAME) %>% filter(., log(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log(watterson_ave.y) > min_bootleneck_pop_value_watterson & feature=="CDS") %>% select ( unique_id)
+  list_of_genes_D_D_watterson <- get(DATAFRAME) %>% filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) > min_bootleneck_pop_value_watterson & feature=="CDS") %>% select ( unique_id)
   
   assign(paste0(POP1, "_", POP2,"_list_CDS_D_D_watterson"), list_of_genes_D_D_watterson)
   
-  list_of_intergenic_D_D_watterson <-  get(DATAFRAME) %>% filter(., log(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log(watterson_ave.y)>min_bootleneck_pop_value_watterson & feature=="Intergenic") %>% select ( unique_id)
+  list_of_intergenic_D_D_watterson <-  get(DATAFRAME) %>% filter(., log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson & feature=="Intergenic") %>% select ( unique_id)
   
   assign(paste0(POP1, "_", POP2,"_list_intergenic_D_D_watterson"), list_of_intergenic_D_D_watterson)
   
   
   ## DATASET ND-D_watterson
       
-  list_of_genes_ND_D_watterson <- get(DATAFRAME) %>% filter(., log(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log(watterson_ave.y) < min_bootleneck_pop_value_watterson & feature=="CDS") %>% select ( unique_id)
+  list_of_genes_ND_D_watterson <- get(DATAFRAME) %>% filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) < min_bootleneck_pop_value_watterson & feature=="CDS") %>% select ( unique_id)
   assign(paste0(POP1, "_", POP2,"_list_CDS_ND_D_watterson"), list_of_genes_ND_D_watterson)
 
 ######
@@ -3501,13 +3611,13 @@ for (DATAFRAME in DATAFRAMES)
 
   data_diversity_categories_watterson <- get(DATAFRAME) %>% 
   mutate (evolution_category=
-            ifelse (log(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log(watterson_ave.y)>min_bootleneck_pop_value_watterson, "D-D_watterson",
-            ifelse (log(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log(watterson_ave.y)<min_bootleneck_pop_value_watterson, "ND-D_watterson",
-            ifelse (log(watterson_ave.x)<min_non_bootleneck_pop_value_watterson & log(watterson_ave.y)<min_bootleneck_pop_value_watterson, "ND-ND_watterson",
-            ifelse (log(watterson_ave.x)<min_non_bootleneck_pop_value_watterson & log(watterson_ave.y)>min_bootleneck_pop_value_watterson, "D-ND_watterson",NA))))) %>% 
+            ifelse (log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson, "D-D_watterson",
+            ifelse (log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)<min_bootleneck_pop_value_watterson, "ND-D_watterson",
+            ifelse (log10(watterson_ave.x)<min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)<min_bootleneck_pop_value_watterson, "ND-ND_watterson",
+            ifelse (log10(watterson_ave.x)<min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson, "D-ND_watterson",NA))))) %>% 
   mutate (diversity_category=
-            ifelse (log(watterson_ave.y)>min_bootleneck_pop_value_watterson, "HD_watterson",
-            ifelse (log(watterson_ave.y)<min_bootleneck_pop_value_watterson, "LD_watterson",NA)))
+            ifelse (log10(watterson_ave.y)>min_bootleneck_pop_value_watterson, "HD_watterson",
+            ifelse (log10(watterson_ave.y)<min_bootleneck_pop_value_watterson, "LD_watterson",NA)))
 
 data_diversity_categories_watterson$evolution_category <- factor (data_diversity_categories_watterson$evolution_category, levels=c("D-ND_watterson", "D-D_watterson", "ND-ND_watterson", "ND-D_watterson"))
 data_diversity_categories_watterson$diversity_category <- factor (data_diversity_categories_watterson$diversity_category, levels=c("HD_watterson", "LD_watterson"))
@@ -3568,10 +3678,10 @@ for (DATAFRAME in DATAFRAMES)
   min_non_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POP1) %>% .[1,2] )
   min_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POP2) %>% .[1,2] )
 
-  DATAFRAME_modif <- get(DATAFRAME) %>% mutate (col=ifelse(log(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log(watterson_ave.y)>min_bootleneck_pop_value_watterson & ratio_watterson_average>0.6 & ratio_watterson_average<1.4 & feature=="CDS", "interesting_genes", "shit"))
+  DATAFRAME_modif <- get(DATAFRAME) %>% mutate (col=ifelse(log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson & ratio_watterson_average>0.6 & ratio_watterson_average<1.4 & feature=="CDS", "interesting_genes", "shit"))
 
   
-   ggplot(data=DATAFRAME_modif, aes(x=log(watterson_ave.y) ,y=log(watterson_ave.x) )) +
+   ggplot(data=DATAFRAME_modif, aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x) )) +
                                     #, fill=col, colour=col)) +
     geom_point(alpha = 1/100, color='grey41') +
     geom_abline(intercept = 0, color='grey20') +
@@ -3585,7 +3695,7 @@ for (DATAFRAME in DATAFRAMES)
    # scale_color_manual(values=c("#999999", "#E69F00"))
    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson.pdf", sep=""), width = 7, height = 7)
    
-ggplot(data=DATAFRAME_modif, aes(x=log(watterson_ave.y) ,y=log(watterson_ave.x) )) +
+ggplot(data=DATAFRAME_modif, aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x) )) +
                                      #fill=col, colour=col)) +
     geom_point(alpha = 1/100, color='grey41') +
     geom_abline(intercept = 0, color='grey20') +
@@ -3854,7 +3964,7 @@ for (INDEX in INDEXES)
   NAME_POP1 <- as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
   NAME_POP2 <- as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
 
-ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("divergence", sprintf("log(%s)", INDEX))) + 
+ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("divergence", sprintf("log10(%s)", INDEX))) + 
   geom_point() + 
   facet_grid(~feature)+
   geom_smooth(method = "lm")
@@ -3888,7 +3998,7 @@ for (INDEX in INDEXES)
   NAME_POP1 <- as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
   NAME_POP2 <- as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
 
-ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("recombination_rate", sprintf("log(%s)", INDEX))) + 
+ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("recombination_rate", sprintf("log10(%s)", INDEX))) + 
   geom_point() + 
   facet_grid(~feature)+
   geom_smooth(method = "lm")
@@ -4881,70 +4991,7 @@ save_plot(paste(wd_output,POP1,"_",POP2,"_GCcontent_by_category.pdf",sep=""), HD
 # ---------------------------------------------
 # PI
 
-#### Diversity pop1 vs pop2
 
-```{r}
-
-library(data.table)
-library(ggplot2)
-
-# En primer lugar hacemos los density plot de las diversidades para cada población. Como ya los habíamos explorado, vemos que eran bimodales, así que con este código fabrico una tablita que recoge el punto más bajo en ese density plot y lo guarda para usarlo despues como punto de corte. 
-
-# Vamos a intentar sacar el punto más bajo en la distribución de los density plot. 
-
-# Todo esta hecho para pairwise
-
-DATAFRAMES=c("c_ll_ki_n013_diversity","c_ll_no_n008_diversity", "c_ll_po_n008_diversity", "c_lp_sm_n019_diversity", "c_lp_do_n012_diversity")
-
-for (DATAFRAME in DATAFRAMES)
-{
-  
-  
-POP=get(DATAFRAME) %>% dplyr::select(pop) %>% dplyr::mutate(pop=as.character(pop)) %>% .[1,1] 
-  
-maxY1_position <- which.max(density(log(get(DATAFRAME)$pairwise_ave))$y)
-maxX1_value <- density(log(get(DATAFRAME)$pairwise_ave))$x[maxY1_position] 
-
-maxY_value <- max(density(log(get(DATAFRAME)$pairwise_ave))$y[density(log(get(DATAFRAME)$pairwise_ave))$x>(maxX1_value+3)])
-
-maxY2_position <- which(density(log(get(DATAFRAME)$pairwise_ave))$y == maxY_value)
-maxX2_value <- density(log(get(DATAFRAME)$pairwise_ave))$x[maxY2_position] 
-
-Densitypairwise.Y <- density(log(get(DATAFRAME)$pairwise_ave))$y
-Densitypairwise.X <- density(log(get(DATAFRAME)$pairwise_ave))$x
-
-minY_value <- min(Densitypairwise.Y[Densitypairwise.X < maxX2_value & Densitypairwise.X > maxX1_value])
-minY_position <- which(Densitypairwise.Y == minY_value)
-minX_value <- density(log(get(DATAFRAME)$pairwise_ave))$x[minY_position] 
-
-
-ggplot(get(DATAFRAME), aes(log(pairwise_ave))) + 
-   geom_density() + 
-   scale_color_viridis(discrete=TRUE) +
-   scale_fill_viridis(discrete=TRUE) +
-   geom_vline(xintercept = density(log(get(DATAFRAME)$pairwise_ave))$x[minY_position]) +
-  ggsave(paste0(wd_output, POP,"_density_pairwise.pdf"))
-
-
-assign(paste0(POP,"_density_min_value_pairwise"), c(POP,minX_value))
-
-}
-
-# Uno las distintas tablas de puntos de corte. 
-
-density_min_values_pairwise <- as.data.frame(rbind (c_lp_sm_n019_density_min_value_pairwise, c_lp_do_n012_density_min_value_pairwise, c_ll_ki_n013_density_min_value_pairwise, c_ll_po_n008_density_min_value_pairwise, c_ll_no_n008_density_min_value_pairwise)) 
-names(density_min_values_pairwise) <- c("pop", "min_density_value_pairwise")
-density_min_values_pairwise$min_density_value_pairwise <- as.numeric(as.character(density_min_values_pairwise$min_density_value_pairwise))
-
-
-rm (c_lp_sm_n019_density_min_value_pairwise)
-rm (c_lp_do_n012_density_min_value_pairwise)
-rm (c_ll_ki_n013_density_min_value_pairwise)
-rm (c_ll_po_n008_density_min_value_pairwise)
-rm (c_ll_no_n008_density_min_value_pairwise) 
-
-
-```
 
 #####  GOterm enrichment & dataset prep
 
@@ -4966,23 +5013,23 @@ for (DATAFRAME in DATAFRAMES)
 
   ## DATASET GO term enrichment and pathway enrichment pairwise
   
-  list_of_genes_GOterm_pairwise <- get(DATAFRAME) %>% filter(., log(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log(pairwise_ave.y) > min_bootleneck_pop_value_pairwise & ratio_pairwise_average > 0.6 & ratio_pairwise_average < 1.4 & feature=="CDS") %>% select (unique_id)
+  list_of_genes_GOterm_pairwise <- get(DATAFRAME) %>% filter(., log10(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y) > min_bootleneck_pop_value_pairwise & ratio_pairwise_average > 0.6 & ratio_pairwise_average < 1.4 & feature=="CDS") %>% select (unique_id)
   assign(paste0(POP1, "_", POP2,"_list_of_genes_of_interest_high_diversity_ratio_1_CDS_pairwise"), list_of_genes_GOterm_pairwise)
   
   ## DATASET D-D  _pairwise
   
-  list_of_genes_D_D_pairwise <- get(DATAFRAME) %>% filter(., log(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log(pairwise_ave.y) > min_bootleneck_pop_value_pairwise & feature=="CDS") %>% select ( unique_id)
+  list_of_genes_D_D_pairwise <- get(DATAFRAME) %>% filter(., log10(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y) > min_bootleneck_pop_value_pairwise & feature=="CDS") %>% select ( unique_id)
   
   assign(paste0(POP1, "_", POP2,"_list_CDS_D_D_pairwise"), list_of_genes_D_D_pairwise)
   
-  list_of_intergenic_D_D_pairwise <-  get(DATAFRAME) %>% filter(., log(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & feature=="Intergenic") %>% select ( unique_id)
+  list_of_intergenic_D_D_pairwise <-  get(DATAFRAME) %>% filter(., log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & feature=="Intergenic") %>% select ( unique_id)
   
   assign(paste0(POP1, "_", POP2,"_list_intergenic_D_D_pairwise"), list_of_intergenic_D_D_pairwise)
   
   
   ## DATASET ND-D_pairwise
       
-  list_of_genes_ND_D_pairwise <- get(DATAFRAME) %>% filter(., log(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log(pairwise_ave.y) < min_bootleneck_pop_value_pairwise & feature=="CDS") %>% select ( unique_id)
+  list_of_genes_ND_D_pairwise <- get(DATAFRAME) %>% filter(., log10(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y) < min_bootleneck_pop_value_pairwise & feature=="CDS") %>% select ( unique_id)
   assign(paste0(POP1, "_", POP2,"_list_CDS_ND_D_pairwise"), list_of_genes_ND_D_pairwise)
 
 ######
@@ -4990,13 +5037,13 @@ for (DATAFRAME in DATAFRAMES)
 
   data_diversity_categories_pairwise <- get(DATAFRAME) %>% 
   mutate (evolution_category=
-            ifelse (log(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "D-D_pairwise",
-            ifelse (log(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "ND-D_pairwise",
-            ifelse (log(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "ND-ND_pairwise",
-            ifelse (log(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "D-ND_pairwise",NA))))) %>% 
+            ifelse (log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "D-D_pairwise",
+            ifelse (log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "ND-D_pairwise",
+            ifelse (log10(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "ND-ND_pairwise",
+            ifelse (log10(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "D-ND_pairwise",NA))))) %>% 
   mutate (diversity_category=
-            ifelse (log(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "HD_pairwise",
-            ifelse (log(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "LD_pairwise",NA)))
+            ifelse (log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "HD_pairwise",
+            ifelse (log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "LD_pairwise",NA)))
 
 data_diversity_categories_pairwise$evolution_category <- factor (data_diversity_categories_pairwise$evolution_category, levels=c("D-ND_pairwise", "D-D_pairwise", "ND-ND_pairwise", "ND-D_pairwise"))
 data_diversity_categories_pairwise$diversity_category <- factor (data_diversity_categories_pairwise$diversity_category, levels=c("HD_pairwise", "LD_pairwise"))
@@ -5057,10 +5104,10 @@ for (DATAFRAME in DATAFRAMES)
   min_non_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POP1) %>% .[1,2] )
   min_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POP2) %>% .[1,2] )
 
-  DATAFRAME_modif <- get(DATAFRAME) %>% mutate (col=ifelse(log(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & ratio_pairwise_average>0.6 & ratio_pairwise_average<1.4 & feature=="CDS", "interesting_genes", "shit"))
+  DATAFRAME_modif <- get(DATAFRAME) %>% mutate (col=ifelse(log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & ratio_pairwise_average>0.6 & ratio_pairwise_average<1.4 & feature=="CDS", "interesting_genes", "shit"))
 
   
-   ggplot(data=DATAFRAME_modif, aes(x=log(pairwise_ave.y) ,y=log(pairwise_ave.x) )) +
+   ggplot(data=DATAFRAME_modif, aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x) )) +
                                     #, fill=col, colour=col)) +
     geom_point(alpha = 1/100, color='grey41') +
     geom_abline(intercept = 0, color='grey20') +
@@ -5074,7 +5121,7 @@ for (DATAFRAME in DATAFRAMES)
     scale_color_manual(values=c("#999999", "#E69F00")) +
     ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise.pdf", sep=""), width = 7, height = 7)
    
-ggplot(data=DATAFRAME_modif, aes(x=log(pairwise_ave.y) ,y=log(pairwise_ave.x) )) +
+ggplot(data=DATAFRAME_modif, aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x) )) +
                                      #fill=col, colour=col)) +
     geom_point(alpha = 1/100, color='grey41') +
     geom_abline(intercept = 0, color='grey20') +
@@ -5379,7 +5426,7 @@ for (INDEX in INDEXES)
   NAME_POP1 <- as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
   NAME_POP2 <- as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
 
-ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("divergence", sprintf("log(%s)", INDEX))) + 
+ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("divergence", sprintf("log10(%s)", INDEX))) + 
   geom_point() + 
   facet_grid(~feature)+
   geom_smooth(method = "lm")
@@ -5413,13 +5460,13 @@ for (INDEX in INDEXES)
   NAME_POP1 <- as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
   NAME_POP2 <- as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
 
-ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("recombination_rate", sprintf("log(%s)", INDEX))) + 
+ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("recombination_rate", sprintf("log10(%s)", INDEX))) + 
   geom_point() + 
   facet_grid(~feature)+
   geom_smooth(method = "lm")
     ggsave(paste (wd_output,NAME_POP1,"_",NAME_POP2,"_recomb_vs_",INDEX,".pdf", sep="" ), device="pdf")
 
-ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("recombination_rate", sprintf("log(%s)", INDEX))) + 
+ggplot(get(DATAFRAME) %>% filter(chr!="chrX"), aes_string("recombination_rate", sprintf("log10(%s)", INDEX))) + 
   geom_point() + 
   facet_grid(~feature)+
   geom_smooth(method = "lm")
