@@ -578,7 +578,7 @@ TYPE_OF_DATA=as.character(get(DATAFRAME) %>% dplyr::select (type_chr) %>% dplyr:
 
 tabla_data_temporal_diversity_pre$recombination_category <- factor(tabla_data_temporal_diversity_pre$recombination_category,levels=c("<=0.5", "<=1", "<=2", "<=3",">3&<=7", ">7", ">7&<=10",">10&<=20",">20"))
 
-tabla_data_temporal_diversity_pre_name <- paste (POP,TYPE_OF_DATA, "diversity", sep="_")
+tabla_data_temporal_diversity_pre_name <- paste (POP,TYPE_OF_DATA, "diversity_pre2", sep="_")
 assign (tabla_data_temporal_diversity_pre_name, tabla_data_temporal_diversity_pre,.GlobalEnv)  
     
     }
@@ -588,13 +588,15 @@ assign (tabla_data_temporal_diversity_pre_name, tabla_data_temporal_diversity_pr
 
 ## Merge autosomic and chrX data
 
+Tengo que hacerlo para calcular el umbrar para el "calling"
+
 ```{r}
 
-c_ll_ki_n013_diversity <- rbind (c_ll_ki_n013_autosomes_diversity, c_ll_ki_n013_chrX_diversity )
-c_ll_no_n008_diversity <- rbind (c_ll_no_n008_autosomes_diversity, c_ll_no_n008_chrX_diversity )
-c_ll_po_n008_diversity <- rbind (c_ll_po_n008_autosomes_diversity, c_ll_po_n008_chrX_diversity )
-c_lp_sm_n019_diversity <- rbind (c_lp_sm_n019_autosomes_diversity, c_lp_sm_n019_chrX_diversity )
-c_lp_do_n012_diversity <- rbind (c_lp_do_n012_autosomes_diversity, c_lp_do_n012_chrX_diversity )
+c_ll_ki_n013_diversity_pre <- rbind (c_ll_ki_n013_autosomes_diversity_pre2, c_ll_ki_n013_chrX_diversity_pre2 ) 
+c_ll_no_n008_diversity_pre <- rbind (c_ll_no_n008_autosomes_diversity_pre2, c_ll_no_n008_chrX_diversity_pre2 )
+c_ll_po_n008_diversity_pre <- rbind (c_ll_po_n008_autosomes_diversity_pre2, c_ll_po_n008_chrX_diversity_pre2 )
+c_lp_sm_n019_diversity_pre <- rbind (c_lp_sm_n019_autosomes_diversity_pre2, c_lp_sm_n019_chrX_diversity_pre2 )
+c_lp_do_n012_diversity_pre <- rbind (c_lp_do_n012_autosomes_diversity_pre2, c_lp_do_n012_chrX_diversity_pre2 )
 
 
 ```
@@ -612,7 +614,7 @@ library(ggplot2)
 
 # Todo esta hecho para watterson
 
-DATAFRAMES=c("c_ll_ki_n013_diversity","c_ll_no_n008_diversity", "c_ll_po_n008_diversity", "c_lp_sm_n019_diversity", "c_lp_do_n012_diversity")
+DATAFRAMES=c("c_ll_ki_n013_diversity_pre","c_ll_no_n008_diversity_pre", "c_ll_po_n008_diversity_pre", "c_lp_sm_n019_diversity_pre", "c_lp_do_n012_diversity_pre")
 
 for (DATAFRAME in DATAFRAMES)
 {
@@ -678,7 +680,7 @@ library(ggplot2)
 
 # Todo esta hecho para pairwise
 
-DATAFRAMES=c("c_ll_ki_n013_diversity","c_ll_no_n008_diversity", "c_ll_po_n008_diversity", "c_lp_sm_n019_diversity", "c_lp_do_n012_diversity")
+DATAFRAMES=c("c_ll_ki_n013_diversity_pre","c_ll_no_n008_diversity_pre", "c_ll_po_n008_diversity_pre", "c_lp_sm_n019_diversity_pre", "c_lp_do_n012_diversity_pre")
 
 for (DATAFRAME in DATAFRAMES)
 {
@@ -733,61 +735,123 @@ rm (c_ll_no_n008_density_min_value_pairwise)
 
 ## Fusiono tablas y cambio valores pequeños por cero
 
+### Change low value for cero:
+
+Autosomes:
 ```{r}
 
-# Hago una tabla con la media para cada grupo y para cada población. 
+# Añado a las tablas por poblacion dos variables en las que se cambian valores por debajo del umbral anteriormente calculado de diversidad (pi y watterson) por cero.
+
+c_ll_ki_n013_autosomes_diversity <- c_ll_ki_n013_autosomes_diversity_pre2 %>% 
+# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
+mutate (watterson_cero = ifelse (pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson),0,watterson_ave)) %>% 
+mutate (pairwise_cero = ifelse (pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise),0,pairwise_ave)) 
+                                      
+c_ll_no_n008_autosomes_diversity <- c_ll_no_n008_autosomes_diversity_pre2 %>% 
+# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
+mutate (watterson_cero = ifelse (pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
+mutate (pairwise_cero = ifelse (pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),0,pairwise_ave))  
+
+c_ll_po_n008_autosomes_diversity <- c_ll_po_n008_autosomes_diversity_pre2 %>% 
+# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
+mutate (watterson_cero = ifelse (pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
+mutate (pairwise_cero = ifelse (pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise),0,pairwise_ave)) 
+
+c_lp_sm_n019_autosomes_diversity <- c_lp_sm_n019_autosomes_diversity_pre2 %>% 
+# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
+mutate (watterson_cero = ifelse (pop=="c_lp_sm_n019"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_sm_n019")$min_density_value_watterson),0,watterson_ave)) %>% 
+mutate (pairwise_cero = ifelse (pop=="c_lp_sm_n019"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_sm_n019")$min_density_value_pairwise),0,pairwise_ave)) 
+
+c_lp_do_n012_autosomes_diversity <- c_lp_do_n012_autosomes_diversity_pre2 %>% 
+# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
+mutate (watterson_cero = ifelse (pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson),0,watterson_ave)) %>% 
+mutate (pairwise_cero = ifelse (pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise),0,pairwise_ave)) 
+```
+
+ChrX:
+
+```{r}
+
+# Añado a las tablas por poblacion dos variables en las que se cambian valores por debajo del umbral anteriormente calculado de diversidad (pi y watterson) por cero.
+
+c_ll_ki_n013_chrX_diversity <- c_ll_ki_n013_chrX_diversity_pre2 %>% 
+# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
+mutate (watterson_cero = ifelse (pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson),0,watterson_ave)) %>% 
+mutate (pairwise_cero = ifelse (pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise),0,pairwise_ave)) 
+                                      
+c_ll_no_n008_chrX_diversity <- c_ll_no_n008_chrX_diversity_pre2 %>% 
+# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
+mutate (watterson_cero = ifelse (pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
+mutate (pairwise_cero = ifelse (pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),0,pairwise_ave))  
+
+c_ll_po_n008_chrX_diversity <- c_ll_po_n008_chrX_diversity_pre2 %>% 
+# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
+mutate (watterson_cero = ifelse (pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
+mutate (pairwise_cero = ifelse (pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise),0,pairwise_ave)) 
+
+c_lp_sm_n019_chrX_diversity <- c_lp_sm_n019_chrX_diversity_pre2 %>% 
+# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
+mutate (watterson_cero = ifelse (pop=="c_lp_sm_n019"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_sm_n019")$min_density_value_watterson),0,watterson_ave)) %>% 
+mutate (pairwise_cero = ifelse (pop=="c_lp_sm_n019"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_sm_n019")$min_density_value_pairwise),0,pairwise_ave)) 
+
+c_lp_do_n012_chrX_diversity <- c_lp_do_n012_chrX_diversity_pre2 %>% 
+# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
+mutate (watterson_cero = ifelse (pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson),0,watterson_ave)) %>% 
+mutate (pairwise_cero = ifelse (pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise),0,pairwise_ave)) 
+```
+
+Fusiono tablas:
+
+
+```{r}
+
+c_ll_ki_n013_diversity <- rbind (c_ll_ki_n013_autosomes_diversity, c_ll_ki_n013_chrX_diversity ) 
+c_ll_no_n008_diversity <- rbind (c_ll_no_n008_autosomes_diversity, c_ll_no_n008_chrX_diversity )
+c_ll_po_n008_diversity <- rbind (c_ll_po_n008_autosomes_diversity, c_ll_po_n008_chrX_diversity )
+c_lp_sm_n019_diversity <- rbind (c_lp_sm_n019_autosomes_diversity, c_lp_sm_n019_chrX_diversity )
+c_lp_do_n012_diversity <- rbind (c_lp_do_n012_autosomes_diversity, c_lp_do_n012_chrX_diversity )
 
 
 ### Autosomas
 
-data_diversity_autosomes_filtered_ave_corrected <- rbind (c_ll_ki_n013_autosomes_diversity, c_ll_no_n008_autosomes_diversity, c_ll_po_n008_autosomes_diversity,  c_lp_sm_n019_autosomes_diversity, c_lp_do_n012_autosomes_diversity) %>% 
-# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
-mutate (watterson_cero = ifelse (pop=="c_lp_sm_n019"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_sm_n019")$min_density_value_watterson) | 
-                                   pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson) | 
-                                   pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson) | 
-                                   pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson) | 
-                                   pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
-  mutate (pairwise_cero = ifelse (pop=="c_lp_sm_n019"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_sm_n019")$min_density_value_pairwise) | 
-                                   pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise) | 
-                                   pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise) | 
-                                   pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise) | 
-                                   pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),0,pairwise_ave)) 
+data_diversity_autosomes_filtered_ave_corrected <- rbind (c_ll_ki_n013_autosomes_diversity, c_ll_no_n008_autosomes_diversity, c_ll_po_n008_autosomes_diversity,  c_lp_sm_n019_autosomes_diversity, c_lp_do_n012_autosomes_diversity) 
 
 ### ChrX
 
-data_diversity_chrX_filtered_ave_corrected <- rbind (c_ll_ki_n013_chrX_diversity, c_ll_no_n008_chrX_diversity, c_ll_po_n008_chrX_diversity,  c_lp_sm_n019_chrX_diversity, c_lp_do_n012_chrX_diversity) %>% 
-# Ahora convierto los valores que quedan por debajo de nuestro umbral en cero. 
- mutate (watterson_cero = ifelse (pop=="c_lp_sm_n019"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_sm_n019")$min_density_value_watterson) | 
-                                   pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson) | 
-                                   pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson) | 
-                                   pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson) | 
-                                   pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
-  mutate (pairwise_cero = ifelse (pop=="c_lp_sm_n019"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_sm_n019")$min_density_value_pairwise) | 
-                                   pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise) | 
-                                   pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise) | 
-                                   pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise) | 
-                                   pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),0,pairwise_ave)) 
+data_diversity_chrX_filtered_ave_corrected <- rbind (c_ll_ki_n013_chrX_diversity, c_ll_no_n008_chrX_diversity, c_ll_po_n008_chrX_diversity,  c_lp_sm_n019_chrX_diversity, c_lp_do_n012_chrX_diversity) 
 # Uno ambas tablas
 
 data_diversity_filtered_ave_corrected <- rbind (data_diversity_autosomes_filtered_ave_corrected, data_diversity_chrX_filtered_ave_corrected)
 
 
-
-
-# rm (data_diversity_filtered)
-# rm (data_diversity_filtered_autosomes)
-# rm (data_diversity_filtered_chrX)
-# rm (c_ll_ki_n013_autosomes_diversity_pre)
-# rm (c_ll_no_n008_autosomes_diversity_pre) 
-# rm (c_ll_po_n008_autosomes_diversity_pre)
-# rm (c_lp_sm_n019_autosomes_diversity_pre) 
-# rm (c_lp_do_n012_autosomes_diversity_pre)
-# rm (c_ll_ki_n013_chrX_diversity_pre)
-# rm (c_ll_no_n008_chrX_diversity_pre)
-# rm (c_ll_po_n008_chrX_diversity_pre)
-# rm (c_lp_sm_n019_chrX_diversity_pre)
-# rm (c_lp_do_n012_chrX_diversity_pre)
-
+rm (data_diversity_filtered)
+rm (data_diversity_filtered_autosomes)
+rm (data_diversity_filtered_chrX)
+rm (c_ll_ki_n013_diversity_pre)
+rm (c_ll_no_n008_diversity_pre) 
+rm (c_ll_po_n008_diversity_pre)
+rm (c_lp_sm_n019_diversity_pre) 
+rm (c_lp_do_n012_diversity_pre)
+rm (c_ll_ki_n013_autosomes_diversity_pre)
+rm (c_ll_no_n008_autosomes_diversity_pre) 
+rm (c_ll_po_n008_autosomes_diversity_pre)
+rm (c_lp_sm_n019_autosomes_diversity_pre) 
+rm (c_lp_do_n012_autosomes_diversity_pre)
+rm (c_ll_ki_n013_autosomes_diversity_pre2)
+rm (c_ll_no_n008_autosomes_diversity_pre2) 
+rm (c_ll_po_n008_autosomes_diversity_pre2)
+rm (c_lp_sm_n019_autosomes_diversity_pre2) 
+rm (c_lp_do_n012_autosomes_diversity_pre2)
+rm (c_ll_ki_n013_chrX_diversity_pre)
+rm (c_ll_no_n008_chrX_diversity_pre)
+rm (c_ll_po_n008_chrX_diversity_pre)
+rm (c_lp_sm_n019_chrX_diversity_pre)
+rm (c_lp_do_n012_chrX_diversity_pre)
+rm (c_ll_ki_n013_chrX_diversity_pre2)
+rm (c_ll_no_n008_chrX_diversity_pre2)
+rm (c_ll_po_n008_chrX_diversity_pre2)
+rm (c_lp_sm_n019_chrX_diversity_pre2)
+rm (c_lp_do_n012_chrX_diversity_pre2)
 
 ```
 
@@ -2485,624 +2549,7 @@ for (DATAFRAME in DATAFRAMES)
 
 ## Tablas interacción non-bootleneck vs bootleneck
 
-# ------------------
-
-### Ratio per unit
-
-Aquí tengo los ratios de las unidades particulares.
-
-```{r}
-
-# Dataframe Kirov-Norway
-
-# Function:
-
-# Cuidado porque aquí estoy asumiendo que la region es igual, y esto parece que es asi, pero no estoy 100% segura de que no haya podido pasar que en una población se haya definido como telomérico y en otra no por falta de bases. 
-
-calculus_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_POP1, name_POP2){
-  data_diversity_POP1_POP2 <- dplyr::inner_join (POP1, POP2, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id", "recombination_rate", "recombination_category", "type_chr", "divergence", "informative_sites_substitutions", "substitutions", "GC_content")) %>%  
-    dplyr::mutate (ratio_pairwise_average = pairwise_ave.y/pairwise_ave.x) %>% 
-    dplyr::mutate (ratio_watterson_average = watterson_ave.y/watterson_ave.x) %>% 
-    dplyr::mutate (ratio_pairwise_average_corrected = pairwise_ave_corrected.y/pairwise_ave_corrected.x) %>%
-    dplyr::mutate (ratio_watterson_average_corrected = watterson_ave_corrected.y/watterson_ave_corrected.x) #%>% 
-  
-  dataframename <- paste ("data_diversity", name_POP1, name_POP2, sep="_")
-  assign (dataframename, data_diversity_POP1_POP2,.GlobalEnv)
-}
-
-# Create data frame
-
-# Dataframe Kirov-Norway
-calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity,c_ll_no_n008_diversity, deparse(substitute(c_ll_ki_n013_diversity)),deparse(substitute(c_ll_no_n008_diversity)))
-
-calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_autosomes_diversity,c_ll_no_n008_autosomes_diversity, deparse(substitute(c_ll_ki_n013_autosomes_diversity)),deparse(substitute(c_ll_no_n008_autosomes_diversity)))
-
-calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_chrX_diversity,c_ll_no_n008_chrX_diversity, deparse(substitute(c_ll_ki_n013_chrX_diversity)),deparse(substitute(c_ll_no_n008_chrX_diversity)))
-
-# Dataframe Kirov-Poland
-calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity,c_ll_po_n008_diversity, deparse(substitute(c_ll_ki_n013_diversity)),deparse(substitute(c_ll_po_n008_diversity)))
-
-calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_autosomes_diversity,c_ll_po_n008_autosomes_diversity, deparse(substitute(c_ll_ki_n013_autosomes_diversity)),deparse(substitute(c_ll_po_n008_autosomes_diversity)))
-
-calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_chrX_diversity,c_ll_po_n008_chrX_diversity, deparse(substitute(c_ll_ki_n013_chrX_diversity)),deparse(substitute(c_ll_po_n008_chrX_diversity)))
-
-
-# Dataframe Sierra_Morena-Doñana
-calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_diversity,c_lp_do_n012_diversity, deparse(substitute(c_lp_sm_n019_diversity)),deparse(substitute(c_lp_do_n012_diversity)))
-
-calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_autosomes_diversity,c_lp_do_n012_autosomes_diversity, deparse(substitute(c_lp_sm_n019_autosomes_diversity)),deparse(substitute(c_lp_do_n012_autosomes_diversity)))
-
-calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_chrX_diversity,c_lp_do_n012_chrX_diversity, deparse(substitute(c_lp_sm_n019_chrX_diversity)),deparse(substitute(c_lp_do_n012_chrX_diversity)))
-
-
-# write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-# write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-# write.table(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity, paste(wd_output,"data_diversity_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
-
-
-# También las creo a lo largo para poder lanzar modelos
-# c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model <- rbind(c_ll_ki_n013_diversity, c_ll_po_n008_diversity)
-# rm(data_diversity)
-# rm(c_ll_ki_n013_diversity)
-# rm(c_ll_po_n008_diversity)
-# rm(c_ll_no_n008_diversity)
-# rm(c_lp_sm_n019_diversity)
-# rm(c_lp_do_n012_diversity)
-
-```
-
-
-
-### Stats de los ratios.
-
-No lo corro pq no tiene mucho sentido hacer la media de los ratios per unit, más que por curiosidad de ver su distribución, y eso ya lo vamos a ver con el boot. 
-
-```{r}
-library("Hmisc")
-library(modeest)
-
-
-
-diversity_stats_pop <- function(diversity_df)
-{
-  diversity_stats_df <- 
-    diversity_df %>% 
-    dplyr::group_by(feature) %>% 
-    dplyr::summarise(mode_ratio_pairwise_average=mlv(ratio_pairwise_average, method="mfv")[['M']],
-                     mean_ratio_pairwise_average=mean(ratio_pairwise_average),
-                     median_ratio_pairwise_average=median(ratio_pairwise_average),
-                     q25_ratio_pairwise_average=quantile(ratio_pairwise_average,0.25),
-                     q75_ratio_pairwise_average=quantile(ratio_pairwise_average,0.75),
-                     q05_ratio_pairwise_average=quantile(ratio_pairwise_average,0.05),
-                     q95_ratio_pairwise_average=quantile(ratio_pairwise_average,0.95),
-                     IQR_ratio_pairwise_average = q75_ratio_pairwise_average - q25_ratio_pairwise_average,
-                     lowerw_ratio_pairwise_average = q25_ratio_pairwise_average - 1.5* IQR_ratio_pairwise_average,
-                     upperw_ratio_pairwise_average = q75_ratio_pairwise_average + 1.5* IQR_ratio_pairwise_average, 
-                     
-                     mean_ratio_watterson_average=mean(ratio_watterson_average),
-                     mean_ratio_corrected_by_pairwise_average_intergenic_per_unit=mean(ratio_pairwise_average_corrected),
-                     mean_ratio_corrected_by_watterson_average_intergenic_per_unit=mean(ratio_watterson_average_corrected)) 
-  
-  return(diversity_stats_df)
-}
-
-stats_data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity <- diversity_stats_pop(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity)
-
-stats_data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity <- diversity_stats_pop(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity)
-
-stats_data_diversity_c_lp_sm_n019_autosomes_diversity_c_lp_do_n012_autosomes_diversity <- diversity_stats_pop(data_diversity_c_lp_sm_n019_autosomes_diversity_c_lp_do_n012_autosomes_diversity)
-
-```
-
-
-### Bootstraping
-
-Hago un boot de la media de los ratios per unit. 
-
-```{r}
-
-library(plyr)
-library(boot)
-library(broom)
-library(magrittr)
-library(dplyr)
-
-#wd_output <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/"
-
-# https://uoftcoders.github.io/studyGroup/lessons/r/resampling/lesson/
-# Explicación del paquete boot y boot_mean
-# https://www.painblogr.org/2017-10-18-purrring-through-bootstraps.html
-# Explicación interesantisima sobre la integración de boot con dplyr group by. 
-
-
-# Cargo la funcion de bootstrap
-boot_mean <- function(original_vector, resample_vector) {
-   mean(original_vector[resample_vector])
-}
-
-
-
-# Defino variables para iterar
-
-# Primero para autosomes para feature y region
-
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity", "data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity", "data_diversity_c_lp_sm_n019_autosomes_diversity_c_lp_do_n012_autosomes_diversity", "data_diversity_c_ll_ki_n013_chrX_diversity_c_ll_no_n008_chrX_diversity", "data_diversity_c_ll_ki_n013_chrX_diversity_c_ll_po_n008_chrX_diversity", "data_diversity_c_lp_sm_n019_chrX_diversity_c_lp_do_n012_chrX_diversity")
-
-GROUPS=c("feature", "region")
-ITERATION=100
-
-for (DATAFRAME in DATAFRAMES)
-{
-  print (DATAFRAME)
-  for (GROUP in GROUPS)
-  {
-    print(GROUP)
-    
-    # Hacemos un group_by y despues un nest que nos devuelve para cada GROUP una variable en la que está condensada la dataframe.
-    
-    ###################
-    #1.  ratio_watterson_average
-    DATAFRAME_filtered <- get(DATAFRAME) %>%
-      # First I group the data by species 
-      dplyr::group_by_(GROUP) %>%
-      # Then I nest the dataframe
-      tidyr::nest()
-    
-      ratio_watterson_average <- DATAFRAME_filtered %<>%
-      # Aquí aplicamos el bootstrapping sobre la columna de data (la que tiene la dataframe condensada) concretamente sobre el subset del ratio X.  
-      dplyr::mutate(booted = purrr::map(.x = data, # The list-column containing <S3: tibble>
-                                        ~ boot::boot(data = as.numeric(.x$ratio_watterson_average), # The <S3 tibble> column being sampled
-                                                     statistic = boot_mean, # The user-defined function
-                                                     R = ITERATION))) %>% 
-      # Del resultado de boot creamos una nueva variable con el valor t, que tiene la matriz de longitud igual al numero de iteraciones. 
-      dplyr::mutate(boot_matrix = purrr::map(.x = booted, # The list-column containing <S3 bootci> objects
-                                             ~ .x$t)) %>% 
-      # Eliminamos la columna data (el dataframe original), y también los valores booted (que tienen todos los resultados del bootstraping). Despues desagregamos por el valor de la matriz. 
-      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-    # Cambiamos el nombre de la matriz. 
-    names(ratio_watterson_average)[2] <- "values"
-ratio_watterson_average_summary <- ratio_watterson_average  %>% 
-    group_by_(.dots=GROUP) %>%
-    dplyr::summarise(mean=mean(values),sd=sd(values))
-    names(ratio_watterson_average_summary)[2] <- "mean_ratio_watterson_boot"
-    names(ratio_watterson_average_summary)[3] <- "sd_ratio_watterson_boot"
-    
-    # Hago lo mismo para cada indice.
-    ###################
-    #2.  ratio_pairwise_average
-    
-    DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
-    ratio_pairwise_average <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_pairwise_average), statistic = boot_mean, R = ITERATION))) %>% 
-      dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-    names(ratio_pairwise_average)[2] <- "values"
-    ratio_pairwise_average_summary <- ratio_pairwise_average  %>% 
-    group_by_(.dots=GROUP) %>%
-    dplyr::summarise(mean=mean(values),sd=sd(values))
-    names(ratio_pairwise_average_summary)[2] <- "mean_ratio_pairwise_boot"
-    names(ratio_pairwise_average_summary)[3] <- "sd_ratio_pairwise_boot"
-    
-    ###################
-    #3.  ratio_pairwise_average_corrected
-    
-    DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
-    ratio_pairwise_average_corrected <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_pairwise_average_corrected), statistic = boot_mean, R = ITERATION))) %>% 
-      dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-    names(ratio_pairwise_average_corrected)[2] <- "values"
-     ratio_pairwise_average_corrected_summary <- ratio_pairwise_average_corrected  %>% 
-    group_by_(.dots=GROUP) %>%
-    dplyr::summarise(mean=mean(values),sd=sd(values))    
-     names(ratio_pairwise_average_corrected_summary)[2] <- "mean_ratio_corrected_by_pairwise_average_intergenic_per_unit_boot"
-    names(ratio_pairwise_average_corrected_summary)[3] <- "sd_ratio_corrected_by_pairwise_average_intergenic_per_unit_boot"
-    
-    ###################
-    #4.  ratio_watterson_average_corrected
-    
-    DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
-    ratio_watterson_average_corrected <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_watterson_average_corrected), statistic = boot_mean, R = ITERATION))) %>% 
-      dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-    names(ratio_watterson_average_corrected)[2] <- "values"
-    ratio_watterson_average_corrected_summary <- ratio_watterson_average_corrected  %>% 
-    group_by_(.dots=GROUP) %>%
-    dplyr::summarise(mean=mean(values),sd=sd(values))  
-    names(ratio_watterson_average_corrected_summary)[2] <- "mean_ratio_corrected_by_watterson_average_intergenic_per_unit_boot"
-    names(ratio_watterson_average_corrected_summary)[3] <- "sd_ratio_corrected_by_watterson_average_intergenic_per_unit_boot"
-
-    ###################
-    #5.  ratio_corrected_by_pairwise_average_intergenic_weighted
-    # 
-    # DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
-    # ratio_corrected_by_pairwise_average_intergenic_weighted <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_pairwise_average_intergenic_weighted), statistic = boot_mean, R = ITERATION))) %>% 
-    #   dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-    #   dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-    # names(ratio_corrected_by_pairwise_average_intergenic_weighted)[2] <- "values"
-    # ratio_corrected_by_pairwise_average_intergenic_weighted_summary <- ratio_corrected_by_pairwise_average_intergenic_weighted  %>% 
-    # group_by_(.dots=GROUP) %>%
-    # dplyr::summarise(mean=mean(values),sd=sd(values))  
-    # names(ratio_corrected_by_pairwise_average_intergenic_weighted_summary)[2] <- "mean_ratio_corrected_by_pairwise_average_intergenic_weighted_boot"
-    # names(ratio_corrected_by_pairwise_average_intergenic_weighted_summary)[3] <- "sd_ratio_corrected_by_pairwise_average_intergenic_weighted_boot"
-    # 
-    # ###################
-    # #6.  ratio_corrected_by_watterson_average_intergenic_weighted
-    # 
-    # DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
-    # ratio_corrected_by_watterson_average_intergenic_weighted <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_watterson_average_intergenic_weighted), statistic = boot_mean, R = ITERATION))) %>% 
-    #   dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-    #   dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-    # names(ratio_corrected_by_watterson_average_intergenic_weighted)[2] <- "values"
-    # ratio_corrected_by_watterson_average_intergenic_weighted_summary <- ratio_corrected_by_watterson_average_intergenic_weighted  %>% 
-    # group_by_(.dots=GROUP) %>%
-    # dplyr::summarise(mean=mean(values),sd=sd(values))  
-    # names(ratio_corrected_by_watterson_average_intergenic_weighted_summary)[2] <- "mean_ratio_corrected_by_watterson_average_intergenic_weighted_boot"
-    # names(ratio_corrected_by_watterson_average_intergenic_weighted_summary)[3] <- "sd_ratio_corrected_by_watterson_average_intergenic_weighted_boot"
-    # 
-    ###################
-    # Agrego los datos
-    
-    tmp_group <- purrr::reduce(list(ratio_watterson_average_summary, ratio_pairwise_average_summary,
-                                    ratio_pairwise_average_corrected_summary,
-                                    ratio_watterson_average_corrected_summary), #,
-                                    #ratio_corrected_by_pairwise_average_intergenic_weighted_summary,
-                                    #ratio_corrected_by_watterson_average_intergenic_weighted_summary), 
-                                    full_join, by = GROUP)
-    
-    POP1=as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
-    POP2=as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
-    chr_type=ifelse((as.character(get(DATAFRAME) %>% select (chr) %>% .[1,1])) == "chrX","chrX","autosomes")
-    
-    tmp_group <- tmp_group %>% mutate (chr_type=chr_type)
-    
-    tmp_group_name <- paste ("ratio_boot",chr_type, POP1,POP2, GROUP, sep="_")
-    
-    assign (tmp_group_name, tmp_group,.GlobalEnv)    
-    
-    ###################
-    # Borro tablas antiguas para que no haya confusión 
-    
-    rm (tmp_group)
-    rm (tmp_group_name)
-    rm (ratio_watterson_average)
-    rm (ratio_pairwise_average)
-    rm (ratio_pairwise_average_corrected)
-    rm (ratio_watterson_average_corrected)
-    #rm (ratio_corrected_by_pairwise_average_intergenic_weighted)
-    #rm (ratio_corrected_by_watterson_average_intergenic_weighted)
-    rm (ratio_watterson_average_summary)
-    rm (ratio_pairwise_average_summary)
-    rm (ratio_pairwise_average_corrected_summary)
-    rm (ratio_watterson_average_corrected_summary)
-    #rm (ratio_corrected_by_pairwise_average_intergenic_weighted_summary)
-    #rm (ratio_corrected_by_watterson_average_intergenic_weighted_summary)
-    
-  }
-}
-
-
-# Ahora fusiono las tablas
-
-ratio_boot_c_ll_ki_n013_c_ll_no_n008_feature <- rbind (ratio_boot_autosomes_c_ll_ki_n013_c_ll_no_n008_feature, ratio_boot_chrX_c_ll_ki_n013_c_ll_no_n008_feature)
-ratio_boot_c_ll_ki_n013_c_ll_po_n008_feature <- rbind (ratio_boot_autosomes_c_ll_ki_n013_c_ll_po_n008_feature, ratio_boot_chrX_c_ll_ki_n013_c_ll_po_n008_feature)
-ratio_boot_c_lp_sm_n019_c_lp_do_n012_feature <- rbind (ratio_boot_autosomes_c_lp_sm_n019_c_lp_do_n012_feature, ratio_boot_chrX_c_lp_sm_n019_c_lp_do_n012_feature)
-
-##############################################################################################################
-# Chr
-
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
-GROUPS=c("chr")
-ITERATION=100
-
-for (DATAFRAME in DATAFRAMES)
-{
-  print (DATAFRAME)
-  for (GROUP in GROUPS)
-  {
-    print(GROUP)
-    
-    # Hacemos un group_by y despues un nest que nos devuelve para cada GROUP una variable en la que está condensada la dataframe.
-    
-    ###################
-    #1.  ratio_watterson_average
-    DATAFRAME_filtered <- get(DATAFRAME) %>%
-      # First I group the data by species 
-      dplyr::group_by_(GROUP) %>%
-      # Then I nest the dataframe
-      tidyr::nest()
-    
-      ratio_watterson_average <- DATAFRAME_filtered %<>%
-      # Aquí aplicamos el bootstrapping sobre la columna de data (la que tiene la dataframe condensada) concretamente sobre el subset del ratio X.  
-      dplyr::mutate(booted = purrr::map(.x = data, # The list-column containing <S3: tibble>
-                                        ~ boot::boot(data = as.numeric(.x$ratio_watterson_average), # The <S3 tibble> column being sampled
-                                                     statistic = boot_mean, # The user-defined function
-                                                     R = ITERATION))) %>% 
-      # Del resultado de boot creamos una nueva variable con el valor t, que tiene la matriz de longitud igual al numero de iteraciones. 
-      dplyr::mutate(boot_matrix = purrr::map(.x = booted, # The list-column containing <S3 bootci> objects
-                                             ~ .x$t)) %>% 
-      # Eliminamos la columna data (el dataframe original), y también los valores booted (que tienen todos los resultados del bootstraping). Despues desagregamos por el valor de la matriz. 
-      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-    # Cambiamos el nombre de la matriz. 
-    names(ratio_watterson_average)[2] <- "values"
-ratio_watterson_average_summary <- ratio_watterson_average  %>% 
-    group_by_(.dots=GROUP) %>%
-    dplyr::summarise(mean=mean(values),sd=sd(values))
-    names(ratio_watterson_average_summary)[2] <- "mean_ratio_watterson_boot"
-    names(ratio_watterson_average_summary)[3] <- "sd_ratio_watterson_boot"
-    
-    # Hago lo mismo para cada indice.
-    ###################
-    #2.  ratio_pairwise_average
-    
-    DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
-    ratio_pairwise_average <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_pairwise_average), statistic = boot_mean, R = ITERATION))) %>% 
-      dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-    names(ratio_pairwise_average)[2] <- "values"
-    ratio_pairwise_average_summary <- ratio_pairwise_average  %>% 
-    group_by_(.dots=GROUP) %>%
-    dplyr::summarise(mean=mean(values),sd=sd(values))
-    names(ratio_pairwise_average_summary)[2] <- "mean_ratio_pairwise_boot"
-    names(ratio_pairwise_average_summary)[3] <- "sd_ratio_pairwise_boot"
-    
-    ###################
-    #3.  ratio_pairwise_average_corrected
-    
-    DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
-    ratio_pairwise_average_corrected <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_pairwise_average_corrected), statistic = boot_mean, R = ITERATION))) %>% 
-      dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-    names(ratio_pairwise_average_corrected)[2] <- "values"
-     ratio_pairwise_average_corrected_summary <- ratio_pairwise_average_corrected  %>% 
-    group_by_(.dots=GROUP) %>%
-    dplyr::summarise(mean=mean(values),sd=sd(values))    
-     names(ratio_pairwise_average_corrected_summary)[2] <- "mean_ratio_corrected_by_pairwise_average_intergenic_per_unit_boot"
-    names(ratio_pairwise_average_corrected_summary)[3] <- "sd_ratio_corrected_by_pairwise_average_intergenic_per_unit_boot"
-    
-    ###################
-    #4.  ratio_watterson_average_corrected
-    
-    DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
-    ratio_watterson_average_corrected <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_watterson_average_corrected), statistic = boot_mean, R = ITERATION))) %>% 
-      dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-    names(ratio_watterson_average_corrected)[2] <- "values"
-    ratio_watterson_average_corrected_summary <- ratio_watterson_average_corrected  %>% 
-    group_by_(.dots=GROUP) %>%
-    dplyr::summarise(mean=mean(values),sd=sd(values))  
-    names(ratio_watterson_average_corrected_summary)[2] <- "mean_ratio_corrected_by_watterson_average_intergenic_per_unit_boot"
-    names(ratio_watterson_average_corrected_summary)[3] <- "sd_ratio_corrected_by_watterson_average_intergenic_per_unit_boot"
-
-    ###################
-    #5.  ratio_corrected_by_pairwise_average_intergenic_weighted
-    # 
-    # DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
-    # ratio_corrected_by_pairwise_average_intergenic_weighted <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_pairwise_average_intergenic_weighted), statistic = boot_mean, R = ITERATION))) %>% 
-    #   dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-    #   dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-    # names(ratio_corrected_by_pairwise_average_intergenic_weighted)[2] <- "values"
-    # ratio_corrected_by_pairwise_average_intergenic_weighted_summary <- ratio_corrected_by_pairwise_average_intergenic_weighted  %>% 
-    # group_by_(.dots=GROUP) %>%
-    # dplyr::summarise(mean=mean(values),sd=sd(values))  
-    # names(ratio_corrected_by_pairwise_average_intergenic_weighted_summary)[2] <- "mean_ratio_corrected_by_pairwise_average_intergenic_weighted_boot"
-    # names(ratio_corrected_by_pairwise_average_intergenic_weighted_summary)[3] <- "sd_ratio_corrected_by_pairwise_average_intergenic_weighted_boot"
-    # 
-    # ###################
-    # #6.  ratio_corrected_by_watterson_average_intergenic_weighted
-    # 
-    # DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
-    # ratio_corrected_by_watterson_average_intergenic_weighted <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_watterson_average_intergenic_weighted), statistic = boot_mean, R = ITERATION))) %>% 
-    #   dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-    #   dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-    # names(ratio_corrected_by_watterson_average_intergenic_weighted)[2] <- "values"
-    # ratio_corrected_by_watterson_average_intergenic_weighted_summary <- ratio_corrected_by_watterson_average_intergenic_weighted  %>% 
-    # group_by_(.dots=GROUP) %>%
-    # dplyr::summarise(mean=mean(values),sd=sd(values))  
-    # names(ratio_corrected_by_watterson_average_intergenic_weighted_summary)[2] <- "mean_ratio_corrected_by_watterson_average_intergenic_weighted_boot"
-    # names(ratio_corrected_by_watterson_average_intergenic_weighted_summary)[3] <- "sd_ratio_corrected_by_watterson_average_intergenic_weighted_boot"
-    # 
-    ###################
-    # Agrego los datos
-    
-    tmp_group <- purrr::reduce(list(ratio_watterson_average_summary, ratio_pairwise_average_summary,
-                                    ratio_pairwise_average_corrected_summary,
-                                    ratio_watterson_average_corrected_summary), #,
-                                    #ratio_corrected_by_pairwise_average_intergenic_weighted_summary,
-                                    #ratio_corrected_by_watterson_average_intergenic_weighted_summary), 
-                                    full_join, by = GROUP)
-    
-    POP1=as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
-    POP2=as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
-
-    
-    tmp_group_name <- paste ("ratio_boot",POP1,POP2, GROUP, sep="_")
-    
-    assign (tmp_group_name, tmp_group,.GlobalEnv)    
-    
-    ###################
-    # Borro tablas antiguas para que no haya confusión 
-    
-    rm (tmp_group)
-    rm (tmp_group_name)
-    rm (ratio_watterson_average)
-    rm (ratio_pairwise_average)
-    rm (ratio_pairwise_average_corrected)
-    rm (ratio_watterson_average_corrected)
-    #rm (ratio_corrected_by_pairwise_average_intergenic_weighted)
-    #rm (ratio_corrected_by_watterson_average_intergenic_weighted)
-    rm (ratio_watterson_average_summary)
-    rm (ratio_pairwise_average_summary)
-    rm (ratio_pairwise_average_corrected_summary)
-    rm (ratio_watterson_average_corrected_summary)
-    #rm (ratio_corrected_by_pairwise_average_intergenic_weighted_summary)
-    #rm (ratio_corrected_by_watterson_average_intergenic_weighted_summary)
-    
-  }
-}
-
-
-
-##############################################################################################################
-# 
-# # Ahora agrupamos por dos caracteristicas a la vez
-# 
-# all_combinations <- combn(GROUPS, 2)
-# 
-# 
-# for (DATAFRAME in DATAFRAMES) 
-# {
-#   print (DATAFRAME)
-#   for (ITERATION in 1:ncol(all_combinations))
-#   { 
-#     GROUP1=all_combinations[, ITERATION][1]
-#     GROUP2=all_combinations[, ITERATION][2]
-#     
-#     print (GROUP1)
-#     print (GROUP2)
-#     # Hacemos un group_by y despues un nest que nos devuelve para cada GROUP una variable en la que está condensada la dataframe.
-#     
-#     ###################
-#     #1.  ratio_watterson_average
-#     DATAFRAME_filtered <- get(DATAFRAME) %>%
-#       # First I group the data by species 
-#       dplyr::group_by_(GROUP1,GROUP2) %>%
-#       # Then I nest the dataframe
-#       tidyr::nest()
-#     
-#     ratio_watterson_average <- DATAFRAME_filtered %<>%
-#       # Aquí aplicamos el bootstrapping sobre la columna de data (la que tiene la dataframe condensada) concretamente sobre el subset del ratio X.  
-#       dplyr::mutate(booted = purrr::map(.x = data, # The list-column containing <S3: tibble>
-#                                         ~ boot::boot(data = as.numeric(.x$ratio_watterson_average), # The <S3 tibble> column being sampled
-#                                                      statistic = boot_mean, # The user-defined function
-#                                                      R = ITERATION))) %>% 
-#       # Del resultado de boot creamos una nueva variable con el valor t, que tiene la matriz de longitud igual al numero de iteraciones. 
-#       dplyr::mutate(boot_matrix = purrr::map(.x = booted, # The list-column containing <S3 bootci> objects
-#                                              ~ .x$t)) %>% 
-#       # Eliminamos la columna data (el dataframe original), y también los valores booted (que tienen todos los resultados del bootstraping). Despues desagregamos por el valor de la matriz. 
-#       dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix) 
-#     # Cambiamos el nombre de la matriz. 
-#     names(ratio_watterson_average)[3] <- "values"
-#     ratio_watterson_summary <- ratio_watterson_average  %>% 
-#       group_by_(.dots=c(GROUP1,GROUP2)) %>%
-#       dplyr::summarise(mean=mean(as.numeric(values)),sd=sd(as.numeric(values)))
-#     names(ratio_watterson_summary)[3] <- "mean_ratio_watterson_boot"
-#     names(ratio_watterson_summary)[4] <- "sd_ratio_watterson_boot"
-#     
-#     # Hago lo mismo para cada indice.
-#     ###################
-#     #2.  ratio_pairwise_average
-#     
-#     DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP1, GROUP2) %>% tidyr::nest()
-#     ratio_pairwise_average <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_pairwise_average), statistic = boot_mean, R = ITERATION))) %>% 
-#       dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-#       dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-#     names(ratio_pairwise_average)[3] <- "values"
-#     ratio_pairwise_average_summary <- ratio_pairwise_average  %>% 
-#       group_by_(.dots=c(GROUP1,GROUP2)) %>%
-#       dplyr::summarise(mean=mean(values),sd=sd(values))
-#     names(ratio_pairwise_average_summary)[3] <- "mean_ratio_pairwise_boot"
-#     names(ratio_pairwise_average_summary)[4] <- "sd_ratio_pairwise_boot"
-#     
-#     ###################
-#     #3.  ratio_corrected_by_pairwise_average_intergenic_per_unit
-#     
-#     DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP1, GROUP2) %>% tidyr::nest()
-#     ratio_corrected_by_pairwise_average_intergenic_per_unit <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_pairwise_average_intergenic_per_unit), statistic = boot_mean, R = ITERATION))) %>% 
-#       dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-#       dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-#     names(ratio_corrected_by_pairwise_average_intergenic_per_unit)[3] <- "values"
-#     ratio_corrected_by_pairwise_average_intergenic_per_unit_summary <- ratio_corrected_by_pairwise_average_intergenic_per_unit  %>% 
-#       group_by_(.dots=c(GROUP1,GROUP2)) %>%
-#       dplyr::summarise(mean=mean(values),sd=sd(values))    
-#     names(ratio_corrected_by_pairwise_average_intergenic_per_unit_summary)[3] <- "mean_ratio_corrected_by_pairwise_average_intergenic_per_unit_boot"
-#     names(ratio_corrected_by_pairwise_average_intergenic_per_unit_summary)[4] <- "sd_ratio_corrected_by_pairwise_average_intergenic_per_unit_boot"
-#     
-#     ###################
-#     #4.  ratio_corrected_by_watterson_average_intergenic_per_unit
-#     
-#     DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP1, GROUP2) %>% tidyr::nest()
-#     ratio_corrected_by_watterson_average_intergenic_per_unit <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_watterson_average_intergenic_per_unit), statistic = boot_mean, R = ITERATION))) %>% 
-#       dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-#       dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-#     names(ratio_corrected_by_watterson_average_intergenic_per_unit)[3] <- "values"
-#     ratio_corrected_by_watterson_average_intergenic_per_unit_summary <- ratio_corrected_by_watterson_average_intergenic_per_unit  %>% 
-#       group_by_(.dots=c(GROUP1,GROUP2)) %>%
-#       dplyr::summarise(mean=mean(values),sd=sd(values))  
-#     names(ratio_corrected_by_watterson_average_intergenic_per_unit_summary)[3] <- "mean_ratio_corrected_by_watterson_average_intergenic_per_unit_boot"
-#     names(ratio_corrected_by_watterson_average_intergenic_per_unit_summary)[4] <- "sd_ratio_corrected_by_watterson_average_intergenic_per_unit_boot"
-#     
-#     # ###################
-#     # #5.  ratio_corrected_by_pairwise_average_intergenic_weighted
-#     # 
-#     # DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP1, GROUP2) %>% tidyr::nest()
-#     # ratio_corrected_by_pairwise_average_intergenic_weighted <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_pairwise_average_intergenic_weighted), statistic = boot_mean, R = ITERATION))) %>% 
-#     #   dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-#     #   dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-#     # names(ratio_corrected_by_pairwise_average_intergenic_weighted)[3] <- "values"
-#     # ratio_corrected_by_pairwise_average_intergenic_weighted_summary <- ratio_corrected_by_pairwise_average_intergenic_weighted  %>% 
-#     #   group_by_(.dots=c(GROUP1,GROUP2)) %>%
-#     #   dplyr::summarise(mean=mean(values),sd=sd(values))  
-#     # names(ratio_corrected_by_pairwise_average_intergenic_weighted_summary)[3] <- "mean_ratio_corrected_by_pairwise_average_intergenic_weighted_boot"
-#     # names(ratio_corrected_by_pairwise_average_intergenic_weighted_summary)[4] <- "sd_ratio_corrected_by_pairwise_average_intergenic_weighted_boot"
-#     # 
-#     # ###################
-#     # #6.  ratio_corrected_by_watterson_average_intergenic_weighted
-#     # 
-#     # DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP1, GROUP2) %>% tidyr::nest()
-#     # ratio_corrected_by_watterson_average_intergenic_weighted <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_watterson_average_intergenic_weighted), statistic = boot_mean, R = ITERATION))) %>% 
-#     #   dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
-#     #   dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
-#     # names(ratio_corrected_by_watterson_average_intergenic_weighted)[3] <- "values"
-#     # ratio_corrected_by_watterson_average_intergenic_weighted_summary <- ratio_corrected_by_watterson_average_intergenic_weighted  %>% 
-#     #   group_by_(.dots=c(GROUP1,GROUP2)) %>%
-#     #   dplyr::summarise(mean=mean(values),sd=sd(values))  
-#     # names(ratio_corrected_by_watterson_average_intergenic_weighted_summary)[3] <- "mean_ratio_corrected_by_watterson_average_intergenic_weighted_boot"
-#     # names(ratio_corrected_by_watterson_average_intergenic_weighted_summary)[4] <- "sd_ratio_corrected_by_watterson_average_intergenic_weighted_boot"
-#     # 
-#     # ###################
-#     # Agrego los datos
-#     
-#     tmp_group <- purrr::reduce(list(ratio_watterson_summary, 
-#                                     ratio_pairwise_average_summary, 
-#                                     ratio_corrected_by_pairwise_average_intergenic_per_unit_summary, 
-#                                     ratio_corrected_by_watterson_average_intergenic_per_unit_summary),#, 
-#                                     #ratio_corrected_by_pairwise_average_intergenic_weighted_summary, 
-#                                     #ratio_corrected_by_watterson_average_intergenic_weighted_summary), 
-#                                full_join, by = c(GROUP1,GROUP2))
-#     
-#     tmp_group_name <- paste (DATAFRAME, GROUP1, GROUP2, sep="_")
-#     
-#     assign (tmp_group_name, tmp_group,.GlobalEnv)    
-#     
-#     ###################
-#     # Borro tablas antiguas para que no haya confusión 
-#     
-#     rm (tmp_group)
-#     rm (tmp_group_name)
-#     rm (ratio_watterson_average)
-#     rm (ratio_pairwise_average)
-#     rm (ratio_corrected_by_pairwise_average_intergenic_per_unit)
-#     rm (ratio_corrected_by_watterson_average_intergenic_per_unit)
-#     #rm (ratio_corrected_by_pairwise_average_intergenic_weighted)
-#     #rm (ratio_corrected_by_watterson_average_intergenic_weighted)
-#     rm (ratio_watterson_summary)
-#     rm (ratio_pairwise_average_summary)
-#     rm (ratio_corrected_by_pairwise_average_intergenic_per_unit_summary)
-#     rm (ratio_corrected_by_watterson_average_intergenic_per_unit_summary)
-#     #rm (ratio_corrected_by_pairwise_average_intergenic_weighted_summary)
-#     #rm (ratio_corrected_by_watterson_average_intergenic_weighted_summary)
-#     
-#     
-#   }
-# }
-
-
-
-   
-```
-
-
-# -------------------------------------------------------------------------------------
+# -------------------------------------------------
 
 
 ### Global
@@ -3862,7 +3309,633 @@ ggplot (as.data.frame(get(DATAFRAME) %>% filter (chr!="chrX")), aes_string("mean
 ```
 
 
-# ---------------------------------
+
+# ------------------
+
+# Per unit
+
+Aquí tengo los ratios de las unidades particulares.
+
+```{r}
+
+# Dataframe Kirov-Norway
+
+# Function:
+
+# Cuidado porque aquí estoy asumiendo que la region es igual, y esto parece que es asi, pero no estoy 100% segura de que no haya podido pasar que en una población se haya definido como telomérico y en otra no por falta de bases. 
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_POP1, name_POP2){
+  data_diversity_POP1_POP2 <- dplyr::inner_join (POP1, POP2, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id", "recombination_rate", "recombination_category", "type_chr", "divergence", "informative_sites_substitutions", "substitutions", "GC_content")) %>%  
+    dplyr::mutate (ratio_pairwise_average = pairwise_ave.y/pairwise_ave.x) %>% 
+    dplyr::mutate (ratio_watterson_average = watterson_ave.y/watterson_ave.x) %>% 
+    dplyr::mutate (ratio_pairwise_average_cero = pairwise_cero.y/pairwise_cero.y) %>%
+    dplyr::mutate (ratio_watterson_average_cero = watterson_cero.y/watterson_cero.x) %>%
+    # Calculo el delta
+    dplyr::mutate (delta_pairwise_average = pairwise_ave.y-pairwise_ave.x) %>% 
+    dplyr::mutate (delta_watterson_average = watterson_ave.y-watterson_ave.x) %>% 
+    dplyr::mutate (delta_pairwise_average = pairwise_ave.y-pairwise_ave.x) %>% 
+    dplyr::mutate (delta_watterson_average = watterson_ave.y-watterson_ave.x)  
+  
+  
+  dataframename <- paste ("data_diversity", name_POP1, name_POP2, sep="_")
+  assign (dataframename, data_diversity_POP1_POP2,.GlobalEnv)
+}
+
+# Create data frame
+
+# Dataframe Kirov-Norway
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity,c_ll_no_n008_diversity, deparse(substitute(c_ll_ki_n013_diversity)),deparse(substitute(c_ll_no_n008_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_autosomes_diversity,c_ll_no_n008_autosomes_diversity, deparse(substitute(c_ll_ki_n013_autosomes_diversity)),deparse(substitute(c_ll_no_n008_autosomes_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_chrX_diversity,c_ll_no_n008_chrX_diversity, deparse(substitute(c_ll_ki_n013_chrX_diversity)),deparse(substitute(c_ll_no_n008_chrX_diversity)))
+
+# Dataframe Kirov-Poland
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity,c_ll_po_n008_diversity, deparse(substitute(c_ll_ki_n013_diversity)),deparse(substitute(c_ll_po_n008_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_autosomes_diversity,c_ll_po_n008_autosomes_diversity, deparse(substitute(c_ll_ki_n013_autosomes_diversity)),deparse(substitute(c_ll_po_n008_autosomes_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_chrX_diversity,c_ll_po_n008_chrX_diversity, deparse(substitute(c_ll_ki_n013_chrX_diversity)),deparse(substitute(c_ll_po_n008_chrX_diversity)))
+
+
+# Dataframe Sierra_Morena-Doñana
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_diversity,c_lp_do_n012_diversity, deparse(substitute(c_lp_sm_n019_diversity)),deparse(substitute(c_lp_do_n012_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_autosomes_diversity,c_lp_do_n012_autosomes_diversity, deparse(substitute(c_lp_sm_n019_autosomes_diversity)),deparse(substitute(c_lp_do_n012_autosomes_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_chrX_diversity,c_lp_do_n012_chrX_diversity, deparse(substitute(c_lp_sm_n019_chrX_diversity)),deparse(substitute(c_lp_do_n012_chrX_diversity)))
+
+
+# write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+# write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+# write.table(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity, paste(wd_output,"data_diversity_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
+
+# También las creo a lo largo para poder lanzar modelos
+# c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model <- rbind(c_ll_ki_n013_diversity, c_ll_po_n008_diversity)
+# rm(data_diversity)
+# rm(c_ll_ki_n013_diversity)
+# rm(c_ll_po_n008_diversity)
+# rm(c_ll_no_n008_diversity)
+# rm(c_lp_sm_n019_diversity)
+# rm(c_lp_do_n012_diversity)
+
+```
+
+
+
+### Stats de los ratios.
+
+No lo corro pq no tiene mucho sentido hacer la media de los ratios per unit, más que por curiosidad de ver su distribución, y eso ya lo vamos a ver con el boot. 
+
+```{r}
+library("Hmisc")
+library(modeest)
+
+
+
+diversity_stats_pop <- function(diversity_df)
+{
+  diversity_stats_df <- 
+    diversity_df %>% 
+    dplyr::group_by(feature) %>% 
+    dplyr::summarise(mode_ratio_pairwise_average=mlv(ratio_pairwise_average, method="mfv")[['M']],
+                     mean_ratio_pairwise_average=mean(ratio_pairwise_average),
+                     median_ratio_pairwise_average=median(ratio_pairwise_average),
+                     q25_ratio_pairwise_average=quantile(ratio_pairwise_average,0.25),
+                     q75_ratio_pairwise_average=quantile(ratio_pairwise_average,0.75),
+                     q05_ratio_pairwise_average=quantile(ratio_pairwise_average,0.05),
+                     q95_ratio_pairwise_average=quantile(ratio_pairwise_average,0.95),
+                     IQR_ratio_pairwise_average = q75_ratio_pairwise_average - q25_ratio_pairwise_average,
+                     lowerw_ratio_pairwise_average = q25_ratio_pairwise_average - 1.5* IQR_ratio_pairwise_average,
+                     upperw_ratio_pairwise_average = q75_ratio_pairwise_average + 1.5* IQR_ratio_pairwise_average, 
+                     
+                     mean_ratio_watterson_average=mean(ratio_watterson_average),
+                     mean_ratio_corrected_by_pairwise_average_intergenic_per_unit=mean(ratio_pairwise_average_corrected),
+                     mean_ratio_corrected_by_watterson_average_intergenic_per_unit=mean(ratio_watterson_average_corrected)) 
+  
+  return(diversity_stats_df)
+}
+
+stats_data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity <- diversity_stats_pop(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity)
+
+stats_data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity <- diversity_stats_pop(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity)
+
+stats_data_diversity_c_lp_sm_n019_autosomes_diversity_c_lp_do_n012_autosomes_diversity <- diversity_stats_pop(data_diversity_c_lp_sm_n019_autosomes_diversity_c_lp_do_n012_autosomes_diversity)
+
+```
+
+
+### Bootstraping
+
+Hago un boot de la media de los ratios per unit. 
+
+```{r}
+
+library(plyr)
+library(boot)
+library(broom)
+library(magrittr)
+library(dplyr)
+
+#wd_output <- "/Users/marialucenaperez/Owncloud/publico/WG_diversity/ANGSD/sfs/"
+
+# https://uoftcoders.github.io/studyGroup/lessons/r/resampling/lesson/
+# Explicación del paquete boot y boot_mean
+# https://www.painblogr.org/2017-10-18-purrring-through-bootstraps.html
+# Explicación interesantisima sobre la integración de boot con dplyr group by. 
+
+
+# Cargo la funcion de bootstrap
+boot_mean <- function(original_vector, resample_vector) {
+   mean(original_vector[resample_vector])
+}
+
+
+
+# Defino variables para iterar
+
+# Primero para autosomes para feature y region
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity", "data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity", "data_diversity_c_lp_sm_n019_autosomes_diversity_c_lp_do_n012_autosomes_diversity", "data_diversity_c_ll_ki_n013_chrX_diversity_c_ll_no_n008_chrX_diversity", "data_diversity_c_ll_ki_n013_chrX_diversity_c_ll_po_n008_chrX_diversity", "data_diversity_c_lp_sm_n019_chrX_diversity_c_lp_do_n012_chrX_diversity")
+
+GROUPS=c("feature", "region")
+ITERATION=100
+
+for (DATAFRAME in DATAFRAMES)
+{
+  print (DATAFRAME)
+  for (GROUP in GROUPS)
+  {
+    print(GROUP)
+    
+    # Hacemos un group_by y despues un nest que nos devuelve para cada GROUP una variable en la que está condensada la dataframe.
+    
+    ###################
+    #1.  ratio_watterson_average
+    DATAFRAME_filtered <- get(DATAFRAME) %>%
+      # First I group the data by species 
+      dplyr::group_by_(GROUP) %>%
+      # Then I nest the dataframe
+      tidyr::nest()
+    
+      ratio_watterson_average <- DATAFRAME_filtered %<>%
+      # Aquí aplicamos el bootstrapping sobre la columna de data (la que tiene la dataframe condensada) concretamente sobre el subset del ratio X.  
+      dplyr::mutate(booted = purrr::map(.x = data, # The list-column containing <S3: tibble>
+                                        ~ boot::boot(data = as.numeric(.x$ratio_watterson_average), # The <S3 tibble> column being sampled
+                                                     statistic = boot_mean, # The user-defined function
+                                                     R = ITERATION))) %>% 
+      # Del resultado de boot creamos una nueva variable con el valor t, que tiene la matriz de longitud igual al numero de iteraciones. 
+      dplyr::mutate(boot_matrix = purrr::map(.x = booted, # The list-column containing <S3 bootci> objects
+                                             ~ .x$t)) %>% 
+      # Eliminamos la columna data (el dataframe original), y también los valores booted (que tienen todos los resultados del bootstraping). Despues desagregamos por el valor de la matriz. 
+      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+    # Cambiamos el nombre de la matriz. 
+    names(ratio_watterson_average)[2] <- "values"
+ratio_watterson_average_summary <- ratio_watterson_average  %>% 
+    group_by_(.dots=GROUP) %>%
+    dplyr::summarise(mean=mean(values),sd=sd(values))
+    names(ratio_watterson_average_summary)[2] <- "mean_ratio_watterson_boot"
+    names(ratio_watterson_average_summary)[3] <- "sd_ratio_watterson_boot"
+    
+    # Hago lo mismo para cada indice.
+    ###################
+    #2.  ratio_pairwise_average
+    
+    DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
+    ratio_pairwise_average <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_pairwise_average), statistic = boot_mean, R = ITERATION))) %>% 
+      dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+    names(ratio_pairwise_average)[2] <- "values"
+    ratio_pairwise_average_summary <- ratio_pairwise_average  %>% 
+    group_by_(.dots=GROUP) %>%
+    dplyr::summarise(mean=mean(values),sd=sd(values))
+    names(ratio_pairwise_average_summary)[2] <- "mean_ratio_pairwise_boot"
+    names(ratio_pairwise_average_summary)[3] <- "sd_ratio_pairwise_boot"
+    
+    ###################
+    #3.  ratio_pairwise_average_corrected
+    
+    DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
+    ratio_pairwise_average_corrected <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_pairwise_average_corrected), statistic = boot_mean, R = ITERATION))) %>% 
+      dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+    names(ratio_pairwise_average_corrected)[2] <- "values"
+     ratio_pairwise_average_corrected_summary <- ratio_pairwise_average_corrected  %>% 
+    group_by_(.dots=GROUP) %>%
+    dplyr::summarise(mean=mean(values),sd=sd(values))    
+     names(ratio_pairwise_average_corrected_summary)[2] <- "mean_ratio_corrected_by_pairwise_average_intergenic_per_unit_boot"
+    names(ratio_pairwise_average_corrected_summary)[3] <- "sd_ratio_corrected_by_pairwise_average_intergenic_per_unit_boot"
+    
+    ###################
+    #4.  ratio_watterson_average_corrected
+    
+    DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
+    ratio_watterson_average_corrected <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_watterson_average_corrected), statistic = boot_mean, R = ITERATION))) %>% 
+      dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+    names(ratio_watterson_average_corrected)[2] <- "values"
+    ratio_watterson_average_corrected_summary <- ratio_watterson_average_corrected  %>% 
+    group_by_(.dots=GROUP) %>%
+    dplyr::summarise(mean=mean(values),sd=sd(values))  
+    names(ratio_watterson_average_corrected_summary)[2] <- "mean_ratio_corrected_by_watterson_average_intergenic_per_unit_boot"
+    names(ratio_watterson_average_corrected_summary)[3] <- "sd_ratio_corrected_by_watterson_average_intergenic_per_unit_boot"
+
+    ###################
+    #5.  ratio_corrected_by_pairwise_average_intergenic_weighted
+    # 
+    # DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
+    # ratio_corrected_by_pairwise_average_intergenic_weighted <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_pairwise_average_intergenic_weighted), statistic = boot_mean, R = ITERATION))) %>% 
+    #   dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+    #   dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+    # names(ratio_corrected_by_pairwise_average_intergenic_weighted)[2] <- "values"
+    # ratio_corrected_by_pairwise_average_intergenic_weighted_summary <- ratio_corrected_by_pairwise_average_intergenic_weighted  %>% 
+    # group_by_(.dots=GROUP) %>%
+    # dplyr::summarise(mean=mean(values),sd=sd(values))  
+    # names(ratio_corrected_by_pairwise_average_intergenic_weighted_summary)[2] <- "mean_ratio_corrected_by_pairwise_average_intergenic_weighted_boot"
+    # names(ratio_corrected_by_pairwise_average_intergenic_weighted_summary)[3] <- "sd_ratio_corrected_by_pairwise_average_intergenic_weighted_boot"
+    # 
+    # ###################
+    # #6.  ratio_corrected_by_watterson_average_intergenic_weighted
+    # 
+    # DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
+    # ratio_corrected_by_watterson_average_intergenic_weighted <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_watterson_average_intergenic_weighted), statistic = boot_mean, R = ITERATION))) %>% 
+    #   dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+    #   dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+    # names(ratio_corrected_by_watterson_average_intergenic_weighted)[2] <- "values"
+    # ratio_corrected_by_watterson_average_intergenic_weighted_summary <- ratio_corrected_by_watterson_average_intergenic_weighted  %>% 
+    # group_by_(.dots=GROUP) %>%
+    # dplyr::summarise(mean=mean(values),sd=sd(values))  
+    # names(ratio_corrected_by_watterson_average_intergenic_weighted_summary)[2] <- "mean_ratio_corrected_by_watterson_average_intergenic_weighted_boot"
+    # names(ratio_corrected_by_watterson_average_intergenic_weighted_summary)[3] <- "sd_ratio_corrected_by_watterson_average_intergenic_weighted_boot"
+    # 
+    ###################
+    # Agrego los datos
+    
+    tmp_group <- purrr::reduce(list(ratio_watterson_average_summary, ratio_pairwise_average_summary,
+                                    ratio_pairwise_average_corrected_summary,
+                                    ratio_watterson_average_corrected_summary), #,
+                                    #ratio_corrected_by_pairwise_average_intergenic_weighted_summary,
+                                    #ratio_corrected_by_watterson_average_intergenic_weighted_summary), 
+                                    full_join, by = GROUP)
+    
+    POP1=as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
+    POP2=as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
+    chr_type=ifelse((as.character(get(DATAFRAME) %>% select (chr) %>% .[1,1])) == "chrX","chrX","autosomes")
+    
+    tmp_group <- tmp_group %>% mutate (chr_type=chr_type)
+    
+    tmp_group_name <- paste ("ratio_boot",chr_type, POP1,POP2, GROUP, sep="_")
+    
+    assign (tmp_group_name, tmp_group,.GlobalEnv)    
+    
+    ###################
+    # Borro tablas antiguas para que no haya confusión 
+    
+    rm (tmp_group)
+    rm (tmp_group_name)
+    rm (ratio_watterson_average)
+    rm (ratio_pairwise_average)
+    rm (ratio_pairwise_average_corrected)
+    rm (ratio_watterson_average_corrected)
+    #rm (ratio_corrected_by_pairwise_average_intergenic_weighted)
+    #rm (ratio_corrected_by_watterson_average_intergenic_weighted)
+    rm (ratio_watterson_average_summary)
+    rm (ratio_pairwise_average_summary)
+    rm (ratio_pairwise_average_corrected_summary)
+    rm (ratio_watterson_average_corrected_summary)
+    #rm (ratio_corrected_by_pairwise_average_intergenic_weighted_summary)
+    #rm (ratio_corrected_by_watterson_average_intergenic_weighted_summary)
+    
+  }
+}
+
+
+# Ahora fusiono las tablas
+
+ratio_boot_c_ll_ki_n013_c_ll_no_n008_feature <- rbind (ratio_boot_autosomes_c_ll_ki_n013_c_ll_no_n008_feature, ratio_boot_chrX_c_ll_ki_n013_c_ll_no_n008_feature)
+ratio_boot_c_ll_ki_n013_c_ll_po_n008_feature <- rbind (ratio_boot_autosomes_c_ll_ki_n013_c_ll_po_n008_feature, ratio_boot_chrX_c_ll_ki_n013_c_ll_po_n008_feature)
+ratio_boot_c_lp_sm_n019_c_lp_do_n012_feature <- rbind (ratio_boot_autosomes_c_lp_sm_n019_c_lp_do_n012_feature, ratio_boot_chrX_c_lp_sm_n019_c_lp_do_n012_feature)
+
+##############################################################################################################
+# Chr
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+GROUPS=c("chr")
+ITERATION=100
+
+for (DATAFRAME in DATAFRAMES)
+{
+  print (DATAFRAME)
+  for (GROUP in GROUPS)
+  {
+    print(GROUP)
+    
+    # Hacemos un group_by y despues un nest que nos devuelve para cada GROUP una variable en la que está condensada la dataframe.
+    
+    ###################
+    #1.  ratio_watterson_average
+    DATAFRAME_filtered <- get(DATAFRAME) %>%
+      # First I group the data by species 
+      dplyr::group_by_(GROUP) %>%
+      # Then I nest the dataframe
+      tidyr::nest()
+    
+      ratio_watterson_average <- DATAFRAME_filtered %<>%
+      # Aquí aplicamos el bootstrapping sobre la columna de data (la que tiene la dataframe condensada) concretamente sobre el subset del ratio X.  
+      dplyr::mutate(booted = purrr::map(.x = data, # The list-column containing <S3: tibble>
+                                        ~ boot::boot(data = as.numeric(.x$ratio_watterson_average), # The <S3 tibble> column being sampled
+                                                     statistic = boot_mean, # The user-defined function
+                                                     R = ITERATION))) %>% 
+      # Del resultado de boot creamos una nueva variable con el valor t, que tiene la matriz de longitud igual al numero de iteraciones. 
+      dplyr::mutate(boot_matrix = purrr::map(.x = booted, # The list-column containing <S3 bootci> objects
+                                             ~ .x$t)) %>% 
+      # Eliminamos la columna data (el dataframe original), y también los valores booted (que tienen todos los resultados del bootstraping). Despues desagregamos por el valor de la matriz. 
+      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+    # Cambiamos el nombre de la matriz. 
+    names(ratio_watterson_average)[2] <- "values"
+ratio_watterson_average_summary <- ratio_watterson_average  %>% 
+    group_by_(.dots=GROUP) %>%
+    dplyr::summarise(mean=mean(values),sd=sd(values))
+    names(ratio_watterson_average_summary)[2] <- "mean_ratio_watterson_boot"
+    names(ratio_watterson_average_summary)[3] <- "sd_ratio_watterson_boot"
+    
+    # Hago lo mismo para cada indice.
+    ###################
+    #2.  ratio_pairwise_average
+    
+    DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
+    ratio_pairwise_average <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_pairwise_average), statistic = boot_mean, R = ITERATION))) %>% 
+      dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+    names(ratio_pairwise_average)[2] <- "values"
+    ratio_pairwise_average_summary <- ratio_pairwise_average  %>% 
+    group_by_(.dots=GROUP) %>%
+    dplyr::summarise(mean=mean(values),sd=sd(values))
+    names(ratio_pairwise_average_summary)[2] <- "mean_ratio_pairwise_boot"
+    names(ratio_pairwise_average_summary)[3] <- "sd_ratio_pairwise_boot"
+    
+    ###################
+    #3.  ratio_pairwise_average_corrected
+    
+    DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
+    ratio_pairwise_average_corrected <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_pairwise_average_corrected), statistic = boot_mean, R = ITERATION))) %>% 
+      dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+    names(ratio_pairwise_average_corrected)[2] <- "values"
+     ratio_pairwise_average_corrected_summary <- ratio_pairwise_average_corrected  %>% 
+    group_by_(.dots=GROUP) %>%
+    dplyr::summarise(mean=mean(values),sd=sd(values))    
+     names(ratio_pairwise_average_corrected_summary)[2] <- "mean_ratio_corrected_by_pairwise_average_intergenic_per_unit_boot"
+    names(ratio_pairwise_average_corrected_summary)[3] <- "sd_ratio_corrected_by_pairwise_average_intergenic_per_unit_boot"
+    
+    ###################
+    #4.  ratio_watterson_average_corrected
+    
+    DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
+    ratio_watterson_average_corrected <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_watterson_average_corrected), statistic = boot_mean, R = ITERATION))) %>% 
+      dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+      dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+    names(ratio_watterson_average_corrected)[2] <- "values"
+    ratio_watterson_average_corrected_summary <- ratio_watterson_average_corrected  %>% 
+    group_by_(.dots=GROUP) %>%
+    dplyr::summarise(mean=mean(values),sd=sd(values))  
+    names(ratio_watterson_average_corrected_summary)[2] <- "mean_ratio_corrected_by_watterson_average_intergenic_per_unit_boot"
+    names(ratio_watterson_average_corrected_summary)[3] <- "sd_ratio_corrected_by_watterson_average_intergenic_per_unit_boot"
+
+    ###################
+    #5.  ratio_corrected_by_pairwise_average_intergenic_weighted
+    # 
+    # DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
+    # ratio_corrected_by_pairwise_average_intergenic_weighted <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_pairwise_average_intergenic_weighted), statistic = boot_mean, R = ITERATION))) %>% 
+    #   dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+    #   dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+    # names(ratio_corrected_by_pairwise_average_intergenic_weighted)[2] <- "values"
+    # ratio_corrected_by_pairwise_average_intergenic_weighted_summary <- ratio_corrected_by_pairwise_average_intergenic_weighted  %>% 
+    # group_by_(.dots=GROUP) %>%
+    # dplyr::summarise(mean=mean(values),sd=sd(values))  
+    # names(ratio_corrected_by_pairwise_average_intergenic_weighted_summary)[2] <- "mean_ratio_corrected_by_pairwise_average_intergenic_weighted_boot"
+    # names(ratio_corrected_by_pairwise_average_intergenic_weighted_summary)[3] <- "sd_ratio_corrected_by_pairwise_average_intergenic_weighted_boot"
+    # 
+    # ###################
+    # #6.  ratio_corrected_by_watterson_average_intergenic_weighted
+    # 
+    # DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP) %>% tidyr::nest()
+    # ratio_corrected_by_watterson_average_intergenic_weighted <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_watterson_average_intergenic_weighted), statistic = boot_mean, R = ITERATION))) %>% 
+    #   dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+    #   dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+    # names(ratio_corrected_by_watterson_average_intergenic_weighted)[2] <- "values"
+    # ratio_corrected_by_watterson_average_intergenic_weighted_summary <- ratio_corrected_by_watterson_average_intergenic_weighted  %>% 
+    # group_by_(.dots=GROUP) %>%
+    # dplyr::summarise(mean=mean(values),sd=sd(values))  
+    # names(ratio_corrected_by_watterson_average_intergenic_weighted_summary)[2] <- "mean_ratio_corrected_by_watterson_average_intergenic_weighted_boot"
+    # names(ratio_corrected_by_watterson_average_intergenic_weighted_summary)[3] <- "sd_ratio_corrected_by_watterson_average_intergenic_weighted_boot"
+    # 
+    ###################
+    # Agrego los datos
+    
+    tmp_group <- purrr::reduce(list(ratio_watterson_average_summary, ratio_pairwise_average_summary,
+                                    ratio_pairwise_average_corrected_summary,
+                                    ratio_watterson_average_corrected_summary), #,
+                                    #ratio_corrected_by_pairwise_average_intergenic_weighted_summary,
+                                    #ratio_corrected_by_watterson_average_intergenic_weighted_summary), 
+                                    full_join, by = GROUP)
+    
+    POP1=as.character(get(DATAFRAME) %>% select (pop.x) %>% .[1,1])
+    POP2=as.character(get(DATAFRAME) %>% select (pop.y) %>% .[1,1])
+
+    
+    tmp_group_name <- paste ("ratio_boot",POP1,POP2, GROUP, sep="_")
+    
+    assign (tmp_group_name, tmp_group,.GlobalEnv)    
+    
+    ###################
+    # Borro tablas antiguas para que no haya confusión 
+    
+    rm (tmp_group)
+    rm (tmp_group_name)
+    rm (ratio_watterson_average)
+    rm (ratio_pairwise_average)
+    rm (ratio_pairwise_average_corrected)
+    rm (ratio_watterson_average_corrected)
+    #rm (ratio_corrected_by_pairwise_average_intergenic_weighted)
+    #rm (ratio_corrected_by_watterson_average_intergenic_weighted)
+    rm (ratio_watterson_average_summary)
+    rm (ratio_pairwise_average_summary)
+    rm (ratio_pairwise_average_corrected_summary)
+    rm (ratio_watterson_average_corrected_summary)
+    #rm (ratio_corrected_by_pairwise_average_intergenic_weighted_summary)
+    #rm (ratio_corrected_by_watterson_average_intergenic_weighted_summary)
+    
+  }
+}
+
+
+
+##############################################################################################################
+# 
+# # Ahora agrupamos por dos caracteristicas a la vez
+# 
+# all_combinations <- combn(GROUPS, 2)
+# 
+# 
+# for (DATAFRAME in DATAFRAMES) 
+# {
+#   print (DATAFRAME)
+#   for (ITERATION in 1:ncol(all_combinations))
+#   { 
+#     GROUP1=all_combinations[, ITERATION][1]
+#     GROUP2=all_combinations[, ITERATION][2]
+#     
+#     print (GROUP1)
+#     print (GROUP2)
+#     # Hacemos un group_by y despues un nest que nos devuelve para cada GROUP una variable en la que está condensada la dataframe.
+#     
+#     ###################
+#     #1.  ratio_watterson_average
+#     DATAFRAME_filtered <- get(DATAFRAME) %>%
+#       # First I group the data by species 
+#       dplyr::group_by_(GROUP1,GROUP2) %>%
+#       # Then I nest the dataframe
+#       tidyr::nest()
+#     
+#     ratio_watterson_average <- DATAFRAME_filtered %<>%
+#       # Aquí aplicamos el bootstrapping sobre la columna de data (la que tiene la dataframe condensada) concretamente sobre el subset del ratio X.  
+#       dplyr::mutate(booted = purrr::map(.x = data, # The list-column containing <S3: tibble>
+#                                         ~ boot::boot(data = as.numeric(.x$ratio_watterson_average), # The <S3 tibble> column being sampled
+#                                                      statistic = boot_mean, # The user-defined function
+#                                                      R = ITERATION))) %>% 
+#       # Del resultado de boot creamos una nueva variable con el valor t, que tiene la matriz de longitud igual al numero de iteraciones. 
+#       dplyr::mutate(boot_matrix = purrr::map(.x = booted, # The list-column containing <S3 bootci> objects
+#                                              ~ .x$t)) %>% 
+#       # Eliminamos la columna data (el dataframe original), y también los valores booted (que tienen todos los resultados del bootstraping). Despues desagregamos por el valor de la matriz. 
+#       dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix) 
+#     # Cambiamos el nombre de la matriz. 
+#     names(ratio_watterson_average)[3] <- "values"
+#     ratio_watterson_summary <- ratio_watterson_average  %>% 
+#       group_by_(.dots=c(GROUP1,GROUP2)) %>%
+#       dplyr::summarise(mean=mean(as.numeric(values)),sd=sd(as.numeric(values)))
+#     names(ratio_watterson_summary)[3] <- "mean_ratio_watterson_boot"
+#     names(ratio_watterson_summary)[4] <- "sd_ratio_watterson_boot"
+#     
+#     # Hago lo mismo para cada indice.
+#     ###################
+#     #2.  ratio_pairwise_average
+#     
+#     DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP1, GROUP2) %>% tidyr::nest()
+#     ratio_pairwise_average <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_pairwise_average), statistic = boot_mean, R = ITERATION))) %>% 
+#       dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+#       dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+#     names(ratio_pairwise_average)[3] <- "values"
+#     ratio_pairwise_average_summary <- ratio_pairwise_average  %>% 
+#       group_by_(.dots=c(GROUP1,GROUP2)) %>%
+#       dplyr::summarise(mean=mean(values),sd=sd(values))
+#     names(ratio_pairwise_average_summary)[3] <- "mean_ratio_pairwise_boot"
+#     names(ratio_pairwise_average_summary)[4] <- "sd_ratio_pairwise_boot"
+#     
+#     ###################
+#     #3.  ratio_corrected_by_pairwise_average_intergenic_per_unit
+#     
+#     DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP1, GROUP2) %>% tidyr::nest()
+#     ratio_corrected_by_pairwise_average_intergenic_per_unit <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_pairwise_average_intergenic_per_unit), statistic = boot_mean, R = ITERATION))) %>% 
+#       dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+#       dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+#     names(ratio_corrected_by_pairwise_average_intergenic_per_unit)[3] <- "values"
+#     ratio_corrected_by_pairwise_average_intergenic_per_unit_summary <- ratio_corrected_by_pairwise_average_intergenic_per_unit  %>% 
+#       group_by_(.dots=c(GROUP1,GROUP2)) %>%
+#       dplyr::summarise(mean=mean(values),sd=sd(values))    
+#     names(ratio_corrected_by_pairwise_average_intergenic_per_unit_summary)[3] <- "mean_ratio_corrected_by_pairwise_average_intergenic_per_unit_boot"
+#     names(ratio_corrected_by_pairwise_average_intergenic_per_unit_summary)[4] <- "sd_ratio_corrected_by_pairwise_average_intergenic_per_unit_boot"
+#     
+#     ###################
+#     #4.  ratio_corrected_by_watterson_average_intergenic_per_unit
+#     
+#     DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP1, GROUP2) %>% tidyr::nest()
+#     ratio_corrected_by_watterson_average_intergenic_per_unit <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_watterson_average_intergenic_per_unit), statistic = boot_mean, R = ITERATION))) %>% 
+#       dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+#       dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+#     names(ratio_corrected_by_watterson_average_intergenic_per_unit)[3] <- "values"
+#     ratio_corrected_by_watterson_average_intergenic_per_unit_summary <- ratio_corrected_by_watterson_average_intergenic_per_unit  %>% 
+#       group_by_(.dots=c(GROUP1,GROUP2)) %>%
+#       dplyr::summarise(mean=mean(values),sd=sd(values))  
+#     names(ratio_corrected_by_watterson_average_intergenic_per_unit_summary)[3] <- "mean_ratio_corrected_by_watterson_average_intergenic_per_unit_boot"
+#     names(ratio_corrected_by_watterson_average_intergenic_per_unit_summary)[4] <- "sd_ratio_corrected_by_watterson_average_intergenic_per_unit_boot"
+#     
+#     # ###################
+#     # #5.  ratio_corrected_by_pairwise_average_intergenic_weighted
+#     # 
+#     # DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP1, GROUP2) %>% tidyr::nest()
+#     # ratio_corrected_by_pairwise_average_intergenic_weighted <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_pairwise_average_intergenic_weighted), statistic = boot_mean, R = ITERATION))) %>% 
+#     #   dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+#     #   dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+#     # names(ratio_corrected_by_pairwise_average_intergenic_weighted)[3] <- "values"
+#     # ratio_corrected_by_pairwise_average_intergenic_weighted_summary <- ratio_corrected_by_pairwise_average_intergenic_weighted  %>% 
+#     #   group_by_(.dots=c(GROUP1,GROUP2)) %>%
+#     #   dplyr::summarise(mean=mean(values),sd=sd(values))  
+#     # names(ratio_corrected_by_pairwise_average_intergenic_weighted_summary)[3] <- "mean_ratio_corrected_by_pairwise_average_intergenic_weighted_boot"
+#     # names(ratio_corrected_by_pairwise_average_intergenic_weighted_summary)[4] <- "sd_ratio_corrected_by_pairwise_average_intergenic_weighted_boot"
+#     # 
+#     # ###################
+#     # #6.  ratio_corrected_by_watterson_average_intergenic_weighted
+#     # 
+#     # DATAFRAME_filtered <- get(DATAFRAME) %>% dplyr::group_by_(GROUP1, GROUP2) %>% tidyr::nest()
+#     # ratio_corrected_by_watterson_average_intergenic_weighted <- DATAFRAME_filtered %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$ratio_corrected_by_watterson_average_intergenic_weighted), statistic = boot_mean, R = ITERATION))) %>% 
+#     #   dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+#     #   dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+#     # names(ratio_corrected_by_watterson_average_intergenic_weighted)[3] <- "values"
+#     # ratio_corrected_by_watterson_average_intergenic_weighted_summary <- ratio_corrected_by_watterson_average_intergenic_weighted  %>% 
+#     #   group_by_(.dots=c(GROUP1,GROUP2)) %>%
+#     #   dplyr::summarise(mean=mean(values),sd=sd(values))  
+#     # names(ratio_corrected_by_watterson_average_intergenic_weighted_summary)[3] <- "mean_ratio_corrected_by_watterson_average_intergenic_weighted_boot"
+#     # names(ratio_corrected_by_watterson_average_intergenic_weighted_summary)[4] <- "sd_ratio_corrected_by_watterson_average_intergenic_weighted_boot"
+#     # 
+#     # ###################
+#     # Agrego los datos
+#     
+#     tmp_group <- purrr::reduce(list(ratio_watterson_summary, 
+#                                     ratio_pairwise_average_summary, 
+#                                     ratio_corrected_by_pairwise_average_intergenic_per_unit_summary, 
+#                                     ratio_corrected_by_watterson_average_intergenic_per_unit_summary),#, 
+#                                     #ratio_corrected_by_pairwise_average_intergenic_weighted_summary, 
+#                                     #ratio_corrected_by_watterson_average_intergenic_weighted_summary), 
+#                                full_join, by = c(GROUP1,GROUP2))
+#     
+#     tmp_group_name <- paste (DATAFRAME, GROUP1, GROUP2, sep="_")
+#     
+#     assign (tmp_group_name, tmp_group,.GlobalEnv)    
+#     
+#     ###################
+#     # Borro tablas antiguas para que no haya confusión 
+#     
+#     rm (tmp_group)
+#     rm (tmp_group_name)
+#     rm (ratio_watterson_average)
+#     rm (ratio_pairwise_average)
+#     rm (ratio_corrected_by_pairwise_average_intergenic_per_unit)
+#     rm (ratio_corrected_by_watterson_average_intergenic_per_unit)
+#     #rm (ratio_corrected_by_pairwise_average_intergenic_weighted)
+#     #rm (ratio_corrected_by_watterson_average_intergenic_weighted)
+#     rm (ratio_watterson_summary)
+#     rm (ratio_pairwise_average_summary)
+#     rm (ratio_corrected_by_pairwise_average_intergenic_per_unit_summary)
+#     rm (ratio_corrected_by_watterson_average_intergenic_per_unit_summary)
+#     #rm (ratio_corrected_by_pairwise_average_intergenic_weighted_summary)
+#     #rm (ratio_corrected_by_watterson_average_intergenic_weighted_summary)
+#     
+#     
+#   }
+# }
+
+
+
+   
+```
+
+
+
+# -------------------------------------------------------------------------------------
+
 
 # WATTERSON
 
@@ -4027,6 +4100,24 @@ ggplot(data=DATAFRAME_modif, aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave
 # #arrange the plots together, with appropriate height and width for each row and column
 # grid.arrange(plot_top, empty, scatter, plot_right, ncol=2, nrow=2, widths=c(4, 1), heights=c(1, 4))
 
+
+```
+
+##### Delta distribution
+
+```{r}
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+
+for (DATAFRAME in DATAFRAMES) 
+{
+ggplot(get(DATAFRAME) %>% filter(pairwise_cero.y!=0 | pairwise_cero.x!=0), aes(x=delta_pairwise_average)) + geom_histogram(binwidth = 0.0005)
+   ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_average_distribution.pdf", sep=""))
+   
+ggplot(get(DATAFRAME) %>% filter(watterson_cero.y!=0 | watterson_cero.x!=0), aes(x=delta_watterson_average)) + geom_histogram(binwidth = 0.0005)
+   ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_average_distribution.pdf", sep=""))
+}
 
 ```
 
@@ -6745,7 +6836,9 @@ save_plot(paste(wd_output,POP1,"_",POP2,"_GCcontent_by_category.pdf",sep=""), HD
 ```
 
 
+
 # -------------------------------------------------
+
 
 # Ven diagram Pi vs Watterson
 
