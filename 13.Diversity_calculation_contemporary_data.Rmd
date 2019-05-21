@@ -746,12 +746,12 @@ mutate (watterson_cero = ifelse (pop=="c_lp_sm_n019"&log10(watterson_ave)<(filte
                                    pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson) | 
                                    pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson) | 
                                    pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson) | 
-                                   pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
+                                   pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),NA,watterson_ave)) %>% 
   mutate (pairwise_cero = ifelse (pop=="c_lp_sm_n019"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_sm_n019")$min_density_value_pairwise) | 
                                    pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise) | 
                                    pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise) | 
                                    pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise) | 
-                                   pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),0,pairwise_ave)) 
+                                   pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),NA,pairwise_ave)) 
 
 ### ChrX
 
@@ -761,12 +761,12 @@ data_diversity_chrX_filtered_ave_corrected <- rbind (c_ll_ki_n013_chrX_diversity
                                    pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson) | 
                                    pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson) | 
                                    pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson) | 
-                                   pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
+                                   pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),NA,watterson_ave)) %>% 
   mutate (pairwise_cero = ifelse (pop=="c_lp_sm_n019"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_sm_n019")$min_density_value_pairwise) | 
                                    pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise) | 
                                    pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise) | 
                                    pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise) | 
-                                   pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise), 0 ,pairwise_ave)) 
+                                   pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),NA,pairwise_ave)) 
 # Uno ambas tablas
 
 data_diversity_filtered_ave_corrected <- rbind (data_diversity_autosomes_filtered_ave_corrected, data_diversity_chrX_filtered_ave_corrected)
@@ -848,36 +848,36 @@ diversity_stats_pop <- function(diversity_df)
                        
                        # Valores considerando los ceros
                        
-                       mean_watterson_ave_corrected=mean(watterson_ave_corrected),
-                       mean_pairwise_ave_corrected=mean(pairwise_ave_corrected),
+                       mean_watterson_cero=mean(watterson_cero, na.rm = TRUE),
+                       mean_pairwise_cero=mean(pairwise_cero, na.rm = TRUE),
 
-                       median_watterson_ave_corrected=median(watterson_ave_corrected),
-                       median_pairwise_ave_corrected=median(pairwise_ave_corrected),
+                       median_watterson_cero=median(watterson_cero, na.rm = TRUE),
+                       median_pairwise_cero=median(pairwise_cero, na.rm = TRUE),
                        
+                       wmean_watterson_cero=weighted.mean(watterson_cero,w=informative_sites, na.rm = TRUE),
+                       wmean_pairwise_cero=mean(pairwise_cero,w=informative_sites, na.rm = TRUE),
                        
-                       wmean_watterson_ave_corrected=weighted.mean(watterson_ave_corrected,w=informative_sites),
-                       wmean_pairwise_ave_corrected=mean(pairwise_ave_corrected,w=informative_sites),
-                       
-                       q25_watterson_ave_corrected=quantile(watterson_ave_corrected,0.25),
-                       q25_pairwise_ave_corrected=quantile(pairwise_ave_corrected,0.25),
+                       q25_watterson_cero=quantile(watterson_cero,0.25, na.rm = TRUE),
+                       q25_pairwise_cero=quantile(pairwise_cero,0.25, na.rm = TRUE),
 
-                       q75_watterson_ave_corrected=quantile(watterson_ave_corrected,0.75),
-                       q75_pairwise_ave_corrected=quantile(pairwise_ave_corrected,0.75),
+                       q75_watterson_cero=quantile(watterson_cero,0.75, na.rm = TRUE),
+                       q75_pairwise_cero=quantile(pairwise_cero,0.75, na.rm = TRUE),
 
-                       q05_watterson_ave_corrected=quantile(watterson_ave_corrected,0.05),
-                       q05_pairwise_ave_corrected=quantile(pairwise_ave_corrected,0.05),
+                       q05_watterson_cero=quantile(watterson_cero,0.05, na.rm = TRUE),
+                       q05_pairwise_cero=quantile(pairwise_cero,0.05, na.rm = TRUE),
 
-                       q95_watterson_ave_corrected=quantile(watterson_ave_corrected,0.95),
-                       q95_pairwise_ave_corrected=quantile(pairwise_ave_corrected,0.95),
+                       q95_watterson_cero=quantile(watterson_cero,0.95, na.rm = TRUE),
+                       q95_pairwise_cero=quantile(pairwise_cero,0.95, na.rm = TRUE),
 
-                       IQR_watterson_ave_corrected = q75_watterson_ave_corrected - q25_watterson_ave_corrected,
-                       IQR_pairwise_ave_corrected  = q75_pairwise_ave_corrected  - q25_pairwise_ave_corrected,
+                       IQR_watterson_cero = q75_watterson_cero - q25_watterson_cero,
+                       IQR_pairwise_cero  = q75_pairwise_cero  - q25_pairwise_cero,
 
-                       lowerw_watterson_ave_corrected = q25_watterson_ave_corrected - 1.5 * IQR_watterson_ave_corrected,
-                       lowerw_pairwise_ave_corrected  = q25_pairwise_ave_corrected  - 1.5 * IQR_pairwise_ave_corrected,
+                       lowerw_watterson_cero = q25_watterson_cero - 1.5 * IQR_watterson_cero,
+                       lowerw_pairwise_cero  = q25_pairwise_cero  - 1.5 * IQR_pairwise_cero,
 
-                       upperw_watterson_ave_corrected = q75_watterson_ave_corrected + 1.5 * IQR_watterson_ave_corrected,
-                       upperw_pairwise_ave_corrected  = q75_pairwise_ave_corrected  + 1.5 * IQR_pairwise_ave_corrected) %>% 
+                       upperw_watterson_cero = q75_watterson_cero + 1.5 * IQR_watterson_cero,
+                       upperw_pairwise_cero  = q75_pairwise_cero  + 1.5 * IQR_pairwise_cero) %>% 
+    
   mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
                             ifelse (pop == "c_ll_no_n008", "Norway", 
@@ -971,38 +971,38 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
                        upperw_watterson_ave = q75_watterson_ave + 1.5* IQR_watterson_ave,
                        upperw_pairwise_ave  = q75_pairwise_ave  + 1.5* IQR_pairwise_ave,
                        
-                       # Valores corregidos
+                       # Valores teniendo en cuenta los valores cero
                        
-                       mean_watterson_ave_corrected=mean(watterson_ave_corrected),
-                       mean_pairwise_ave_corrected=mean(pairwise_ave_corrected),
+                       mean_watterson_cero=mean(watterson_cero, na.rm = TRUE),
+                       mean_pairwise_cero=mean(pairwise_cero, na.rm = TRUE),
 
-                       median_watterson_ave_corrected=median(watterson_ave_corrected),
-                       median_pairwise_ave_corrected=median(pairwise_ave_corrected),
+                       median_watterson_cero=median(watterson_cero, na.rm = TRUE),
+                       median_pairwise_cero=median(pairwise_cero, na.rm = TRUE),
                        
                        
-                       wmean_watterson_ave_corrected=weighted.mean(watterson_ave_corrected,w=informative_sites),
-                       wmean_pairwise_ave_corrected=mean(pairwise_ave_corrected,w=informative_sites),
+                       wmean_watterson_cero=weighted.mean(watterson_cero,w=informative_sites, na.rm = TRUE),
+                       wmean_pairwise_cero=mean(pairwise_cero,w=informative_sites, na.rm = TRUE),
                        
-                       q25_watterson_ave_corrected=quantile(watterson_ave_corrected,0.25),
-                       q25_pairwise_ave_corrected=quantile(pairwise_ave_corrected,0.25),
+                       q25_watterson_cero=quantile(watterson_cero,0.25, na.rm = TRUE),
+                       q25_pairwise_cero=quantile(pairwise_cero,0.25, na.rm = TRUE),
 
-                       q75_watterson_ave_corrected=quantile(watterson_ave_corrected,0.75),
-                       q75_pairwise_ave_corrected=quantile(pairwise_ave_corrected,0.75),
+                       q75_watterson_cero=quantile(watterson_cero,0.75, na.rm = TRUE),
+                       q75_pairwise_cero=quantile(pairwise_cero,0.75, na.rm = TRUE),
 
-                       q05_watterson_ave_corrected=quantile(watterson_ave_corrected,0.05),
-                       q05_pairwise_ave_corrected=quantile(pairwise_ave_corrected,0.05),
+                       q05_watterson_cero=quantile(watterson_cero,0.05, na.rm = TRUE),
+                       q05_pairwise_cero=quantile(pairwise_cero,0.05, na.rm = TRUE),
 
-                       q95_watterson_ave_corrected=quantile(watterson_ave_corrected,0.95),
-                       q95_pairwise_ave_corrected=quantile(pairwise_ave_corrected,0.95),
+                       q95_watterson_cero=quantile(watterson_cero,0.95, na.rm = TRUE),
+                       q95_pairwise_cero=quantile(pairwise_cero,0.95, na.rm = TRUE),
 
-                       IQR_watterson_ave_corrected = q75_watterson_ave_corrected - q25_watterson_ave_corrected,
-                       IQR_pairwise_ave_corrected  = q75_pairwise_ave_corrected  - q25_pairwise_ave_corrected,
+                       IQR_watterson_cero = q75_watterson_cero - q25_watterson_cero,
+                       IQR_pairwise_cero  = q75_pairwise_cero  - q25_pairwise_cero,
 
-                       lowerw_watterson_ave_corrected = q25_watterson_ave_corrected - 1.5 * IQR_watterson_ave_corrected,
-                       lowerw_pairwise_ave_corrected  = q25_pairwise_ave_corrected  - 1.5 * IQR_pairwise_ave_corrected,
+                       lowerw_watterson_cero = q25_watterson_cero - 1.5 * IQR_watterson_cero,
+                       lowerw_pairwise_cero  = q25_pairwise_cero  - 1.5 * IQR_pairwise_cero,
 
-                       upperw_watterson_ave_corrected = q75_watterson_ave_corrected + 1.5 * IQR_watterson_ave_corrected,
-                       upperw_pairwise_ave_corrected  = q75_pairwise_ave_corrected  + 1.5 * IQR_pairwise_ave_corrected,
+                       upperw_watterson_cero = q75_watterson_cero + 1.5 * IQR_watterson_cero,
+                       upperw_pairwise_cero  = q75_pairwise_cero  + 1.5 * IQR_pairwise_cero,
                        
                        # Valores recombinación
                        
@@ -1120,38 +1120,38 @@ diversity_stats_doble_grouped <- function(DATAFRAME, GROUP1, GROUP2)
                        upperw_watterson_ave = q75_watterson_ave + 1.5* IQR_watterson_ave,
                        upperw_pairwise_ave  = q75_pairwise_ave  + 1.5* IQR_pairwise_ave,
                        
-                         # Valores corregidos
+                         # Valores teniendo en cuenta los valores 0. 
                        
-                       mean_watterson_ave_corrected=mean(watterson_ave_corrected),
-                       mean_pairwise_ave_corrected=mean(pairwise_ave_corrected),
+                       mean_watterson_cero=mean(watterson_cero, na.rm = TRUE),
+                       mean_pairwise_cero=mean(pairwise_cero, na.rm = TRUE),
 
-                       median_watterson_ave_corrected=median(watterson_ave_corrected),
-                       median_pairwise_ave_corrected=median(pairwise_ave_corrected),
+                       median_watterson_cero=median(watterson_cero, na.rm = TRUE),
+                       median_pairwise_cero=median(pairwise_cero, na.rm = TRUE),
                        
                        
-                       wmean_watterson_ave_corrected=weighted.mean(watterson_ave_corrected,w=informative_sites),
-                       wmean_pairwise_ave_corrected=mean(pairwise_ave_corrected,w=informative_sites),
+                       wmean_watterson_cero=weighted.mean(watterson_cero,w=informative_sites, na.rm = TRUE),
+                       wmean_pairwise_cero=mean(pairwise_cero,w=informative_sites, na.rm = TRUE),
                        
-                       q25_watterson_ave_corrected=quantile(watterson_ave_corrected,0.25),
-                       q25_pairwise_ave_corrected=quantile(pairwise_ave_corrected,0.25),
+                       q25_watterson_cero=quantile(watterson_cero,0.25, na.rm = TRUE),
+                       q25_pairwise_cero=quantile(pairwise_cero,0.25, na.rm = TRUE),
 
-                       q75_watterson_ave_corrected=quantile(watterson_ave_corrected,0.75),
-                       q75_pairwise_ave_corrected=quantile(pairwise_ave_corrected,0.75),
+                       q75_watterson_cero=quantile(watterson_cero,0.75, na.rm = TRUE),
+                       q75_pairwise_cero=quantile(pairwise_cero,0.75, na.rm = TRUE),
 
-                       q05_watterson_ave_corrected=quantile(watterson_ave_corrected,0.05),
-                       q05_pairwise_ave_corrected=quantile(pairwise_ave_corrected,0.05),
+                       q05_watterson_cero=quantile(watterson_cero,0.05, na.rm = TRUE),
+                       q05_pairwise_cero=quantile(pairwise_cero,0.05, na.rm = TRUE),
 
-                       q95_watterson_ave_corrected=quantile(watterson_ave_corrected,0.95),
-                       q95_pairwise_ave_corrected=quantile(pairwise_ave_corrected,0.95),
+                       q95_watterson_cero=quantile(watterson_cero,0.95, na.rm = TRUE),
+                       q95_pairwise_cero=quantile(pairwise_cero,0.95, na.rm = TRUE),
 
-                       IQR_watterson_ave_corrected = q75_watterson_ave_corrected - q25_watterson_ave_corrected,
-                       IQR_pairwise_ave_corrected  = q75_pairwise_ave_corrected  - q25_pairwise_ave_corrected,
+                       IQR_watterson_cero = q75_watterson_cero - q25_watterson_cero,
+                       IQR_pairwise_cero  = q75_pairwise_cero  - q25_pairwise_cero,
 
-                       lowerw_watterson_ave_corrected = q25_watterson_ave_corrected - 1.5 * IQR_watterson_ave_corrected,
-                       lowerw_pairwise_ave_corrected  = q25_pairwise_ave_corrected  - 1.5 * IQR_pairwise_ave_corrected,
+                       lowerw_watterson_cero = q25_watterson_cero - 1.5 * IQR_watterson_cero,
+                       lowerw_pairwise_cero  = q25_pairwise_cero  - 1.5 * IQR_pairwise_cero,
 
-                       upperw_watterson_ave_corrected = q75_watterson_ave_corrected + 1.5 * IQR_watterson_ave_corrected,
-                       upperw_pairwise_ave_corrected  = q75_pairwise_ave_corrected  + 1.5 * IQR_pairwise_ave_corrected,
+                       upperw_watterson_cero = q75_watterson_cero + 1.5 * IQR_watterson_cero,
+                       upperw_pairwise_cero  = q75_pairwise_cero  + 1.5 * IQR_pairwise_cero,
                        
                        # Valores recombinación
                        
