@@ -746,12 +746,12 @@ mutate (watterson_cero = ifelse (pop=="c_lp_sm_n019"&log10(watterson_ave)<(filte
                                    pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson) | 
                                    pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson) | 
                                    pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson) | 
-                                   pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),NA,watterson_ave)) %>% 
+                                   pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
   mutate (pairwise_cero = ifelse (pop=="c_lp_sm_n019"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_sm_n019")$min_density_value_pairwise) | 
                                    pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise) | 
                                    pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise) | 
                                    pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise) | 
-                                   pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),NA,pairwise_ave)) 
+                                   pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),0,pairwise_ave)) 
 
 ### ChrX
 
@@ -761,12 +761,12 @@ data_diversity_chrX_filtered_ave_corrected <- rbind (c_ll_ki_n013_chrX_diversity
                                    pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson) | 
                                    pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson) | 
                                    pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson) | 
-                                   pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),NA,watterson_ave)) %>% 
+                                   pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
   mutate (pairwise_cero = ifelse (pop=="c_lp_sm_n019"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_sm_n019")$min_density_value_pairwise) | 
                                    pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise) | 
                                    pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise) | 
                                    pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise) | 
-                                   pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),NA,pairwise_ave)) 
+                                   pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),0,pairwise_ave)) 
 # Uno ambas tablas
 
 data_diversity_filtered_ave_corrected <- rbind (data_diversity_autosomes_filtered_ave_corrected, data_diversity_chrX_filtered_ave_corrected)
@@ -1456,6 +1456,47 @@ for (SPECIE in unique(data_diversity_filtered_ave_corrected$specie))
 }
 
 ```
+
+### Empirical average considering ceros --> No lo corro
+
+No lo corro.
+
+```{r}
+
+DATAFRAMES=c("stats_df_chr", "stats_df_feature","stats_df_region")
+SPECIES=c("L.lynx","L.pardinus")
+
+for (DATAFRAME in DATAFRAMES)
+  {
+  for (SPECIE in SPECIES)
+  {
+    print (SPECIE)
+  ggplot(data=get(DATAFRAME) %>% filter(.,Species==!!SPECIE), aes_string(x="Populations",y="pairwise_cero", fill="Populations", color="Populations")) +
+      geom_point() +
+      facet_grid(reformulate(colnames(get(DATAFRAME))[2]), scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))
+    ggsave(paste (wd_output,"mean_pairwise_cero_per_",colnames(get(DATAFRAME))[2],"_",SPECIE,".pdf", sep="" ), device="pdf")
+    
+    ggplot(data=get(DATAFRAME) %>% filter(.,Species==!!SPECIE), aes_string(x="Populations",y="watterson_cero", fill="Populations", color="Populations")) +
+      geom_point() +
+      facet_grid(reformulate(colnames(get(DATAFRAME))[2]), scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))
+    ggsave(paste (wd_output,"mean_watterson_cero_per_",colnames(get(DATAFRAME))[2],"_",SPECIE,".pdf", sep="" ), device="pdf")
+    
+    
+   
+   }
+}
+
+  
+```
+
 
 ### Empirical weighted average --> No lo corro
 
@@ -2180,6 +2221,266 @@ for (DATAFRAME in DATAFRAMES)
 ```
 
 
+## Bootstraped mean considering ceros
+
+
+```{r}
+
+library(boot)
+library(broom)
+
+# Cargo la funcion de bootstrap
+boot_mean <- function(original_vector, resample_vector) {
+   mean(original_vector[resample_vector])
+}
+
+# Cargo la función global
+diversity_stats_grouped_ave_cero_boot <- function(DATAFRAME ,GROUP)
+{ 
+  
+    DATAFRAME_nested <- DATAFRAME %>% dplyr::group_by_("pop", GROUP)  %>% tidyr::nest()
+  pairwise_average <- DATAFRAME_nested %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$pairwise_cero), statistic = boot_mean, R = ITERATION))) %>% 
+    dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+    dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+  names(pairwise_average)[3] <- "values"
+  pairwise_average_summary <- pairwise_average  %>% 
+    group_by_(.dots=c("pop", GROUP)) %>%
+    dplyr::summarise(mean=mean(values),sd=sd(values)) %>% 
+    mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                              ifelse (pop == "c_ll_ki_n013", "Kirov",
+                              ifelse (pop == "c_ll_no_n008", "Norway", 
+                              ifelse (pop == "c_lp_sm_n019", "Andujar",
+                              ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
+    mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
+                              ifelse (pop == "c_ll_ki_n013", "L.lynx", 
+                              ifelse (pop == "c_ll_no_n008", "L.lynx", 
+                              ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
+                              ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))
+  names(pairwise_average_summary)[3] <- "mean_pairwise_boot"
+  names(pairwise_average_summary)[4] <- "sd_pairwise_boot"
+  
+  
+        DATAFRAME_nested <- DATAFRAME  %>% dplyr::group_by_("pop", GROUP) %>% tidyr::nest()
+  watterson_average <- DATAFRAME_nested %<>% dplyr::mutate(booted = purrr::map(.x = data, ~ boot::boot(data = as.numeric(.x$watterson_cero), statistic = boot_mean, R = ITERATION))) %>% 
+    dplyr::mutate(boot_matrix = purrr::map(.x = booted, ~ .x$t)) %>% 
+    dplyr::select(-data, -booted) %>% tidyr::unnest(boot_matrix)  
+  names(watterson_average)[3] <- "values"
+  watterson_average_summary <- watterson_average  %>% 
+    group_by_(.dots=c("pop", GROUP)) %>%
+    dplyr::summarise(mean=mean(values),sd=sd(values)) %>%     
+    mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
+                              ifelse (pop == "c_ll_ki_n013", "Kirov",
+                              ifelse (pop == "c_ll_no_n008", "Norway", 
+                              ifelse (pop == "c_lp_sm_n019", "Andujar", 
+                              ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
+    mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
+                              ifelse (pop == "c_ll_ki_n013", "L.lynx",  
+                              ifelse (pop == "c_ll_no_n008", "L.lynx", 
+                              ifelse (pop == "c_lp_sm_n019", "L.pardinus", 
+                              ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))
+  names(watterson_average_summary)[3] <- "mean_watterson_boot"
+  names(watterson_average_summary)[4] <- "sd_watterson_boot"
+  
+  tmp_group <- full_join (watterson_average_summary, pairwise_average_summary, by = c("pop", GROUP, "Populations", "Species")) 
+  tmp_group$Populations <- factor (tmp_group$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar", "Donana"))
+  
+  if("chr" %in% colnames(tmp_group))
+{tmp_group$chr <- factor(tmp_group$chr, levels = c("chrA1","chrC1","chrB1","chrA2","chrB2","chrC2","chrA3","chrB3","chrB4","chrD1","chrD2","chrD3","chrD4","chrE1","chrE2","chrF1","chrF2","chrX"))}
+  
+  
+return (tmp_group)
+ 
+  rm (tmp_group)
+  rm (watterson_average)
+  rm (watterson_average_summary)
+  rm (pairwise_average)
+  rm (pairwise_average_summary)
+  rm (tajimaD)
+  rm (tajimaD_summary)
+  rm (DATAFRAME_nested)
+  
+}
+
+
+ITERATION=100
+
+
+# Genero las tablas
+
+stats_df_pop_autosomes_feature_boostrapped_cero <- diversity_stats_grouped_ave_cero_boot(data_diversity_autosomes_filtered_ave_corrected, "feature") %>%  mutate (type_chr="autosomes")
+stats_df_pop_chrX_feature_boostrapped_cero <- diversity_stats_grouped_ave_cero_boot(data_diversity_chrX_filtered_ave_corrected, "feature") %>%  mutate (type_chr="chrX")
+
+stats_df_pop_autosomes_region_boostrapped_cero <- diversity_stats_grouped_ave_cero_boot(data_diversity_autosomes_filtered_ave_corrected, "region") %>%  mutate (type_chr="autosomes")
+stats_df_pop_chrX_region_boostrapped_cero <- diversity_stats_grouped_ave_cero_boot(data_diversity_chrX_filtered_ave_corrected, "region") %>%  mutate (type_chr="chrX")
+
+stats_df_pop_chr_boostrapped_cero <- diversity_stats_grouped_ave_cero_boot(data_diversity_filtered_ave_corrected, "chr") 
+
+# Fusiono y guardo
+
+stats_df_pop_feature_boostrapped_cero <- rbind (stats_df_pop_autosomes_feature_boostrapped_cero, stats_df_pop_chrX_feature_boostrapped_cero)
+stats_df_pop_region_boostrapped_cero <- rbind(stats_df_pop_autosomes_region_boostrapped_cero,stats_df_pop_chrX_region_boostrapped_cero)
+
+rm(stats_df_pop_autosomes_feature_boostrapped_cero)
+rm(stats_df_pop_chrX_feature_boostrapped_cero)
+rm(stats_df_pop_autosomes_region_boostrapped_cero)
+rm(stats_df_pop_chrX_region_boostrapped_cero)
+
+write.table(stats_df_pop_feature_boostrapped_cero, paste(wd_output,"stats_diversity_per_pop_per_feature_boostrapped_cero.tsv",sep=""), quote = F,  row.names = F, sep =";", dec="," )
+write.table(stats_df_pop_region_boostrapped_cero, paste(wd_output,"stats_diversity_per_pop_per_region_boostrapped_cero.tsv",sep=""), quote = F,  row.names = F, sep =";", dec="," )
+write.table(stats_df_pop_chr_boostrapped_cero, paste(wd_output,"stats_diversity_per_pop_per_chr_boostrapped_cero.tsv",sep=""), quote = F,  row.names = F, sep =";", dec="," )
+
+
+```
+
+## Plot Bootstrapped data considering zeros
+
+```{r}
+
+# Ploteo los datos de bootstraping  
+
+DATAFRAMES=c("stats_df_pop_feature_boostrapped_cero","stats_df_pop_region_boostrapped_cero")
+SPECIES=c("L.lynx","L.pardinus")
+
+for (DATAFRAME in DATAFRAMES)
+  {
+  for (SPECIE in SPECIES)
+  {
+    print (SPECIE)
+  ggplot(data=get(DATAFRAME) %>% filter(.,Species==!!SPECIE), aes_string(x="Populations",y="mean_pairwise_boot", fill="Populations", color="Populations")) +
+      geom_point() +
+      geom_errorbar(aes(ymin=(mean_pairwise_boot-sd_pairwise_boot), ymax=(mean_pairwise_boot+sd_pairwise_boot))) +
+      # Con este facet soy capaz de separar autosomas de chr chrXes.
+      facet_grid(type_chr~get(colnames(get(DATAFRAME))[2]),  scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      scale_color_viridis(discrete=TRUE) +
+      scale_fill_viridis(discrete=TRUE) +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))
+    ggsave(paste (wd_output,"mean_pairwise_considering_cero_boot_per_",colnames(get(DATAFRAME))[2],"_",SPECIE,".pdf", sep="" ), device="pdf")
+    
+    ggplot(data=get(DATAFRAME) %>% filter(.,Species==!!SPECIE), aes_string(x="Populations",y="mean_watterson_boot", fill="Populations", color="Populations")) +
+      geom_point() +
+      geom_errorbar(aes(ymin=(mean_watterson_boot-sd_pairwise_boot), ymax=(mean_watterson_boot+sd_pairwise_boot))) +
+      # Con este facet soy capaz de separar autosomas de chr chrXes.
+      facet_grid(type_chr~get(colnames(get(DATAFRAME))[2]),  scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      scale_color_viridis(discrete=TRUE) +
+      scale_fill_viridis(discrete=TRUE) +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))
+    ggsave(paste (wd_output,"mean_watterson_considering_cero_boot_per_",colnames(get(DATAFRAME))[2],"_",SPECIE,".pdf", sep="" ), device="pdf")
+   }
+}
+
+
+#####################
+# Plot para main:
+
+ ggplot(data=stats_df_pop_feature_boostrapped_cero %>% filter(.,type_chr=="autosomes"), aes_string(x="Populations",y="mean_pairwise_boot", fill="Populations", color="Populations")) +
+      geom_point() +
+      geom_errorbar(aes(ymin=(mean_pairwise_boot-sd_pairwise_boot), ymax=(mean_pairwise_boot+sd_pairwise_boot))) +
+      # Con este facet soy capaz de separar autosomas de chr chrXes.
+      facet_grid(Species~feature,  scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      scale_color_viridis(discrete=TRUE) +
+      scale_fill_viridis(discrete=TRUE) +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))+
+   scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+   
+    ggsave(paste (wd_output,"mean_pairwise_considering_cero_boot_per_feature_autosomes_both_species.pdf", sep="" ), device="pdf")
+
+
+ggplot(data=stats_df_pop_feature_boostrapped_cero %>% filter(.,type_chr=="autosomes"), aes_string(x="Populations",y="mean_watterson_boot", fill="Populations", color="Populations")) +
+      geom_point() +
+      geom_errorbar(aes(ymin=(mean_watterson_boot-sd_watterson_boot), ymax=(mean_watterson_boot+sd_watterson_boot))) +
+      # Con este facet soy capaz de separar autosomas de chr chrXes.
+      facet_grid(Species~feature,  scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      scale_color_viridis(discrete=TRUE) +
+      scale_fill_viridis(discrete=TRUE) +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))+scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+    ggsave(paste (wd_output,"mean_watterson_considering_cero_boot_per_feature_autosomes_both_species.pdf", sep="" ), device="pdf")
+
+## Chr x
+
+ ggplot(data=stats_df_pop_feature_boostrapped_cero %>% filter(.,type_chr=="chrX"), aes_string(x="Populations",y="mean_pairwise_boot", fill="Populations", color="Populations")) +
+      geom_point() +
+      geom_errorbar(aes(ymin=(mean_pairwise_boot-sd_pairwise_boot), ymax=(mean_pairwise_boot+sd_pairwise_boot))) +
+      # Con este facet soy capaz de separar autosomas de chr chrXes.
+      facet_grid(Species~feature,  scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      scale_color_viridis(discrete=TRUE) +
+      scale_fill_viridis(discrete=TRUE) +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))+
+   scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+    ggsave(paste (wd_output,"mean_pairwise_considering_cero_boot_per_feature_chrX_both_species.pdf", sep="" ), device="pdf")
+
+
+ggplot(data=stats_df_pop_feature_boostrapped_cero %>% filter(.,type_chr=="chrX"), aes_string(x="Populations",y="mean_watterson_boot", fill="Populations", color="Populations")) +
+      geom_point() +
+      geom_errorbar(aes(ymin=(mean_watterson_boot-sd_watterson_boot), ymax=(mean_watterson_boot+sd_watterson_boot))) +
+      # Con este facet soy capaz de separar autosomas de chr chrXes.
+      facet_grid(Species~feature,  scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      scale_color_viridis(discrete=TRUE) +
+      scale_fill_viridis(discrete=TRUE) +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))+scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+    ggsave(paste (wd_output,"mean_watterson_considering_cero_boot_per_feature_chrX_both_species.pdf", sep="" ), device="pdf")
+
+
+
+
+# Corro lo mismo xa la tabla con chr que no tengo que separar entre autosomas y chrX
+
+DATAFRAMES=c("stats_df_pop_chr_boostrapped_cero") 
+SPECIES=c("L.lynx","L.pardinus")
+
+for (DATAFRAME in DATAFRAMES)
+  {
+  for (SPECIE in SPECIES)
+  {
+    print (SPECIE)
+  ggplot(data=get(DATAFRAME) %>% filter(.,Species==!!SPECIE), aes_string(x="Populations",y="mean_pairwise_boot", fill="Populations", color="Populations")) +
+      geom_point() +
+      geom_errorbar(aes(ymin=(mean_pairwise_boot-sd_pairwise_boot), ymax=(mean_pairwise_boot+sd_pairwise_boot))) +
+      facet_grid(reformulate(colnames(get(DATAFRAME))[2]),  scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      scale_color_viridis(discrete=TRUE) +
+      scale_fill_viridis(discrete=TRUE) +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))
+    ggsave(paste (wd_output,"mean_pairwise_considering_cero_boot_per_",colnames(get(DATAFRAME))[2],"_",SPECIE,"_autosomes.pdf", sep="" ), device="pdf")
+    
+    ggplot(data=get(DATAFRAME) %>% filter(.,Species==!!SPECIE), aes_string(x="Populations",y="mean_watterson_boot", fill="Populations", color="Populations")) +
+      geom_point() +
+      geom_errorbar(aes(ymin=(mean_watterson_boot-sd_pairwise_boot), ymax=(mean_watterson_boot+sd_pairwise_boot))) +
+      # Con este facet soy capaz de separar autosomas de chr chrXes.
+      facet_grid(reformulate(colnames(get(DATAFRAME))[2]),  scales="free", switch="x") +
+      #scale_y_continuous(trans = 'log10') +
+      scale_color_viridis(discrete=TRUE) +
+      scale_fill_viridis(discrete=TRUE) +
+      theme_bw() +  #theme selection for background and lines
+      theme(axis.line.x = element_line(color="black", size = 0.5),
+            axis.text.x = element_blank(),strip.text = element_text(angle = 90))
+    ggsave(paste (wd_output,"mean_watterson_considering_cero_boot_per_",colnames(get(DATAFRAME))[2],"_",SPECIE,".pdf", sep="" ), device="pdf")
+
+
+   }
+}
+
+  
+```
 # ----------------------------------------------------------------
 
 ## Tablas interacción non-bootleneck vs bootleneck
