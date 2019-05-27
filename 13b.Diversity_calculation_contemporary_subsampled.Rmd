@@ -602,6 +602,7 @@ rm (DATAFRAME)
 ## 4. Create new variable low values to zero
 
 ```{r}
+
 data_diversity_filtered_recomb_cat_zero_variable <- data_diversity_filtered_recomb_cat %>% 
 mutate (watterson_zero = ifelse (pop=="c_lp_sm_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_sm_n012")$min_density_value_watterson) | 
 	                               pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson) | 
@@ -620,6 +621,7 @@ rm (data_diversity_filtered_recomb_cat)
 ## 5. Rename & order factors
 
 ```{r}
+
 data_diversity_filtered_recomb_cat_zero_variable$Populations <- factor (data_diversity_filtered_recomb_cat_zero_variable$Populations, levels=c("Kirov","Bialowieza","Norway", "Andujar","Donana"))
 
 data_diversity_filtered_recomb_cat_zero_variable$region <- plyr::revalue(data_diversity_filtered_recomb_cat_zero_variable$region, c("Arm"="Interstitial"))
@@ -627,6 +629,7 @@ data_diversity_filtered_recomb_cat_zero_variable$region <- plyr::revalue(data_di
 data_diversity_filtered_recomb_cat_zero_variable$feature <- plyr::revalue(data_diversity_filtered_recomb_cat_zero_variable$feature, c("intergenic"="Intergenic", "promoter_gene_1000"="Gen_promoter", "5UTR"="5UTR", "CDS"="CDS", "intron"="Intron", "3UTR"="3UTR", "promoter_lncRNA_1000"="lncRNA_promoter", "lncRNA"="lncRNA_exons", "intron_lncRNA"="lncRNA_intron", "ncRNA"="ncRNA", "UCNE"="UCNE"))
 
 data_diversity_filtered_recomb_cat_zero_variable$feature <- factor (data_diversity_filtered_recomb_cat_zero_variable$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+
 ```
 
 
@@ -1324,7 +1327,7 @@ for (SPECIE in unique(data_diversity_autosomes_filtered_ave_corrected$specie))
               strip.background = element_blank(),
               strip.text = element_text(angle = 90))
              # panel.spacing = unit(1.5, "lines"))
-      ggsave(paste (wd_output, "boxplot_violin_plot/",INDEX,"_per_",GROUP,"_",SPECIE,"_autosomes_boxplot.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
+      ggsave(paste (wd_output,INDEX,"_per_",GROUP,"_",SPECIE,"_autosomes_boxplot.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
       
       # VIOLIN
       
@@ -1353,7 +1356,7 @@ for (SPECIE in unique(data_diversity_autosomes_filtered_ave_corrected$specie))
               strip.background = element_blank(),
               strip.text = element_text(angle = 90))
             #  panel.spacing = unit(1.5, "lines"))
-      ggsave(paste (wd_output,"boxplot_violin_plot/", INDEX,"_per_",GROUP,"_",SPECIE,"_autosomes_violin.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
+      ggsave(paste (wd_output, INDEX,"_per_",GROUP,"_",SPECIE,"_autosomes_violin.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
       
     }
   }
@@ -1396,7 +1399,7 @@ for (SPECIE in unique(data_diversity_filtered_ave_corrected$specie))
               strip.background = element_blank(),
               strip.text = element_text(angle = 90))
              # panel.spacing = unit(1.5, "lines"))
-      ggsave(paste (wd_output, "boxplot_violin_plot/",INDEX,"_per_",GROUP,"_",SPECIE,"_boxplot.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
+      ggsave(paste (wd_output, INDEX,"_per_",GROUP,"_",SPECIE,"_boxplot.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
       
       # VIOLIN
       
@@ -1425,7 +1428,7 @@ for (SPECIE in unique(data_diversity_filtered_ave_corrected$specie))
               strip.background = element_blank(),
               strip.text = element_text(angle = 90))
             #  panel.spacing = unit(1.5, "lines"))
-      ggsave(paste (wd_output,"boxplot_violin_plot/", INDEX,"_per_",GROUP,"_",SPECIE,"_violin.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
+      ggsave(paste (wd_output, INDEX,"_per_",GROUP,"_",SPECIE,"_violin.pdf", sep="" ),  width = 50, height = 60, units = "cm", device="pdf")
       
     }
   }
