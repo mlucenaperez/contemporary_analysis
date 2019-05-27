@@ -519,6 +519,7 @@ rm (c_ll_no_n008_density_min_value_watterson)
 rm (DATAFRAME)
 
 
+
 ```
 
 ## 3. Density plot pairwise
@@ -583,6 +584,7 @@ rm (c_ll_ki_n013_density_min_value_pairwise)
 rm (c_ll_po_n008_density_min_value_pairwise)
 rm (c_ll_no_n008_density_min_value_pairwise) 
 rm (DATAFRAME)
+
 
 ```
 
@@ -3807,16 +3809,39 @@ Aquí tengo los ratios de las unidades particulares.
 
 calculus_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_POP1, name_POP2){
   data_diversity_POP1_POP2 <- dplyr::inner_join (POP1, POP2, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id", "recombination_rate", "recombination_category", "type_chr", "divergence", "informative_sites_substitutions", "substitutions", "GC_content")) %>%  
+    
+    # Hago cero cuando las dos medidas de diversidad en la poblacion bottleneck y no, tienen cero. 
+    ## Watterson.x
+    dplyr::mutate (watterson_zero.x.ok = (ifelse(watterson_zero.x==0 & watterson_zero.y==0, NA,watterson_zero.x))) %>% 
+    dplyr::select (- watterson_zero.x) %>% 
+    dplyr::rename(watterson_zero.x=watterson_zero.x.ok) %>% 
+    
+    ## Watterson.x
+    dplyr::mutate (watterson_zero.y.ok = (ifelse(watterson_zero.y==0 & watterson_zero.x==0, NA,watterson_zero.y))) %>% 
+    dplyr::select (- watterson_zero.y) %>% 
+    dplyr::rename(watterson_zero.y=watterson_zero.y.ok) %>% 
+
+    ## pairwise.x
+    dplyr::mutate (pairwise_zero.x.ok = (ifelse(pairwise_zero.x==0 & pairwise_zero.y==0, NA,pairwise_zero.x))) %>% 
+    dplyr::select (- pairwise_zero.x) %>% 
+    dplyr::rename(pairwise_zero.x=pairwise_zero.x.ok) %>% 
+    
+    ## pairwise.x
+    dplyr::mutate (pairwise_zero.y.ok = (ifelse(pairwise_zero.y==0 & pairwise_zero.x==0, NA,pairwise_zero.y))) %>% 
+    dplyr::select (- pairwise_zero.y) %>% 
+    dplyr::rename(pairwise_zero.y=pairwise_zero.y.ok) %>% 
+    
+    # Calculo el ratio
     dplyr::mutate (ratio_pairwise_average = pairwise_ave.y/pairwise_ave.x) %>% 
     dplyr::mutate (ratio_watterson_average = watterson_ave.y/watterson_ave.x) %>% 
-    dplyr::mutate (ratio_pairwise_average_zero = pairwise_zero.y/pairwise_zero.y) %>%
+    dplyr::mutate (ratio_pairwise_average_zero = pairwise_zero.y/pairwise_zero.x) %>%
     dplyr::mutate (ratio_watterson_average_zero = watterson_zero.y/watterson_zero.x) %>%
-    # Calculo el delta
-    dplyr::mutate (delta_pairwise_average = pairwise_ave.y-pairwise_ave.x) %>% 
-    dplyr::mutate (delta_watterson_average = watterson_ave.y-watterson_ave.x) %>% 
-    dplyr::mutate (delta_pairwise_average = pairwise_ave.y-pairwise_ave.x) %>% 
-    dplyr::mutate (delta_watterson_average = watterson_ave.y-watterson_ave.x)  
-  
+    
+    # Calculo el delta normalizado para la suma de los valores de diversidad
+    dplyr::mutate (delta_pairwise_average_normalized = ((pairwise_ave.y - pairwise_ave.x) / (pairwise_ave.y + pairwise_ave.x))) %>% 
+    dplyr::mutate (delta_watterson_average_normalized = ((watterson_ave.y - watterson_ave.x) / (watterson_ave.y + watterson_ave.x))) %>% 
+    dplyr::mutate (delta_pairwise_average_normalized_zero = ((pairwise_zero.y - pairwise_zero.x) / (pairwise_zero.y + pairwise_zero.x))) %>% 
+    dplyr::mutate (delta_watterson_average_normalized_zero = ((watterson_zero.y - watterson_zero.x) / (watterson_zero.y + watterson_zero.x)))
   
   dataframename <- paste ("data_diversity", name_POP1, name_POP2, sep="_")
   assign (dataframename, data_diversity_POP1_POP2,.GlobalEnv)
@@ -3868,20 +3893,91 @@ calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_chrX_diversity
 
 ```{r}
 
+library(moments)  
+library (psych)
+
 DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
 
 
 for (DATAFRAME in DATAFRAMES) 
 {
-ggplot(get(DATAFRAME) %>% filter(pairwise_zero.y!=0 | pairwise_zero.x!=0), aes(x=delta_pairwise_average)) + geom_histogram(binwidth = 0.0005) +
-   facet_wrap(~feature, scales = "free" ) +
-     theme(axis.text.x = element_text(angle = 90, hjust = 1))
-   ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_average_distribution.pdf", sep=""))
-   
-ggplot(get(DATAFRAME) %>% filter(watterson_zero.y!=0 | watterson_zero.x!=0), aes(x=delta_watterson_average)) + geom_histogram(binwidth = 0.0005) +
-  facet_wrap(~feature, scales = "free" ) +
-   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+  POPULATION1=get(DATAFRAME) %>% select(Populations.x) %>% mutate(Populations.x=as.character(Populations.x)) %>% .[1,1] 
+  POPULATION2=get(DATAFRAME) %>% select(Populations.y) %>% mutate(Populations.y=as.character(Populations.y)) %>% .[1,1] 
+
+  # WATTERSON
+
+  a <- aggregate(get(DATAFRAME)$delta_watterson_average_normalized_zero, list(get(DATAFRAME)$feature), skew)
+
+  ggplot(a, aes(x=Group.1, y=x)) +
+    geom_point() +
+    labs(title=paste("Skewness for the Delta comparing Watterson:", POPULATION2,"vs", POPULATION1, sep =" "),
+        x ="Feature", y = "Skewness") +    
+    coord_flip() +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_skewness.pdf", sep=""))
+
+    
+  ggplot (get(DATAFRAME), aes(x=feature, y=delta_watterson_average_normalized_zero)) +
+  #geom_boxplot() +
+  stat_summary(fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+  labs(title=paste("Mean for the Delta comparing Watterson:", POPULATION2,"vs", POPULATION1, sep =" "),
+        x ="Feature", y = "Mean") +    
+  coord_flip() +
+  ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_mean.pdf", sep=""))
+
+  
+   ggplot(get(DATAFRAME), aes(x=delta_watterson_average_normalized_zero)) + 
+     geom_histogram(binwidth = 0.05) +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_average_distribution.pdf", sep=""))
+  
+   
+   ggplot(get(DATAFRAME), aes(x=delta_watterson_average_normalized_zero)) + 
+     geom_histogram(binwidth = 0.05) +
+  facet_wrap(~feature, scales = "free", ncol=3)+
+   theme(axis.text.x = element_text(angle = 90)) +
+  ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_average_distribution_per_feature.pdf", sep=""))
+  
+  
+  # PI
+  
+  
+   b <- aggregate(get(DATAFRAME)$delta_pairwise_average_normalized_zero, list(get(DATAFRAME)$feature), skew)
+
+  ggplot(b, aes(x=Group.1, y=x)) +
+    geom_point() +
+    labs(title=paste("Skewness for the Delta comparing pairwise:", POPULATION2,"vs", POPULATION1, sep =" "),
+        x ="Feature", y = "Skewness") +    
+    coord_flip() +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_skewness.pdf", sep=""))
+
+    
+  ggplot (get(DATAFRAME), aes(x=feature, y=delta_pairwise_average_normalized_zero)) +
+  #geom_boxplot() +
+  stat_summary(fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+  labs(title=paste("Mean for the Delta comparing pairwise:", POPULATION2,"vs", POPULATION1, sep =" "),
+        x ="Feature", y = "Mean") +    
+  coord_flip() +
+  ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_mean.pdf", sep=""))
+
+  
+   ggplot(get(DATAFRAME), aes(x=delta_pairwise_average_normalized_zero)) + 
+     geom_histogram(binwidth = 0.05) +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_average_distribution.pdf", sep=""))
+  
+   
+   ggplot(get(DATAFRAME), aes(x=delta_pairwise_average_normalized_zero)) + 
+     geom_histogram(binwidth = 0.05) +
+  facet_wrap(~feature, scales = "free", ncol=3)+
+   theme(axis.text.x = element_text(angle = 90)) +
+  ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_average_distribution_per_feature.pdf", sep=""))
+  
+
 }
 
 ```
