@@ -4,6 +4,117 @@ output: html_document
 ---
 
 
+# GO term annotation
+
+Tengo tablas individuales y las quiero anotar con los GO term correspondientes
+
+## Load information for GO annotation
+
+```{r}
+library (dplyr)
+library (plyr)
+library(tidyr)
+
+# Working directory
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
+wd_input <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
+
+# Tabla con la información de GO term para cada gen.
+
+tabla_all_genes_GO_term_complete_info <- read.table (paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes_minor_modif.txt"), sep="\t", header = T) %>% mutate (GO_ACC=as.character(GO_ACC)) %>% filter(GO_TYPE=="biological_process") %>% dplyr::select (-"GO_TYPE")
+# El minor_modif tiene ' cambiadas por empty space pq si no R entiende que es un string. 
+
+tabla_all_genes_GO_term_complete_info_modif <- tabla_all_genes_GO_term_complete_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(GENE_NAME, collapse=','))  
+
+write.table(tabla_all_genes_GO_term_complete_info_modif, paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes_modif.NAMES.gmt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+```
+
+## Files of interest
+
+Voy a empezar con las tablas individuales por cada población. Primero tengo que modificarlas en bash.
+
+
+```{bash}
+
+cd /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/
+
+
+## Kirov - Norway
+# list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson.txt
+# Vemos cuantos duplicados tiene. En principio se los vamos a dejar.
+
+tail -n+2 list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | wc -l
+#    4255
+tail -n+2 list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq | wc -l
+#    3092
+
+tail -n+2 list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//'  | sort > list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson_trimmed.txt
+
+
+## Kirov - Poland
+
+
+tail -n+2 list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | wc -l
+#    8407
+tail -n+2 list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq | wc -l
+#    5722
+
+tail -n+2 list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//'  | sort > list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson_trimmed.txt
+
+
+## Doñana - Andujar
+tail -n+2 list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | wc -l
+#    1527
+tail -n+2 list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq | wc -l
+#    1287
+
+tail -n+2 list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//'  | sort > list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson_trimmed.txt
+
+
+```
+
+Lo uno a la tabla de GO term
+
+
+```{r}
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
+wd_input <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
+
+
+c_ll_ki_n013_c_ll_no_n008 <- dplyr::inner_join(read.table (paste0(wd_input,"list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson_trimmed.txt", sep="")), tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
+
+c_ll_ki_n013_c_ll_no_n008.gProfile<-  c_ll_ki_n013_c_ll_no_n008 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008.gProfile <- c_ll_ki_n013_c_ll_no_n008.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+write.table(c_ll_ki_n013_c_ll_no_n008.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_no_n008.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+
+######
+c_ll_ki_n013_c_ll_po_n008 <- dplyr::inner_join(read.table (paste0(wd_input,"list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson_trimmed.txt", sep="")), tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
+
+c_ll_ki_n013_c_ll_po_n008.gProfile<-  c_ll_ki_n013_c_ll_po_n008 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_po_n008.gProfile <- c_ll_ki_n013_c_ll_po_n008.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+write.table(c_ll_ki_n013_c_ll_po_n008.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_po_n008.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+
+######
+
+c_lp_sm_n019_c_lp_do_n012 <- dplyr::inner_join(read.table (paste0(wd_input,"list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson_trimmed.txt", sep="")), tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
+
+c_lp_sm_n019_c_lp_do_n012.gProfile<-  c_lp_sm_n019_c_lp_do_n012 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_lp_sm_n019_c_lp_do_n012.gProfile <- c_lp_sm_n019_c_lp_do_n012.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+write.table(c_lp_sm_n019_c_lp_do_n012.gProfile, paste0(wd, "c_lp_sm_n019_c_lp_do_n012.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+```
+
+
+
+
 # GO term enrichment
 
 Este es el script donde realizo el GO term enrichment analysis y el pathway enrichment analysis. 
@@ -37,9 +148,9 @@ Lo primero que voy a hacer es cargar nuestros archivos
 
 ```{r}
 library(topGO)
-library (dplyr)
 library (plyr)
 library(tidyr)
+library (dplyr)
 
 # Working directory
 
@@ -153,7 +264,12 @@ cd /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/
 
 tail -n+2 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_trimmed_noduplicates.txt
 
+tail -n+2 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort > list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_trimmed.txt
+
+
 tail -n+2 list_genes_of_interest_lynx_lynx_high_diversity_ratio_1.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_trimmed_noduplicates.txt
+
+tail -n+2 list_genes_of_interest_lynx_lynx_high_diversity_ratio_1.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort > list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_trimmed.txt
 
 
 # Ahora separo los que me han salido con pi y los que me han salido con watterson. 
@@ -162,6 +278,9 @@ tail -n+2 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_
 
 tail -n+2 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson_trimmed_noduplicates.txt
 
+tail -n+2 list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort > list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_watterson_trimmed.txt
+
+tail -n+2 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort > list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson_trimmed.txt
 
 
 ```
@@ -176,7 +295,11 @@ tail -n+2 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_
 
 ```{r}
 file_input <- "list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed_noduplicates.txt"
+file_input <- "list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed.txt"
+
 file_output <- "list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed_noduplicates"
+file_output <- "list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed"
+
 description <- "Analysis of CDS with a ratio above 1 lynx lynx & lynx pardinus"
 ```
 
