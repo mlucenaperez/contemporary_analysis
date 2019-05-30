@@ -779,6 +779,8 @@ diversity_stats_pop <- function(diversity_df)
 {
   diversity_stats_df <- 
              diversity_df %>% 
+             mutate(watterson_zero_zero=ifelse(watterson_zero==0, NA,watterson_zero)) %>% 
+             mutate(pairwise_zero_zero=ifelse(pairwise_zero==0, NA,pairwise_zero)) %>% 
              dplyr::group_by(pop) %>%
              dplyr::summarise(
                        total_count=n(), 
@@ -816,7 +818,7 @@ diversity_stats_pop <- function(diversity_df)
                        upperw_pairwise_ave  = q75_pairwise_ave  + 1.5 * IQR_pairwise_ave,
                        
                        
-                       # Valores considerando los ceros
+                       # Valores convirtiendo a cero y considerandolos 
                        
                        mean_watterson_zero=mean(watterson_zero, na.rm = TRUE),
                        mean_pairwise_zero=mean(pairwise_zero, na.rm = TRUE),
@@ -846,7 +848,40 @@ diversity_stats_pop <- function(diversity_df)
                        lowerw_pairwise_zero  = q25_pairwise_zero  - 1.5 * IQR_pairwise_zero,
 
                        upperw_watterson_zero = q75_watterson_zero + 1.5 * IQR_watterson_zero,
-                       upperw_pairwise_zero  = q75_pairwise_zero  + 1.5 * IQR_pairwise_zero) %>% 
+                       upperw_pairwise_zero  = q75_pairwise_zero  + 1.5 * IQR_pairwise_zero, 
+    
+                        # Valores convirtiendo a cero y SIN CONSIDERARLOS
+                       
+                       mean_watterson_zero_zero=mean(watterson_zero_zero, na.rm = TRUE),
+                       mean_pairwise_zero_zero=mean(pairwise_zero_zero, na.rm = TRUE),
+
+                       median_watterson_zero_zero=median(watterson_zero_zero, na.rm = TRUE),
+                       median_pairwise_zero_zero=median(pairwise_zero_zero, na.rm = TRUE),
+                       
+                       wmean_watterson_zero_zero=weighted.mean(watterson_zero_zero,w=informative_sites, na.rm = TRUE),
+                       wmean_pairwise_zero_zero=mean(pairwise_zero_zero,w=informative_sites, na.rm = TRUE),
+                       
+                       q25_watterson_zero_zero=quantile(watterson_zero_zero,0.25, na.rm = TRUE),
+                       q25_pairwise_zero_zero=quantile(pairwise_zero_zero,0.25, na.rm = TRUE),
+
+                       q75_watterson_zero_zero=quantile(watterson_zero_zero,0.75, na.rm = TRUE),
+                       q75_pairwise_zero_zero=quantile(pairwise_zero_zero,0.75, na.rm = TRUE),
+
+                       q05_watterson_zero_zero=quantile(watterson_zero_zero,0.05, na.rm = TRUE),
+                       q05_pairwise_zero_zero=quantile(pairwise_zero_zero,0.05, na.rm = TRUE),
+
+                       q95_watterson_zero_zero=quantile(watterson_zero_zero,0.95, na.rm = TRUE),
+                       q95_pairwise_zero_zero=quantile(pairwise_zero_zero,0.95, na.rm = TRUE),
+
+                       IQR_watterson_zero_zero = q75_watterson_zero_zero - q25_watterson_zero_zero,
+                       IQR_pairwise_zero_zero  = q75_pairwise_zero_zero  - q25_pairwise_zero_zero,
+
+                       lowerw_watterson_zero_zero = q25_watterson_zero_zero - 1.5 * IQR_watterson_zero_zero,
+                       lowerw_pairwise_zero_zero  = q25_pairwise_zero_zero  - 1.5 * IQR_pairwise_zero_zero,
+
+                       upperw_watterson_zero_zero = q75_watterson_zero_zero + 1.5 * IQR_watterson_zero_zero,
+                       upperw_pairwise_zero_zero  = q75_pairwise_zero_zero  + 1.5 * IQR_pairwise_zero_zero) %>% 
+  
     
   mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "Bialowieza",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
@@ -892,6 +927,8 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
 { diversity_stats_df_grouped <- 
              DATAFRAME %>% 
              dplyr::group_by_("pop",GROUP) %>%
+             mutate(watterson_zero_zero=ifelse(watterson_zero==0, NA,watterson_zero)) %>% 
+             mutate(pairwise_zero_zero=ifelse(pairwise_zero==0, NA,pairwise_zero)) %>% 
              dplyr::summarise(
                        total_count=n(), 
 
@@ -968,6 +1005,38 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
 
                        upperw_watterson_zero = q75_watterson_zero + 1.5 * IQR_watterson_zero,
                        upperw_pairwise_zero  = q75_pairwise_zero  + 1.5 * IQR_pairwise_zero,
+    
+                        # Valores convirtiendo a cero y SIN CONSIDERARLOS
+                       
+                       mean_watterson_zero_zero=mean(watterson_zero_zero, na.rm = TRUE),
+                       mean_pairwise_zero_zero=mean(pairwise_zero_zero, na.rm = TRUE),
+
+                       median_watterson_zero_zero=median(watterson_zero_zero, na.rm = TRUE),
+                       median_pairwise_zero_zero=median(pairwise_zero_zero, na.rm = TRUE),
+                       
+                       wmean_watterson_zero_zero=weighted.mean(watterson_zero_zero,w=informative_sites, na.rm = TRUE),
+                       wmean_pairwise_zero_zero=mean(pairwise_zero_zero,w=informative_sites, na.rm = TRUE),
+                       
+                       q25_watterson_zero_zero=quantile(watterson_zero_zero,0.25, na.rm = TRUE),
+                       q25_pairwise_zero_zero=quantile(pairwise_zero_zero,0.25, na.rm = TRUE),
+
+                       q75_watterson_zero_zero=quantile(watterson_zero_zero,0.75, na.rm = TRUE),
+                       q75_pairwise_zero_zero=quantile(pairwise_zero_zero,0.75, na.rm = TRUE),
+
+                       q05_watterson_zero_zero=quantile(watterson_zero_zero,0.05, na.rm = TRUE),
+                       q05_pairwise_zero_zero=quantile(pairwise_zero_zero,0.05, na.rm = TRUE),
+
+                       q95_watterson_zero_zero=quantile(watterson_zero_zero,0.95, na.rm = TRUE),
+                       q95_pairwise_zero_zero=quantile(pairwise_zero_zero,0.95, na.rm = TRUE),
+
+                       IQR_watterson_zero_zero = q75_watterson_zero_zero - q25_watterson_zero_zero,
+                       IQR_pairwise_zero_zero  = q75_pairwise_zero_zero  - q25_pairwise_zero_zero,
+
+                       lowerw_watterson_zero_zero = q25_watterson_zero_zero - 1.5 * IQR_watterson_zero_zero,
+                       lowerw_pairwise_zero_zero  = q25_pairwise_zero_zero  - 1.5 * IQR_pairwise_zero_zero,
+
+                       upperw_watterson_zero_zero = q75_watterson_zero_zero + 1.5 * IQR_watterson_zero_zero,
+                       upperw_pairwise_zero_zero  = q75_pairwise_zero_zero  + 1.5 * IQR_pairwise_zero_zero,
                        
                        # Valores recombinación
                        
@@ -3816,7 +3885,7 @@ calculus_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, nam
     dplyr::select (- watterson_zero.x) %>% 
     dplyr::rename(watterson_zero.x=watterson_zero.x.ok) %>% 
     
-    ## Watterson.x
+    ## Watterson.y
     dplyr::mutate (watterson_zero.y.ok = (ifelse(watterson_zero.y==0 & watterson_zero.x==0, NA,watterson_zero.y))) %>% 
     dplyr::select (- watterson_zero.y) %>% 
     dplyr::rename(watterson_zero.y=watterson_zero.y.ok) %>% 
@@ -3826,7 +3895,7 @@ calculus_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, nam
     dplyr::select (- pairwise_zero.x) %>% 
     dplyr::rename(pairwise_zero.x=pairwise_zero.x.ok) %>% 
     
-    ## pairwise.x
+    ## pairwise.y
     dplyr::mutate (pairwise_zero.y.ok = (ifelse(pairwise_zero.y==0 & pairwise_zero.x==0, NA,pairwise_zero.y))) %>% 
     dplyr::select (- pairwise_zero.y) %>% 
     dplyr::rename(pairwise_zero.y=pairwise_zero.y.ok) %>% 
@@ -3840,9 +3909,12 @@ calculus_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, nam
     # Calculo el delta normalizado para la suma de los valores de diversidad
     dplyr::mutate (delta_pairwise_average_normalized = ((pairwise_ave.y - pairwise_ave.x) / (pairwise_ave.y + pairwise_ave.x))) %>% 
     dplyr::mutate (delta_watterson_average_normalized = ((watterson_ave.y - watterson_ave.x) / (watterson_ave.y + watterson_ave.x))) %>% 
+   
     dplyr::mutate (delta_pairwise_average_normalized_zero = ((pairwise_zero.y - pairwise_zero.x) / (pairwise_zero.y + pairwise_zero.x))) %>% 
-    dplyr::mutate (delta_watterson_average_normalized_zero = ((watterson_zero.y - watterson_zero.x) / (watterson_zero.y + watterson_zero.x)))
+    dplyr::mutate (delta_watterson_average_normalized_zero = ((watterson_zero.y - watterson_zero.x) / (watterson_zero.y + watterson_zero.x))) 
   
+    
+
   dataframename <- paste ("data_diversity", name_POP1, name_POP2, sep="_")
   assign (dataframename, data_diversity_POP1_POP2,.GlobalEnv)
 }
@@ -3905,82 +3977,95 @@ for (DATAFRAME in DATAFRAMES)
   
   POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
   POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-
+  
   POPULATION1=get(DATAFRAME) %>% select(Populations.x) %>% mutate(Populations.x=as.character(Populations.x)) %>% .[1,1] 
   POPULATION2=get(DATAFRAME) %>% select(Populations.y) %>% mutate(Populations.y=as.character(Populations.y)) %>% .[1,1] 
-
+  
+  # Low values to zero:
+  
   # WATTERSON
-
+  
+  #unbiased estimate of the kurtosis (DeCarlo, 1997)
   a <- aggregate(get(DATAFRAME)$delta_watterson_average_normalized_zero, list(get(DATAFRAME)$feature), skew)
-
+  
   ggplot(a, aes(x=Group.1, y=x)) +
     geom_point() +
     labs(title=paste("Skewness for the Delta comparing Watterson:", POPULATION2,"vs", POPULATION1, sep =" "),
-        x ="Feature", y = "Skewness") +    
+         x ="Feature", y = "Skewness") +    
     coord_flip() +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_skewness.pdf", sep=""))
-
-    
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_skewness.pdf", sep=""))
+  
+  
   ggplot (get(DATAFRAME), aes(x=feature, y=delta_watterson_average_normalized_zero)) +
-  #geom_boxplot() +
-  stat_summary(fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
-  labs(title=paste("Mean for the Delta comparing Watterson:", POPULATION2,"vs", POPULATION1, sep =" "),
-        x ="Feature", y = "Mean") +    
-  coord_flip() +
-  ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_mean.pdf", sep=""))
-
+    #geom_boxplot() +
+    stat_summary(fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+    labs(title=paste("Mean for the Delta comparing Watterson:", POPULATION2,"vs", POPULATION1, sep =" "),
+         x ="Feature", y = "Mean") +    
+    coord_flip() +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_mean.pdf", sep=""))
   
-   ggplot(get(DATAFRAME), aes(x=delta_watterson_average_normalized_zero)) + 
-     geom_histogram(binwidth = 0.05) +
-   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_average_distribution.pdf", sep=""))
   
-   
-   ggplot(get(DATAFRAME), aes(x=delta_watterson_average_normalized_zero)) + 
-     geom_histogram(binwidth = 0.05) +
-  facet_wrap(~feature, scales = "free", ncol=3)+
-   theme(axis.text.x = element_text(angle = 90)) +
-  ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_average_distribution_per_feature.pdf", sep=""))
+  ggplot(get(DATAFRAME), aes(x=(delta_watterson_average_normalized_zero))) + 
+    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All"), binwidth = 0.05) +
+    geom_histogram(data = get(DATAFRAME) %>% filter(delta_watterson_average_normalized_zero!=-1 & delta_watterson_average_normalized_zero!=1) %>% mutate(subset = "Subset"), binwidth = 0.05) +
+    facet_wrap(~subset, scales = "free", nrow=2)  +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_average_distribution.pdf", sep=""))
+  
+  
+  ggplot() + 
+    aes(x = delta_watterson_average_normalized_zero) +
+    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All"), binwidth = 0.05) +
+    geom_histogram(data = get(DATAFRAME) %>% filter(delta_watterson_average_normalized_zero!=-1 & delta_watterson_average_normalized_zero!=1) %>% mutate(subset = "Subset"), binwidth = 0.05) +
+    facet_wrap(feature~subset, scales = "free", nrow=4)  +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_average_distribution_per_feature.pdf", sep=""))
   
   
   # PI
   
+  #unbiased estimate of the kurtosis (DeCarlo, 1997)
+  b <- aggregate(get(DATAFRAME)$delta_pairwise_average_normalized_zero, list(get(DATAFRAME)$feature), skew)
   
-   b <- aggregate(get(DATAFRAME)$delta_pairwise_average_normalized_zero, list(get(DATAFRAME)$feature), skew)
-
   ggplot(b, aes(x=Group.1, y=x)) +
     geom_point() +
     labs(title=paste("Skewness for the Delta comparing pairwise:", POPULATION2,"vs", POPULATION1, sep =" "),
-        x ="Feature", y = "Skewness") +    
+         x ="Feature", y = "Skewness") +    
     coord_flip() +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_skewness.pdf", sep=""))
-
-    
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_skewness.pdf", sep=""))
+  
+  
   ggplot (get(DATAFRAME), aes(x=feature, y=delta_pairwise_average_normalized_zero)) +
-  #geom_boxplot() +
-  stat_summary(fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
-  labs(title=paste("Mean for the Delta comparing pairwise:", POPULATION2,"vs", POPULATION1, sep =" "),
-        x ="Feature", y = "Mean") +    
-  coord_flip() +
-  ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_mean.pdf", sep=""))
-
+    #geom_boxplot() +
+    stat_summary(fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+    labs(title=paste("Mean for the Delta comparing pairwise:", POPULATION2,"vs", POPULATION1, sep =" "),
+         x ="Feature", y = "Mean") +    
+    coord_flip() +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_mean.pdf", sep=""))
   
-   ggplot(get(DATAFRAME), aes(x=delta_pairwise_average_normalized_zero)) + 
-     geom_histogram(binwidth = 0.05) +
-   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_average_distribution.pdf", sep=""))
   
-   
-   ggplot(get(DATAFRAME), aes(x=delta_pairwise_average_normalized_zero)) + 
-     geom_histogram(binwidth = 0.05) +
-  facet_wrap(~feature, scales = "free", ncol=3)+
-   theme(axis.text.x = element_text(angle = 90)) +
-  ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_average_distribution_per_feature.pdf", sep=""))
+  ggplot(get(DATAFRAME), aes(x=(delta_pairwise_average_normalized_zero))) + 
+    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All"), binwidth = 0.05) +
+    geom_histogram(data = get(DATAFRAME) %>% filter(delta_pairwise_average_normalized_zero!=-1 & delta_pairwise_average_normalized_zero!=1) %>% mutate(subset = "Subset"), binwidth = 0.05) +
+    facet_wrap(~subset, scales = "free", nrow=2)  +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_average_distribution.pdf", sep=""))
+  
+  
+  ggplot() + 
+    aes(x = delta_pairwise_average_normalized_zero) +
+    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All"), binwidth = 0.05) +
+    geom_histogram(data = get(DATAFRAME) %>% filter(delta_pairwise_average_normalized_zero!=-1 & delta_pairwise_average_normalized_zero!=1) %>% mutate(subset = "Subset"), binwidth = 0.05) +
+    facet_wrap(feature~subset, scales = "free", nrow=4)  +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_average_distribution_per_feature.pdf", sep=""))
+  
+  
+  
   
 
 }
 
 ```
+
 
 ### Stats de los ratios.
 
@@ -4550,35 +4635,38 @@ DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "da
 for (DATAFRAME in DATAFRAMES) 
 {
   
-  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
   
   min_non_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% filter(pop==POP1) %>% .[1,2] )
   min_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% filter(pop==POP2) %>% .[1,2] )
 
+  above95_non_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & pop==POP1) %>% dplyr::select ("q95_watterson_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+  
+  above95_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% filter(feature=="CDS" & pop==POP2) %>% dplyr::select ("q95_watterson_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
   ## DATASET GO term enrichment and pathway enrichment watterson
   
-  list_of_genes_GOterm_watterson <- get(DATAFRAME) %>% filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) > min_bootleneck_pop_value_watterson & ratio_watterson_average > 0.6 & ratio_watterson_average < 1.4 & feature=="CDS") %>% select (unique_id)
+  list_of_genes_GOterm_watterson <- get(DATAFRAME) %>% filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) > min_bootleneck_pop_value_watterson & ratio_watterson_average > 0.6 & ratio_watterson_average < 1.4 & feature=="CDS" & watterson_ave.x > above95_non_bootleneck_pop_value_watterson & watterson_ave.y > above95_bootleneck_pop_value_watterson) %>% dplyr::select (unique_id)
   assign(paste0(POP1, "_", POP2,"_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson"), list_of_genes_GOterm_watterson)
   
   ## DATASET D-D  _watterson
   
-  list_of_genes_D_D_watterson <- get(DATAFRAME) %>% filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) > min_bootleneck_pop_value_watterson & feature=="CDS") %>% select ( unique_id)
+  list_of_genes_D_D_watterson <- get(DATAFRAME) %>% dplyr::filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) > min_bootleneck_pop_value_watterson & feature=="CDS") %>% dplyr::select ( unique_id)
   
   assign(paste0(POP1, "_", POP2,"_list_CDS_D_D_watterson"), list_of_genes_D_D_watterson)
   
-  list_of_intergenic_D_D_watterson <-  get(DATAFRAME) %>% filter(., log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson & feature=="Intergenic") %>% select ( unique_id)
+  list_of_intergenic_D_D_watterson <-  get(DATAFRAME) %>% dplyr::filter(., log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson & feature=="Intergenic") %>% dplyr::select ( unique_id)
   
   assign(paste0(POP1, "_", POP2,"_list_intergenic_D_D_watterson"), list_of_intergenic_D_D_watterson)
   
   
   ## DATASET ND-D_watterson
       
-  list_of_genes_ND_D_watterson <- get(DATAFRAME) %>% filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) < min_bootleneck_pop_value_watterson & feature=="CDS") %>% select ( unique_id)
+  list_of_genes_ND_D_watterson <- get(DATAFRAME) %>% dplyr::filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) < min_bootleneck_pop_value_watterson & feature=="CDS") %>% dplyr::select ( unique_id)
   assign(paste0(POP1, "_", POP2,"_list_CDS_ND_D_watterson"), list_of_genes_ND_D_watterson)
 
 ######
-  # Aqui categorizo las unidades que tienen uan alta diversidad y ni pierden ni ganan diversidad (HD (high diversity)), las unidades que tiene baja diversidad en la non-bottleneck pero ganan en la bottleneck (LD_W (low diversity win)), las que tienen alta diversidad en la non bottleneck pero baja en la bottleneck (HD_L), y las que tienen baja diversidad en ambas (LD). 
+  # Aqui categorizo las unidades que tienen diversidad y ni pierden ni ganan diversidad (D-D), las unidades que tiene no diversidad en la non-bottleneck pero ganan en la bottleneck (ND-D ), las que tienen alta diversidad en la non bottleneck pero baja en la bottleneck (D-ND), y las que no tienen diversidad en ambas (ND-ND). 
 
   data_diversity_categories_watterson <- get(DATAFRAME) %>% 
   mutate (evolution_category=
@@ -4605,6 +4693,16 @@ data_diversity_categories_watterson$diversity_category <- factor (data_diversity
 list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_watterson <- inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson, c_ll_ki_n013_c_ll_po_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson)
 
 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson <- dplyr::inner_join (c_ll_ki_n013_c_ll_no_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson, c_ll_ki_n013_c_ll_po_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson)
+
+# Tablas individuales:
+
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson, paste0(wd_output,"list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson.txt" ), quote = F, row.names = F)
+
+write.table(c_ll_ki_n013_c_ll_po_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson, paste0(wd_output,"list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson.txt" ), quote = F, row.names = F)
+
+write.table(c_lp_sm_n019_c_lp_do_n012_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson, paste0(wd_output,"list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson.txt" ), quote = F, row.names = F)
+
+# Tabla unida
 
 write.table(list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_watterson, paste0(wd_output,"list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_watterson.txt" ), quote = F, row.names = F)
 
