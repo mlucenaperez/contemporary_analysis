@@ -4,120 +4,10 @@ output: html_document
 ---
 
 
-# GO term annotation
 
-Tengo tablas individuales y las quiero anotar con los GO term correspondientes
+# Load library and required information
 
-## Load information for GO annotation
-
-```{r}
-library (dplyr)
-library (plyr)
-library(tidyr)
-
-# Working directory
-
-wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
-wd_input <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
-
-# Tabla con la información de GO term para cada gen.
-
-tabla_all_genes_GO_term_complete_info <- read.table (paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes_minor_modif.txt"), sep="\t", header = T) %>% mutate (GO_ACC=as.character(GO_ACC)) %>% filter(GO_TYPE=="biological_process") %>% dplyr::select (-"GO_TYPE")
-# El minor_modif tiene ' cambiadas por empty space pq si no R entiende que es un string. 
-
-tabla_all_genes_GO_term_complete_info_modif <- tabla_all_genes_GO_term_complete_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(GENE_NAME, collapse=','))  
-
-write.table(tabla_all_genes_GO_term_complete_info_modif, paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes_modif.NAMES.gmt"), quote = F, row.names = F, col.names = F, sep = "\t" )
-
-```
-
-## Files of interest
-
-Voy a empezar con las tablas individuales por cada población. Primero tengo que modificarlas en bash.
-
-
-```{bash}
-
-cd /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/
-
-
-## Kirov - Norway
-# list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson.txt
-# Vemos cuantos duplicados tiene. En principio se los vamos a dejar.
-
-tail -n+2 list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | wc -l
-#    4255
-tail -n+2 list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq | wc -l
-#    3092
-
-tail -n+2 list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//'  | sort > list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson_trimmed.txt
-
-
-## Kirov - Poland
-
-
-tail -n+2 list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | wc -l
-#    8407
-tail -n+2 list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq | wc -l
-#    5722
-
-tail -n+2 list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//'  | sort > list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson_trimmed.txt
-
-
-## Doñana - Andujar
-tail -n+2 list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | wc -l
-#    1527
-tail -n+2 list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq | wc -l
-#    1287
-
-tail -n+2 list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//'  | sort > list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson_trimmed.txt
-
-
-```
-
-Lo uno a la tabla de GO term
-
-
-```{r}
-
-wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
-wd_input <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
-
-
-c_ll_ki_n013_c_ll_no_n008 <- dplyr::inner_join(read.table (paste0(wd_input,"list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson_trimmed.txt", sep="")), tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
-
-c_ll_ki_n013_c_ll_no_n008.gProfile<-  c_ll_ki_n013_c_ll_no_n008 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
-
-c_ll_ki_n013_c_ll_no_n008.gProfile <- c_ll_ki_n013_c_ll_no_n008.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
-write.table(c_ll_ki_n013_c_ll_no_n008.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_no_n008.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
-
-
-######
-c_ll_ki_n013_c_ll_po_n008 <- dplyr::inner_join(read.table (paste0(wd_input,"list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson_trimmed.txt", sep="")), tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
-
-c_ll_ki_n013_c_ll_po_n008.gProfile<-  c_ll_ki_n013_c_ll_po_n008 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
-
-c_ll_ki_n013_c_ll_po_n008.gProfile <- c_ll_ki_n013_c_ll_po_n008.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
-write.table(c_ll_ki_n013_c_ll_po_n008.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_po_n008.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
-
-
-######
-
-c_lp_sm_n019_c_lp_do_n012 <- dplyr::inner_join(read.table (paste0(wd_input,"list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson_trimmed.txt", sep="")), tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
-
-c_lp_sm_n019_c_lp_do_n012.gProfile<-  c_lp_sm_n019_c_lp_do_n012 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
-
-c_lp_sm_n019_c_lp_do_n012.gProfile <- c_lp_sm_n019_c_lp_do_n012.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
-write.table(c_lp_sm_n019_c_lp_do_n012.gProfile, paste0(wd, "c_lp_sm_n019_c_lp_do_n012.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
-
-```
-
-
-
-
-# GO term enrichment
-
-Este es el script donde realizo el GO term enrichment analysis y el pathway enrichment analysis. 
+Este es el script donde realizo el GO term annotation & enrichment analysis y el pathway enrichment analysis. 
 
 Lo primero que hago es pedirle a Godoy una lista donde cada gen tenga asociado su GO-term. El me pasa una carpeta donde hay varios archivos.
 
@@ -142,7 +32,7 @@ genes2transcript2go.list.txt --> Creo que es la carpeta que tiene el nombre de g
 
 Los lp23 son antiguos sin la isoforma principal.
 
-Lo primero que voy a hacer es cargar nuestros archivos
+Lo primero que voy a hacer es cargar librerias y nuestros archivos:
 
 ## Load information for GO enrichment
 
@@ -152,17 +42,26 @@ library (plyr)
 library(tidyr)
 library (dplyr)
 
+
 # Working directory
 
 wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
-wd_input <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
 
 # Tabla con la información de GO term para cada gen.
 
-tabla_all_genes_GO_term_complete_info <- read.table (paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes.txt"), sep="\t", header = T) %>% dplyr::select (., GENE_NAME, GO_ACC) %>% mutate (GO_ACC=as.character(GO_ACC))
+tabla_all_genes_GO_term_complete_info <- read.table (paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes_minor_modif.txt"), sep="\t", header = T) %>% mutate (GO_ACC=as.character(GO_ACC)) %>% filter(GO_TYPE=="biological_process") %>% dplyr::select (-"GO_TYPE")
+# El minor_modif tiene ' cambiadas por empty space pq si no R entiende que es un string. 
 
-# Convert  data frame in a list of list based on a Key value
-# geneID2GO <- readMappings(file = system.file("examples/geneid2go.map", package = "topGO"))
+
+## Modifo el archivo para poder generar un gmt con los nombres de cada GO term, su descripción, y a que genes va asociado. 
+# Este archivo lo vamos a necesitar para cargar los datos en CYTOSCAPE. 
+tabla_all_genes_GO_term_complete_info_modif <- tabla_all_genes_GO_term_complete_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(GENE_NAME, collapse=','))  
+
+
+
+write.table(tabla_all_genes_GO_term_complete_info_modif, paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes_modif.NAMES.gmt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+
 
 list_of_list_all_genes_GO_term <- dlply(tabla_all_genes_GO_term_complete_info, .(GENE_NAME), function(x)x$GO_ACC)
 list_of_list_all_genes_GO_term_chr <- lapply(list_of_list_all_genes_GO_term, function(x) as.character(unlist(x)))
@@ -228,6 +127,55 @@ Pathway topology analysis considers the connectivity between molecules that is r
 genes_to_KO.list <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/genes_to_KO.txt", header=F)
 
 ```
+
+
+
+
+# GO term annotation
+
+Tengo tablas individuales y las quiero anotar con los GO term correspondientes
+
+
+Lo uno a la tabla de GO term
+
+
+```{r}
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
+
+
+c_ll_ki_n013_c_ll_no_n008 <- dplyr::inner_join(read.table (paste0(wd,"list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson_trimmed.txt", sep="")), tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
+
+c_ll_ki_n013_c_ll_no_n008.gProfile<-  c_ll_ki_n013_c_ll_no_n008 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008.gProfile <- c_ll_ki_n013_c_ll_no_n008.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+write.table(c_ll_ki_n013_c_ll_no_n008.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_no_n008.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+
+######
+c_ll_ki_n013_c_ll_po_n008 <- dplyr::inner_join(read.table (paste0(wd,"list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson_trimmed.txt", sep="")), tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
+
+c_ll_ki_n013_c_ll_po_n008.gProfile<-  c_ll_ki_n013_c_ll_po_n008 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_po_n008.gProfile <- c_ll_ki_n013_c_ll_po_n008.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+write.table(c_ll_ki_n013_c_ll_po_n008.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_po_n008.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+
+######
+
+c_lp_sm_n019_c_lp_do_n012 <- dplyr::inner_join(read.table (paste0(wd,"list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson_trimmed.txt", sep="")), tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
+
+c_lp_sm_n019_c_lp_do_n012.gProfile<-  c_lp_sm_n019_c_lp_do_n012 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_lp_sm_n019_c_lp_do_n012.gProfile <- c_lp_sm_n019_c_lp_do_n012.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+write.table(c_lp_sm_n019_c_lp_do_n012.gProfile, paste0(wd, "c_lp_sm_n019_c_lp_do_n012.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+```
+
+
+
+
 
 
 # Files of interest
@@ -307,7 +255,7 @@ description <- "Analysis of CDS with a ratio above 1 lynx lynx & lynx pardinus"
 ```{r}
 
 # Genes de interes
-gene_of_interest <- as.data.frame(read.table(paste0(wd_input, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
+gene_of_interest <- as.data.frame(read.table(paste0(wd, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
 
 # Lo convierto en tabla y lo proceso para GO analysis.
 gene_of_interest_list <- unlist(gene_of_interest$V1)
@@ -377,7 +325,7 @@ description <- "Analysis of CDS with a ratio above 1 lynx lynx"
 
 # Genes de interes
 
-gene_of_interest <- as.data.frame(read.table(paste0(wd_input, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
+gene_of_interest <- as.data.frame(read.table(paste0(wd, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
 
 
 # Lo convierto en tabla y lo proceso para GO analysis.
@@ -449,7 +397,7 @@ description <- "Analysis of CDS with a ratio over 1 and high Watterson diversity
 ```{r}
 
 # Genes de interes
-gene_of_interest <- as.data.frame(read.table(paste0(wd_input, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
+gene_of_interest <- as.data.frame(read.table(paste0(wd, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
 
 # Lo convierto en tabla y lo proceso para GO analysis.
 gene_of_interest_list <- unlist(gene_of_interest$V1)
@@ -518,7 +466,7 @@ description <- "Analysis of CDS with a ratio over 1 and high Pi diversity lynx l
 ```{r}
 
 # Genes de interes
-gene_of_interest <- as.data.frame(read.table(paste0(wd_input, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
+gene_of_interest <- as.data.frame(read.table(paste0(wd, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
 
 # Lo convierto en tabla y lo proceso para GO analysis.
 gene_of_interest_list <- unlist(gene_of_interest$V1)
@@ -586,7 +534,7 @@ description <- "Analysis of CDS with a ratio over 1 and high diversity lynx lynx
 ```{r}
 
 # Genes de interes
-gene_of_interest <- as.data.frame(read.table(paste0(wd_input, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
+gene_of_interest <- as.data.frame(read.table(paste0(wd, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
 
 
 # Lo convierto en tabla y lo proceso para GO analysis.
