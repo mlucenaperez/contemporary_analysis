@@ -4067,7 +4067,7 @@ for (DATAFRAME in DATAFRAMES)
 ```
 
 
-### Stats de los ratios.
+### Stats de los ratios. --> No lo corro
 
 No lo corro pq no tiene mucho sentido hacer la media de los ratios per unit, más que por curiosidad de ver su distribución, y eso ya lo vamos a ver con el boot. 
 
@@ -4622,6 +4622,64 @@ ratio_watterson_average_summary <- ratio_watterson_average  %>%
 # WATTERSON
 
 
+##### Diversity plot pop1 vs pop2
+
+```{r}
+
+# Plot de diversidad de una población frente a otra, con el corte de los valores más bajos en el density plot para ambos casos, y graficamente ploteados esos cortes. 
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+for (DATAFRAME in DATAFRAMES) 
+{
+ 
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  min_non_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POP1) %>% .[1,2] )
+  min_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POP2) %>% .[1,2] )
+
+  above95_non_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & pop==POP1) %>% dplyr::select ("q95_watterson_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+  
+  above95_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% filter(feature=="CDS" & pop==POP2) %>% dplyr::select ("q95_watterson_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+
+  # Añadimos una columna para que se coloreen los genes que luego vamos a pasarle al GO term enrichment. Estos genes son: ls¡os que presentan ALTA diversidad en ambas poblaciones, y un ratio parecido. 
+  
+  DATAFRAME_modif <- get(DATAFRAME) %>% mutate (col=ifelse(log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson & ratio_watterson_average>0.6 & ratio_watterson_average<1.4 & feature=="CDS" & watterson_ave.x > above95_non_bootleneck_pop_value_watterson & watterson_ave.y > above95_bootleneck_pop_value_watterson, "interesting_genes", "shit"))
+
+  # Plot de todas las features
+  
+  ggplot(data=DATAFRAME_modif, aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x) )) +
+    geom_point(alpha = 1/100, color='grey41') +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_watterson, color='grey20') +
+    facet_wrap(~feature) +
+    theme_light() +
+    theme(legend.position="none") +
+   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson.pdf", sep=""), width = 7, height = 7)
+   
+   
+  ggplot() +
+    geom_point(data=DATAFRAME_modif %>% filter(., feature=="CDS") %>% filter(col=="shit"),
+               aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x)), alpha = 1/10, colour="grey41", size=1 ) +
+    geom_point(data=DATAFRAME_modif %>% filter(., feature=="CDS") %>% filter(col=="interesting_genes"),
+               aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x)), colour="#FF0000", size=1 ) +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_watterson, color='grey20') +
+    theme_light() +
+    theme(legend.position="none") +
+    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson_interesting_CDS.pdf", sep=""), width = 7, height = 7)
+
+   
+}
+
+```
+
+
+
+
 
 #####  GOterm enrichment & dataset prep
 
@@ -4642,29 +4700,9 @@ for (DATAFRAME in DATAFRAMES)
   min_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% filter(pop==POP2) %>% .[1,2] )
 
   above95_non_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & pop==POP1) %>% dplyr::select ("q95_watterson_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
-  
   above95_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% filter(feature=="CDS" & pop==POP2) %>% dplyr::select ("q95_watterson_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
-  ## DATASET GO term enrichment and pathway enrichment watterson
-  
-  list_of_genes_GOterm_watterson <- get(DATAFRAME) %>% filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) > min_bootleneck_pop_value_watterson & ratio_watterson_average > 0.6 & ratio_watterson_average < 1.4 & feature=="CDS" & watterson_ave.x > above95_non_bootleneck_pop_value_watterson & watterson_ave.y > above95_bootleneck_pop_value_watterson) %>% dplyr::select (unique_id)
-  assign(paste0(POP1, "_", POP2,"_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson"), list_of_genes_GOterm_watterson)
-  
-  ## DATASET D-D  _watterson
-  
-  list_of_genes_D_D_watterson <- get(DATAFRAME) %>% dplyr::filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) > min_bootleneck_pop_value_watterson & feature=="CDS") %>% dplyr::select ( unique_id)
-  
-  assign(paste0(POP1, "_", POP2,"_list_CDS_D_D_watterson"), list_of_genes_D_D_watterson)
-  
-  list_of_intergenic_D_D_watterson <-  get(DATAFRAME) %>% dplyr::filter(., log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson & feature=="Intergenic") %>% dplyr::select ( unique_id)
-  
-  assign(paste0(POP1, "_", POP2,"_list_intergenic_D_D_watterson"), list_of_intergenic_D_D_watterson)
   
   
-  ## DATASET ND-D_watterson
-      
-  list_of_genes_ND_D_watterson <- get(DATAFRAME) %>% dplyr::filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) < min_bootleneck_pop_value_watterson & feature=="CDS") %>% dplyr::select ( unique_id)
-  assign(paste0(POP1, "_", POP2,"_list_CDS_ND_D_watterson"), list_of_genes_ND_D_watterson)
-
 ######
   # Aqui categorizo las unidades que tienen diversidad y ni pierden ni ganan diversidad (D-D), las unidades que tiene no diversidad en la non-bottleneck pero ganan en la bottleneck (ND-D ), las que tienen alta diversidad en la non bottleneck pero baja en la bottleneck (D-ND), y las que no tienen diversidad en ambas (ND-ND). 
 
@@ -4683,122 +4721,66 @@ data_diversity_categories_watterson$diversity_category <- factor (data_diversity
 
   assign(paste0("data_diversity_",POP1, "_diversity_", POP2,"_diversity_categories_watterson"), data_diversity_categories_watterson)
 
+  
+  
+      ## DATASET D-D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment watterson
+  
+  list_of_CDS_HD_HD_watterson <- get(DATAFRAME) %>% filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) > min_bootleneck_pop_value_watterson & ratio_watterson_average > 0.6 & ratio_watterson_average < 1.4 & feature=="CDS" & watterson_ave.x > above95_non_bootleneck_pop_value_watterson & watterson_ave.y > above95_bootleneck_pop_value_watterson) %>% dplyr::select (unique_id) %>% tidyr::separate(., unique_id, into =c("Gen", "start", "end", "feature") ) %>% dplyr::select (Gen)
+    
+  assign(paste0(POP1, "_", POP2,"_list_of_CDS_HD_HD_ratio_1_watterson"), list_of_CDS_HD_HD_watterson)
+
+    ## DATASET ND-D_watterson --> Inspecting the GO term.
+      
+  list_of_genes_ND_D_watterson <- get(DATAFRAME) %>% dplyr::filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) < min_bootleneck_pop_value_watterson & feature=="CDS") %>% dplyr::select ( unique_id) %>% tidyr::separate(., unique_id, into =c("Gen", "start", "end", "feature") ) %>% dplyr::select (Gen)
+  
+  assign(paste0(POP1, "_", POP2,"_list_CDS_ND_D_watterson"), list_of_genes_ND_D_watterson)
+
   }
 
 
-# Los uno
 
-# Los que van a servir para hacer GO termn.
+## DATASET D-D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment watterson
 
-list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_watterson <- inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson, c_ll_ki_n013_c_ll_po_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson)
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson)
 
-list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson <- dplyr::inner_join (c_ll_ki_n013_c_ll_no_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson, c_ll_ki_n013_c_ll_po_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson)
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson)
 
 # Tablas individuales:
 
-write.table(c_ll_ki_n013_c_ll_no_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson, paste0(wd_output,"list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson.txt" ), quote = F, row.names = F)
-
-write.table(c_ll_ki_n013_c_ll_po_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson, paste0(wd_output,"list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson.txt" ), quote = F, row.names = F)
-
-write.table(c_lp_sm_n019_c_lp_do_n012_list_of_genes_of_interest_high_diversity_ratio_1_CDS_watterson, paste0(wd_output,"list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson.txt" ), quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson" , quote = F, row.names = F)
+write.table(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson" , quote = F, row.names = F)
 
 # Tabla unida
 
-write.table(list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_watterson, paste0(wd_output,"list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_watterson.txt" ), quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson" , quote = F, row.names = F)
 
-write.table(list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson, paste0(wd_output,"list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson.txt" ), quote = F, row.names = F)
-
-# Los que son D-D en todas las poblaciones: CDS
-
-colnames(c_ll_ki_n013_c_ll_no_n008_list_CDS_D_D_watterson) <- "c_ll_ki_n013_c_ll_no_n008_D_D_watterson"
-colnames(c_ll_ki_n013_c_ll_po_n008_list_CDS_D_D_watterson) <- "c_ll_ki_n013_c_ll_po_n008_D_D_watterson"
-colnames(c_lp_sm_n019_c_lp_do_n012_list_CDS_D_D_watterson) <- "c_lp_sm_n019_c_lp_do_n012_D_D_watterson"
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson", quote = F, row.names = F)
 
 
-# Los que son D-D en todas las poblaciones: Intergenic
 
-colnames(c_ll_ki_n013_c_ll_no_n008_list_intergenic_D_D_watterson) <- "c_ll_ki_n013_c_ll_no_n008_D_D_watterson"
-colnames(c_ll_ki_n013_c_ll_po_n008_list_intergenic_D_D_watterson) <- "c_ll_ki_n013_c_ll_po_n008_D_D_watterson"
-colnames(c_lp_sm_n019_c_lp_do_n012_list_intergenic_D_D_watterson) <- "c_lp_sm_n019_c_lp_do_n012_D_D_watterson"
+## DATASET ND-D_watterson --> Inspecting the GO term.
 
-# Los que son ND-D en todas las poblaciones: Intergenic
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson, c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson)
 
-colnames(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson) <- "c_ll_ki_n013_c_ll_no_n008_ND_D_watterson"
-colnames(c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson) <- "c_ll_ki_n013_c_ll_po_n008_ND_D_watterson"
-colnames(c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson) <- "c_lp_sm_n019_c_lp_do_n012_ND_D_watterson"
-
-```
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson, c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson)
 
 
-##### Diversity plot pop1 vs pop2
+# Tablas individuales:
 
-```{r}
+write.table(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson" , quote = F, row.names = F)
+write.table(c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson" , quote = F, row.names = F)
 
-# Plot de diversidad de una población frente a otra, con el corte de los valores más bajos en el density plot para ambos casos, y graficamente ploteados esos cortes. 
+# Tabla unida
 
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson" , quote = F, row.names = F)
 
-for (DATAFRAME in DATAFRAMES) 
-{
- 
-  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-  
-  min_non_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POP1) %>% .[1,2] )
-  min_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POP2) %>% .[1,2] )
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson", quote = F, row.names = F)
 
-  DATAFRAME_modif <- get(DATAFRAME) %>% mutate (col=ifelse(log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson & ratio_watterson_average>0.6 & ratio_watterson_average<1.4 & feature=="CDS", "interesting_genes", "shit"))
-
-  
-   ggplot(data=DATAFRAME_modif, aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x) )) +
-                                    #, fill=col, colour=col)) +
-    geom_point(alpha = 1/100, color='grey41') +
-    geom_abline(intercept = 0, color='grey20') +
-    geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
-    geom_vline(xintercept = min_bootleneck_pop_value_watterson, color='grey20') +
-    facet_wrap(~feature) +
-    #scale_color_viridis(discrete=TRUE) +
-    #scale_fill_viridis(discrete=TRUE) +
-    theme_light() +
-    theme(legend.position="none") +
-   # scale_color_manual(values=c("#999999", "#E69F00"))
-   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson.pdf", sep=""), width = 7, height = 7)
-   
-ggplot(data=DATAFRAME_modif, aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x) )) +
-                                     #fill=col, colour=col)) +
-    geom_point(alpha = 1/100, color='grey41') +
-    geom_abline(intercept = 0, color='grey20') +
-    geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
-    geom_vline(xintercept = min_bootleneck_pop_value_watterson, color='grey20') +
-    #scale_color_viridis(discrete=TRUE) +
-    #scale_fill_viridis(discrete=TRUE) +
-    facet_wrap(~feature, scales = "free" ) +
-    theme_light()  +
-    theme(legend.position="none") +
-  labs (title=paste0(POP1,"_",POP2)) +
-   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson_scalefree.pdf", sep=""))
-
-} 
-
-
-# Un pequeño codigo para plotear el density plot al lado de una nube de puntos. 
-# #marginal density of x - plot on top
-# plot_top <- ggplot(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(watterson_ave.y)) + 
-#   geom_density(alpha=.5) + 
-#   theme(legend.position = "none")
-# 
-# #marginal density of y - plot on the right
-# plot_right <-ggplot(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(watterson_ave.x)) + 
-#   geom_density(alpha=.5) + 
-#   theme(legend.position = "none")
-# 
-# #arrange the plots together, with appropriate height and width for each row and column
-# grid.arrange(plot_top, empty, scatter, plot_right, ncol=2, nrow=2, widths=c(4, 1), heights=c(1, 4))
 
 
 ```
-
-
 
 
 ##### Venh-diagram
@@ -6061,103 +6043,6 @@ save_plot(paste(wd_output,POP1,"_",POP2,"_GCcontent_by_category.pdf",sep=""), HD
 
 # ---------------------------------------------
 # PI
-
-
-
-#####  GOterm enrichment & dataset prep
-
-```{r}
-
-
-# Ahora vamos a intentar sacar las unidades que quedan por encima de ese minimo en la distribución para ambas poblaciones: serían valores que con alta diversidad en las dos poblaciones. Además queremos que esos valores tengan un ratio similar a uno: tienen alta diveridad y en las dos poblaciones, muy parecida. 
-
-DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
-
-for (DATAFRAME in DATAFRAMES) 
-{
-  
-  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-  
-  min_non_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% filter(pop==POP1) %>% .[1,2] )
-  min_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% filter(pop==POP2) %>% .[1,2] )
-
-  ## DATASET GO term enrichment and pathway enrichment pairwise
-  
-  list_of_genes_GOterm_pairwise <- get(DATAFRAME) %>% filter(., log10(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y) > min_bootleneck_pop_value_pairwise & ratio_pairwise_average > 0.6 & ratio_pairwise_average < 1.4 & feature=="CDS") %>% select (unique_id)
-  assign(paste0(POP1, "_", POP2,"_list_of_genes_of_interest_high_diversity_ratio_1_CDS_pairwise"), list_of_genes_GOterm_pairwise)
-  
-  ## DATASET D-D  _pairwise
-  
-  list_of_genes_D_D_pairwise <- get(DATAFRAME) %>% filter(., log10(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y) > min_bootleneck_pop_value_pairwise & feature=="CDS") %>% select ( unique_id)
-  
-  assign(paste0(POP1, "_", POP2,"_list_CDS_D_D_pairwise"), list_of_genes_D_D_pairwise)
-  
-  list_of_intergenic_D_D_pairwise <-  get(DATAFRAME) %>% filter(., log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & feature=="Intergenic") %>% select ( unique_id)
-  
-  assign(paste0(POP1, "_", POP2,"_list_intergenic_D_D_pairwise"), list_of_intergenic_D_D_pairwise)
-  
-  
-  ## DATASET ND-D_pairwise
-      
-  list_of_genes_ND_D_pairwise <- get(DATAFRAME) %>% filter(., log10(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y) < min_bootleneck_pop_value_pairwise & feature=="CDS") %>% select ( unique_id)
-  assign(paste0(POP1, "_", POP2,"_list_CDS_ND_D_pairwise"), list_of_genes_ND_D_pairwise)
-
-######
-  # Aqui categorizo las unidades que tienen uan alta diversidad y ni pierden ni ganan diversidad (HD (high diversity)), las unidades que tiene baja diversidad en la non-bottleneck pero ganan en la bottleneck (LD_W (low diversity win)), las que tienen alta diversidad en la non bottleneck pero baja en la bottleneck (HD_L), y las que tienen baja diversidad en ambas (LD). 
-
-  data_diversity_categories_pairwise <- get(DATAFRAME) %>% 
-  mutate (evolution_category=
-            ifelse (log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "D-D_pairwise",
-            ifelse (log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "ND-D_pairwise",
-            ifelse (log10(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "ND-ND_pairwise",
-            ifelse (log10(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "D-ND_pairwise",NA))))) %>% 
-  mutate (diversity_category=
-            ifelse (log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "HD_pairwise",
-            ifelse (log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "LD_pairwise",NA)))
-
-data_diversity_categories_pairwise$evolution_category <- factor (data_diversity_categories_pairwise$evolution_category, levels=c("D-ND_pairwise", "D-D_pairwise", "ND-ND_pairwise", "ND-D_pairwise"))
-data_diversity_categories_pairwise$diversity_category <- factor (data_diversity_categories_pairwise$diversity_category, levels=c("HD_pairwise", "LD_pairwise"))
-
-  assign(paste0("data_diversity_",POP1, "_diversity_", POP2,"_diversity_categories_pairwise"), data_diversity_categories_pairwise)
-
-  }
-
-
-# Los uno
-
-# Los que van a servir para hacer GO termn.
-
-list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_pairwise <- inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_pairwise, c_ll_ki_n013_c_ll_po_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_pairwise)
-
-list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_pairwise <- dplyr::inner_join (c_ll_ki_n013_c_ll_no_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_pairwise, c_ll_ki_n013_c_ll_po_n008_list_of_genes_of_interest_high_diversity_ratio_1_CDS_pairwise) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_of_genes_of_interest_high_diversity_ratio_1_CDS_pairwise)
-
-write.table(list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_pairwise, paste0(wd_output,"list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_pairwise.txt" ), quote = F, row.names = F)
-
-write.table(list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_pairwise, paste0(wd_output,"list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_pairwise.txt" ), quote = F, row.names = F)
-
-# Los que son D-D en todas las poblaciones: CDS
-
-colnames(c_ll_ki_n013_c_ll_no_n008_list_CDS_D_D_pairwise) <- "c_ll_ki_n013_c_ll_no_n008_D_D_pairwise"
-colnames(c_ll_ki_n013_c_ll_po_n008_list_CDS_D_D_pairwise) <- "c_ll_ki_n013_c_ll_po_n008_D_D_pairwise"
-colnames(c_lp_sm_n019_c_lp_do_n012_list_CDS_D_D_pairwise) <- "c_lp_sm_n019_c_lp_do_n012_D_D_pairwise"
-
-
-# Los que son D-D en todas las poblaciones: Intergenic
-
-colnames(c_ll_ki_n013_c_ll_no_n008_list_intergenic_D_D_pairwise) <- "c_ll_ki_n013_c_ll_no_n008_D_D_pairwise"
-colnames(c_ll_ki_n013_c_ll_po_n008_list_intergenic_D_D_pairwise) <- "c_ll_ki_n013_c_ll_po_n008_D_D_pairwise"
-colnames(c_lp_sm_n019_c_lp_do_n012_list_intergenic_D_D_pairwise) <- "c_lp_sm_n019_c_lp_do_n012_D_D_pairwise"
-
-# Los que son ND-D en todas las poblaciones: Intergenic
-
-colnames(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise) <- "c_ll_ki_n013_c_ll_no_n008_ND_D_pairwise"
-colnames(c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise) <- "c_ll_ki_n013_c_ll_po_n008_ND_D_pairwise"
-colnames(c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise) <- "c_lp_sm_n019_c_lp_do_n012_ND_D_pairwise"
-
-```
-
-
 ##### Diversity plot pop1 vs pop2
 
 ```{r}
@@ -6175,57 +6060,145 @@ for (DATAFRAME in DATAFRAMES)
   min_non_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POP1) %>% .[1,2] )
   min_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POP2) %>% .[1,2] )
 
-  DATAFRAME_modif <- get(DATAFRAME) %>% mutate (col=ifelse(log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & ratio_pairwise_average>0.6 & ratio_pairwise_average<1.4 & feature=="CDS", "interesting_genes", "shit"))
-
+  above95_non_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & pop==POP1) %>% dplyr::select ("q95_pairwise_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
   
-   ggplot(data=DATAFRAME_modif, aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x) )) +
-                                    #, fill=col, colour=col)) +
+  above95_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% filter(feature=="CDS" & pop==POP2) %>% dplyr::select ("q95_pairwise_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+
+  # Añadimos una columna para que se coloreen los genes que luego vamos a pasarle al GO term enrichment. Estos genes son: ls¡os que presentan ALTA diversidad en ambas poblaciones, y un ratio parecido. 
+  
+  DATAFRAME_modif <- get(DATAFRAME) %>% mutate (col=ifelse(log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & ratio_pairwise_average>0.6 & ratio_pairwise_average<1.4 & feature=="CDS" & pairwise_ave.x > above95_non_bootleneck_pop_value_pairwise & pairwise_ave.y > above95_bootleneck_pop_value_pairwise, "interesting_genes", "shit"))
+
+  # Plot de todas las features
+  
+  ggplot(data=DATAFRAME_modif, aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x) )) +
     geom_point(alpha = 1/100, color='grey41') +
     geom_abline(intercept = 0, color='grey20') +
     geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
     geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
-     facet_wrap(~feature) +
-    #scale_color_viridis(discrete=TRUE) +
-    #scale_fill_viridis(discrete=TRUE) +
+    facet_wrap(~feature) +
     theme_light() +
-    theme(legend.position="none") + 
-    scale_color_manual(values=c("#999999", "#E69F00")) +
-    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise.pdf", sep=""), width = 7, height = 7)
+    theme(legend.position="none") +
+   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise.pdf", sep=""), width = 7, height = 7)
    
-ggplot(data=DATAFRAME_modif, aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x) )) +
-                                     #fill=col, colour=col)) +
-    geom_point(alpha = 1/100, color='grey41') +
+   
+  ggplot() +
+    geom_point(data=DATAFRAME_modif %>% filter(., feature=="CDS") %>% filter(col=="shit"),
+               aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x)), alpha = 1/10, colour="grey41", size=1 ) +
+    geom_point(data=DATAFRAME_modif %>% filter(., feature=="CDS") %>% filter(col=="interesting_genes"),
+               aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x)), colour="#FF0000", size=1 ) +
     geom_abline(intercept = 0, color='grey20') +
     geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
     geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
-    #scale_color_viridis(discrete=TRUE) +
-    #scale_fill_viridis(discrete=TRUE) +
-    facet_wrap(~feature, scales = "free" ) +
-    theme_light()  +
+    theme_light() +
     theme(legend.position="none") +
-  labs (title=paste0(POP1,"_",POP2)) +
-   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise_scalefree.pdf", sep=""))
+    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise_interesting_CDS.pdf", sep=""), width = 7, height = 7)
 
-} 
-
-
-# Un pequeño codigo para plotear el density plot al lado de una nube de puntos. 
-# #marginal density of x - plot on top
-# plot_top <- ggplot(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(pairwise_ave.y)) + 
-#   geom_density(alpha=.5) + 
-#   theme(legend.position = "none")
-# 
-# #marginal density of y - plot on the right
-# plot_right <-ggplot(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(pairwise_ave.x)) + 
-#   geom_density(alpha=.5) + 
-#   theme(legend.position = "none")
-# 
-# #arrange the plots together, with appropriate height and width for each row and column
-# grid.arrange(plot_top, empty, scatter, plot_right, ncol=2, nrow=2, widths=c(4, 1), heights=c(1, 4))
-
+   
+}
 
 ```
 
+
+#####  GOterm enrichment & dataset prep
+
+```{r}
+
+
+# Ahora vamos a intentar sacar las unidades que quedan por encima de ese minimo en la distribución para ambas poblaciones: serían valores que con alta diversidad en las dos poblaciones. Además queremos que esos valores tengan un ratio similar a uno: tienen alta diveridad y en las dos poblaciones, muy parecida. 
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+for (DATAFRAME in DATAFRAMES) 
+{
+  
+  POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  min_non_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% filter(pop==POP1) %>% .[1,2] )
+  min_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% filter(pop==POP2) %>% .[1,2] )
+
+  above95_non_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & pop==POP1) %>% dplyr::select ("q95_pairwise_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+  above95_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% filter(feature=="CDS" & pop==POP2) %>% dplyr::select ("q95_pairwise_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+  
+  
+######
+  # Aqui categorizo las unidades que tienen diversidad y ni pierden ni ganan diversidad (D-D), las unidades que tiene no diversidad en la non-bottleneck pero ganan en la bottleneck (ND-D ), las que tienen alta diversidad en la non bottleneck pero baja en la bottleneck (D-ND), y las que no tienen diversidad en ambas (ND-ND). 
+
+  data_diversity_categories_pairwise <- get(DATAFRAME) %>% 
+  mutate (evolution_category=
+            ifelse (log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "D-D_pairwise",
+            ifelse (log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "ND-D_pairwise",
+            ifelse (log10(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "ND-ND_pairwise",
+            ifelse (log10(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "D-ND_pairwise",NA))))) %>% 
+  mutate (diversity_category=
+            ifelse (log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "HD_pairwise",
+            ifelse (log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "LD_pairwise",NA)))
+
+data_diversity_categories_pairwise$evolution_category <- factor (data_diversity_categories_pairwise$evolution_category, levels=c("D-ND_pairwise", "D-D_pairwise", "ND-ND_pairwise", "ND-D_pairwise"))
+data_diversity_categories_pairwise$diversity_category <- factor (data_diversity_categories_pairwise$diversity_category, levels=c("HD_pairwise", "LD_pairwise"))
+
+  assign(paste0("data_diversity_",POP1, "_diversity_", POP2,"_diversity_categories_pairwise"), data_diversity_categories_pairwise)
+
+  
+  
+      ## DATASET D-D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment pairwise
+  
+  list_of_CDS_HD_HD_pairwise <- get(DATAFRAME) %>% filter(., log10(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y) > min_bootleneck_pop_value_pairwise & ratio_pairwise_average > 0.6 & ratio_pairwise_average < 1.4 & feature=="CDS" & pairwise_ave.x > above95_non_bootleneck_pop_value_pairwise & pairwise_ave.y > above95_bootleneck_pop_value_pairwise) %>% dplyr::select (unique_id) %>% tidyr::separate(., unique_id, into =c("Gen", "start", "end", "feature") ) %>% dplyr::select (Gen)
+    
+  assign(paste0(POP1, "_", POP2,"_list_of_CDS_HD_HD_ratio_1_pairwise"), list_of_CDS_HD_HD_pairwise)
+
+    ## DATASET ND-D_pairwise --> Inspecting the GO term.
+      
+  list_of_genes_ND_D_pairwise <- get(DATAFRAME) %>% dplyr::filter(., log10(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y) < min_bootleneck_pop_value_pairwise & feature=="CDS") %>% dplyr::select ( unique_id) %>% tidyr::separate(., unique_id, into =c("Gen", "start", "end", "feature") ) %>% dplyr::select (Gen)
+  
+  assign(paste0(POP1, "_", POP2,"_list_CDS_ND_D_pairwise"), list_of_genes_ND_D_pairwise)
+
+  }
+
+
+
+## DATASET D-D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment pairwise
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise)
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise)
+
+# Tablas individuales:
+
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise" , quote = F, row.names = F)
+write.table(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise" , quote = F, row.names = F)
+
+# Tabla unida
+
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise" , quote = F, row.names = F)
+
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise", quote = F, row.names = F)
+
+
+
+## DATASET ND-D_pairwise --> Inspecting the GO term.
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise, c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise)
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise, c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise)
+
+
+# Tablas individuales:
+
+write.table(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise" , quote = F, row.names = F)
+write.table(c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise" , quote = F, row.names = F)
+
+# Tabla unida
+
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise" , quote = F, row.names = F)
+
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise", quote = F, row.names = F)
+
+
+
+```
 
 ##### Venh-diagram
 
