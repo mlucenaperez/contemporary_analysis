@@ -34,7 +34,7 @@ Los lp23 son antiguos sin la isoforma principal.
 
 Lo primero que voy a hacer es cargar librerias y nuestros archivos:
 
-## Load information for GO enrichment
+## Load information for GO annotation & enrichment
 
 ```{r}
 library(topGO)
@@ -57,27 +57,24 @@ tabla_all_genes_GO_term_complete_info <- read.table (paste0(wd, "GO2LYPA.LYPA23C
 # Este archivo lo vamos a necesitar para cargar los datos en CYTOSCAPE. 
 tabla_all_genes_GO_term_complete_info_modif <- tabla_all_genes_GO_term_complete_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(GENE_NAME, collapse=','))  
 
-
-
+# Guardo la tabla
 write.table(tabla_all_genes_GO_term_complete_info_modif, paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes_modif.NAMES.gmt"), quote = F, row.names = F, col.names = F, sep = "\t" )
 
 
-
+# Modificaciones para topGo.
 list_of_list_all_genes_GO_term <- dlply(tabla_all_genes_GO_term_complete_info, .(GENE_NAME), function(x)x$GO_ACC)
 list_of_list_all_genes_GO_term_chr <- lapply(list_of_list_all_genes_GO_term, function(x) as.character(unlist(x)))
-
-str(head(list_of_list_all_genes_GO_term_chr))
 
 # Guardo los nombres de los genes en cuestión. 
 geneNames <- names(list_of_list_all_genes_GO_term_chr)
 
 ```
 
-# Pathway enrichment
+## Load information for pathway enrichment
 
 No hace falta hacer este chunk, pq solo se tiene que hacer una vez.
 
-## Previous work
+- Previous work
 
 Voy a seleccionar los KO que son los nombres de proteinas comunes a todos
 
@@ -110,7 +107,7 @@ Voy a seleccionar los KO que son los nombres de proteinas comunes a todos
 <!-- scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/Lyp_annotation_Apr14_final/genes_to_KO.txt /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation -->
 <!-- ``` -->
 
-## Load KO information for pathway enrichment
+- Load KO information for pathway enrichment
 
 From reactome webpage: https://reactome.org/userguide/analysis
 Entities:
@@ -128,9 +125,6 @@ genes_to_KO.list <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_
 
 ```
 
-
-
-
 # GO term annotation
 
 Tengo tablas individuales y las quiero anotar con los GO term correspondientes
@@ -140,14 +134,22 @@ Lo uno a la tabla de GO term
 
 
 ```{r}
+library("stringr")
 
 wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
-wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
 
 
-c_ll_ki_n013_c_ll_no_n008 <- dplyr::inner_join(read.table (paste0(wd,"list_genes_of_interest_c_ll_ki_n013_c_ll_no_n008_high_diversity_ratio_1_watterson_trimmed.txt", sep="")), tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
+c_ll_ki_n013_c_ll_no_n008 <- dplyr::inner_join(read.table (paste0(wd,"c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise", sep=""), header = T, stringsAsFactors = F) %>% gsub( "P", "", as.character(.$Gen) n)
+                                               
+                                               gsub("%", "", paste(LOAN$RATE))
+                                                %>%  sub("P1$", "", .$Gen)
+                                                lstrip(., char = "P") %>% head()
+                                               
+                                               
+                                               
+                                               tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
 
-c_ll_ki_n013_c_ll_no_n008.gProfile<-  c_ll_ki_n013_c_ll_no_n008 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+c_ll_ki_n013_c_ll_no_n008.gProfile <-  c_ll_ki_n013_c_ll_no_n008 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
 
 c_ll_ki_n013_c_ll_no_n008.gProfile <- c_ll_ki_n013_c_ll_no_n008.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
 write.table(c_ll_ki_n013_c_ll_no_n008.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_no_n008.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
