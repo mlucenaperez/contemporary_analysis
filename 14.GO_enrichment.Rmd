@@ -5,7 +5,7 @@ output: html_document
 
 
 
-# Load library and required information
+# 1. Load library and required information
 
 Este es el script donde realizo el GO term annotation & enrichment analysis y el pathway enrichment analysis. 
 
@@ -109,6 +109,8 @@ Voy a seleccionar los KO que son los nombres de proteinas comunes a todos
 
 - Load KO information for pathway enrichment
 
+Al final vamos a usar los GO term en lugar de los KO para darle a REACTOME
+
 From reactome webpage: https://reactome.org/userguide/analysis
 Entities:
 If your data is a single column of identifiers such as UniProt IDs, gene symbols or ChEBI IDs, they are mapped to pathways and over-representation and pathway-topology analyses are run. Over-representation analysis is a statistical (hypergeometric distribution) test that determines whether certain Reactome pathways are over-represented (enriched) in the submitted data. It answers the question ‘Does my list contain more proteins for pathway X than would be expected by chance?’ This test produces a probability score, which is corrected for false discovery rate using the Benjamani-Hochberg method.
@@ -121,472 +123,594 @@ Pathway topology analysis considers the connectivity between molecules that is r
 ```{r}
 # Archivo de equivalencias KO con genes
 
-genes_to_KO.list <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/genes_to_KO.txt", header=F)
+# genes_to_KO.list <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/genes_to_KO.txt", header=F)
 
 ```
 
-# GO term annotation
 
 Tengo tablas individuales y las quiero anotar con los GO term correspondientes
 
-
 Lo uno a la tabla de GO term
 
+# 2. Load files
+
+## 2.1. Watterson
+
+### HD_HD_ratio_1_watterson individual
 
 ```{r}
-library("stringr")
-
 wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
 
+# Kirov vs Norway
 
-c_ll_ki_n013_c_ll_no_n008 <- dplyr::inner_join(read.table (paste0(wd,"c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise", sep=""), header = T, stringsAsFactors = F) %>% gsub( "P", "", as.character(.$Gen) n)
-                                               
-                                               gsub("%", "", paste(LOAN$RATE))
-                                                %>%  sub("P1$", "", .$Gen)
-                                                lstrip(., char = "P") %>% head()
-                                               
-                                               
-                                               
-                                               tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson", sep=""), header = T, stringsAsFactors = F) 
 
-c_ll_ki_n013_c_ll_no_n008.gProfile <-  c_ll_ki_n013_c_ll_no_n008 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson$Gen)
 
-c_ll_ki_n013_c_ll_no_n008.gProfile <- c_ll_ki_n013_c_ll_no_n008.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
-write.table(c_ll_ki_n013_c_ll_no_n008.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_no_n008.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+# Kirov vs Poland
 
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson", sep=""), header = T, stringsAsFactors = F) 
 
-######
-c_ll_ki_n013_c_ll_po_n008 <- dplyr::inner_join(read.table (paste0(wd,"list_genes_of_interest_c_ll_ki_n013_c_ll_po_n008_high_diversity_ratio_1_watterson_trimmed.txt", sep="")), tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson$Gen)
+                        
+# Andujar vs Doñana
 
-c_ll_ki_n013_c_ll_po_n008.gProfile<-  c_ll_ki_n013_c_ll_po_n008 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson <- read.table (paste0(wd,"input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson", sep=""), header = T, stringsAsFactors = F) 
 
-c_ll_ki_n013_c_ll_po_n008.gProfile <- c_ll_ki_n013_c_ll_po_n008.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
-write.table(c_ll_ki_n013_c_ll_po_n008.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_po_n008.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
-
-
-######
-
-c_lp_sm_n019_c_lp_do_n012 <- dplyr::inner_join(read.table (paste0(wd,"list_genes_of_interest_c_lp_sm_n019_c_lp_do_n012_high_diversity_ratio_1_watterson_trimmed.txt", sep="")), tabla_all_genes_GO_term_complete_info, by=c("V1"="GENE_NAME")) 
-
-c_lp_sm_n019_c_lp_do_n012.gProfile<-  c_lp_sm_n019_c_lp_do_n012 %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(V1, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
-
-c_lp_sm_n019_c_lp_do_n012.gProfile <- c_lp_sm_n019_c_lp_do_n012.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
-write.table(c_lp_sm_n019_c_lp_do_n012.gProfile, paste0(wd, "c_lp_sm_n019_c_lp_do_n012.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
-
+# Así quito todo lo que venga despues de la última P. 
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson$Gen <- sub("P[^P]+$", "", c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson$Gen)
+ 
 ```
 
-
-
-
-
-
-# Files of interest
+### HD_HD_ratio_1_watterson in common
 
 ```{r}
 
-# Tabla de genes de interes
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson", sep=""), header = T, stringsAsFactors = F) 
 
-# Tenemos 4 listas. 
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson$Gen)
+ 
 
-# 1. Aquellas unidades con ratios mayores de uno  comunes a las tres comparaciones (con dos especies).
-# /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS.txt 
 
-# 2. Aquellas unidades con ratios mayores de uno en la comparación de las dos poblaciones de lynx lynx. 
-# /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_for_venn_lynx_lynx_ratio_above_1_CDS.txt
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson", sep=""), header = T, stringsAsFactors = F) 
 
-# 3. Unidades con un ratio similar a 1 y diversidad alta comunes a las tres comparaciones (con dos especies).
-# /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1.txt
-
-# 4. Unidades con un ratio similar a 1 y diversidad alta en la comparación de las dos poblaciones de lynx lynx. 
-# /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/list_genes_of_interest_lynx_lynx_high_diversity_ratio_1.txt
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson$Gen)
+ 
 
 ```
 
-Voy a procesarla para que esté disponible para que se la trague R más facil
-
-```{bash}
-
-cd /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/
-
-#tail -n+2 list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed_noduplicates.txt
-
-#tail -n+2 list_for_venn_lynx_lynx_ratio_above_1_CDS.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates.txt
-
-tail -n+2 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_trimmed_noduplicates.txt
-
-tail -n+2 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort > list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_trimmed.txt
-
-
-tail -n+2 list_genes_of_interest_lynx_lynx_high_diversity_ratio_1.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_trimmed_noduplicates.txt
-
-tail -n+2 list_genes_of_interest_lynx_lynx_high_diversity_ratio_1.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort > list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_trimmed.txt
-
-
-# Ahora separo los que me han salido con pi y los que me han salido con watterson. 
-
-tail -n+2 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_pairwise.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_pairwise_trimmed_noduplicates.txt
-
-tail -n+2 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort | uniq > list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson_trimmed_noduplicates.txt
-
-tail -n+2 list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort > list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_watterson_trimmed.txt
-
-tail -n+2 list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson.txt | cut -d"_" -f1 | sed 's/.\{2\}$//' | sort > list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson_trimmed.txt
-
-
-```
-
-
-## 1. Aquellas unidades con ratios mayores de uno comunes a las tres comparaciones (con dos especies).
-
-
-
-
-###  Loading my files
+### ND-D individual
 
 ```{r}
-file_input <- "list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed_noduplicates.txt"
-file_input <- "list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed.txt"
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
 
-file_output <- "list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed_noduplicates"
-file_output <- "list_for_venn_lynx_lynx_lynx_pardinus_ratio_above_1_CDS_trimmed"
+# Kirov vs Norway
 
-description <- "Analysis of CDS with a ratio above 1 lynx lynx & lynx pardinus"
+c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson$Gen)
+
+# Kirov vs Poland
+
+c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson$Gen)
+                        
+# Andujar vs Doñana
+
+c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson <- read.table (paste0(wd,"input_data/c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson$Gen <- sub("P[^P]+$", "", c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson$Gen)
+ 
 ```
 
+### ND_D in common
 
 ```{r}
 
-# Genes de interes
-gene_of_interest <- as.data.frame(read.table(paste0(wd, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson", sep=""), header = T, stringsAsFactors = F) 
 
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson$Gen)
+ 
+
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson$Gen)
+ 
+
+```
+
+
+## 2.2. Pairwise
+
+### HD_HD_ratio_1_pairwise individual
+
+```{r}
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
+
+# Kirov vs Norway
+
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise$Gen)
+
+# Kirov vs Poland
+
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise$Gen)
+                        
+# Andujar vs Doñana
+
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise <- read.table (paste0(wd,"input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise$Gen <- sub("P[^P]+$", "", c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise$Gen)
+ 
+```
+
+### HD_HD_ratio_1_pairwise in common
+
+```{r}
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise$Gen)
+ 
+
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise$Gen)
+ 
+
+```
+
+### ND-D individual
+
+```{r}
+# Kirov vs Norway
+
+c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise$Gen)
+
+# Kirov vs Poland
+
+c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise$Gen)
+                        
+# Andujar vs Doñana
+
+c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise <- read.table (paste0(wd,"input_data/c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise$Gen <- sub("P[^P]+$", "", c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise$Gen)
+ 
+```
+
+### ND_D in common
+
+```{r}
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise$Gen)
+ 
+
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise", sep=""), header = T, stringsAsFactors = F) 
+
+# Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise$Gen)
+ 
+
+```
+
+# 3. CYTOSCAPE: GO annotation enrichment map.
+
+En esta sección vamos a preparar los archivos para poder visualizarlos en el enrichment map de cytoscape. Esta manera de visualizarlos, es muy útil pues puedes seleccionar qué archivos están en las tres comparaciones, y colorearlas acorde. Además nos devuelve la descripción, y podemos jugar a encontrar si hay alguna descripción interesante, a pesar de no estar enriched. 
+
+## 3.1 Watterson 
+
+### HD_HD_ratio_1_watterson individual
+
+```{r}
+
+# Kirov vs Norway
+
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile <-  c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile <- c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+
+# Kirov vs Poland
+
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile <-  c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile <- c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+write.table(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+# Andujar vs Doñana
+
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info <- dplyr::inner_join(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile <-  c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile <- c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+write.table(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+```
+
+### HD_HD_ratio_1_watterson in common
+
+Transformación de los archivos con varias poblaciones.
+
+```{r}
+
+# Comparaciones en lynx lynx
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile <-  c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile <- c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+# En principio no lo guardo pq para enrichment map me gusta mas cargar los inviduales y mirarlos en excel: 
+#write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+# Las 3 comparaciones:
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile <-  c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile <- c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+# En principio no lo guardo pq para enrichment map me gusta mas cargar los inviduales y mirarlos en excel: 
+#write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+```
+
+### ND-D individual
+
+```{r}
+
+# Kirov vs Norway
+
+c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson_all_info.gProfile <-  c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson_all_info.gProfile <- c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+write.table(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson_all_info.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+
+# Kirov vs Poland
+
+c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info.gProfile <-  c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+
+c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info.gProfile <- c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+write.table(c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+# Andujar vs Doñana
+
+c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info <- dplyr::inner_join(c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info.gProfile <-  c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info.gProfile <- c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+write.table(c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+```
+
+### ND_D_ratio_1_watterson in common
+
+Transformación de los archivos con varias poblaciones.
+
+```{r}
+
+# Comparaciones en lynx lynx
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info.gProfile <-  c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info.gProfile <- c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+# En principio no lo guardo pq para enrichment map me gusta mas cargar los inviduales y mirarlos en excel: 
+#write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+# Las 3 comparaciones:
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info.gProfile <-  c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info.gProfile <- c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+# En principio no lo guardo pq para enrichment map me gusta mas cargar los inviduales y mirarlos en excel: 
+#write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+```
+## 3.2. Pairwise
+
+### HD_HD_ratio_1_watterson individual
+
+Ahora los voy a preparar para tener archivos de entrada al programa enrichment map. Este programa nos devuelve unas tablas muy cómodas con las que jugar despues. 
+
+```{r}
+
+# Kirov vs Norway
+
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile <-  c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile <- c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+# Kirov vs Poland
+
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile <-  c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile <- c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+write.table(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+# Andujar vs Doñana
+
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info <- dplyr::inner_join(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile <-  c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile <- c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+write.table(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+```
+
+
+### HD_HD_ratio_1_watterson in common
+
+Transformación de los archivos con varias poblaciones.
+
+```{r}
+
+# Comparaciones en lynx lynx
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile <-  c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile <- c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+# En principio no lo guardo pq para enrichment map me gusta mas cargar los inviduales y mirarlos en excel: 
+#write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+# Las 3 comparaciones:
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile <-  c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile <- c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+# En principio no lo guardo pq para enrichment map me gusta mas cargar los inviduales y mirarlos en excel: 
+#write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+```
+
+
+### ND-D individual
+
+```{r}
+
+# Kirov vs Norway
+
+c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise_all_info.gProfile <-  c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise_all_info.gProfile <- c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+write.table(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise_all_info.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+
+# Kirov vs Poland
+
+c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info.gProfile <-  c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+
+c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info.gProfile <- c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+write.table(c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+# Andujar vs Doñana
+
+c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info <- dplyr::inner_join(c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info.gProfile <-  c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info.gProfile <- c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+write.table(c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+```
+
+### ND_D_ratio_1_pairwise in common
+
+Transformación de los archivos con varias poblaciones.
+
+```{r}
+
+# Comparaciones en lynx lynx
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info.gProfile <-  c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info.gProfile <- c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+# En principio no lo guardo pq para enrichment map me gusta mas cargar los inviduales y mirarlos en excel: 
+#write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+# Las 3 comparaciones:
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise,                                             tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) 
+
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info.gProfile <-  c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(Gen, collapse=',')) %>% dplyr::mutate(p.Val=1) %>% dplyr::mutate(FDR=1) %>% dplyr::mutate(Phenotype=1) %>% dplyr::rename(GO.ID=GO_ACC, Description=GO_NAME) 
+
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info.gProfile <- c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info.gProfile[c("GO.ID","Description","p.Val","FDR","Phenotype","Genes")] %>%  drop_na()
+
+# En principio no lo guardo pq para enrichment map me gusta mas cargar los inviduales y mirarlos en excel: 
+#write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info.gProfile, paste0(wd, "c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise_all_info.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+```
+# 4. Reactome input
+
+Guardo para cada archivo una lista de los GO term. 
+```{r}
+
+# Watterson
+
+## Comparaciones_individuales
+
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile[1], paste0(wd, "REACTOME/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.GO_terms.txt"), quote = F, row.names = F, col.names = F, sep = "\t" ) 
+
+write.table(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile[1], paste0(wd, "REACTOME/input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.GO_terms.txt"), quote = F, row.names = F, col.names = F, sep = "\t" ) 
+
+write.table(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile[1], paste0(wd, "REACTOME/input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.GO_terms.txt"), quote = F, row.names = F, col.names = F, sep = "\t" ) 
+
+## Varias comparaciones
+
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile[1], paste0(wd, "REACTOME/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.GO_terms.txt"), quote = F, row.names = F, col.names = F, sep = "\t" ) 
+
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile[1], paste0(wd, "REACTOME/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.GO_terms.txt"), quote = F, row.names = F, col.names = F, sep = "\t" ) 
+
+
+
+# Pairwise
+
+## Comparaciones individuales
+
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile[1], paste0(wd, "REACTOME/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.GO_terms.txt"), quote = F, row.names = F, col.names = F, sep = "\t" ) 
+
+write.table(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile[1], paste0(wd, "REACTOME/input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.GO_terms.txt"), quote = F, row.names = F, col.names = F, sep = "\t" ) 
+
+write.table(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile[1], paste0(wd, "REACTOME/input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.GO_terms.txt"), quote = F, row.names = F, col.names = F, sep = "\t" ) 
+
+## Varias comparaciones
+
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile[1], paste0(wd, "REACTOME/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.GO_terms.txt"), quote = F, row.names = F, col.names = F, sep = "\t" ) 
+
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile[1], paste0(wd, "REACTOME/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.GO_terms.txt"), quote = F, row.names = F, col.names = F, sep = "\t" ) 
+
+
+
+```
+
+# 5. GO term enrichment 
+
+Hago un loop que hace el enrichment sobre todos los dataframe de interes. 
+
+```{r}
+
+DATAFRAMES = list(
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson = c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson = c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson = c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson, 
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise = c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise)
+
+# Corro en bucle los análisis de enrichemnt:
+
+for (i in 1:length(DATAFRAMES)) {
+
+print(names(DATAFRAMES)[i])
+
+# Primero genero la lista Gen_list
 # Lo convierto en tabla y lo proceso para GO analysis.
-gene_of_interest_list <- unlist(gene_of_interest$V1)
-
+gene_of_interest_list <- unlist(DATAFRAMES[[i]]$Gen)
 # Hago una lista con 0 y 1 con los genes que tengo que filtrar
 geneList <- factor(as.integer(geneNames %in% gene_of_interest_list))
-
 # Asigno esa lista a cada gen (pongo header)
 names(geneList) <- as.factor(geneNames)
 
-str(geneList)
+# GO analysis itself
 
-```
-
-###  GO analysis 
-
-```{r}
-
-GOdata <- new("topGOdata", ontology = "BP", description = "Analysis of CDS with a ratio above 1 lynx lynx & lynx pardinus", allGenes = geneList,
-               annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
-
-description (GOdata)
-termStat(GOdata)
-
-test.stat <- new("weight01Count", testStatistic = GOFisherTest, name = "Fisher test")
-resultFisher <- getSigGroups(GOdata, test.stat)
-
-head(score(resultFisher))
-hist(score(resultFisher))
-geneData(resultFisher)
-
-allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=50 )
-
-write.table(allRes, paste0(wd, file_output, "_results_GO.txt"), quote = F, row.names = F)
-
-```
-
-###  Pathway enrichment
-
-
-Intersección con mi archivos de genes de interes
-
-```{r}
-## Uno las dos tablas genes de interes, y KO term. 
-genes_of_interest_KO <- inner_join(genes_to_KO.list, gene_of_interest) %>%  distinct(V1,V2, .keep_all = TRUE)
-write.table(genes_of_interest_KO$V2, paste0(wd, file_output, "_results_KO.txt"), quote = F, row.names = F, col.names = F)
-
-```
-
-
-
-## 2. Aquellas unidades con ratios mayores de uno en la comparación de las dos poblaciones de lynx lynx. 
-
-
-### Loading my files
-
-```{r}
-file_input <- "list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates.txt"
-file_output <- "list_for_venn_lynx_lynx_ratio_above_1_CDS_trimmed_noduplicates"
-description <- "Analysis of CDS with a ratio above 1 lynx lynx"
-
-```
-
-
-
-```{r}
-
-# Genes de interes
-
-gene_of_interest <- as.data.frame(read.table(paste0(wd, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
-
-
-# Lo convierto en tabla y lo proceso para GO analysis.
-gene_of_interest_list <- unlist(gene_of_interest$V1)
-
-# Hago una lista con 0 y 1 con los genes que tengo que filtrar
-geneList <- factor(as.integer(geneNames %in% gene_of_interest_list))
-
-# Asigno esa lista a cada gen (pongo header)
-names(geneList) <- as.factor(geneNames)
-
-str(geneList)
-
-```
-
-### GO analysis 
-
-```{r}
-
+# Puedes cambiar ontology y poner BP (biological process), CC (celular component), or MF (molecular function). 
 GOdata <- new("topGOdata", ontology = "BP", description = description, allGenes = geneList,
                annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
-
-description (GOdata)
-termStat(GOdata)
-
+# description (GOdata)
+# termStat(GOdata)
 test.stat <- new("weight01Count", testStatistic = GOFisherTest, name = "Fisher test")
 resultFisher <- getSigGroups(GOdata, test.stat)
+# head(score(resultFisher))
+# hist(score(resultFisher))
+# geneData(resultFisher)
+allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=150, numChar=300 )
 
-head(score(resultFisher))
-hist(score(resultFisher))
-geneData(resultFisher)
+# Guardo los resultados con el nombre del dataframe
+write.table(allRes, paste0(wd, "topGO/results/", names(DATAFRAMES)[i], "_results_GO_enrichment_BP.txt"), quote = F, row.names = F)
 
-allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=50 )
+rm(list = c('gene_of_interest_list','geneList','GOdata','test.stat','resultFisher','allRes'))
 
-write.table(allRes, paste0(wd, file_output, "_results_GO.txt"), quote = F, row.names = F)
-
-```
-
-###  Pathway enrichment
-
-
-Intersección con mi archivos de genes de interes
-
-```{r}
-## Uno las dos tablas genes de interes, y KO term. 
-genes_of_interest_KO <- inner_join(genes_to_KO.list, gene_of_interest) %>%  distinct(V1,V2, .keep_all = TRUE)
-write.table(genes_of_interest_KO$V2, paste0(wd, file_output, "_results_KO.txt"), quote = F, row.names = F, col.names = F)
-
+ }
 ```
 
 
-## 3. Aquellas unidades con ratios ~1 y diversidad en las tres comparaciones
+## Otras notas
 
-### Watterson:
+From REACTOME paper
 
-#### Loading my files
+The Kyoto Encyclopedia of Genes and Genomes, or KEGG (Kanehisa et al., 2004) features an extensive set of biological pathway charts. Like HumanCyc, KEGG focuses on intermediate metabolism rather than higher-level pathways. Its data model differs fundamentally from Reactome’s by representing the motivating force of all reactions in the form of catalyst activities via Enzyme Commission EC numbers. Because there is not a one-to-one mapping between EC activity and polypeptide, it can be problematic to relate a protein represented in SwissProt to a reaction represented in KEGG.
 
-```{r}
-#file_input <- "list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_trimmed_noduplicates.txt"
-file_input <- "list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson_trimmed_noduplicates.txt"
-#file_output <- "list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_trimmed_noduplicates"
-file_output <- "list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_watterson_trimmed_noduplicates"
+-- Otros:
 
-description <- "Analysis of CDS with a ratio over 1 and high Watterson diversity lynx lynx & lynx pardinus"
+I think that there is some confusion in this thread.
 
-```
+1. There is the Gene Ontology.  Its terms are used (primarily)
+for the annotation of gene products.  Both the Ontology and the
+annotations contributed by the members of the GO Consortium database
+are available from the GO site.
 
+2. There is the KEGG Orthology, available from the KEGG site.
+This is _both_ an ontology, seen, for example, by
+opening KO up to its 3rd level: http://www.genome.ad.jp/dbget-bin/get_htext?KO+-s+F+-f+F+C
+_and_ annotations of classes of gene product, seen if it is opened up
+to level 4:
+http://www.genome.ad.jp/dbget-bin/get_htext?KO+-s+F+-f+F+D
 
-```{r}
-
-# Genes de interes
-gene_of_interest <- as.data.frame(read.table(paste0(wd, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
-
-# Lo convierto en tabla y lo proceso para GO analysis.
-gene_of_interest_list <- unlist(gene_of_interest$V1)
-
-# Hago una lista con 0 y 1 con los genes que tengo que filtrar
-geneList <- factor(as.integer(geneNames %in% gene_of_interest_list))
-
-# Asigno esa lista a cada gen (pongo header)
-names(geneList) <- as.factor(geneNames)
-
-str(geneList)
-
-```
-
-#### GO analysis 
-
-```{r}
-# Puedes cambiar ontology y poner BP (biological process), CC (celular component), or MF (molecular function). Cambia el nombre del archivo como se guarda. 
-
-GOdata <- new("topGOdata", ontology = "CC", description = description, allGenes = geneList,
-               annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
-
-description (GOdata)
-termStat(GOdata)
-
-test.stat <- new("weight01Count", testStatistic = GOFisherTest, name = "Fisher test")
-resultFisher <- getSigGroups(GOdata, test.stat)
-
-head(score(resultFisher))
-hist(score(resultFisher))
-geneData(resultFisher)
-
-allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=50, numChar=300 )
-
-write.table(allRes, paste0(wd, file_output, "_results_GO_CC_Watterson.txt"), quote = F, row.names = F)
-
-```
-
-###  Pathway enrichment
-
-
-Intersección con mi archivos de genes de interes
-
-```{r}
-## Uno las dos tablas genes de interes, y KO term. 
-genes_of_interest_KO <- inner_join(genes_to_KO.list, gene_of_interest) %>%  distinct(V1,V2, .keep_all = TRUE)
-write.table(genes_of_interest_KO$V2, paste0(wd, file_output, "_results_KO_Watterson.txt"), quote = F, row.names = F, col.names = F)
-
-```
-
-### Pi:
-
-#### Loading my files
-
-```{r}
-#file_input <- "list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_trimmed_noduplicates.txt"
-file_input <- "list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_pairwise_trimmed_noduplicates.txt"
-#file_output <- "list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_trimmed_noduplicates"
-file_output <- "list_genes_of_interest_lynx_lynx_lynx_pardinus_high_diversity_ratio_1_pairwise_trimmed_noduplicates"
-
-description <- "Analysis of CDS with a ratio over 1 and high Pi diversity lynx lynx & lynx pardinus"
-
-```
-
-
-```{r}
-
-# Genes de interes
-gene_of_interest <- as.data.frame(read.table(paste0(wd, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
-
-# Lo convierto en tabla y lo proceso para GO analysis.
-gene_of_interest_list <- unlist(gene_of_interest$V1)
-
-# Hago una lista con 0 y 1 con los genes que tengo que filtrar
-geneList <- factor(as.integer(geneNames %in% gene_of_interest_list))
-
-# Asigno esa lista a cada gen (pongo header)
-names(geneList) <- as.factor(geneNames)
-
-str(geneList)
-
-```
-
-#### GO analysis 
-
-```{r}
-# Puedes cambiar ontology y poner BP (biological process), CC (celular component), or MF (molecular function). Cambia el nombre del archivo como se guarda. 
-
-GOdata <- new("topGOdata", ontology = "MF", description = description, allGenes = geneList,
-               annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
-
-description (GOdata)
-termStat(GOdata)
-
-test.stat <- new("weight01Count", testStatistic = GOFisherTest, name = "Fisher test")
-resultFisher <- getSigGroups(GOdata, test.stat)
-
-head(score(resultFisher))
-hist(score(resultFisher))
-geneData(resultFisher)
-
-allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=50, numChar=300 )
-
-write.table(allRes, paste0(wd, file_output, "_results_GO_MF_Pairwise.txt"), quote = F, row.names = F)
-
-```
-
-###  Pathway enrichment
-
-
-Intersección con mi archivos de genes de interes
-
-```{r}
-## Uno las dos tablas genes de interes, y KO term. 
-genes_of_interest_KO <- inner_join(genes_to_KO.list, gene_of_interest) %>%  distinct(V1,V2, .keep_all = TRUE)
-write.table(genes_of_interest_KO$V2, paste0(wd, file_output, "_results_KO_Pairwise.txt"), quote = F, row.names = F, col.names = F)
-
-```
-
-
-## 4. Aquellas unidades con ratios ~1 en la comparación de las dos poblaciones de lynx lynx. 
-
-
-### Loading my files
-
-```{r}
-file_input <- "list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_trimmed_noduplicates.txt"
-file_output <- "list_genes_of_interest_lynx_lynx_high_diversity_ratio_1_trimmed_noduplicates"
-description <- "Analysis of CDS with a ratio over 1 and high diversity lynx lynx"
-
-```
-
-
-```{r}
-
-# Genes de interes
-gene_of_interest <- as.data.frame(read.table(paste0(wd, file_input), header=F)) %>% mutate (V1=as.character(V1)) 
-
-
-# Lo convierto en tabla y lo proceso para GO analysis.
-gene_of_interest_list <- unlist(gene_of_interest$V1)
-
-# Hago una lista con 0 y 1 con los genes que tengo que filtrar
-geneList <- factor(as.integer(geneNames %in% gene_of_interest_list))
-
-# Asigno esa lista a cada gen (pongo header)
-names(geneList) <- as.factor(geneNames)
-
-str(geneList)
-
-```
-
-### GO analysis 
-
-```{r}
-
-GOdata <- new("topGOdata", ontology = "BP", description = description, allGenes = geneList,
-               annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
-
-description (GOdata)
-termStat(GOdata)
-
-test.stat <- new("weight01Count", testStatistic = GOFisherTest, name = "Fisher test")
-resultFisher <- getSigGroups(GOdata, test.stat)
-
-head(score(resultFisher))
-hist(score(resultFisher))
-geneData(resultFisher)
-
-allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=50, numChar=300 )
-
-write.table(allRes, paste0(wd, file_output, "_results_GO_BP.txt"), quote = F, row.names = F)
-
-```
-
-
-###  Pathway enrichment
-
-
-Intersección con mi archivos de genes de interes
-
-```{r}
-## Uno las dos tablas genes de interes, y KO term. 
-genes_of_interest_KO <- inner_join(genes_to_KO.list, gene_of_interest) %>%  distinct(V1,V2, .keep_all = TRUE)
-write.table(genes_of_interest_KO$V2, paste0(wd, file_output, "_results_KO.txt"), quote = F, row.names = F, col.names = F)
-
-```
 
 
 
