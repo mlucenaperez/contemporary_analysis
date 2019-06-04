@@ -4066,6 +4066,61 @@ for (DATAFRAME in DATAFRAMES)
 
 ```
 
+### Delta vs recombination
+
+```{r}
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+for (DATAFRAME in DATAFRAMES) 
+{
+  
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+
+    # RECOMBINATION WATTERSON
+  
+    ggplot (get(DATAFRAME), aes(x=recombination_rate, y=delta_watterson_average_normalized_zero)) +
+    geom_point() +
+    ggsave (paste(wd_output,POP1,"_",POP2, "_recombination_vs_delta_zero_watterson.pdf", sep=""))
+  
+     # DIVERGENCE WATTERSON
+  
+    ggplot (get(DATAFRAME), aes(x=divergence, y=delta_watterson_average_normalized_zero)) +
+    geom_point() +
+    ggsave (paste(wd_output,POP1,"_",POP2, "_divergence_vs_delta_zero_watterson.pdf", sep=""))
+
+     # GC_CONTENT WATTERSON
+  
+    ggplot (get(DATAFRAME), aes(x=GC_content, y=delta_watterson_average_normalized_zero)) +
+    geom_point() +
+    ggsave (paste(wd_output,POP1,"_",POP2, "_GC_content_vs_delta_zero_watterson.pdf", sep=""))
+    
+    # RECOMBINATION pairwise
+  
+    ggplot (get(DATAFRAME), aes(x=recombination_rate, y=delta_pairwise_average_normalized_zero)) +
+    geom_point() +
+    ggsave (paste(wd_output,POP1,"_",POP2, "_recombination_vs_delta_zero_pairwise.pdf", sep=""))
+  
+     # DIVERGENCE pairwise
+  
+    ggplot (get(DATAFRAME), aes(x=divergence, y=delta_pairwise_average_normalized_zero)) +
+    geom_point() +
+    ggsave (paste(wd_output,POP1,"_",POP2, "_divergence_vs_delta_zero_pairwise.pdf", sep=""))
+
+     # GC_CONTENT pairwise
+  
+    ggplot (get(DATAFRAME), aes(x=GC_content, y=delta_pairwise_average_normalized_zero)) +
+    geom_point() +
+    ggsave (paste(wd_output,POP1,"_",POP2, "_GC_content_vs_delta_zero_pairwise.pdf", sep=""))
+
+
+}
+  
+```
+
+
+
 
 ### Stats de los ratios. --> No lo corro
 
@@ -4109,7 +4164,7 @@ stats_data_diversity_c_lp_sm_n019_autosomes_diversity_c_lp_do_n012_autosomes_div
 ```
 
 
-### Bootstraping
+### Bootstraping --> No lo corro
 
 Hago un boot de la media de los ratios per unit. 
 
@@ -7632,12 +7687,24 @@ for(i in DATAFRAMES){
 
 ### GAM
 
+
+```{r}
+data_set_yedra <- data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity %>% filter (!is.na(delta_pairwise_average_normalized_zero)) %>% .[sample(1:nrow(.), 2500, replace=FALSE),] %>% select ("scaffold", "start_cero_based", "end", "recombination_rate", "divergence", "GC_content","feature", "delta_pairwise_average_normalized_zero") %>% arrange(., scaffold, start_cero_based) 
+
+write.csv(data_set_yedra, "/Users/marialucenaperez/Desktop/DATAFRAME_test_Maria.csv",row.names = F, quote = F)
+
+```
+
+https://noamross.github.io/gams-in-r-course/chapter1
+
 ```{r}
 require(gam)
 require(ISLR)
 attach(Wage)
 require("mgcv")
 
+
+data_set_yedra <- read.table("/Users/marialucenaperez/Desktop/DATAFRAME_test_Maria.csv", header=T, sep=",")
 gam1<-gam(wage~s(age,df=6)+s(year,df=6)+education ,data = Wage)
 #in the above function s() is the shorthand for fitting smoothing splines 
 #in gam() function
@@ -7648,39 +7715,153 @@ par(mfrow=c(1,3)) #to partition the Plotting Window
 plot(gam1,se = TRUE) 
 #se stands for standard error Bands
 
-hist(log(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity$ratio_watterson_average), breaks=30, col="red")
-hist(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity$ratio_watterson_average_corrected, breaks=30, col="red")
-
-gam1<-gam(log(ratio_watterson_average)~+s(length)+chr+feature+divergence+recombination_rate,data = data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity, method = "REML")
+gam1<-gam(delta_pairwise_average_normalized_zero~+s(recombination_rate),data = data_set_yedra)
+# When fitting a GAM, use the syntax y ~ s(x) in the model formula to indicate that y should be a smooth, non-linear function of x.
 #in the above function s() is the shorthand for fitting smoothing splines 
 #in gam() function
+
 summary(gam1)
 
 par(mfrow=c(3,3)) #to partition the Plotting Window
 gam.check(gam1)
-
+# Extract the model coefficients
+coef(gam1)
 
 #Plotting the Model
 par(mfrow=c(1,3)) #to partition the Plotting Window
-plot(gam1,se = TRUE) 
+plot(gam1,se = TRUE,residuals = TRUE, pch = 1) 
 #se stands for standard error Bands
 
+gam2<-gam(delta_pairwise_average_normalized_zero~+s(recombination_rate, k = 3) ,data = data_set_yedra)
+plot(gam2,se = TRUE,residuals = TRUE, pch = 1) 
+
+gam3<-gam(delta_pairwise_average_normalized_zero~+s(recombination_rate, k = 20) ,data = data_set_yedra)
+plot(gam3,se = TRUE,residuals = TRUE, pch = 1) 
 
 
-
-ki.po.model_iteraction <- lmer (ratio_corrected_by_watterson_average_intergenic_per_unit ~ feature * recombination_rate.y * chr + ( 1 | unique_id ), data=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity, REML=FALSE)
-
-r.squaredGLMM(ki.po.model_iteraction)
-
-ggplot(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity, aes(ratio_corrected_by_watterson_average_intergenic_per_unit)) +
-  geom_density()
+gam4<-gam(delta_pairwise_average_normalized_zero~+s(recombination_rate) ,data = data_set_yedra, sp = 0.1)
+plot(gam4,se = TRUE,residuals = TRUE, pch = 1) 
 
 
-d <- density(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity$ratio_corrected_by_watterson_average_intergenic_per_unit) # returns the density data 
-plot(d)
+gam5<-gam(delta_pairwise_average_normalized_zero~+s(recombination_rate) ,data = data_set_yedra, sp = 0.0001)
+plot(gam5,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam6<-gam(delta_pairwise_average_normalized_zero~+s(recombination_rate, k=) ,data = data_set_yedra, sp = 0.1)
+plot(gam6,se = TRUE,residuals = TRUE, pch = 1) 
 
 
 ```
+#### Divergencia
+
+```{r}
+gam1<-gam(delta_pairwise_average_normalized_zero~+s(divergence),data = data_set_yedra)
+# When fitting a GAM, use the syntax y ~ s(x) in the model formula to indicate that y should be a smooth, non-linear function of x.
+#in the above function s() is the shorthand for fitting smoothing splines 
+#in gam() function
+
+summary(gam1)
+
+
+# Extract the model coefficients
+coef(gam1)
+
+#Plotting the Model
+par(mfrow=c(1,3)) #to partition the Plotting Window
+plot(gam1,se = TRUE,residuals = TRUE, pch = 1) 
+#se stands for standard error Bands
+
+gam2<-gam(delta_pairwise_average_normalized_zero~+s(divergence, k = 3) ,data = data_set_yedra)
+plot(gam2,se = TRUE,residuals = TRUE, pch = 1) 
+
+gam3<-gam(delta_pairwise_average_normalized_zero~+s(divergence, k = 20) ,data = data_set_yedra)
+plot(gam3,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam4<-gam(delta_pairwise_average_normalized_zero~+s(divergence) ,data = data_set_yedra, sp = 0.1)
+plot(gam4,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam5<-gam(delta_pairwise_average_normalized_zero~+s(divergence) ,data = data_set_yedra, sp = 0.0001)
+plot(gam5,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam6<-gam(delta_pairwise_average_normalized_zero~+s(divergence, k=) ,data = data_set_yedra, sp = 0.1)
+plot(gam6,se = TRUE,residuals = TRUE, pch = 1) 
+
+```
+#### GC_content
+
+```{r}
+gam1<-gam(delta_pairwise_average_normalized_zero~+s(GC_content),data = data_set_yedra)
+# When fitting a GAM, use the syntax y ~ s(x) in the model formula to indicate that y should be a smooth, non-linear function of x.
+#in the above function s() is the shorthand for fitting smoothing splines 
+#in gam() function
+
+summary(gam1)
+
+
+# Extract the model coefficients
+coef(gam1)
+
+#Plotting the Model
+par(mfrow=c(1,3)) #to partition the Plotting Window
+plot(gam1,se = TRUE,residuals = TRUE, pch = 1) 
+#se stands for standard error Bands
+
+gam2<-gam(delta_pairwise_average_normalized_zero~+s(GC_content, k = 3) ,data = data_set_yedra)
+plot(gam2,se = TRUE,residuals = TRUE, pch = 1) 
+
+gam3<-gam(delta_pairwise_average_normalized_zero~+s(GC_content, k = 20) ,data = data_set_yedra)
+plot(gam3,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam4<-gam(delta_pairwise_average_normalized_zero~+s(GC_content) ,data = data_set_yedra, sp = 0.1)
+plot(gam4,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam5<-gam(delta_pairwise_average_normalized_zero~+s(GC_content) ,data = data_set_yedra, sp = 0.0001)
+plot(gam5,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam6<-gam(delta_pairwise_average_normalized_zero~+s(GC_content, k=) ,data = data_set_yedra, sp = 0.1)
+plot(gam6,se = TRUE,residuals = TRUE, pch = 1) 
+
+```
+
+#### Multivariate
+
+```{r}
+
+gam1<-gam(delta_pairwise_average_normalized_zero ~ s(recombination_rate) +s (divergence) +s (GC_content) ,data = (data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity %>% filter(delta_pairwise_average_normalized_zero!=-1 & delta_pairwise_average_normalized_zero!=1)), method = "REML")
+# When fitting a GAM, use the syntax y ~ s(x) in the model formula to indicate that y should be a smooth, non-linear function of x.
+#in the above function s() is the shorthand for fitting smoothing splines 
+#in gam() function
+
+gam1<-gam(delta_pairwise_average_normalized_zero ~ s(recombination_rate) +s (divergence) +s (GC_content) ,data = data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity , method = "REML")
+
+
+summary(gam1)
+
+
+# Extract the model coefficients
+coef(gam1)
+cols <- sample(c("red","green","pink"),100,TRUE)
+
+
+#Plotting the Model
+par(mfrow=c(3,1)) #to partition the Plotting Window
+plot(gam1,se = TRUE,residuals = F, pch=19, cex=0.75, scheme=1, shade=T,shade.col='gray90')
+
+
+
+
+```
+
+
+# Conclusión GAM
+
+No se ve un patrón claro, y no se nos ocurren trasnformaciones que solucionen este tema. Así que dejamos lo de los modelos agotado por el momento. 
 
 
 ## Modelo mixto generalizado
