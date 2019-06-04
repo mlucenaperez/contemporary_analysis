@@ -49,13 +49,13 @@ wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_term
 
 # Tabla con la información de GO term para cada gen.
 
-tabla_all_genes_GO_term_complete_info <- read.table (paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes_minor_modif.txt"), sep="\t", header = T) %>% mutate (GO_ACC=as.character(GO_ACC)) %>% filter(GO_TYPE=="biological_process") %>% dplyr::select (-"GO_TYPE")
+tabla_all_genes_GO_term_complete_info <- read.table (paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes_minor_modif.txt"), sep="\t", header = T) %>% mutate (GO_ACC=as.character(GO_ACC))
 # El minor_modif tiene ' cambiadas por empty space pq si no R entiende que es un string. 
 
 
 ## Modifo el archivo para poder generar un gmt con los nombres de cada GO term, su descripción, y a que genes va asociado. 
 # Este archivo lo vamos a necesitar para cargar los datos en CYTOSCAPE. 
-tabla_all_genes_GO_term_complete_info_modif <- tabla_all_genes_GO_term_complete_info %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(GENE_NAME, collapse=','))  
+tabla_all_genes_GO_term_complete_info_modif <- tabla_all_genes_GO_term_complete_info %>% dplyr::select (-"GO_TYPE") %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(GENE_NAME, collapse=','))  
 
 # Guardo la tabla
 write.table(tabla_all_genes_GO_term_complete_info_modif, paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes_modif.NAMES.gmt"), quote = F, row.names = F, col.names = F, sep = "\t" )
@@ -325,7 +325,9 @@ c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_li
 
 ```
 
-# 3. CYTOSCAPE: GO annotation enrichment map.
+# 3. CYTOSCAPE: ALL GENES:
+
+GO annotation enrichment map.
 
 En esta sección vamos a preparar los archivos para poder visualizarlos en el enrichment map de cytoscape. Esta manera de visualizarlos, es muy útil pues puedes seleccionar qué archivos están en las tres comparaciones, y colorearlas acorde. Además nos devuelve la descripción, y podemos jugar a encontrar si hay alguna descripción interesante, a pesar de no estar enriched. 
 
@@ -653,6 +655,7 @@ c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson = c_ll_ki_n013_c_l
 c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise = c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise)
 
 # Corro en bucle los análisis de enrichemnt:
+## Biological procces
 
 for (i in 1:length(DATAFRAMES)) {
 
@@ -669,7 +672,7 @@ names(geneList) <- as.factor(geneNames)
 # GO analysis itself
 
 # Puedes cambiar ontology y poner BP (biological process), CC (celular component), or MF (molecular function). 
-GOdata <- new("topGOdata", ontology = "BP", description = description, allGenes = geneList,
+GOdata <- new("topGOdata", ontology = "BP", description = names(DATAFRAMES)[i], allGenes = geneList,
                annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
 # description (GOdata)
 # termStat(GOdata)
@@ -681,11 +684,142 @@ resultFisher <- getSigGroups(GOdata, test.stat)
 allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=150, numChar=300 )
 
 # Guardo los resultados con el nombre del dataframe
-write.table(allRes, paste0(wd, "topGO/results/", names(DATAFRAMES)[i], "_results_GO_enrichment_BP.txt"), quote = F, row.names = F)
+name=names(DATAFRAMES)[i]
+assign(paste0(name, "_GO_term_enrichment_BP"), allRes )
+
+write.table(allRes, paste0(wd, "topGO/results/", name, "_results_GO_enrichment_BP.txt"), quote = F, row.names = F)
 
 rm(list = c('gene_of_interest_list','geneList','GOdata','test.stat','resultFisher','allRes'))
 
- }
+}
+
+
+## Celular component
+
+for (i in 1:length(DATAFRAMES)) {
+
+print(names(DATAFRAMES)[i])
+
+# Primero genero la lista Gen_list
+# Lo convierto en tabla y lo proceso para GO analysis.
+gene_of_interest_list <- unlist(DATAFRAMES[[i]]$Gen)
+# Hago una lista con 0 y 1 con los genes que tengo que filtrar
+geneList <- factor(as.integer(geneNames %in% gene_of_interest_list))
+# Asigno esa lista a cada gen (pongo header)
+names(geneList) <- as.factor(geneNames)
+
+# GO analysis itself
+name=names(DATAFRAMES)[i]
+
+# Puedes cambiar ontology y poner BP (biological process), CC (celular component), or MF (molecular function). 
+GOdata <- new("topGOdata", ontology ='CC', description = "kk", allGenes = geneList,
+               annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
+# description (GOdata)
+# termStat(GOdata)
+test.stat <- new("weight01Count", testStatistic = GOFisherTest, name = "Fisher test")
+resultFisher <- getSigGroups(GOdata, test.stat)
+# head(score(resultFisher))
+# hist(score(resultFisher))
+# geneData(resultFisher)
+allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=150, numChar=300 )
+
+# Guardo los resultados con el nombre del dataframe
+assign(paste0(name, "_GO_term_enrichment_CC"), allRes )
+
+write.table(allRes, paste0(wd, "topGO/results/", name, "_results_GO_enrichment_CC.txt"), quote = F, row.names = F)
+
+rm(list = c('gene_of_interest_list','geneList','GOdata','test.stat','resultFisher','allRes'))
+
+}
+
+
+## Molecular funtion
+
+for (i in 1:length(DATAFRAMES)) {
+
+print(names(DATAFRAMES)[i])
+
+# Primero genero la lista Gen_list
+# Lo convierto en tabla y lo proceso para GO analysis.
+gene_of_interest_list <- unlist(DATAFRAMES[[i]]$Gen)
+# Hago una lista con 0 y 1 con los genes que tengo que filtrar
+geneList <- factor(as.integer(geneNames %in% gene_of_interest_list))
+# Asigno esa lista a cada gen (pongo header)
+names(geneList) <- as.factor(geneNames)
+
+# GO analysis itself
+name=names(DATAFRAMES)[i]
+
+# Puedes cambiar ontology y poner BP (biological process), CC (celular component), or MF (molecular function). 
+GOdata <- new("topGOdata", ontology ='MF', description = "kk", allGenes = geneList,
+               annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
+# description (GOdata)
+# termStat(GOdata)
+test.stat <- new("weight01Count", testStatistic = GOFisherTest, name = "Fisher test")
+resultFisher <- getSigGroups(GOdata, test.stat)
+# head(score(resultFisher))
+# hist(score(resultFisher))
+# geneData(resultFisher)
+allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=150, numChar=300 )
+
+# Guardo los resultados con el nombre del dataframe
+assign(paste0(name, "_GO_term_enrichment_MF"), allRes )
+
+write.table(allRes, paste0(wd, "topGO/results/", name, "_results_GO_enrichment_MF.txt"), quote = F, row.names = F)
+
+rm(list = c('gene_of_interest_list','geneList','GOdata','test.stat','resultFisher','allRes'))
+
+}
+
+
+```
+
+## 5.1 GO term in common
+
+
+```{r}
+# Ahora seleccionamos los GO term que están enriched en varios dataset.
+
+
+c_ll_ki_n013_c_ll_no_n008_pairwise_PLUS_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_results_GO_enrichment_BP <- dplyr::inner_join (c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, by=c("GO.ID","Term")) 
+# %>% filter(., weighted01.x<0.05 ) %>% filter(., weighted01.y<0.05 ) 
+
+
+write.table(c_ll_ki_n013_c_ll_no_n008_pairwise_PLUS_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_results_GO_enrichment_BP, paste0(wd, "topGO/results/c_ll_ki_n013_c_ll_no_n008_pairwise_PLUS_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_results_GO_enrichment_BP.txt", sep=""), quote = T, row.names = F)
+
+
+
+c_ll_ki_n013_c_ll_no_n008_PLUS_c_ll_ki_n013_c_ll_po_n008_PLUS_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term <- dplyr::inner_join (c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, by=c("GO.ID","Term")) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, by=c("GO.ID","Term")) 
+# %>% filter(., weighted01<0.05 ) %>% filter(., weighted01.x<0.05 ) %>% filter(., weighted01.y<0.05 ) 
+
+write.table(c_ll_ki_n013_c_ll_no_n008_PLUS_c_ll_ki_n013_c_ll_po_n008_PLUS_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, paste0(wd, "topGO/results/c_ll_ki_n013_c_ll_no_n008_PLUS_c_ll_ki_n013_c_ll_po_n008_PLUS_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term.txt", sep=""), quote = T, row.names = F)
+
+
+
+
+```
+
+# 6. CYTOSCAPE GO enriched!
+
+Ahora voy a genera los archivos necesarios para correr CYTOSCAPE usando los p valores del enrichment test. 
+
+```{r}
+# Uno la tabla con nuestro p valores a la tabla que ya habiamos construido usando nuestros genes con los GO term a los que se asocian. 
+
+# c_ll_ki vs c_ll_no
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile <- rbind (c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_CC, c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_MF) %>%  inner_join(., as.data.frame(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile), by=c("GO.ID"="GO.ID", "Term"="Description")) %>% dplyr::select( GO.ID, Description=Term, p.Val=weighted01, FDR, Phenotype, Genes)
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+# c_ll_ki vs c_ll_po
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile <- rbind (c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_CC, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_MF) %>%  inner_join(., as.data.frame(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile), by=c("GO.ID"="GO.ID", "Term"="Description")) %>% dplyr::select( GO.ID, Description=Term, p.Val=weighted01, FDR, Phenotype, Genes)
+write.table(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+
+# c_lp_sm vs c_lp_do
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment <- rbind (c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_CC, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_MF) %>%  inner_join(., as.data.frame(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile), by=c("GO.ID"="GO.ID", "Term"="Description")) %>% dplyr::select( GO.ID, Description=Term, p.Val=weighted01, FDR, Phenotype, Genes)
+write.table(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+
+
 ```
 
 
@@ -696,8 +830,6 @@ From REACTOME paper
 The Kyoto Encyclopedia of Genes and Genomes, or KEGG (Kanehisa et al., 2004) features an extensive set of biological pathway charts. Like HumanCyc, KEGG focuses on intermediate metabolism rather than higher-level pathways. Its data model differs fundamentally from Reactome’s by representing the motivating force of all reactions in the form of catalyst activities via Enzyme Commission EC numbers. Because there is not a one-to-one mapping between EC activity and polypeptide, it can be problematic to relate a protein represented in SwissProt to a reaction represented in KEGG.
 
 -- Otros:
-
-I think that there is some confusion in this thread.
 
 1. There is the Gene Ontology.  Its terms are used (primarily)
 for the annotation of gene products.  Both the Ontology and the
