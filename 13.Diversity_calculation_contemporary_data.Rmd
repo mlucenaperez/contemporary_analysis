@@ -39,6 +39,7 @@ for (pop in poplist)
   
   for (file_for_given_pop in files_for_given_pop)
   {
+    message (file_for_given_pop)
     # if the merged dataset doesn't exist, create it
     if (!exists("dataset"))
     {
@@ -49,7 +50,7 @@ for (pop in poplist)
     if (exists("dataset"))
     {
       temp_dataset <-read.table(paste(wd_in,file_for_given_pop, sep=""), header=TRUE, sep="\t", na.strings = c("NA", "na"))
-      dataset<-full_join(dataset, temp_dataset, by = c("scaffold", "start_cero_based", "end", "length", "NAs", "informative_sites", "feature", "strandness", "frame", "id_gene", "id", "watterson_ave", "watterson_sd", "pairwise_ave", "pairwise_sd", "tajimaD", "pop", "specie", "epoch"))   
+      dataset <- dplyr::full_join(dataset, temp_dataset, by = c("scaffold", "start_cero_based", "end", "length", "NAs", "informative_sites", "feature", "strandness", "frame", "id_gene", "id", "watterson_ave", "watterson_sd", "pairwise_ave", "pairwise_sd", "tajimaD", "pop", "specie", "epoch"))   
       rm(temp_dataset)
       assign(pop, dataset) # Con esto quiero ponerle el nombre de la población a la dataframe. 
     }
@@ -70,7 +71,7 @@ data_diversity_raw <-rbind(c_ll_ki_n013,c_ll_po_n008,c_ll_no_n008,c_lp_sm_n019,c
             tajimaD = as.numeric(gsub("\\*10\\^","e",tajimaD)))
 
 
-# write.table (data_diversity_raw, paste(wd_out, "global.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+write.table (data_diversity_raw, paste(wd_out, "global.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 # write.table (c_ll_ki_n013, paste(wd_out, "c_ll_ki_n013.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 # write.table (c_ll_ki_n008, paste(wd_out, "c_ll_ki_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 # write.table (c_ll_no_n008, paste(wd_out, "c_ll_no_n008.per.unit.averages.chr.all.regions.tsv", sep=""), row.names = F, quote = F, sep = '\t')
@@ -779,6 +780,7 @@ diversity_stats_pop <- function(diversity_df)
 {
   diversity_stats_df <- 
              diversity_df %>% 
+    # Esto zero - zero lo calculo para luego poder sacar el 95% de la distribución par los GO term de interes. 
              mutate(watterson_zero_zero=ifelse(watterson_zero==0, NA,watterson_zero)) %>% 
              mutate(pairwise_zero_zero=ifelse(pairwise_zero==0, NA,pairwise_zero)) %>% 
              dplyr::group_by(pop) %>%
@@ -4128,7 +4130,6 @@ No lo corro pq no tiene mucho sentido hacer la media de los ratios per unit, má
 
 ```{r}
 library("Hmisc")
-library(modeest)
 
 
 
@@ -4759,32 +4760,32 @@ for (DATAFRAME in DATAFRAMES)
   
   
 ######
-  # Aqui categorizo las unidades que tienen diversidad y ni pierden ni ganan diversidad (D-D), las unidades que tiene no diversidad en la non-bottleneck pero ganan en la bottleneck (ND-D ), las que tienen alta diversidad en la non bottleneck pero baja en la bottleneck (D-ND), y las que no tienen diversidad en ambas (ND-ND). 
+  # Aqui categorizo las unidades que tienen diversidad y ni pierden ni ganan diversidad (D_D), las unidades que tiene no diversidad en la non-bottleneck pero ganan en la bottleneck (ND_D ), las que tienen alta diversidad en la non bottleneck pero baja en la bottleneck (D_ND), y las que no tienen diversidad en ambas (ND_ND). 
 
   data_diversity_categories_watterson <- get(DATAFRAME) %>% 
   mutate (evolution_category=
-            ifelse (log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson, "D-D_watterson",
-            ifelse (log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)<min_bootleneck_pop_value_watterson, "ND-D_watterson",
-            ifelse (log10(watterson_ave.x)<min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)<min_bootleneck_pop_value_watterson, "ND-ND_watterson",
-            ifelse (log10(watterson_ave.x)<min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson, "D-ND_watterson",NA))))) %>% 
+            ifelse (log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson, "D_D_watterson",
+            ifelse (log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)<min_bootleneck_pop_value_watterson, "D_ND_watterson",
+            ifelse (log10(watterson_ave.x)<min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)<min_bootleneck_pop_value_watterson, "ND_ND_watterson",
+            ifelse (log10(watterson_ave.x)<min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson, "ND_D_watterson",NA))))) %>% 
   mutate (diversity_category=
             ifelse (log10(watterson_ave.y)>min_bootleneck_pop_value_watterson, "HD_watterson",
             ifelse (log10(watterson_ave.y)<min_bootleneck_pop_value_watterson, "LD_watterson",NA)))
 
-data_diversity_categories_watterson$evolution_category <- factor (data_diversity_categories_watterson$evolution_category, levels=c("D-ND_watterson", "D-D_watterson", "ND-ND_watterson", "ND-D_watterson"))
+data_diversity_categories_watterson$evolution_category <- factor (data_diversity_categories_watterson$evolution_category, levels=c("D_ND_watterson", "D_D_watterson", "ND_ND_watterson", "ND_D_watterson"))
 data_diversity_categories_watterson$diversity_category <- factor (data_diversity_categories_watterson$diversity_category, levels=c("HD_watterson", "LD_watterson"))
 
   assign(paste0("data_diversity_",POP1, "_diversity_", POP2,"_diversity_categories_watterson"), data_diversity_categories_watterson)
 
   
   
-      ## DATASET D-D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment watterson
+      ## DATASET D_D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment watterson
   
   list_of_CDS_HD_HD_watterson <- get(DATAFRAME) %>% filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) > min_bootleneck_pop_value_watterson & ratio_watterson_average > 0.6 & ratio_watterson_average < 1.4 & feature=="CDS" & watterson_ave.x > above95_non_bootleneck_pop_value_watterson & watterson_ave.y > above95_bootleneck_pop_value_watterson) %>% dplyr::select (unique_id) %>% tidyr::separate(., unique_id, into =c("Gen", "start", "end", "feature") ) %>% dplyr::select (Gen)
     
   assign(paste0(POP1, "_", POP2,"_list_of_CDS_HD_HD_ratio_1_watterson"), list_of_CDS_HD_HD_watterson)
 
-    ## DATASET ND-D_watterson --> Inspecting the GO term.
+    ## DATASET ND_D_watterson --> Inspecting the GO term.
       
   list_of_genes_ND_D_watterson <- get(DATAFRAME) %>% dplyr::filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) < min_bootleneck_pop_value_watterson & feature=="CDS") %>% dplyr::select ( unique_id) %>% tidyr::separate(., unique_id, into =c("Gen", "start", "end", "feature") ) %>% dplyr::select (Gen)
   
@@ -4794,7 +4795,7 @@ data_diversity_categories_watterson$diversity_category <- factor (data_diversity
 
 
 
-## DATASET D-D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment watterson
+## DATASET D_D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment watterson
 
 c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson)
 
@@ -4814,7 +4815,7 @@ write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_l
 
 
 
-## DATASET ND-D_watterson --> Inspecting the GO term.
+## DATASET ND_D_watterson --> Inspecting the GO term.
 
 c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson, c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson)
 
@@ -5280,7 +5281,7 @@ for (DATAFRAME in DATAFRAMES) {
 ## HD ## 
    sts_HD_watterson <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_watterson"))$divergence)$stats  # Compute lower and upper whisker limits
 
-  my_comparisons <- list(c("D-ND_watterson", "D-D_watterson"))
+  my_comparisons <- list(c("D_ND_watterson", "D_D_watterson"))
   
   ## Mean HD ##
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_watterson")), aes(evolution_category,divergence)) +
@@ -5309,7 +5310,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ## LD ## 
  
 sts_LD_watterson <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_watterson"))$divergence)$stats  # Compute lower and upper whisker limits
-my_comparisons <- list(c("ND-ND_watterson", "ND-D_watterson"))
+my_comparisons <- list(c("ND_ND_watterson", "ND_D_watterson"))
 
   ## Mean LD ##
 
@@ -5360,7 +5361,7 @@ for (DATAFRAME in DATAFRAMES) {
 ## HD ## 
    sts_HD_watterson <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_watterson"))$divergence)$stats  # Compute lower and upper whisker limits
 
-  my_comparisons <- list(c("D-ND_watterson", "D-D_watterson"))
+  my_comparisons <- list(c("D_ND_watterson", "D_D_watterson"))
   
   ## Mean HD ##
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_watterson")), aes(evolution_category,divergence)) +
@@ -5389,7 +5390,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ## LD ## 
  
 sts_LD_watterson <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_watterson"))$divergence)$stats  # Compute lower and upper whisker limits
-my_comparisons <- list(c("ND-ND_watterson", "ND-D_watterson"))
+my_comparisons <- list(c("ND_ND_watterson", "ND_D_watterson"))
 
   ## Mean LD ##
 
@@ -5439,7 +5440,7 @@ for (DATAFRAME in DATAFRAMES) {
 ## HD ## 
    sts_HD_watterson <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_watterson"))$recombination_rate)$stats  # Compute lower and upper whisker limits
 
-  my_comparisons <- list(c("D-ND_watterson", "D-D_watterson"))
+  my_comparisons <- list(c("D_ND_watterson", "D_D_watterson"))
   
   ## Mean HD ##
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_watterson")), aes(evolution_category,recombination_rate)) +
@@ -5468,7 +5469,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ## LD ## 
  
 sts_LD_watterson <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_watterson"))$recombination_rate)$stats  # Compute lower and upper whisker limits
-my_comparisons <- list(c("ND-ND_watterson", "ND-D_watterson"))
+my_comparisons <- list(c("ND_ND_watterson", "ND_D_watterson"))
 
   ## Mean LD ##
 
@@ -5515,7 +5516,7 @@ for (DATAFRAME in DATAFRAMES) {
 ## HD ## 
    sts_HD_watterson <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_watterson"))$recombination_rate)$stats  # Compute lower and upper whisker limits
 
-  my_comparisons <- list(c("D-ND_watterson", "D-D_watterson"))
+  my_comparisons <- list(c("D_ND_watterson", "D_D_watterson"))
   
   ## Mean HD ##
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_watterson")), aes(evolution_category,recombination_rate)) +
@@ -5544,7 +5545,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ## LD ## 
  
 sts_LD_watterson <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_watterson"))$recombination_rate)$stats  # Compute lower and upper whisker limits
-my_comparisons <- list(c("ND-ND_watterson", "ND-D_watterson"))
+my_comparisons <- list(c("ND_ND_watterson", "ND_D_watterson"))
 
   ## Mean LD ##
 
@@ -5593,7 +5594,7 @@ for (DATAFRAME in DATAFRAMES) {
 ## HD ## 
    sts_HD_watterson <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_watterson"))$GC_content)$stats  # Compute lower and upper whisker limits
 
-  my_comparisons <- list(c("D-ND_watterson", "D-D_watterson"))
+  my_comparisons <- list(c("D_ND_watterson", "D_D_watterson"))
   
   ## Mean HD ##
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_watterson")), aes(evolution_category,GC_content)) +
@@ -5622,7 +5623,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ## LD ## 
  
 sts_LD_watterson <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_watterson"))$GC_content)$stats  # Compute lower and upper whisker limits
-my_comparisons <- list(c("ND-ND_watterson", "ND-D_watterson"))
+my_comparisons <- list(c("ND_ND_watterson", "ND_D_watterson"))
 
   ## Mean LD ##
 
@@ -5670,7 +5671,7 @@ for (DATAFRAME in DATAFRAMES) {
 ## HD ## 
    sts_HD_watterson <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_watterson"))$GC_content)$stats  # Compute lower and upper whisker limits
 
-  my_comparisons <- list(c("D-ND_watterson", "D-D_watterson"))
+  my_comparisons <- list(c("D_ND_watterson", "D_D_watterson"))
   
   ## Mean HD ##
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_watterson")), aes(evolution_category,GC_content)) +
@@ -5699,7 +5700,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ## LD ## 
  
 sts_LD_watterson <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_watterson"))$GC_content)$stats  # Compute lower and upper whisker limits
-my_comparisons <- list(c("ND-ND_watterson", "ND-D_watterson"))
+my_comparisons <- list(c("ND_ND_watterson", "ND_D_watterson"))
 
   ## Mean LD ##
 
@@ -6177,32 +6178,32 @@ for (DATAFRAME in DATAFRAMES)
   
   
 ######
-  # Aqui categorizo las unidades que tienen diversidad y ni pierden ni ganan diversidad (D-D), las unidades que tiene no diversidad en la non-bottleneck pero ganan en la bottleneck (ND-D ), las que tienen alta diversidad en la non bottleneck pero baja en la bottleneck (D-ND), y las que no tienen diversidad en ambas (ND-ND). 
+  # Aqui categorizo las unidades que tienen diversidad y ni pierden ni ganan diversidad (D_D), las unidades que tiene no diversidad en la non-bottleneck pero ganan en la bottleneck (ND_D ), las que tienen alta diversidad en la non bottleneck pero baja en la bottleneck (D_ND), y las que no tienen diversidad en ambas (ND_ND). 
 
   data_diversity_categories_pairwise <- get(DATAFRAME) %>% 
   mutate (evolution_category=
-            ifelse (log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "D-D_pairwise",
-            ifelse (log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "ND-D_pairwise",
-            ifelse (log10(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "ND-ND_pairwise",
-            ifelse (log10(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "D-ND_pairwise",NA))))) %>% 
+            ifelse (log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "D_D_pairwise",
+            ifelse (log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "D_ND_pairwise",
+            ifelse (log10(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "ND_ND_pairwise",
+            ifelse (log10(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "ND_D_pairwise",NA))))) %>% 
   mutate (diversity_category=
             ifelse (log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "HD_pairwise",
             ifelse (log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "LD_pairwise",NA)))
 
-data_diversity_categories_pairwise$evolution_category <- factor (data_diversity_categories_pairwise$evolution_category, levels=c("D-ND_pairwise", "D-D_pairwise", "ND-ND_pairwise", "ND-D_pairwise"))
+data_diversity_categories_pairwise$evolution_category <- factor (data_diversity_categories_pairwise$evolution_category, levels=c("D_ND_pairwise", "D_D_pairwise", "ND_ND_pairwise", "ND_D_pairwise"))
 data_diversity_categories_pairwise$diversity_category <- factor (data_diversity_categories_pairwise$diversity_category, levels=c("HD_pairwise", "LD_pairwise"))
 
   assign(paste0("data_diversity_",POP1, "_diversity_", POP2,"_diversity_categories_pairwise"), data_diversity_categories_pairwise)
 
   
   
-      ## DATASET D-D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment pairwise
+      ## DATASET D_D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment pairwise
   
   list_of_CDS_HD_HD_pairwise <- get(DATAFRAME) %>% filter(., log10(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y) > min_bootleneck_pop_value_pairwise & ratio_pairwise_average > 0.6 & ratio_pairwise_average < 1.4 & feature=="CDS" & pairwise_ave.x > above95_non_bootleneck_pop_value_pairwise & pairwise_ave.y > above95_bootleneck_pop_value_pairwise) %>% dplyr::select (unique_id) %>% tidyr::separate(., unique_id, into =c("Gen", "start", "end", "feature") ) %>% dplyr::select (Gen)
     
   assign(paste0(POP1, "_", POP2,"_list_of_CDS_HD_HD_ratio_1_pairwise"), list_of_CDS_HD_HD_pairwise)
 
-    ## DATASET ND-D_pairwise --> Inspecting the GO term.
+    ## DATASET ND_D_pairwise --> Inspecting the GO term.
       
   list_of_genes_ND_D_pairwise <- get(DATAFRAME) %>% dplyr::filter(., log10(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y) < min_bootleneck_pop_value_pairwise & feature=="CDS") %>% dplyr::select ( unique_id) %>% tidyr::separate(., unique_id, into =c("Gen", "start", "end", "feature") ) %>% dplyr::select (Gen)
   
@@ -6212,7 +6213,7 @@ data_diversity_categories_pairwise$diversity_category <- factor (data_diversity_
 
 
 
-## DATASET D-D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment pairwise
+## DATASET D_D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment pairwise
 
 c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise)
 
@@ -6232,7 +6233,7 @@ write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_l
 
 
 
-## DATASET ND-D_pairwise --> Inspecting the GO term.
+## DATASET ND_D_pairwise --> Inspecting the GO term.
 
 c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise, c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise)
 
@@ -6732,7 +6733,7 @@ for (DATAFRAME in DATAFRAMES) {
 ## HD ## 
    sts_HD_pairwise <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise"))$divergence)$stats  # Compute lower and upper whisker limits
 
-  my_comparisons <- list(c("D-ND_pairwise", "D-D_pairwise"))
+  my_comparisons <- list(c("D_ND_pairwise", "D_D_pairwise"))
   
   ## Mean HD ##
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,divergence)) +
@@ -6761,7 +6762,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ## LD ## 
  
 sts_LD_pairwise <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_pairwise"))$divergence)$stats  # Compute lower and upper whisker limits
-my_comparisons <- list(c("ND-ND_pairwise", "ND-D_pairwise"))
+my_comparisons <- list(c("ND_ND_pairwise", "ND_D_pairwise"))
 
   ## Mean LD ##
 
@@ -6811,7 +6812,7 @@ for (DATAFRAME in DATAFRAMES) {
 ## HD ## 
    sts_HD_pairwise <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise"))$divergence)$stats  # Compute lower and upper whisker limits
 
-  my_comparisons <- list(c("D-ND_pairwise", "D-D_pairwise"))
+  my_comparisons <- list(c("D_ND_pairwise", "D_D_pairwise"))
   
   ## Mean HD ##
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,divergence)) +
@@ -6840,7 +6841,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ## LD ## 
  
 sts_LD_pairwise <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_pairwise"))$divergence)$stats  # Compute lower and upper whisker limits
-my_comparisons <- list(c("ND-ND_pairwise", "ND-D_pairwise"))
+my_comparisons <- list(c("ND_ND_pairwise", "ND_D_pairwise"))
 
   ## Mean LD ##
 
@@ -6889,7 +6890,7 @@ for (DATAFRAME in DATAFRAMES) {
 ## HD ## 
    sts_HD_pairwise <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise"))$recombination_rate)$stats  # Compute lower and upper whisker limits
 
-  my_comparisons <- list(c("D-ND_pairwise", "D-D_pairwise"))
+  my_comparisons <- list(c("D_ND_pairwise", "D_D_pairwise"))
   
   ## Mean HD ##
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,recombination_rate)) +
@@ -6918,7 +6919,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ## LD ## 
  
 sts_LD_pairwise <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_pairwise"))$recombination_rate)$stats  # Compute lower and upper whisker limits
-my_comparisons <- list(c("ND-ND_pairwise", "ND-D_pairwise"))
+my_comparisons <- list(c("ND_ND_pairwise", "ND_D_pairwise"))
 
   ## Mean LD ##
 
@@ -6965,7 +6966,7 @@ for (DATAFRAME in DATAFRAMES) {
 ## HD ## 
    sts_HD_pairwise <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise"))$recombination_rate)$stats  # Compute lower and upper whisker limits
 
-  my_comparisons <- list(c("D-ND_pairwise", "D-D_pairwise"))
+  my_comparisons <- list(c("D_ND_pairwise", "D_D_pairwise"))
   
   ## Mean HD ##
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,recombination_rate)) +
@@ -6994,7 +6995,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ## LD ## 
  
 sts_LD_pairwise <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_pairwise"))$recombination_rate)$stats  # Compute lower and upper whisker limits
-my_comparisons <- list(c("ND-ND_pairwise", "ND-D_pairwise"))
+my_comparisons <- list(c("ND_ND_pairwise", "ND_D_pairwise"))
 
   ## Mean LD ##
 
@@ -7043,7 +7044,7 @@ for (DATAFRAME in DATAFRAMES) {
 ## HD ## 
    sts_HD_pairwise <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise"))$GC_content)$stats  # Compute lower and upper whisker limits
 
-  my_comparisons <- list(c("D-ND_pairwise", "D-D_pairwise"))
+  my_comparisons <- list(c("D_ND_pairwise", "D_D_pairwise"))
   
   ## Mean HD ##
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,GC_content)) +
@@ -7072,7 +7073,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ## LD ## 
  
 sts_LD_pairwise <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_pairwise"))$GC_content)$stats  # Compute lower and upper whisker limits
-my_comparisons <- list(c("ND-ND_pairwise", "ND-D_pairwise"))
+my_comparisons <- list(c("ND_ND_pairwise", "ND_D_pairwise"))
 
   ## Mean LD ##
 
@@ -7120,7 +7121,7 @@ for (DATAFRAME in DATAFRAMES) {
 ## HD ## 
    sts_HD_pairwise <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise"))$GC_content)$stats  # Compute lower and upper whisker limits
 
-  my_comparisons <- list(c("D-ND_pairwise", "D-D_pairwise"))
+  my_comparisons <- list(c("D_ND_pairwise", "D_D_pairwise"))
   
   ## Mean HD ##
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,GC_content)) +
@@ -7149,7 +7150,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ## LD ## 
  
 sts_LD_pairwise <- boxplot.stats((get(DATAFRAME)%>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_pairwise"))$GC_content)$stats  # Compute lower and upper whisker limits
-my_comparisons <- list(c("ND-ND_pairwise", "ND-D_pairwise"))
+my_comparisons <- list(c("ND_ND_pairwise", "ND_D_pairwise"))
 
   ## Mean LD ##
 
