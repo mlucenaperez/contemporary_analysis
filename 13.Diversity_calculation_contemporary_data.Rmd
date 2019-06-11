@@ -789,6 +789,7 @@ diversity_stats_pop <- function(diversity_df)
                        
                        mean_watterson_ave=mean(watterson_ave),
                        mean_pairwise_ave=mean(pairwise_ave),
+                       mean_tajimaD=mean(tajimaD),
 
                        median_watterson_ave=median(watterson_ave),
                        median_pairwise_ave=median(pairwise_ave),
@@ -5340,10 +5341,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #stat_summary(fun.data = mean_se, geom = "errorbar") +
   stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
   scale_colour_viridis_d(option="cividis") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.9, tip_length=0, map_signif_level=TRUE,linetype="blank",  test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.9, tip_length=0, map_signif_level=TRUE,linetype="blank",  test.args=list(alternative="less")) + # test.args=list(alternative="less")
   
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_HD_feature_watterson_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_HD_feature_watterson_alternative_less.pdf",sep=""))
 
   ## Boxplot HD ##
 
@@ -5352,10 +5353,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
   scale_colour_viridis_d(option="cividis") +
   coord_cartesian(ylim = c(0,max(sts_HD_watterson)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank",  test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_watterson)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank",  test.args=list(alternative="less")) + # test.args=list(alternative="less")
   
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_HD_feature_watterson_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_HD_feature_watterson_alternative_less.pdf",sep=""))
 
 
 #############################################
@@ -5373,10 +5374,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   #stat_summary(fun.data = mean_se, geom = "errorbar") +
   stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
   scale_colour_viridis_d(option="cividis") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.9, tip_length=0,map_signif_level=TRUE, linetype="blank",  test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.9, tip_length=0,map_signif_level=TRUE, linetype="blank",  test.args=list(alternative="less")) + # test.args=list(alternative="less")  map_signif_level=TRUE, 
   
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_LD_feature_watterson_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_LD_feature_watterson_alternative_less.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -5386,10 +5387,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   facet_grid(col = vars(feature) ) +
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
   scale_colour_viridis_d(option="cividis") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank",  test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_watterson)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank",  test.args=list(alternative="less")) + # test.args=list(alternative="less")
   theme_minimal() +
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_LD_feature_watterson_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_LD_feature_watterson_less.pdf",sep=""))
 
 
 }
@@ -5986,6 +5987,7 @@ According to help(wilcox.test), if the samples contain less than 50 values (as i
 stat_compare_means has a method.args argument but it doesn't seem to pass the exact = TRUE specification correctly. Instead you can compute the p-value exactly how you want it first and then add it to the plot
 Por tanto, los p-values son una aproximacion normal (In one case the p-value is exact and in the other it is a normal approximation.)
 
+
 ### Boxplot generales
 
 ```{r}
@@ -6047,6 +6049,7 @@ rm(divergence.greater, divergence.less, recombination.greater, recombination.les
 
 
 for (DATAFRAME in DATAFRAMES) 
+  
   {
   
 
@@ -6085,9 +6088,11 @@ rm(divergence.greater, divergence.less, recombination.greater, recombination.les
 #### Boxplot categories vs. divergence
 
 ```{r}
+
+library("ggsignif")
 library("ggpubr")
 library("cowplot")
-library("ggsignif")
+library(ggplot2); theme_set(theme_minimal())
 
 
 DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise")
@@ -6110,12 +6115,12 @@ for (DATAFRAME in DATAFRAMES) {
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,divergence)) +
    coord_cartesian(ylim = c(0,0.008)) +
   #facet_grid(col = vars(feature) ) +
-  # stat_summary(fun.y = mean, geom="point", size=3) +
-  # stat_summary(fun.data = mean_se, geom = "errorbar") +
+  #stat_summary(fun.y = mean, geom="point", size=3) +
+  #stat_summary(fun.data = mean_se, geom = "errorbar") +
+  stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
   scale_colour_viridis_d(option="cividis") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.0075, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
-  
-  theme(strip.text.x = element_text(angle = 75)) +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.0075, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + 
+  theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
   ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_HD_pairwise_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
@@ -6125,8 +6130,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
   scale_colour_viridis_d(option="cividis") +
   coord_cartesian(ylim = c(0,max(sts_HD_pairwise)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
-  
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater"))  + 
   theme(strip.text.x = element_text(angle = 75)) +
   ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_HD_pairwise_alternative_greater.pdf",sep=""))
 
@@ -6142,11 +6146,12 @@ my_comparisons <- list(c("ND_ND_pairwise", "ND_D_pairwise"))
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_pairwise")), aes(evolution_category,divergence)) +
   coord_cartesian(ylim = c(0,0.008)) +
   #facet_grid(col = vars(feature) ) +
-  stat_summary(fun.y = mean, geom="point", size=3) +
-  stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.0075, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
-  
-  theme(strip.text.x = element_text(angle = 75)) +
+  #stat_summary(fun.y = mean, geom="point", size=3) +
+  #stat_summary(fun.data = mean_se, geom = "errorbar") +
+  stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+  scale_colour_viridis_d(option="cividis") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.0075, tip_length=0, linetype="blank", test.args=list(alternative="greater"))  + 
+  theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
   ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_LD_pairwise_alternative_greater.pdf",sep=""))
 
 
@@ -6156,19 +6161,18 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_pairwise)*2.3)) +
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
-  
+  scale_colour_viridis_d(option="cividis") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater"))  + 
   theme(strip.text.x = element_text(angle = 75)) +
   ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_LD_pairwise_alternative_greater.pdf",sep=""))
 
 
 }
+
 ```
 #### Boxplot categories vs. divergence by features
 
 ```{r}
-library("ggpubr")
-library("cowplot")
 
 
 DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise")
@@ -6189,13 +6193,14 @@ for (DATAFRAME in DATAFRAMES) {
   
   ## Mean HD ##
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,divergence)) +
-   coord_cartesian(ylim = c(0,0.008)) +
+  coord_cartesian(ylim = c(0,0.01)) +
   facet_grid(col = vars(feature) ) +
-  stat_summary(fun.y = mean, geom="point", size=3) +
-  stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.0075, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
-  
-  theme(strip.text.x = element_text(angle = 75)) +
+  stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+  scale_colour_viridis_d(option="cividis") +
+  #stat_summary(fun.y = mean, geom="point", size=3) +
+  #stat_summary(fun.data = mean_se, geom = "errorbar") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.0075, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # 
+  theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
   ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_HD_features_pairwise_alternative_greater.pdf",sep=""))
 
   ## Boxplot HD ##
@@ -6203,9 +6208,9 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,divergence)) +
   facet_grid(col = vars(feature) ) +
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
+  scale_colour_viridis_d(option="cividis") +
   coord_cartesian(ylim = c(0,max(sts_HD_pairwise)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
-  
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # 
   theme(strip.text.x = element_text(angle = 75)) +
   ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_HD_features_pairwise_alternative_greater.pdf",sep=""))
 
@@ -6221,11 +6226,12 @@ my_comparisons <- list(c("ND_ND_pairwise", "ND_D_pairwise"))
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_pairwise")), aes(evolution_category,divergence)) +
   coord_cartesian(ylim = c(0,0.008)) +
   facet_grid(col = vars(feature) ) +
-  stat_summary(fun.y = mean, geom="point", size=3) +
-  stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.0075, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  
-  
-  theme(strip.text.x = element_text(angle = 75)) +
+  #stat_summary(fun.y = mean, geom="point", size=3) +
+  #stat_summary(fun.data = mean_se, geom = "errorbar") +
+  stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+  scale_colour_viridis_d(option="cividis") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.0075, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # 
+  theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
   ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_mean_se_LD_features_pairwise_alternative_greater.pdf",sep=""))
 
 
@@ -6235,13 +6241,15 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_pairwise)*2.3)) +
   facet_grid(col = vars(feature) ) +
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
-  
+  scale_colour_viridis_d(option="cividis") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, map_signif_level=TRUE, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # 
   theme(strip.text.x = element_text(angle = 75)) +
   ggsave(paste(wd_output,POP1,"_",POP2,"_divergence_boxplot_LD_features_pairwise_alternative_greater.pdf",sep=""))
 
 
 }
+
+
 ```
 
 
@@ -6269,23 +6277,24 @@ for (DATAFRAME in DATAFRAMES) {
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,recombination_rate)) +
   coord_cartesian(ylim = c(0,5)) +
   #facet_grid(col = vars(feature) ) +
-  stat_summary(fun.y = mean, geom="point", size=3) +
-  stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=5, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
-  
+  #stat_summary(fun.y = mean, geom="point", size=3) +
+  #stat_summary(fun.data = mean_se, geom = "errorbar") +
+  stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+  scale_colour_viridis_d(option="cividis") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=5, tip_length=0, linetype="blank", test.args=list(alternative="less")) + # test.args=list(alternative="less")
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_HD_pairwise_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_HD_pairwise_alternative_less.pdf",sep=""))
 
   ## Boxplot HD ##
 
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,recombination_rate)) +
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
+  scale_colour_viridis_d(option="cividis") +
   coord_cartesian(ylim = c(0,max(sts_HD_pairwise)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
-  
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="less")) + # test.args=list(alternative="less")
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_HD_pairwise_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_HD_pairwise_alternative_less.pdf",sep=""))
 
 
 #############################################
@@ -6299,12 +6308,13 @@ my_comparisons <- list(c("ND_ND_pairwise", "ND_D_pairwise"))
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_pairwise")), aes(evolution_category,recombination_rate)) +
   coord_cartesian(ylim = c(0,5)) +
   #facet_grid(col = vars(feature) ) +
-  stat_summary(fun.y = mean, geom="point", size=3) +
-  stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=5, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
-  
+  #stat_summary(fun.y = mean, geom="point", size=3) +
+  #stat_summary(fun.data = mean_se, geom = "errorbar") +
+  stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+  scale_colour_viridis_d(option="cividis") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=5, tip_length=0, linetype="blank", test.args=list(alternative="less")) + # test.args=list(alternative="less")  map_signif_level=TRUE, 
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_LD_pairwise_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_LD_pairwise_alternative_less.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -6313,10 +6323,10 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_pairwise)*2.3)) +
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
-  
+  scale_colour_viridis_d(option="cividis") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="less")) + # test.args=list(alternative="less")
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_LD_pairwise_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_LD_pairwise_alternative_less.pdf",sep=""))
 
 
 }
@@ -6345,23 +6355,24 @@ for (DATAFRAME in DATAFRAMES) {
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,recombination_rate)) +
   coord_cartesian(ylim = c(0,10)) +
   facet_grid(col = vars(feature) ) +
-  stat_summary(fun.y = mean, geom="point", size=3) +
-  stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=9, tip_length=0,map_signif_level=TRUE, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
-  
+  #stat_summary(fun.y = mean, geom="point", size=3) +
+  #stat_summary(fun.data = mean_se, geom = "errorbar") +
+  stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+  scale_colour_viridis_d(option="cividis") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=9, tip_length=0,map_signif_level=TRUE, linetype="blank", test.args=list(alternative="less")) + # test.args=list(alternative="less")
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_HD_feature_pairwise_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_HD_feature_pairwise_alternative_less.pdf",sep=""))
 
   ## Boxplot HD ##
 
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,recombination_rate)) +
   facet_grid(col = vars(feature) ) +
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
+  scale_colour_viridis_d(option="cividis") +
   coord_cartesian(ylim = c(0,max(sts_HD_pairwise)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
-  
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank", test.args=list(alternative="less")) + # test.args=list(alternative="less")
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_HD_feature_pairwise_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_HD_feature_pairwise_alternative_less.pdf",sep=""))
 
 
 #############################################
@@ -6375,12 +6386,14 @@ my_comparisons <- list(c("ND_ND_pairwise", "ND_D_pairwise"))
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_pairwise")), aes(evolution_category,recombination_rate)) +
   coord_cartesian(ylim = c(0,10)) +
   facet_grid(col = vars(feature) ) +
-  stat_summary(fun.y = mean, geom="point", size=3) +
-  stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=9, tip_length=0, map_signif_level=TRUE,linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
+  #stat_summary(fun.y = mean, geom="point", size=3) +
+  #stat_summary(fun.data = mean_se, geom = "errorbar") +
+  stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+  scale_colour_viridis_d(option="cividis") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=9, tip_length=0, map_signif_level=TRUE,linetype="blank", test.args=list(alternative="less")) + # test.args=list(alternative="less")  map_signif_level=TRUE, 
   
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_LD_feature_pairwise_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_mean_se_LD_feature_pairwise_alternative_less.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -6389,10 +6402,11 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_pairwise)*2.3)) +
   facet_grid(col = vars(feature) ) +
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
+  scale_colour_viridis_d(option="cividis") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank", test.args=list(alternative="less")) + # test.args=list(alternative="less")
   
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_LD_feature_pairwise_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_recombination_boxplot_LD_feature_pairwise_alternative_less.pdf",sep=""))
 
 
 }
@@ -6423,8 +6437,10 @@ for (DATAFRAME in DATAFRAMES) {
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,GC_content)) +
   coord_cartesian(ylim = c(0,0.8)) +
   #facet_grid(col = vars(feature) ) +
-  stat_summary(fun.y = mean, geom="point", size=3) +
-  stat_summary(fun.data = mean_se, geom = "errorbar") +
+  #stat_summary(fun.y = mean, geom="point", size=3) +
+  #stat_summary(fun.data = mean_se, geom = "errorbar") +
+  stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+  scale_colour_viridis_d(option="cividis") +
   geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.8, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   
   theme(strip.text.x = element_text(angle = 75)) +
@@ -6435,6 +6451,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,GC_content)) +
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
+  scale_colour_viridis_d(option="cividis") +
   coord_cartesian(ylim = c(0,max(sts_HD_pairwise)*2.3)) +
   geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   
@@ -6453,8 +6470,10 @@ my_comparisons <- list(c("ND_ND_pairwise", "ND_D_pairwise"))
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_pairwise")), aes(evolution_category,GC_content)) +
   coord_cartesian(ylim = c(0,0.8)) +
   #facet_grid(col = vars(feature) ) +
-  stat_summary(fun.y = mean, geom="point", size=3) +
-  stat_summary(fun.data = mean_se, geom = "errorbar") +
+  #stat_summary(fun.y = mean, geom="point", size=3) +
+  #stat_summary(fun.data = mean_se, geom = "errorbar") +
+  stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+  scale_colour_viridis_d(option="cividis") +
   geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.8, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
   
   theme(strip.text.x = element_text(angle = 75)) +
@@ -6467,6 +6486,7 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_pairwise)*2.3)) +
   #facet_grid(col = vars(feature) ) +
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
+  scale_colour_viridis_d(option="cividis") +
   geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
   
   theme(strip.text.x = element_text(angle = 75)) +
@@ -6500,23 +6520,26 @@ for (DATAFRAME in DATAFRAMES) {
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,GC_content)) +
   coord_cartesian(ylim = c(0,1)) +
   facet_grid(col = vars(feature) ) +
-  stat_summary(fun.y = mean, geom="point", size=3) +
-  stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.9, tip_length=0, map_signif_level=TRUE,linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
+  #stat_summary(fun.y = mean, geom="point", size=3) +
+  #stat_summary(fun.data = mean_se, geom = "errorbar") +
+  stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+  scale_colour_viridis_d(option="cividis") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=0.9, tip_length=0, map_signif_level=TRUE,linetype="blank",  test.args=list(alternative="less")) + # test.args=list(alternative="less")
   
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_HD_feature_pairwise_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_HD_feature_pairwise_alternative_less.pdf",sep=""))
 
   ## Boxplot HD ##
 
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="HD_pairwise")), aes(evolution_category,GC_content)) +
   facet_grid(col = vars(feature) ) +
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
+  scale_colour_viridis_d(option="cividis") +
   coord_cartesian(ylim = c(0,max(sts_HD_pairwise)*2.3)) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
+  geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts_HD_pairwise)*2.1, tip_length=0, map_signif_level=TRUE,linetype="blank",  test.args=list(alternative="less")) + # test.args=list(alternative="less")
   
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_HD_feature_pairwise_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_HD_feature_pairwise_alternative_less.pdf",sep=""))
 
 
 #############################################
@@ -6530,12 +6553,14 @@ my_comparisons <- list(c("ND_ND_pairwise", "ND_D_pairwise"))
 ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_category=="LD_pairwise")), aes(evolution_category,GC_content)) +
   coord_cartesian(ylim = c(0,1)) +
   facet_grid(col = vars(feature) ) +
-  stat_summary(fun.y = mean, geom="point", size=3) +
-  stat_summary(fun.data = mean_se, geom = "errorbar") +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.9, tip_length=0,map_signif_level=TRUE, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")  map_signif_level=TRUE, 
+  #stat_summary(fun.y = mean, geom="point", size=3) +
+  #stat_summary(fun.data = mean_se, geom = "errorbar") +
+  stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+  scale_colour_viridis_d(option="cividis") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=0.9, tip_length=0,map_signif_level=TRUE, linetype="blank",  test.args=list(alternative="less")) + # test.args=list(alternative="less")  map_signif_level=TRUE, 
   
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_LD_feature_pairwise_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_mean_se_LD_feature_pairwise_alternative_less.pdf",sep=""))
 
 
   ## Boxplot LD ##
@@ -6544,16 +6569,19 @@ ggplot((get(DATAFRAME) %>% filter (type_chr=="autosomes") %>% filter(diversity_c
   coord_cartesian(ylim = c(0,max(sts_LD_pairwise)*2.3)) +
   facet_grid(col = vars(feature) ) +
   geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
-  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank", test.args=list(alternative="greater")) + # test.args=list(alternative="greater")
-  
+  scale_colour_viridis_d(option="cividis") +
+  geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=max(sts_LD_pairwise)*2.1, tip_length=0,map_signif_level=TRUE, linetype="blank",  test.args=list(alternative="less")) + # test.args=list(alternative="less")
+  theme_minimal() +
   theme(strip.text.x = element_text(angle = 75)) +
-  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_LD_feature_pairwise_alternative_greater.pdf",sep=""))
+  ggsave(paste(wd_output,POP1,"_",POP2,"_GC_boxplot_LD_feature_pairwise_less.pdf",sep=""))
 
 
 }
 
 
 ```
+
+
 
 
 
