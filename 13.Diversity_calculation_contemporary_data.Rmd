@@ -3823,12 +3823,9 @@ for (POP in POPS)
 
 Sobre la de stats de cada población. ¡¡Es el ratio de las medias!!!
 
-
-#### RATIO MEDIAN
-
+#### One factor: Ratio and pairwise table
 ##### Feature
 
-Formula
 ```{r}
 
 # Calculo el ratio para la mediana:
@@ -4202,230 +4199,6 @@ write.table(ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr, paste(wd
 
 ```
 
-#### RATIO MEDIAN INTERACTIONS
-
-No modificado para tener en cuenta los valores que hemos cambiado y hemos hecho cero. Si quisiera modificarlo, fijarme script de arriba. 
-
-
-```{r}
-
-############## INTERACCIONES ################
-
-### FEATURE - CHR ###
-
-# Calculo el ratio para la mediana:
-
-bootleneck_vs_non_bootleneck_ratio_median_feature_chr <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
-  
-  # Nombre de las poblaciones
-  
-  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
-  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
-   
-  # Valor para intergénico de la población --> autosomes.
-  
-  autosomes_pairwise_average_intergenic_per_unit_pop1_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop1_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_intergenic))  
-  
-  autosomes_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic))  
-  
-  # Valor para intergénico de la población --> chrX.
-
-  chrX_pairwise_average_intergenic_per_unit_pop1_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop1_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_intergenic))  
-  
-  chrX_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic)) 
-  
-  
-  # Calculo de los ratios globales.
-  
-  ratio_averages_POP1_POP2 <- full_join ( select ( dataframe_POP1, feature, pop, chr, total_count, median_pairwise_ave, median_watterson_ave), 
-                                          select ( dataframe_POP2, feature, pop, chr, total_count, median_pairwise_ave, median_watterson_ave), 
-                                          by=c("chr", "feature")) %>% 
-    
-    
-    mutate (ratio_median_pairwise = median_pairwise_ave.y/median_pairwise_ave.x) %>% 
-    mutate (ratio_median_watterson = median_watterson_ave.y/median_watterson_ave.x) %>% 
-    
-    mutate (ratio_median_pairwise_corrected = ifelse(chr!="chrX",  
-(median_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median), (median_pairwise_ave.y/chrX_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/chrX_pairwise_average_intergenic_per_unit_pop1_median))) %>% 
-  
-    mutate (ratio_median_watterson_corrected = ifelse(chr!="chrX",                  (median_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_median), 
-(median_watterson_ave.y/chrX_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/chrX_watterson_average_intergenic_per_unit_pop1_median)))
-
-  
-  dataframename <- paste ("ratio_median", name_POP1, name_POP2,  sep="_")
-  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
-  
-}
-
-# Create data frame
-
-# Dataframe Kirov-Norway
-
-bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_ll_ki_n013_stats_feature_chr,c_ll_no_n008_stats_feature_chr, deparse(substitute(c_ll_ki_n013_stats_feature_chr)),deparse(substitute(c_ll_no_n008_stats_feature_chr)))
-write.table(ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_no_n008_stats_feature_chr, paste(wd_output,"ratio_median_autosomes_feature_chr_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
-
-# Dataframe Kirov-Poland
-
-bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_ll_ki_n013_stats_feature_chr,c_ll_po_n008_stats_feature_chr, deparse(substitute(c_ll_ki_n013_stats_feature_chr)),deparse(substitute(c_ll_po_n008_stats_feature_chr)))
-write.table(ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_po_n008_stats_feature_chr, paste(wd_output,"ratio_median_autosomes_feature_chr_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
-
-# Dataframe Sierra_Morena-Doñana
-
-bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_lp_sm_n019_stats_feature_chr, c_lp_do_n012_stats_feature_chr, deparse(substitute(c_lp_sm_n019_stats_feature_chr)),deparse(substitute(c_lp_do_n012_stats_feature_chr)))
-write.table(ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr, paste(wd_output,"ratio_median_autosomes_feature_chr_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
-
-### FEATURE - REGION ###
-
-# Calculo el ratio para la media:
-
-bootleneck_vs_non_bootleneck_ratio_median_feature_region <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
-  
-  # Nombre de las poblaciones
-  
-  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
-  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
-   
-  # Valor para intergénico de la población --> autosomes.
-  
-  autosomes_pairwise_average_intergenic_per_unit_pop1_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop1_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_intergenic))  
-  
-  autosomes_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic))  
-  
-  # Valor para intergénico de la población --> chrX.
-
-  chrX_pairwise_average_intergenic_per_unit_pop1_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop1_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_intergenic))  
-  
-  chrX_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic)) 
-  
-  
-  
-  # Calculo de los ratios globales.
-  
-  ratio_averages_POP1_POP2 <- full_join ( 
-    select ( dataframe_POP1, pop, feature, region, total_count, median_pairwise_ave, median_watterson_ave, median_pairwise_ave_corrected, median_watterson_ave_corrected, type_chr), 
-    select ( dataframe_POP2, pop, feature, region, total_count, median_pairwise_ave, median_watterson_ave, median_pairwise_ave_corrected, median_watterson_ave_corrected, type_chr), 
-    by=c("feature","region", "type_chr")) %>% 
-    
-    
-    mutate (ratio_median_pairwise = median_pairwise_ave.y/median_pairwise_ave.x) %>% 
-    mutate (ratio_median_watterson = median_watterson_ave.y/median_watterson_ave.x) %>% 
-    
-     mutate (ratio_median_pairwise_corrected = ifelse(type_chr=="autosomes",                  (median_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median), 
-(median_pairwise_ave.y/chrX_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/chrX_pairwise_average_intergenic_per_unit_pop1_median))) %>% 
-  
-    mutate (ratio_median_watterson_corrected = ifelse(type_chr=="autosomes",                  (median_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_median), 
-(median_watterson_ave.y/chrX_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/chrX_watterson_average_intergenic_per_unit_pop1_median)))
-
-  
-  dataframename <- paste ("ratio_median", name_POP1, name_POP2,  sep="_")
-  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
- 
-}
-
-# Create data frame
-
-# Dataframe Kirov-Norway
-
-bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_ll_ki_n013_stats_feature_region,c_ll_no_n008_stats_feature_region, deparse(substitute(c_ll_ki_n013_stats_feature_region)),deparse(substitute(c_ll_no_n008_stats_feature_region)))
-write.table(ratio_median_c_ll_ki_n013_stats_feature_region_c_ll_no_n008_stats_feature_region, paste(wd_output,"ratio_median_feature_region_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
-
-# Dataframe Kirov-Poland
-
-bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_ll_ki_n013_stats_feature_region,c_ll_po_n008_stats_feature_region, deparse(substitute(c_ll_ki_n013_stats_feature_region)),deparse(substitute(c_ll_po_n008_stats_feature_region)))
-write.table(ratio_median_c_ll_ki_n013_stats_feature_region_c_ll_po_n008_stats_feature_region, paste(wd_output,"ratio_median_feature_region_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
-# Dataframe Sierra_Morena-Doñana
-
-bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_lp_sm_n019_stats_feature_region,c_lp_do_n012_stats_feature_region, deparse(substitute(c_lp_sm_n019_stats_feature_region)),deparse(substitute(c_lp_do_n012_stats_feature_region)))
-write.table(ratio_median_c_lp_sm_n019_stats_feature_region_c_lp_do_n012_stats_feature_region, paste(wd_output,"ratio_median_feature_region_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
-
-
-### REGION - CHR ###
-
-# Calculo el ratio para la mediana:
-
-bootleneck_vs_non_bootleneck_ratio_median_region_chr <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
-  
-  # Nombre de las poblaciones
-  
-  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
-  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
-   
-  # Valor para intergénico de la población --> autosomes.
-  
-  autosomes_pairwise_average_intergenic_per_unit_pop1_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop1_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_intergenic))  
-  
-  autosomes_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic))  
-  
-  # Valor para intergénico de la población --> chrX.
-
-  chrX_pairwise_average_intergenic_per_unit_pop1_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop1_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_intergenic))  
-  
-  chrX_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic)) 
-  
-  
-  
-  # Calculo de los ratios globales.
-  
-  ratio_averages_POP1_POP2 <- full_join ( 
-    select ( dataframe_POP1, pop, region, region, total_count, median_pairwise_ave, median_watterson_ave, median_pairwise_ave_corrected, median_watterson_ave_corrected, chr), 
-    select ( dataframe_POP2, pop, region, region, total_count, median_pairwise_ave, median_watterson_ave, median_pairwise_ave_corrected, median_watterson_ave_corrected, chr), 
-    by=c("region", "chr")) %>% 
-    
-    
-    mutate (ratio_median_pairwise = median_pairwise_ave.y/median_pairwise_ave.x) %>% 
-    mutate (ratio_median_watterson = median_watterson_ave.y/median_watterson_ave.x) %>% 
-    
-     mutate (ratio_median_pairwise_corrected = ifelse(chr!="chrX",                  (median_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median), 
-(median_pairwise_ave.y/chrX_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/chrX_pairwise_average_intergenic_per_unit_pop1_median))) %>% 
-  
-    mutate (ratio_median_watterson_corrected = ifelse(chr!="chrX",                  (median_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_median), 
-(median_watterson_ave.y/chrX_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/chrX_watterson_average_intergenic_per_unit_pop1_median)))
-
-  
-  dataframename <- paste ("ratio_median", name_POP1, name_POP2,  sep="_")
-  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
- 
-}
-
-# Create data frame
-
-# Dataframe Kirov-Norway
-
-bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_ll_ki_n013_stats_region_chr,c_ll_no_n008_stats_region_chr, deparse(substitute(c_ll_ki_n013_stats_region_chr)),deparse(substitute(c_ll_no_n008_stats_region_chr)))
-write.table(ratio_median_c_ll_ki_n013_stats_region_chr_c_ll_no_n008_stats_region_chr, paste(wd_output,"ratio_median_autosomes_region_chr_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
- 
-# Dataframe Kirov-Poland
- 
-bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_ll_ki_n013_stats_region_chr,c_ll_po_n008_stats_region_chr, deparse(substitute(c_ll_ki_n013_stats_region_chr)),deparse(substitute(c_ll_po_n008_stats_region_chr)))
-write.table(ratio_median_c_ll_ki_n013_stats_region_chr_c_ll_po_n008_stats_region_chr, paste(wd_output,"ratio_median_autosomes_region_chr_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
- 
-# Dataframe Sierra_Morena-Doñana
- 
-bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_lp_sm_n019_stats_region_chr, c_lp_do_n012_stats_region_chr, deparse(substitute(c_lp_sm_n019_stats_region_chr)),deparse(substitute(c_lp_do_n012_stats_region_chr)))
-write.table(ratio_median_c_lp_sm_n019_stats_region_chr_c_lp_do_n012_stats_region_chr, paste(wd_output,"ratio_median_autosomes_region_chr_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
-
-
-```
-
 ##### Plot for ratio
 
 ```{r}
@@ -4454,414 +4227,163 @@ ggplot (get(DATAFRAME) %>% filter (type_chr!="chrX"), aes_string("feature", INDE
 
 ```
 
-#### RATIO MEAN
+#### Two factors: Interaction table
 
-##### Feature
-
-Formula
+##### Feature-Chr
 ```{r}
+# Calculo el ratio para la mediana:
 
-# Calculo el ratio para la media:
-
-bootleneck_vs_non_bootleneck_ratio_mean_feature <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+bootleneck_vs_non_bootleneck_ratio_median_feature_chr <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
   
   # Nombre de las poblaciones
   
   POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
   POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
    
-# AUTOSOMES
+  # Create interaction table:
+  ratio_averages_POP1_POP2 <- full_join ( select ( dataframe_POP1, feature, pop, chr, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
+                                          select ( dataframe_POP2, feature, pop, chr, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
+                                          by=c("chr", "feature")) 
   
-  # All values
-  autosomes_pairwise_average_intergenic_per_unit_pop1_mean <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_pairwise_ave_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop1_mean <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_watterson_ave_intergenic))  
-  
-  autosomes_pairwise_average_intergenic_per_unit_pop2_mean <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_pairwise_ave_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop2_mean <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_watterson_ave_intergenic))  
-  
-  
-  # Replacing low values -> 0
-  autosomes_pairwise_average_intergenic_per_unit_pop1_mean_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_pairwise_ave_zero_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop1_mean_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_watterson_ave_zero_intergenic))  
-  
-  autosomes_pairwise_average_intergenic_per_unit_pop2_mean_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_pairwise_ave_zero_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop2_mean_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_watterson_ave_zero_intergenic))  
-  
-
-# CHRX.
-
-  # All values
-  chrX_pairwise_average_intergenic_per_unit_pop1_mean <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_pairwise_ave_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop1_mean <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_watterson_ave_intergenic))  
-  
-  chrX_pairwise_average_intergenic_per_unit_pop2_mean <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_pairwise_ave_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop2_mean <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_watterson_ave_intergenic))  
-  
-  # Replacing low values -> 0
-  chrX_pairwise_average_intergenic_per_unit_pop1_mean_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_pairwise_ave_zero_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop1_mean_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_watterson_ave_zero_intergenic))  
-  
-  chrX_pairwise_average_intergenic_per_unit_pop2_mean_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_pairwise_ave_zero_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop2_mean_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_watterson_ave_zero_intergenic))  
-  
-  
-  # Calculo de los ratios globales.
-  
-  ratio_averages_POP1_POP2 <- full_join ( 
-    select ( dataframe_POP1, pop, feature, total_count, mean_pairwise_ave, mean_watterson_ave,  type_chr, mean_pairwise_zero, mean_watterson_zero), 
-    select ( dataframe_POP2, pop, feature, total_count, mean_pairwise_ave, mean_watterson_ave,  type_chr, mean_pairwise_zero, mean_watterson_zero), 
-                                          by=c("feature", "type_chr")) %>% 
-      
-  # All values
-
-    mutate (ratio_mean_pairwise = mean_pairwise_ave.y/mean_pairwise_ave.x) %>% 
-    mutate (ratio_mean_watterson = mean_watterson_ave.y/mean_watterson_ave.x) %>% 
-
-    
-  # Replacing low values -> 0
-
-    mutate (ratio_mean_pairwise_zero = mean_pairwise_zero.y/mean_pairwise_zero.x) %>% 
-    mutate (ratio_mean_watterson_zero = mean_watterson_zero.y/mean_watterson_zero.x) %>% 
-  
-    
-    
-    
-  # All values
-    
-    # PI    
-    mutate (ratio_mean_pairwise_corrected = ifelse(type_chr=="autosomes",                  (mean_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_mean)/(mean_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_mean), 
- # else
-(mean_pairwise_ave.y/chrX_pairwise_average_intergenic_per_unit_pop2_mean)/(mean_pairwise_ave.x/chrX_pairwise_average_intergenic_per_unit_pop1_mean))) %>% 
-  
-    # WATTERSON
-    mutate (ratio_mean_watterson_corrected = ifelse(type_chr=="autosomes",                  (mean_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_mean)/(mean_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_mean), 
-# else
-(mean_watterson_ave.y/chrX_watterson_average_intergenic_per_unit_pop2_mean)/(mean_watterson_ave.x/chrX_watterson_average_intergenic_per_unit_pop1_mean))) %>% 
-    
-    
-    
-  # Replacing low values -> 0
-  
-    # PI    
-    mutate (ratio_mean_pairwise_corrected_zero = ifelse(type_chr=="autosomes",                  (mean_pairwise_zero.y/autosomes_pairwise_average_intergenic_per_unit_pop2_mean_zero)/(mean_pairwise_zero.x/autosomes_pairwise_average_intergenic_per_unit_pop1_mean_zero), 
- # else
-(mean_pairwise_zero.y/chrX_pairwise_average_intergenic_per_unit_pop2_mean_zero)/(mean_pairwise_zero.x/chrX_pairwise_average_intergenic_per_unit_pop1_mean_zero))) %>% 
-  
-    # WATTERSON
-    mutate (ratio_mean_watterson_corrected_zero = ifelse(type_chr=="autosomes",                  (mean_watterson_zero.y/autosomes_watterson_average_intergenic_per_unit_pop2_mean_zero)/(mean_watterson_zero.x/autosomes_watterson_average_intergenic_per_unit_pop1_mean_zero), 
-# else
-(mean_watterson_zero.y/chrX_watterson_average_intergenic_per_unit_pop2_mean_zero)/(mean_watterson_zero.x/chrX_watterson_average_intergenic_per_unit_pop1_mean_zero)))
-
-  
-  dataframename <- paste ("ratio_mean", name_POP1, name_POP2,  sep="_")
+  dataframename <- paste ("interaction_stats_", name_POP1, name_POP2,  sep="_")
   assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
+  
 }
-
-```
-
-Creo las data frame
-
-```{r}
 
 # Create data frame
 
 # Dataframe Kirov-Norway
-
-bootleneck_vs_non_bootleneck_ratio_mean_feature(c_ll_ki_n013_stats_feature,c_ll_no_n008_stats_feature, deparse(substitute(c_ll_ki_n013_stats_feature)),deparse(substitute(c_ll_no_n008_stats_feature)))
-
-write.table(ratio_mean_c_ll_ki_n013_stats_feature_c_ll_no_n008_stats_feature, paste(wd_output,"ratio_mean_autosomes_feature_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
+bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_ll_ki_n013_stats_feature_chr,c_ll_no_n008_stats_feature_chr, deparse(substitute(c_ll_ki_n013_stats_feature_chr)),deparse(substitute(c_ll_no_n008_stats_feature_chr)))
 
 # Dataframe Kirov-Poland
-
-bootleneck_vs_non_bootleneck_ratio_mean_feature(c_ll_ki_n013_stats_feature,c_ll_po_n008_stats_feature, deparse(substitute(c_ll_ki_n013_stats_feature)),deparse(substitute(c_ll_po_n008_stats_feature)))
-write.table(ratio_mean_c_ll_ki_n013_stats_feature_c_ll_po_n008_stats_feature, paste(wd_output,"ratio_mean_autosomes_feature_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
+bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_ll_ki_n013_stats_feature_chr,c_ll_po_n008_stats_feature_chr, deparse(substitute(c_ll_ki_n013_stats_feature_chr)),deparse(substitute(c_ll_po_n008_stats_feature_chr)))
 
 # Dataframe Sierra_Morena-Doñana
-
-bootleneck_vs_non_bootleneck_ratio_mean_feature(c_lp_sm_n019_stats_feature, c_lp_do_n012_stats_feature, deparse(substitute(c_lp_sm_n019_stats_feature)),deparse(substitute(c_lp_do_n012_stats_feature)))
-write.table(ratio_mean_c_lp_sm_n019_stats_feature_c_lp_do_n012_stats_feature, paste(wd_output,"ratio_mean_autosomes_feature_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_lp_sm_n019_stats_feature_chr, c_lp_do_n012_stats_feature_chr, deparse(substitute(c_lp_sm_n019_stats_feature_chr)),deparse(substitute(c_lp_do_n012_stats_feature_chr)))
 
 ```
 
-##### Region
+##### Feature-Region
 
 ```{r}
 
-
 # Calculo el ratio para la media:
 
-bootleneck_vs_non_bootleneck_ratio_mean_region <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+bootleneck_vs_non_bootleneck_ratio_median_feature_region <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
   
   # Nombre de las poblaciones
   
   POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
   POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
    
-# AUTOSOMES
+  # Create interaction table:
+  ratio_averages_POP1_POP2 <- full_join ( select ( dataframe_POP1, feature, pop, region, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
+                                          select ( dataframe_POP2, feature, pop, region, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
+                                          by=c("region", "feature")) 
   
-  # All values
-  autosomes_pairwise_average_intergenic_per_unit_pop1_mean <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_pairwise_ave_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop1_mean <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_watterson_ave_intergenic))  
-  
-  autosomes_pairwise_average_intergenic_per_unit_pop2_mean <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_pairwise_ave_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop2_mean <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_watterson_ave_intergenic))  
-  
-  
-  # Replacing low values -> 0
-  autosomes_pairwise_average_intergenic_per_unit_pop1_mean_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_pairwise_ave_zero_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop1_mean_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_watterson_ave_zero_intergenic))  
-  
-  autosomes_pairwise_average_intergenic_per_unit_pop2_mean_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_pairwise_ave_zero_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop2_mean_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_watterson_ave_zero_intergenic))  
-  
-
-# CHRX.
-
-  # All values
-  chrX_pairwise_average_intergenic_per_unit_pop1_mean <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_pairwise_ave_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop1_mean <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_watterson_ave_intergenic))  
-  
-  chrX_pairwise_average_intergenic_per_unit_pop2_mean <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_pairwise_ave_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop2_mean <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_watterson_ave_intergenic))  
-  
-  # Replacing low values -> 0
-  chrX_pairwise_average_intergenic_per_unit_pop1_mean_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_pairwise_ave_zero_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop1_mean_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_watterson_ave_zero_intergenic))  
-  
-  chrX_pairwise_average_intergenic_per_unit_pop2_mean_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_pairwise_ave_zero_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop2_mean_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_watterson_ave_zero_intergenic))  
-  
-  
-  # Calculo de los ratios globales.
-  
-  ratio_averages_POP1_POP2 <- full_join ( 
-    select ( dataframe_POP1, pop, region, total_count, mean_pairwise_ave, mean_watterson_ave,  type_chr, mean_pairwise_zero, mean_watterson_zero), 
-    select ( dataframe_POP2, pop, region, total_count, mean_pairwise_ave, mean_watterson_ave,  type_chr, mean_pairwise_zero, mean_watterson_zero), 
-                                          by=c("region", "type_chr")) %>% 
-      
-  # All values
-
-    mutate (ratio_mean_pairwise = mean_pairwise_ave.y/mean_pairwise_ave.x) %>% 
-    mutate (ratio_mean_watterson = mean_watterson_ave.y/mean_watterson_ave.x) %>% 
-
-    
-  # Replacing low values -> 0
-
-    mutate (ratio_mean_pairwise_zero = mean_pairwise_zero.y/mean_pairwise_zero.x) %>% 
-    mutate (ratio_mean_watterson_zero = mean_watterson_zero.y/mean_watterson_zero.x) %>% 
-  
-    
-    
-    
-  # All values
-    
-    # PI    
-    mutate (ratio_mean_pairwise_corrected = ifelse(type_chr=="autosomes",                  (mean_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_mean)/(mean_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_mean), 
- # else
-(mean_pairwise_ave.y/chrX_pairwise_average_intergenic_per_unit_pop2_mean)/(mean_pairwise_ave.x/chrX_pairwise_average_intergenic_per_unit_pop1_mean))) %>% 
-  
-    # WATTERSON
-    mutate (ratio_mean_watterson_corrected = ifelse(type_chr=="autosomes",                  (mean_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_mean)/(mean_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_mean), 
-# else
-(mean_watterson_ave.y/chrX_watterson_average_intergenic_per_unit_pop2_mean)/(mean_watterson_ave.x/chrX_watterson_average_intergenic_per_unit_pop1_mean))) %>% 
-    
-    
-    
-  # Replacing low values -> 0
-  
-    # PI    
-    mutate (ratio_mean_pairwise_corrected_zero = ifelse(type_chr=="autosomes",                  (mean_pairwise_zero.y/autosomes_pairwise_average_intergenic_per_unit_pop2_mean_zero)/(mean_pairwise_zero.x/autosomes_pairwise_average_intergenic_per_unit_pop1_mean_zero), 
- # else
-(mean_pairwise_zero.y/chrX_pairwise_average_intergenic_per_unit_pop2_mean_zero)/(mean_pairwise_zero.x/chrX_pairwise_average_intergenic_per_unit_pop1_mean_zero))) %>% 
-  
-    # WATTERSON
-    mutate (ratio_mean_watterson_corrected_zero = ifelse(type_chr=="autosomes",                  (mean_watterson_zero.y/autosomes_watterson_average_intergenic_per_unit_pop2_mean_zero)/(mean_watterson_zero.x/autosomes_watterson_average_intergenic_per_unit_pop1_mean_zero), 
-# else
-(mean_watterson_zero.y/chrX_watterson_average_intergenic_per_unit_pop2_mean_zero)/(mean_watterson_zero.x/chrX_watterson_average_intergenic_per_unit_pop1_mean_zero)))
-
-  
-  dataframename <- paste ("ratio_mean", name_POP1, name_POP2,  sep="_")
+  dataframename <- paste ("interaction_stats_", name_POP1, name_POP2,  sep="_")
   assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
 }
-
-
-```
-
-Create data frames
-
-```{r}
 
 # Create data frame
 
 # Dataframe Kirov-Norway
-
-bootleneck_vs_non_bootleneck_ratio_mean_region(c_ll_ki_n013_stats_region,c_ll_no_n008_stats_region, deparse(substitute(c_ll_ki_n013_stats_region)),deparse(substitute(c_ll_no_n008_stats_region)))
-write.table(ratio_mean_c_ll_ki_n013_stats_region_c_ll_no_n008_stats_region, paste(wd_output,"ratio_mean_autosomes_region_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_ll_ki_n013_stats_feature_region,c_ll_no_n008_stats_feature_region, deparse(substitute(c_ll_ki_n013_stats_feature_region)),deparse(substitute(c_ll_no_n008_stats_feature_region)))
 
 # Dataframe Kirov-Poland
-
-bootleneck_vs_non_bootleneck_ratio_mean_region(c_ll_ki_n013_stats_region,c_ll_po_n008_stats_region, deparse(substitute(c_ll_ki_n013_stats_region)),deparse(substitute(c_ll_po_n008_stats_region)))
-write.table(ratio_mean_c_ll_ki_n013_stats_region_c_ll_po_n008_stats_region, paste(wd_output,"ratio_mean_autosomes_region_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
+bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_ll_ki_n013_stats_feature_region,c_ll_po_n008_stats_feature_region, deparse(substitute(c_ll_ki_n013_stats_feature_region)),deparse(substitute(c_ll_po_n008_stats_feature_region)))
 
 # Dataframe Sierra_Morena-Doñana
-
-bootleneck_vs_non_bootleneck_ratio_mean_region(c_lp_sm_n019_stats_region, c_lp_do_n012_stats_region, deparse(substitute(c_lp_sm_n019_stats_region)),deparse(substitute(c_lp_do_n012_stats_region)))
-write.table(ratio_mean_c_lp_sm_n019_stats_region_c_lp_do_n012_stats_region, paste(wd_output,"ratio_mean_autosomes_region_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_lp_sm_n019_stats_feature_region,c_lp_do_n012_stats_feature_region, deparse(substitute(c_lp_sm_n019_stats_feature_region)),deparse(substitute(c_lp_do_n012_stats_feature_region)))
 
 ```
 
-##### Chr
 
+##### Region-Chr 
 ```{r}
 
-# Calculo el ratio para la media:
+# Calculo el ratio para la mediana:
 
-bootleneck_vs_non_bootleneck_ratio_mean_chr <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+bootleneck_vs_non_bootleneck_ratio_median_region_chr <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
   
   # Nombre de las poblaciones
-  
+
   POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
   POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
    
-# AUTOSOMES
+  # Create interaction table:
+  ratio_averages_POP1_POP2 <- full_join ( select ( dataframe_POP1, chr, pop, region, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
+                                          select ( dataframe_POP2, chr, pop, region, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
+                                          by=c("region", "chr")) 
   
-  # All values
-  autosomes_pairwise_average_intergenic_per_unit_pop1_mean <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_pairwise_ave_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop1_mean <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_watterson_ave_intergenic))  
-  
-  autosomes_pairwise_average_intergenic_per_unit_pop2_mean <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_pairwise_ave_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop2_mean <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_watterson_ave_intergenic))  
-  
-  
-  # Replacing low values -> 0
-  autosomes_pairwise_average_intergenic_per_unit_pop1_mean_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_pairwise_ave_zero_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop1_mean_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_watterson_ave_zero_intergenic))  
-  
-  autosomes_pairwise_average_intergenic_per_unit_pop2_mean_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_pairwise_ave_zero_intergenic)) 
-  autosomes_watterson_average_intergenic_per_unit_pop2_mean_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_watterson_ave_zero_intergenic))  
-  
-
-# CHRX.
-
-  # All values
-  chrX_pairwise_average_intergenic_per_unit_pop1_mean <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_pairwise_ave_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop1_mean <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_watterson_ave_intergenic))  
-  
-  chrX_pairwise_average_intergenic_per_unit_pop2_mean <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_pairwise_ave_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop2_mean <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_watterson_ave_intergenic))  
-  
-  # Replacing low values -> 0
-  chrX_pairwise_average_intergenic_per_unit_pop1_mean_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_pairwise_ave_zero_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop1_mean_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (mean_watterson_ave_zero_intergenic))  
-  
-  chrX_pairwise_average_intergenic_per_unit_pop2_mean_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_pairwise_ave_zero_intergenic)) 
-  chrX_watterson_average_intergenic_per_unit_pop2_mean_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (mean_watterson_ave_zero_intergenic))  
-  
-  
-  # Calculo de los ratios globales.
-  
-  ratio_averages_POP1_POP2 <- full_join ( 
-    select ( dataframe_POP1, chr, pop, total_count, mean_pairwise_ave, mean_watterson_ave, mean_pairwise_zero, mean_watterson_zero), 
-    select ( dataframe_POP2, chr, pop, total_count, mean_pairwise_ave, mean_watterson_ave, mean_pairwise_zero, mean_watterson_zero), 
-                                          by=c("chr")) %>% 
-      
-  # All values
-
-    mutate (ratio_mean_pairwise = mean_pairwise_ave.y/mean_pairwise_ave.x) %>% 
-    mutate (ratio_mean_watterson = mean_watterson_ave.y/mean_watterson_ave.x) %>% 
-
-    
-  # Replacing low values -> 0
-
-    mutate (ratio_mean_pairwise_zero = mean_pairwise_zero.y/mean_pairwise_zero.x) %>% 
-    mutate (ratio_mean_watterson_zero = mean_watterson_zero.y/mean_watterson_zero.x) %>% 
-  
-    
-    
-    
-  # All values
-    
-    # PI    
-    mutate (ratio_mean_pairwise_corrected = ifelse(chr!="chrX",                  (mean_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_mean)/(mean_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_mean), 
- # else
-(mean_pairwise_ave.y/chrX_pairwise_average_intergenic_per_unit_pop2_mean)/(mean_pairwise_ave.x/chrX_pairwise_average_intergenic_per_unit_pop1_mean))) %>% 
-  
-    # WATTERSON
-    mutate (ratio_mean_watterson_corrected = ifelse(chr!="chrX",                  (mean_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_mean)/(mean_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_mean), 
-# else
-(mean_watterson_ave.y/chrX_watterson_average_intergenic_per_unit_pop2_mean)/(mean_watterson_ave.x/chrX_watterson_average_intergenic_per_unit_pop1_mean))) %>% 
-    
-    
-    
-  # Replacing low values -> 0
-  
-    # PI    
-    mutate (ratio_mean_pairwise_corrected_zero = ifelse(chr!="chrX",                  (mean_pairwise_zero.y/autosomes_pairwise_average_intergenic_per_unit_pop2_mean_zero)/(mean_pairwise_zero.x/autosomes_pairwise_average_intergenic_per_unit_pop1_mean_zero), 
- # else
-(mean_pairwise_zero.y/chrX_pairwise_average_intergenic_per_unit_pop2_mean_zero)/(mean_pairwise_zero.x/chrX_pairwise_average_intergenic_per_unit_pop1_mean_zero))) %>% 
-  
-    # WATTERSON
-    mutate (ratio_mean_watterson_corrected_zero = ifelse(chr!="chrX",                  (mean_watterson_zero.y/autosomes_watterson_average_intergenic_per_unit_pop2_mean_zero)/(mean_watterson_zero.x/autosomes_watterson_average_intergenic_per_unit_pop1_mean_zero), 
-# else
-(mean_watterson_zero.y/chrX_watterson_average_intergenic_per_unit_pop2_mean_zero)/(mean_watterson_zero.x/chrX_watterson_average_intergenic_per_unit_pop1_mean_zero)))
-
-  
-  dataframename <- paste ("ratio_mean", name_POP1, name_POP2,  sep="_")
+  dataframename <- paste ("interaction_stats_", name_POP1, name_POP2,  sep="_")
   assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
 }
 
-```
-
-Create data frame
-```{r}
+# Create data frame
 
 # Dataframe Kirov-Norway
-bootleneck_vs_non_bootleneck_ratio_mean_chr(c_ll_ki_n013_stats_chr,c_ll_no_n008_stats_chr, deparse(substitute(c_ll_ki_n013_stats_chr)),deparse(substitute(c_ll_no_n008_stats_chr)))
-write.table(ratio_mean_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr, paste(wd_output,"ratio_mean_autosomes_chr_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
+bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_ll_ki_n013_stats_region_chr,c_ll_no_n008_stats_region_chr, deparse(substitute(c_ll_ki_n013_stats_region_chr)),deparse(substitute(c_ll_no_n008_stats_region_chr)))
 
 # Dataframe Kirov-Poland
-bootleneck_vs_non_bootleneck_ratio_mean_chr(c_ll_ki_n013_stats_chr,c_ll_po_n008_stats_chr, deparse(substitute(c_ll_ki_n013_stats_chr)),deparse(substitute(c_ll_po_n008_stats_chr)))
-write.table(ratio_mean_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr, paste(wd_output,"ratio_mean_autosomes_chr_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_ll_ki_n013_stats_region_chr,c_ll_po_n008_stats_region_chr, deparse(substitute(c_ll_ki_n013_stats_region_chr)),deparse(substitute(c_ll_po_n008_stats_region_chr)))
 
 # Dataframe Sierra_Morena-Doñana
-bootleneck_vs_non_bootleneck_ratio_mean_chr(c_lp_sm_n019_stats_chr, c_lp_do_n012_stats_chr, deparse(substitute(c_lp_sm_n019_stats_chr)),deparse(substitute(c_lp_do_n012_stats_chr)))
-write.table(ratio_mean_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr, paste(wd_output,"ratio_mean_autosomes_chr_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
+bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_lp_sm_n019_stats_region_chr, c_lp_do_n012_stats_region_chr, deparse(substitute(c_lp_sm_n019_stats_region_chr)),deparse(substitute(c_lp_do_n012_stats_region_chr)))
 ```
 
-##### Plot for ratio
+
+##### Plot chr-region
 
 ```{r}
+library (ggpubr)
 
-DATAFRAMES=c(
-"ratio_mean_c_ll_ki_n013_stats_feature_c_ll_no_n008_stats_feature", "ratio_mean_c_ll_ki_n013_stats_feature_c_ll_po_n008_stats_feature", "ratio_mean_c_lp_sm_n019_stats_feature_c_lp_do_n012_stats_feature")
+DIVERSITY_MEASURES=c("wmean_watterson_ave", "wmean_pairwise_ave")
 
-INDEXES=c("ratio_mean_watterson_corrected", "ratio_mean_pairwise_corrected", "ratio_mean_watterson_corrected", "ratio_mean_pairwise_corrected", "ratio_mean_watterson_corrected_zero", "ratio_mean_pairwise_corrected_zero")
-
-for (DATAFRAME in DATAFRAMES)
+  for (DIVERSITY_MEASURE in DIVERSITY_MEASURES)
 {
-for (INDEX in INDEXES)
-  {
+    
+a <- ggplot(data=interaction_stats__c_ll_ki_n013_stats_region_chr_c_ll_po_n008_stats_region_chr %>% filter(chr!="chrX"), mapping = aes_string(paste(DIVERSITY_MEASURE,".x",sep=""), paste(DIVERSITY_MEASURE,".y",sep="")))+
+  facet_wrap (~region, ncol=1) +
+  geom_point (aes(colour=chr)) +
+  scale_color_viridis_d() +
+  geom_abline(colour="grey") +
+  geom_smooth (method = "lm", se = FALSE, colour="black", size=0.5) +
+  theme(legend.position="none")
+ 
+b <- ggplot(data=interaction_stats__c_ll_ki_n013_stats_region_chr_c_ll_no_n008_stats_region_chr %>% filter(chr!="chrX"), mapping = aes_string(paste(DIVERSITY_MEASURE,".x",sep=""), paste(DIVERSITY_MEASURE,".y",sep="")))+
+  facet_wrap (~region, ncol=1) +
+  geom_point (aes(colour=chr)) +
+  scale_color_viridis_d() +
+  geom_abline(colour="grey") +
+  geom_smooth (method = "lm", se = FALSE, colour="black", size=0.5) +
+  theme(legend.position="none")
 
-ggplot (get(DATAFRAME) %>% filter (type_chr!="chrX"), aes_string("feature", INDEX, fill="type_chr", colour="type_chr")) +
-  geom_point() +
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
-  theme(text=element_text(family = 'Times', size = 12, color = 'black'), axis.text.x = element_text(angle = 45, hjust = 1))
+c <- ggplot(data=interaction_stats__c_lp_sm_n019_stats_region_chr_c_lp_do_n012_stats_region_chr %>% filter(chr!="chrX"), mapping = aes_string(paste(DIVERSITY_MEASURE,".x",sep=""), paste(DIVERSITY_MEASURE,".y",sep="")))+
+  facet_wrap (~region, ncol=1) +
+  geom_point (aes(colour=chr)) +
+  scale_color_viridis_d() +
+  geom_abline(colour="grey") +
+  geom_smooth (method = "lm", se = FALSE, colour="black", size=0.5) 
+
+ 
+a.b.c <- ggarrange(a, b, c,  
+          labels = c("A", "B" ,"C"),
+          ncol = 3, nrow = 1, widths=c(1,1,1.25))
   
-  ggsave(paste(wd_output, DATAFRAME,"_", INDEX,".pdf", sep=""))
-}
-}
+ggsave (paste(wd_output,"comparisons_region_vs_chr_",DIVERSITY_MEASURE, ".pdf", sep=""),a.b.c, width = 25, height = 25, units = "cm")
 
-
+}
 
 ```
 
-#####
+
+
+# -------------------------
+# -------------------------
+# -------------------------
+
+# OLD CODE
 
 ##### Heatmap for two groups
 
