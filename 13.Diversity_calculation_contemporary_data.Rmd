@@ -4358,7 +4358,7 @@ bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_lp_sm_n019_stats_region_c
 ```
 
 
-##### Plot chr-region
+##### Plot diversity one pop vs the other chr-region
 
 ```{r}
 library (ggpubr)
