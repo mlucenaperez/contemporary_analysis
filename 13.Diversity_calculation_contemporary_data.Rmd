@@ -4268,9 +4268,9 @@ bootleneck_vs_non_bootleneck_ratio_median_feature_chr <- function(dataframe_POP1
   # Create interaction table:
   ratio_averages_POP1_POP2 <- full_join ( select ( dataframe_POP1, feature, pop, chr, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
                                           select ( dataframe_POP2, feature, pop, chr, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
-                                          by=c("chr", "feature")) 
+                                          by=c("chr", "feature")) %>% mutate (comparison=paste(POP1,"_", POP2, sep=""))
   
-  dataframename <- paste ("interaction_stats_", name_POP1, name_POP2,  sep="_")
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
   assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
   
 }
@@ -4304,9 +4304,9 @@ bootleneck_vs_non_bootleneck_ratio_median_feature_region <- function(dataframe_P
   # Create interaction table:
   ratio_averages_POP1_POP2 <- full_join ( select ( dataframe_POP1, feature, pop, region, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
                                           select ( dataframe_POP2, feature, pop, region, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
-                                          by=c("region", "feature")) 
+                                          by=c("region", "feature"))  %>% mutate (comparison=paste(POP1,"_", POP2, sep=""))
   
-  dataframename <- paste ("interaction_stats_", name_POP1, name_POP2,  sep="_")
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
   assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
 }
 
@@ -4339,9 +4339,9 @@ bootleneck_vs_non_bootleneck_ratio_median_region_chr <- function(dataframe_POP1,
   # Create interaction table:
   ratio_averages_POP1_POP2 <- full_join ( select ( dataframe_POP1, chr, pop, region, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
                                           select ( dataframe_POP2, chr, pop, region, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
-                                          by=c("region", "chr")) 
+                                          by=c("region", "chr"))  %>% mutate (comparison=paste(POP1,"_", POP2, sep=""))
   
-  dataframename <- paste ("interaction_stats_", name_POP1, name_POP2,  sep="_")
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
   assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
 }
 
@@ -4363,40 +4363,24 @@ bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_lp_sm_n019_stats_region_c
 ```{r}
 library (ggpubr)
 
-DIVERSITY_MEASURES=c("wmean_watterson_ave", "wmean_pairwise_ave")
+DIVERSITY_MEASURES=c( "wmean_pairwise_ave", "wmean_watterson_ave")
+
+interaction_stats_all_comparison_region_chr <-  rbind (interaction_stats_c_ll_ki_n013_stats_region_chr_c_ll_po_n008_stats_region_chr ,interaction_stats_c_ll_ki_n013_stats_region_chr_c_ll_no_n008_stats_region_chr, interaction_stats_c_lp_sm_n019_stats_region_chr_c_lp_do_n012_stats_region_chr) 
+
+interaction_stats_all_comparison_region_chr$comparison <- factor (interaction_stats_all_comparison_region_chr$comparison, levels=c("c_ll_ki_n013_c_ll_po_n008","c_ll_ki_n013_c_ll_no_n008", "c_lp_sm_n019_c_lp_do_n012"))
+
 
   for (DIVERSITY_MEASURE in DIVERSITY_MEASURES)
 {
     
-a <- ggplot(data=interaction_stats__c_ll_ki_n013_stats_region_chr_c_ll_po_n008_stats_region_chr %>% filter(chr!="chrX"), mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""), paste(DIVERSITY_MEASURE,".x",sep="")))+
-  facet_wrap (~region, ncol=1) +
-  geom_point (aes(colour=chr)) +
-  scale_color_viridis_d() +
-  geom_abline(colour="grey") +
-  geom_smooth (method = "lm", se = FALSE, colour="black", size=0.5) +
-  theme(legend.position="none")
- 
-b <- ggplot(data=interaction_stats__c_ll_ki_n013_stats_region_chr_c_ll_no_n008_stats_region_chr %>% filter(chr!="chrX"), mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""), paste(DIVERSITY_MEASURE,".x",sep="")))+
-  facet_wrap (~region, ncol=1) +
-  geom_point (aes(colour=chr)) +
-  scale_color_viridis_d() +
-  geom_abline(colour="grey") +
-  geom_smooth (method = "lm", se = FALSE, colour="black", size=0.5) +
-  theme(legend.position="none")
-
-c <- ggplot(data=interaction_stats__c_lp_sm_n019_stats_region_chr_c_lp_do_n012_stats_region_chr %>% filter(chr!="chrX"), mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""), paste(DIVERSITY_MEASURE,".x",sep="")))+
-  facet_wrap (~region, ncol=1) +
+ggplot(data=interaction_stats_all_comparison_region_chr %>% filter(chr!="chrX"), mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""), paste(DIVERSITY_MEASURE,".x",sep="")))+
+  facet_wrap (region~comparison) +
   geom_point (aes(colour=chr)) +
   scale_color_viridis_d() +
   geom_abline(colour="grey") +
   geom_smooth (method = "lm", se = FALSE, colour="black", size=0.5) 
 
- 
-a.b.c <- ggarrange(a, b, c,  
-          labels = c("A", "B" ,"C"),
-          ncol = 3, nrow = 1, widths=c(1,1,1.25))
-  
-ggsave (paste(wd_output,"comparisons_region_vs_chr_",DIVERSITY_MEASURE, ".pdf", sep=""),a.b.c, width = 25, height = 25, units = "cm")
+ggsave (paste(wd_output,"comparisons_region_vs_chr_",DIVERSITY_MEASURE, ".pdf", sep=""), width = 25, height = 25, units = "cm")
 
 }
 
