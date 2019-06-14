@@ -623,7 +623,7 @@ data_diversity_filtered_recomb_cat_zero_variable$feature <- factor (data_diversi
 ```
 
 
-## 5. Autosomes vs chrX
+## 6. Autosomes vs chrX
 
 A partir de ahora debería separar todo el rato cromosomas chrXes de no chrXes. 
 
@@ -639,7 +639,7 @@ rm (data_diversity_filtered_recomb_cat_zero_variable)
 
 ```
 
-## 6. Corrected with intergenic
+## 7. Corrected with intergenic
 
 Corrijo los valores individuales para la media de intergénico
 
@@ -736,7 +736,7 @@ for (POP in POPS)
 ```
 
 
-## 7. Fusiono tablas:
+## 8. Fusiono tablas:
 
 
 ```{r}
@@ -1294,7 +1294,7 @@ ggplot(data=subset(data_diversity_autosomes_filtered_ave_corrected, !is.na(recom
   geom_boxplot() +
   scale_color_viridis(discrete=TRUE) +
   scale_fill_viridis(discrete=TRUE) +
-  facet_grid(~pop)+
+  facet_grid(~pop) +
   ggsave(paste(wd_output,"recombination_categories_vs_pairwise.pdf",sep=""))
 
 ggplot(data=subset(data_diversity_autosomes_filtered_ave_corrected, !is.na(recombination_category)),aes(recombination_category,pairwise_ave, fill=pop, colour=pop))+
@@ -1327,15 +1327,13 @@ ggplot(data_diversity_autosomes_filtered_ave_corrected,aes(region,recombination_
   geom_boxplot() + #geom_violin
   scale_color_viridis(discrete=TRUE) +
   scale_fill_viridis(discrete=TRUE) +
-
  ggsave(paste (wd_output, "boxplot_violin_plot/","recombination_rate_per_region.pdf", sep="" ))
 
 
 ggplot(data_diversity_autosomes_filtered_ave_corrected,aes(region,recombination_rate))+
   scale_color_viridis(discrete=TRUE) +
   scale_fill_viridis(discrete=TRUE) +
- stat_summary(fun.y = mean, geom="point", size=3) +
-  stat_summary(fun.data = mean_se, geom = "errorbar") +
+  stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
  ggsave(paste (wd_output, "boxplot_violin_plot/","recombination_rate_per_region_mean_se.pdf", sep="" ))
 
 
@@ -4365,22 +4363,35 @@ library (ggpubr)
 
 DIVERSITY_MEASURES=c( "wmean_pairwise_ave", "wmean_watterson_ave")
 
-interaction_stats_all_comparison_region_chr <-  rbind (interaction_stats_c_ll_ki_n013_stats_region_chr_c_ll_po_n008_stats_region_chr ,interaction_stats_c_ll_ki_n013_stats_region_chr_c_ll_no_n008_stats_region_chr, interaction_stats_c_lp_sm_n019_stats_region_chr_c_lp_do_n012_stats_region_chr) 
+interaction_stats_all_comparison_region_chr_cat_info <-  rbind (interaction_stats_c_ll_ki_n013_stats_region_chr_c_ll_po_n008_stats_region_chr ,interaction_stats_c_ll_ki_n013_stats_region_chr_c_ll_no_n008_stats_region_chr, interaction_stats_c_lp_sm_n019_stats_region_chr_c_lp_do_n012_stats_region_chr) %>% dplyr::full_join(., cat_chr_info_divergence, by="chr") 
 
-interaction_stats_all_comparison_region_chr$comparison <- factor (interaction_stats_all_comparison_region_chr$comparison, levels=c("c_ll_ki_n013_c_ll_po_n008","c_ll_ki_n013_c_ll_no_n008", "c_lp_sm_n019_c_lp_do_n012"))
+interaction_stats_all_comparison_region_chr_cat_info$comparison <- factor (interaction_stats_all_comparison_region_chr_cat_info$comparison, levels=c("c_ll_ki_n013_c_ll_po_n008","c_ll_ki_n013_c_ll_no_n008", "c_lp_sm_n019_c_lp_do_n012"))
 
 
   for (DIVERSITY_MEASURE in DIVERSITY_MEASURES)
 {
     
-ggplot(data=interaction_stats_all_comparison_region_chr %>% filter(chr!="chrX"), mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""), paste(DIVERSITY_MEASURE,".x",sep="")))+
+ggplot(data=interaction_stats_all_comparison_region_chr_cat_info %>% filter(chr!="chrX"), mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""), paste(DIVERSITY_MEASURE,".x",sep="")))+
   facet_wrap (region~comparison) +
-  geom_point (aes(colour=chr)) +
-  scale_color_viridis_d() +
+  geom_point (aes(colour=cM.Mb)) +
+  scale_fill_viridis() +
+  scale_colour_viridis() +
   geom_abline(colour="grey") +
   geom_smooth (method = "lm", se = FALSE, colour="black", size=0.5) 
 
-ggsave (paste(wd_output,"comparisons_region_vs_chr_",DIVERSITY_MEASURE, ".pdf", sep=""), width = 25, height = 25, units = "cm")
+ggsave (paste(wd_output,"comparisons_region_vs_chr_",DIVERSITY_MEASURE, "_colour_recomb.pdf", sep=""), width = 25, height = 25, units = "cm")
+
+
+
+ggplot(data=interaction_stats_all_comparison_region_chr_cat_info %>% filter(chr!="chrX"), mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""), paste(DIVERSITY_MEASURE,".x",sep="")))+
+  facet_wrap (region~comparison) +
+  geom_point (aes(colour=chr)) +
+  scale_fill_viridis() +
+  scale_colour_viridis() +
+  geom_abline(colour="grey") +
+  geom_smooth (method = "lm", se = FALSE, colour="black", size=0.5) 
+
+ggsave (paste(wd_output,"comparisons_region_vs_chr_",DIVERSITY_MEASURE, "_colour_chr.pdf", sep=""), width = 25, height = 25, units = "cm")
 
 }
 
