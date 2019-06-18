@@ -1,0 +1,306 @@
+---
+title: "16.Divergent_selection"
+output: html_document
+---
+
+
+Vamos a testar si los candidatos a alta diversidad que tenemos para los dataset de WG que han salido del GO term enrichment vienen de seleccion divergente, o de balancing selection. Para ello vamos a buscar los genes a los que pertencen, y concretamente donde están en el scaffold y vamos a comprobar la FST usando los archivos de FST que cree en 2017. 
+
+Los archivos de fst están en:
+
+Servidor B:
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/fst/fst_window_analysis
+
+Los archivos de diversidad donde voy a buscar mis genes son:
+
+En local:
+/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/global.per.unit.averages.chr.all.regions.subsampled.filtered.watterson.modif.chrX.tsv
+
+Lo vamos a hacer sobre:
+
+1. El dataset de genes GO term enriched que han salido para esa población en concreto (/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/topGO/results/$POP1_$POP2_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term.txt)
+
+
+Al hacerlo sobre este dataset de cada población, ya tendremos también los resultados para el dataset de la unión, solo tendremos que filtrar al final. 
+2. El dataset de genes GO term enriched que han salido despues de hacer la unión con los dataset de las otras comparaciones (/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/topGO/results/c_ll_ki_n013_c_ll_no_n008_PLUS_c_ll_ki_n013_c_ll_po_n008_PLUS_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term.txt)
+
+
+Para las tres comparaciones, la unión nos da la siguiente lista de genes. Esto está mirado con la tablita de cytoscape. El problema es que están todos los genes asociados a ese GO term, así que nosotros vamos a intentar hilar más fino y quedarnos con los genes que han hecho que ese GO salga como enriched. 
+
+
+1. GO:0045745: positive regulation of G-protein coupled receptor protein signaling pathway --> LIKELY BALANCING SELECTION
+LYPA23C001421,LYPA23C002312,LYPA23C003024,LYPA23C004416,LYPA23C004420,LYPA23C006713,LYPA23C007332,LYPA23C009144,LYPA23C010345,LYPA23C011001,LYPA23C012190,LYPA23C015679,LYPA23C015865,LYPA23C016658,LYPA23C017853,LYPA23C021654,LYPA23C022877
+2. GO:0010866: regulation of triglyceride biosynthetic process
+LYPA23C001421,LYPA23C002312,LYPA23C003024,LYPA23C006713,LYPA23C009144,LYPA23C010345,LYPA23C011001,LYPA23C012461,LYPA23C013667,LYPA23C021654,LYPA23C022877
+3. GO:0010884: positive regulation of lipid storage
+LYPA23C001421,LYPA23C002312,LYPA23C003024,LYPA23C006713,LYPA23C008940,LYPA23C009144,LYPA23C010345,LYPA23C011001,LYPA23C016283,LYPA23C021654,LYPA23C022877
+4. GO:0006429: leucyl-tRNA aminoacylation
+LYPA23C007377,LYPA23C015118
+5. GO:0008057: eye pigment granule organization
+LYPA23C010642,LYPA23C017435
+6. GO:0000902: cell morphogenesis
+LYPA23C000049,LYPA23C000067,LYPA23C001383,LYPA23C001608,LYPA23C002014,LYPA23C002692,LYPA23C002980,LYPA23C003173,LYPA23C003860,LYPA23C004189,LYPA23C004193,LYPA23C004985,LYPA23C005074,LYPA23C005647,LYPA23C006043,LYPA23C007185,LYPA23C007446,LYPA23C007470,LYPA23C007587,LYPA23C007593,LYPA23C007670,LYPA23C008664,LYPA23C008686,LYPA23C009362,LYPA23C010049,LYPA23C010642,LYPA23C010645,LYPA23C011626,LYPA23C012623,LYPA23C012929,LYPA23C013707,LYPA23C014460,LYPA23C014673,LYPA23C015073,LYPA23C015385,LYPA23C015592,LYPA23C015737,LYPA23C015898,LYPA23C016303,LYPA23C016728,LYPA23C017072,LYPA23C017435,LYPA23C017492,LYPA23C017648,LYPA23C017739,LYPA23C018851,LYPA23C019763,LYPA23C020473,LYPA23C021301,LYPA23C022672,LYPA23C022688
+7. GO:0002089: lens morphogenesis in camera-type eye
+LYPA23C001796,LYPA23C002366,LYPA23C003863,LYPA23C005745,LYPA23C006584,LYPA23C007672,LYPA23C008509,LYPA23C010642,LYPA23C011250,LYPA23C017214,LYPA23C017435,LYPA23C019063,LYPA23C021537
+
+# Load wd
+```{r}
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
+```
+
+
+# Load individual files (sacado del script de GO term). 
+Esto lo hago para poder filtrar la tabla de genes y quedarnos solo con los que de verdad han dado ese GO term, y no con todos. 
+
+## 2.2. Pairwise
+
+### HD_HD_ratio_1_pairwise individual
+
+```{r}
+
+# Kirov vs Norway
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise", sep=""), header = T, stringsAsFactors = F) # Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise$Gen)
+
+# Kirov vs Poland
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise <- read.table (paste0(wd,"input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise", sep=""), header = T, stringsAsFactors = F) # Así quito todo lo que venga despues de la última P. 
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise$Gen <- sub("P[^P]+$", "", c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise$Gen)
+                        
+# Andujar vs Doñana
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise <- read.table (paste0(wd,"input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise", sep=""), header = T, stringsAsFactors = F) # Así quito todo lo que venga despues de la última P. 
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise$Gen <- sub("P[^P]+$", "", c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise$Gen)
+ 
+```
+
+# Load GO term overrepresented per pop.
+
+```{r}
+# Tabla con los GO term de interés:
+
+# Kirov Norway
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term  <- read.table(paste(wd,"topGO/results/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_results_GO_enrichment_BP.txt",sep=""), header = T) %>% filter (weighted01<0.05)
+
+# Kirov Poland
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term  <- read.table(paste(wd,"topGO/results/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_results_GO_enrichment_BP.txt",sep=""), header = T) %>% filter (weighted01<0.05)
+
+# Andujar Doñana
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term  <- read.table(paste(wd,"topGO/results/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_results_GO_enrichment_BP.txt",sep=""), header = T) %>% filter (weighted01<0.05)
+
+# Union de los tres dataset
+c_ll_ki_n013_c_ll_no_n008_PLUS_c_ll_ki_n013_c_ll_po_n008_PLUS_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term  <- read.table(paste(wd, "topGO/results/c_ll_ki_n013_c_ll_no_n008_PLUS_c_ll_ki_n013_c_ll_po_n008_PLUS_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term.txt",sep=""), header = T) 
+
+
+# Tabla con la info de GO term and GENE
+
+# Tabla con la información de GO term para cada gen.
+tabla_all_genes_GO_term_complete_info <- read.table (paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes_minor_modif.txt"), sep="\t", header = T) %>% mutate (GO_ACC=as.character(GO_ACC))
+
+```
+
+# Select gene of interest
+
+Aqui voy a quedarme con para cada dataset los genes que me han dado el GO-term, pq hay muchos genes asociados a cada GOterm, pero solo algunos son los que hacen que ese GO term salga, son los genes que están en nuestras condiciones y por tanto aparecen en nuestra tabla inicial. Estos son los que me quedo. 
+
+```{r}
+
+# Kirov Norway
+c_ll_ki_n013_c_ll_no_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_no_n008 <- inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise, tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) %>% inner_join (. , c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, by=c("GO_ACC"="GO.ID")) 
+
+# Kirov Poland
+c_ll_ki_n013_c_ll_po_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_po_n008 <- inner_join(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) %>% inner_join (. , c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, by=c("GO_ACC"="GO.ID"))
+
+# Andujar Doñana
+c_lp_sm_n019_c_lp_do_n012_GO_info_GO_enriched_c_lp_sm_n019_c_lp_do_n012 <- inner_join(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise, tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) %>% inner_join (. , c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, by=c("GO_ACC"="GO.ID"))
+
+
+```
+
+
+Ahora que tengo los genes por dataset, me interesa saber qué posiciones tienen en el genoma. Para ello voy a buscarlos en mi tabla de diversidad. Cargo la tabla de diversidad
+Tabla de diversidad
+
+```{r}
+wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
+
+data_diversity_filtered <- read.table(paste(wd, "global.per.unit.averages.chr.all.regions.filtered.watterson.modif.chrX.tsv", sep=""), header=T, na.strings = c("NA", "na")) %>%
+  # filtramos para que tenga información de cromosoma
+  filter(., !is.na(chr)) %>% 
+  filter(., !is.na(region)) 
+
+```
+
+# Join to get coordinates
+```{r}
+wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/fst_comparisons/"
+
+# Kirov Norway
+c_ll_ki_n013_c_ll_no_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_no_n008_genes_info <- inner_join (c_ll_ki_n013_c_ll_no_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_no_n008, data_diversity_filtered, by=c("Gen"="id_gene")) %>% filter (feature=="CDS" & pop=="c_ll_ki_n013") %>% select("scaffold", "start_cero_based", "end", "length", "NAs", "informative_sites", "feature", "region", "chr", "Gen") %>% group_by(Gen, region, chr, scaffold) %>% summarise(start=min(start_cero_based), end=max(end)) %>% ungroup() %>% select ( -region, -chr) %>% select(scaffold, start, end, Gen)
+
+write.table(c_ll_ki_n013_c_ll_no_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_no_n008_genes_info, paste(wd_output,"c_ll_ki_n013_c_ll_no_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_no_n008_genes_info.bed", sep=""), sep = '\t', quote=F, row.names = F)
+
+
+
+# Kirov Poland
+c_ll_ki_n013_c_ll_po_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_po_n008_genes_info <- inner_join (c_ll_ki_n013_c_ll_po_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_po_n008, data_diversity_filtered, by=c("Gen"="id_gene")) %>% filter (feature=="CDS" & pop=="c_ll_ki_n013") %>% select("scaffold", "start_cero_based", "end", "length", "NAs", "informative_sites", "feature", "region", "chr", "Gen") %>% group_by(Gen, region, chr, scaffold) %>% summarise(start=min(start_cero_based), end=max(end)) %>% ungroup() %>% select ( -region, -chr) %>% select(scaffold, start, end, Gen)
+
+write.table(c_ll_ki_n013_c_ll_po_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_po_n008_genes_info, paste(wd_output,"c_ll_ki_n013_c_ll_po_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_po_n008_genes_info.bed", sep=""), sep = '\t', quote=F, row.names = F)
+
+
+# Andujar Doñana
+c_lp_sm_n019_c_lp_do_n012_GO_info_GO_enriched_c_lp_sm_n019_c_lp_do_n012_genes_info <- inner_join (c_lp_sm_n019_c_lp_do_n012_GO_info_GO_enriched_c_lp_sm_n019_c_lp_do_n012, data_diversity_filtered, by=c("Gen"="id_gene")) %>% filter (feature=="CDS" & pop=="c_lp_sm_n019") %>% select("scaffold", "start_cero_based", "end", "length", "NAs", "informative_sites", "feature", "region", "chr", "Gen") %>% group_by(Gen, region, chr, scaffold) %>% summarise(start=min(start_cero_based), end=max(end)) %>% ungroup() %>% select ( -region, -chr) %>% select(scaffold, start, end, Gen)
+
+write.table(c_lp_sm_n019_c_lp_do_n012_GO_info_GO_enriched_c_lp_sm_n019_c_lp_do_n012_genes_info, paste(wd_output,"c_lp_sm_n019_c_lp_do_n012_GO_info_GO_enriched_c_lp_sm_n019_c_lp_do_n012_genes_info.bed", sep=""), sep = '\t', quote=F, row.names = F)
+
+```
+
+# Server FST
+
+Ahora lo voy a copiar al servidor y voy a hacer un intersect con los FST
+
+Me voy a trabajar al servidor B
+
+Creo la carpeta de trabajo:
+
+```{bash}
+mkdir /home/mlucena/GO_term_diversity_fst
+```
+
+Copio los archivos que he generado
+```{bash}
+scp /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/fst_comparisons/* mlucena@genomics-b.ebd.csic.es://home/mlucena/GO_term_diversity_fst  
+```
+
+
+```{bash}
+# Server B
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/fst/fst_window_analysis
+# Los archivos que nos interesan son:
+# c_ll_ki_n013.c_ll_no_n008.unfolded-lr.fst_50000_1000.tsv
+# c_ll_ki_n013.c_ll_po_n008.unfolded-lr.fst_50000_1000.tsv
+# c_lp_do_n012.c_lp_sm_n019.unfolded-lr.fst_50000_1000.tsv
+
+
+# y tienen esta pinta
+head c_ll_ki_n013.c_ll_no_n008.unfolded-lr.fst_50000_1000.tsv
+#region	chr	midPos	Nsites	fst
+#(1011,27275)(12191,59999)(10000,60000)	lp23.s00001	35000	26266	0.180002
+#(5431,33137)(20066,69375)(20000,70000)	lp23.s00001	45000	27708	0.191669
+#(12251,33400)(30000,71158)(30000,80000)	lp23.s00001	55000	21151	0.203159
+```
+La posición de la ventana está en el tercer parentesis, los primeros son los index donde el busca y el segndo parentesis es la primera posición con datos, y la última. 
+Yo voy a coger la ventana completa, y la quiero transformar en bed.
+
+Primero los voy a transformar en bed. 
+
+```{bash}
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/fst/fst_window_analysis
+
+tail -n +2 c_ll_ki_n013.c_ll_no_n008.unfolded-lr.fst_50000_1000.tsv | cut -d"(" -f 3-4 | cut -d ")" -f1,3 | tr -s ',' '\t' | tr -s ')' '\t' | awk -v OFS="\t" '{print $3, $1, $2, $6}' > c_ll_ki_n013.c_ll_no_n008.unfolded-lr.fst_50000_1000.bed
+
+tail -n +2 c_ll_ki_n013.c_ll_po_n008.unfolded-lr.fst_50000_1000.tsv | cut -d"(" -f 3-4 | cut -d ")" -f1,3 | tr -s ',' '\t' | tr -s ')' '\t' | awk -v OFS="\t" '{print $3, $1, $2, $6}' > c_ll_ki_n013.c_ll_po_n008.unfolded-lr.fst_50000_1000.bed
+
+tail -n +2 c_lp_do_n012.c_lp_sm_n019.unfolded-lr.fst_50000_1000.tsv | cut -d"(" -f 3-4 | cut -d ")" -f1,3 | tr -s ',' '\t' | tr -s ')' '\t' | awk -v OFS="\t" '{print $3, $1, $2, $6}' > c_lp_do_n012.c_lp_sm_n019.unfolded-lr.fst_50000_1000.bed
+
+```
+
+
+
+```{bash}
+bedtools intersect -a /home/mlucena/ANGSD_analysis/whole_genome_analysis/fst/fst_window_analysis/c_ll_ki_n013.c_ll_no_n008.unfolded-lr.fst_50000_1000.bed -b <(tail -n +2 c_ll_ki_n013_c_ll_no_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_no_n008_genes_info.bed) -wo > c_ll_ki_n013_c_ll_no_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_no_n008_genes_info_FST.bed
+
+
+bedtools intersect -a /home/mlucena/ANGSD_analysis/whole_genome_analysis/fst/fst_window_analysis/c_ll_ki_n013.c_ll_po_n008.unfolded-lr.fst_50000_1000.bed -b <(tail -n +2 c_ll_ki_n013_c_ll_po_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_po_n008_genes_info.bed) -wo > c_ll_ki_n013_c_ll_po_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_po_n008_genes_info_FST.bed
+
+
+bedtools intersect -a /home/mlucena/ANGSD_analysis/whole_genome_analysis/fst/fst_window_analysis/c_lp_do_n012.c_lp_sm_n019.unfolded-lr.fst_50000_1000.bed -b <(tail -n +2 c_lp_sm_n019_c_lp_do_n012_GO_info_GO_enriched_c_lp_sm_n019_c_lp_do_n012_genes_info.bed) -wo > c_lp_sm_n019_c_lp_do_n012_GO_info_GO_enriched_c_lp_sm_n019_c_lp_do_n012_genes_info_FST.bed
+```
+
+# Download to R
+
+```{bash}
+# Archivos que he generado y me interesan
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/GO_term_diversity_fst/*_FST.bed /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/fst_comparisons/
+
+# Archivos con valores FST por ventanas
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_analysis/fst/fst_window_analysis/*bed /Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/fst
+
+```
+
+# Valores de interes resumen
+
+```{r}
+c_ll_ki_n013_c_ll_no_n008_gene_info_FST <- read.table(paste(wd, "fst_comparisons/c_ll_ki_n013_c_ll_no_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_no_n008_genes_info_FST.bed", sep="")) %>% group_by(V8) %>% summarise(wmean_FST=weighted.mean(V4,w=V9))
+
+c_ll_ki_n013_c_ll_po_n008_gene_info_FST <- read.table(paste(wd, "fst_comparisons/c_ll_ki_n013_c_ll_po_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_po_n008_genes_info_FST.bed", sep="")) %>% group_by(V8) %>% summarise(wmean_FST=weighted.mean(V4,w=V9))
+
+c_lp_sm_n019_c_lp_do_n012_gene_info_FST <- read.table(paste(wd, "fst_comparisons/c_lp_sm_n019_c_lp_do_n012_GO_info_GO_enriched_c_lp_sm_n019_c_lp_do_n012_genes_info_FST.bed", sep="")) %>% group_by(V8) %>% summarise(wmean_FST=weighted.mean(V4,w=V9))
+
+```
+
+
+
+# FST distribution 
+
+```{r}
+c_lp_sm_n019_c_lp_do_n012_FST <- read.table("/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/fst/c_lp_do_n012.c_lp_sm_n019.unfolded-lr.fst_50000_1000.bed")
+
+c_ll_ki_n013_c_ll_no_n008_FST <- read.table("/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/fst/c_ll_ki_n013.c_ll_no_n008.unfolded-lr.fst_50000_1000.bed")
+
+c_ll_ki_n013_c_ll_po_n008_FST <- read.table("/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/fst/c_ll_ki_n013.c_ll_po_n008.unfolded-lr.fst_50000_1000.bed")
+
+```
+
+
+##  Plot
+
+```{r}
+library(ggplot2); theme_set(theme_minimal())
+
+ggplot() +
+  geom_histogram(data=c_lp_sm_n019_c_lp_do_n012_FST, aes(V4), binwidth = 0.005) +
+  geom_histogram (data=c_lp_sm_n019_c_lp_do_n012_gene_info_FST, aes(wmean_FST, colour="red"))
+
+ggplot() +
+  geom_histogram(data=c_ll_ki_n013_c_ll_no_n008_FST, aes(V4), binwidth = 0.005) +
+  geom_histogram (data=c_ll_ki_n013_c_ll_no_n008_gene_info_FST, aes(wmean_FST, colour="red"))
+
+ggplot() +
+  geom_histogram(data=c_ll_ki_n013_c_ll_po_n008_FST, aes(V4), binwidth = 0.005) +
+  geom_histogram (data=c_ll_ki_n013_c_ll_po_n008_gene_info_FST, aes(wmean_FST, colour="red"))
+
+```
+
+
+```{r}
+
+all_FST <- rbind (c_lp_sm_n019_c_lp_do_n012_FST %>% mutate(comparison="c_lp_sm_n019_c_lp_do_n012_general"),c_ll_ki_n013_c_ll_po_n008_FST %>% mutate(comparison="c_ll_ki_n013_c_ll_po_n008_general") , c_ll_ki_n013_c_ll_no_n008_FST %>% mutate(comparison="c_ll_ki_n013_c_ll_no_n008_general"))
+
+
+all_FST_interest <- rbind (c_ll_ki_n013_c_ll_po_n008_gene_info_FST %>% mutate(comparison="c_ll_ki_n013_c_ll_po_n008_genes_interest"), c_ll_ki_n013_c_ll_no_n008_gene_info_FST %>% mutate (comparison="c_ll_ki_n013_c_ll_no_n0081_genes_interest"),c_lp_sm_n019_c_lp_do_n012_gene_info_FST %>% mutate(comparison="c_lp_sm_n019_c_lp_do_n0121_genes_interest"))
+
+ggplot() +
+  geom_boxplot(data=all_FST, aes(comparison, V4)) +
+  geom_boxplot(data=all_FST_interest, aes(comparison, wmean_FST)) 
+  
+
+
+```
+
+
+
+
+
+
+
+
+Hago inner join para cada data set quedandome solo con lo que me interesa. 
+
+```{r}
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_info_GO_enriched_all_dataset <- inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise, tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) %>% inner_join (. ,  c_ll_ki_n013_c_ll_no_n008_PLUS_c_ll_ki_n013_c_ll_po_n008_PLUS_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, by=c("GO_ACC"="GO.ID"))
+
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_info_GO_enriched_all_dataset <- inner_join(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) %>% inner_join (. ,  c_ll_ki_n013_c_ll_no_n008_PLUS_c_ll_ki_n013_c_ll_po_n008_PLUS_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, by=c("GO_ACC"="GO.ID"))
+
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_info_GO_enriched_all_dataset <- inner_join(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise, tabla_all_genes_GO_term_complete_info, by=c("Gen"="GENE_NAME")) %>% inner_join (. ,  c_ll_ki_n013_c_ll_no_n008_PLUS_c_ll_ki_n013_c_ll_po_n008_PLUS_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, by=c("GO_ACC"="GO.ID")) 
+
+```
+
