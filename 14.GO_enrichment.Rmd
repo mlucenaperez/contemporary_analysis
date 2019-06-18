@@ -687,7 +687,7 @@ allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf=
 name=names(DATAFRAMES)[i]
 assign(paste0(name, "_GO_term_enrichment_BP"), allRes )
 
-write.table(allRes, paste0(wd, "topGO/results/", name, "_results_GO_enrichment_BP.txt"), quote = F, row.names = F)
+write.table(allRes, paste0(wd, "topGO/results/", name, "_results_GO_enrichment_BP.txt"), quote = T, row.names = F)
 
 rm(list = c('gene_of_interest_list','geneList','GOdata','test.stat','resultFisher','allRes'))
 
@@ -726,7 +726,7 @@ allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf=
 # Guardo los resultados con el nombre del dataframe
 assign(paste0(name, "_GO_term_enrichment_CC"), allRes )
 
-write.table(allRes, paste0(wd, "topGO/results/", name, "_results_GO_enrichment_CC.txt"), quote = F, row.names = F)
+write.table(allRes, paste0(wd, "topGO/results/", name, "_results_GO_enrichment_CC.txt"), quote = T, row.names = F)
 
 rm(list = c('gene_of_interest_list','geneList','GOdata','test.stat','resultFisher','allRes'))
 
@@ -765,7 +765,7 @@ allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf=
 # Guardo los resultados con el nombre del dataframe
 assign(paste0(name, "_GO_term_enrichment_MF"), allRes )
 
-write.table(allRes, paste0(wd, "topGO/results/", name, "_results_GO_enrichment_MF.txt"), quote = F, row.names = F)
+write.table(allRes, paste0(wd, "topGO/results/", name, "_results_GO_enrichment_MF.txt"), quote = T, row.names = F)
 
 rm(list = c('gene_of_interest_list','geneList','GOdata','test.stat','resultFisher','allRes'))
 
