@@ -800,6 +800,8 @@ diversity_stats_pop <- function(diversity_df)
 
                        wmean_watterson_ave=weighted.mean(watterson_ave,w=informative_sites),
                        wmean_pairwise_ave=mean(pairwise_ave,w=informative_sites),
+                      wmean_tajimaD=mean(tajimaD,w=informative_sites),
+
                        
                        q25_watterson_ave=quantile(watterson_ave,0.25),
                        q25_pairwise_ave=quantile(pairwise_ave,0.25),
@@ -4386,8 +4388,8 @@ ggsave (paste(wd_output,"comparisons_region_vs_chr_",DIVERSITY_MEASURE, "_colour
 ggplot(data=interaction_stats_all_comparison_region_chr_cat_info %>% filter(chr!="chrX"), mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""), paste(DIVERSITY_MEASURE,".x",sep="")))+
   facet_wrap (region~comparison) +
   geom_point (aes(colour=chr)) +
-  scale_fill_viridis() +
-  scale_colour_viridis() +
+  scale_fill_viridis_d() +
+  scale_colour_viridis_d() +
   geom_abline(colour="grey") +
   geom_smooth (method = "lm", se = FALSE, colour="black", size=0.5) 
 
