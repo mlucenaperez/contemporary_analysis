@@ -55,10 +55,10 @@ tabla_all_genes_GO_term_complete_info <- read.table (paste0(wd, "GO2LYPA.LYPA23C
 
 ## Modifo el archivo para poder generar un gmt con los nombres de cada GO term, su descripción, y a que genes va asociado. 
 # Este archivo lo vamos a necesitar para cargar los datos en CYTOSCAPE. 
-tabla_all_genes_GO_term_complete_info_modif <- tabla_all_genes_GO_term_complete_info %>% dplyr::select (-"GO_TYPE") %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(GENE_NAME, collapse=','))  
+tabla_all_genes_GO_term_complete_info_modif <- tabla_all_genes_GO_term_complete_info %>% dplyr::select (-"GO_TYPE") %>% dplyr::group_by(GO_ACC,GO_NAME) %>% dplyr::summarise(Genes=paste(GENE_NAME, collapse=',')) %>% as.data.frame() 
 
 # Guardo la tabla
-write.table(tabla_all_genes_GO_term_complete_info_modif, paste0(wd, "GO2LYPA.LYPA23C.APPRIS.fatigo.genes_modif.NAMES.gmt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+write.table(tabla_all_genes_GO_term_complete_info_modif, paste0(wd, "CYTOSCAPE/input_data/GO2LYPA.LYPA23C.APPRIS.fatigo.genes_modif.NAMES.gmt"), quote = F, row.names = F, col.names = F, sep = "\t" )
 
 
 # Modificaciones para topGo.
@@ -466,7 +466,7 @@ c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_li
 ```
 ## 3.2. Pairwise
 
-### HD_HD_ratio_1_watterson individual
+### HD_HD_ratio_1_pairwise individual
 
 Ahora los voy a preparar para tener archivos de entrada al programa enrichment map. Este programa nos devuelve unas tablas muy cómodas con las que jugar despues. 
 
@@ -505,7 +505,7 @@ write.table(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_inf
 ```
 
 
-### HD_HD_ratio_1_watterson in common
+### HD_HD_ratio_1_pairwise in common
 
 Transformación de los archivos con varias poblaciones.
 
@@ -651,8 +651,12 @@ Hago un loop que hace el enrichment sobre todos los dataframe de interes.
 ```{r}
 
 DATAFRAMES = list(
-c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson = c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson = c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson = c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson, 
-c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise = c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise)
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise = c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise)
+
+#, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise)
+
+
+#c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson = c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson = c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson = c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson = c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson,
 
 # Corro en bucle los análisis de enrichemnt:
 ## Biological procces
@@ -681,7 +685,7 @@ resultFisher <- getSigGroups(GOdata, test.stat)
 # head(score(resultFisher))
 # hist(score(resultFisher))
 # geneData(resultFisher)
-allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=150, numChar=300 )
+allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=100, numChar=300 )
 
 # Guardo los resultados con el nombre del dataframe
 name=names(DATAFRAMES)[i]
@@ -712,7 +716,7 @@ names(geneList) <- as.factor(geneNames)
 name=names(DATAFRAMES)[i]
 
 # Puedes cambiar ontology y poner BP (biological process), CC (celular component), or MF (molecular function). 
-GOdata <- new("topGOdata", ontology ='CC', description = "kk", allGenes = geneList,
+GOdata <- new("topGOdata", ontology ='CC', description = names(DATAFRAMES)[i], allGenes = geneList,
                annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
 # description (GOdata)
 # termStat(GOdata)
@@ -721,7 +725,7 @@ resultFisher <- getSigGroups(GOdata, test.stat)
 # head(score(resultFisher))
 # hist(score(resultFisher))
 # geneData(resultFisher)
-allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=150, numChar=300 )
+allRes <- GenTable(GOdata, weighted01=resultFisher, orderBy="weight01", ranksOf="weight01", topNodes=100, numChar=300 )
 
 # Guardo los resultados con el nombre del dataframe
 assign(paste0(name, "_GO_term_enrichment_CC"), allRes )
@@ -751,7 +755,7 @@ names(geneList) <- as.factor(geneNames)
 name=names(DATAFRAMES)[i]
 
 # Puedes cambiar ontology y poner BP (biological process), CC (celular component), or MF (molecular function). 
-GOdata <- new("topGOdata", ontology ='MF', description = "kk", allGenes = geneList,
+GOdata <- new("topGOdata", ontology ='MF', description = names(DATAFRAMES)[i], allGenes = geneList,
                annot = annFUN.gene2GO, gene2GO = list_of_list_all_genes_GO_term_chr)
 # description (GOdata)
 # termStat(GOdata)
@@ -781,7 +785,7 @@ rm(list = c('gene_of_interest_list','geneList','GOdata','test.stat','resultFishe
 # Ahora seleccionamos los GO term que están enriched en varios dataset.
 
 
-c_ll_ki_n013_c_ll_no_n008_pairwise_PLUS_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_results_GO_enrichment_BP <- dplyr::inner_join (c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, by=c("GO.ID","Term")) 
+c_ll_ki_n013_c_ll_no_n008_pairwise_PLUS_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_results_GO_enrichment_BP <- dplyr::inner_join (c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, by=c("GO.ID","Term")) 
 # %>% filter(., weighted01.x<0.05 ) %>% filter(., weighted01.y<0.05 ) 
 
 
@@ -789,7 +793,7 @@ write.table(c_ll_ki_n013_c_ll_no_n008_pairwise_PLUS_c_ll_ki_n013_c_ll_po_n008_li
 
 
 
-c_ll_ki_n013_c_ll_no_n008_PLUS_c_ll_ki_n013_c_ll_po_n008_PLUS_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term <- dplyr::inner_join (c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, by=c("GO.ID","Term")) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, by=c("GO.ID","Term")) 
+c_ll_ki_n013_c_ll_no_n008_PLUS_c_ll_ki_n013_c_ll_po_n008_PLUS_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term <- dplyr::inner_join (c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, by=c("GO.ID","Term")) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, by=c("GO.ID","Term")) 
 # %>% filter(., weighted01<0.05 ) %>% filter(., weighted01.x<0.05 ) %>% filter(., weighted01.y<0.05 ) 
 
 write.table(c_ll_ki_n013_c_ll_no_n008_PLUS_c_ll_ki_n013_c_ll_po_n008_PLUS_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term, paste0(wd, "topGO/results/c_ll_ki_n013_c_ll_no_n008_PLUS_c_ll_ki_n013_c_ll_po_n008_PLUS_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term.txt", sep=""), quote = T, row.names = F)
@@ -807,17 +811,36 @@ Ahora voy a genera los archivos necesarios para correr CYTOSCAPE usando los p va
 # Uno la tabla con nuestro p valores a la tabla que ya habiamos construido usando nuestros genes con los GO term a los que se asocian. 
 
 # c_ll_ki vs c_ll_no
-c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile <- rbind (c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_CC, c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_MF) %>%  inner_join(., as.data.frame(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile), by=c("GO.ID"="GO.ID", "Term"="Description")) %>% dplyr::select( GO.ID, Description=Term, p.Val=weighted01, FDR, Phenotype, Genes)
-write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile <- rbind (c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_CC, c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_MF) %>%  dplyr::inner_join (., as.data.frame(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile), by=c("GO.ID"="GO.ID")) %>% dplyr::select( GO.ID, Description=Term, p.Val=weighted01, FDR, Phenotype, Genes)
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile.txt"), quote = F, row.names = F, col.names = T, sep = "\t" )
 
 # c_ll_ki vs c_ll_po
-c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile <- rbind (c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_CC, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_MF) %>%  inner_join(., as.data.frame(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile), by=c("GO.ID"="GO.ID", "Term"="Description")) %>% dplyr::select( GO.ID, Description=Term, p.Val=weighted01, FDR, Phenotype, Genes)
-write.table(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile <- rbind (c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_CC, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_MF) %>%  dplyr::inner_join(., as.data.frame(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile), by=c("GO.ID"="GO.ID")) %>% dplyr::select( GO.ID, Description=Term, p.Val=weighted01, FDR, Phenotype, Genes)
+write.table(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile.txt"), quote = F, row.names = F, col.names = T, sep = "\t" )
 
 
 # c_lp_sm vs c_lp_do
-c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile <- rbind (c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_CC, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_MF) %>%  inner_join(., as.data.frame(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson_all_info.gProfile), by=c("GO.ID"="GO.ID", "Term"="Description")) %>% dplyr::select( GO.ID, Description=Term, p.Val=weighted01, FDR, Phenotype, Genes)
-write.table(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile.txt"), quote = F, row.names = F, col.names = F, sep = "\t" )
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile <- rbind (c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_CC, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_MF) %>%  dplyr::inner_join(., as.data.frame(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile), by=c("GO.ID"="GO.ID")) %>% dplyr::select( GO.ID, Description=Term, p.Val=weighted01, FDR, Phenotype, Genes)
+write.table(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment.gProfile.txt"), quote = F, row.names = F, col.names = T, sep = "\t" )
+
+
+
+
+# Uno la tabla con nuestro p valores a la tabla que ya habiamos construido usando nuestros genes con los GO term a los que se asocian. 
+
+# c_ll_ki vs c_ll_no
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP.gProfile <- c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP %>%  dplyr::inner_join (., as.data.frame(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile), by=c("GO.ID"="GO.ID")) %>% dplyr::select( GO.ID, Description=Term, p.Val=weighted01, FDR, Phenotype, Genes)
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP.gProfile.txt"), quote = F, row.names = F, col.names = T, sep = "\t" )
+
+# c_ll_ki vs c_ll_po
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP.gProfile <- c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP %>%  dplyr::inner_join(., as.data.frame(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile), by=c("GO.ID"="GO.ID")) %>% dplyr::select( GO.ID, Description=Term, p.Val=weighted01, FDR, Phenotype, Genes)
+write.table(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP.gProfile.txt"), quote = F, row.names = F, col.names = T, sep = "\t" )
+
+
+# c_lp_sm vs c_lp_do
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP.gProfile <- c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP %>%  dplyr::inner_join(., as.data.frame(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_all_info.gProfile), by=c("GO.ID"="GO.ID")) %>% dplyr::select( GO.ID, Description=Term, p.Val=weighted01, FDR, Phenotype, Genes)
+write.table(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP.gProfile, paste0(wd, "CYTOSCAPE/input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise_GO_term_enrichment_BP.gProfile.txt"), quote = F, row.names = F, col.names = T, sep = "\t" )
+
 
 
 ```
