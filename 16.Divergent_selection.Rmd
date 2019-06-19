@@ -43,8 +43,11 @@ LYPA23C000049,LYPA23C000067,LYPA23C001383,LYPA23C001608,LYPA23C002014,LYPA23C002
 7. GO:0002089: lens morphogenesis in camera-type eye
 LYPA23C001796,LYPA23C002366,LYPA23C003863,LYPA23C005745,LYPA23C006584,LYPA23C007672,LYPA23C008509,LYPA23C010642,LYPA23C011250,LYPA23C017214,LYPA23C017435,LYPA23C019063,LYPA23C021537
 
-# Load wd
+# Load wd & library
 ```{r}
+library(dplyr)
+library(ggplot2); theme_set(theme_minimal())
+
 wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
 ```
 
@@ -131,6 +134,7 @@ data_diversity_filtered <- read.table(paste(wd, "global.per.unit.averages.chr.al
 
 # Join to get coordinates
 ```{r}
+
 wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/fst_comparisons/"
 
 # Kirov Norway
@@ -229,6 +233,8 @@ scp mlucena@genomics-b.ebd.csic.es://home/mlucena/ANGSD_analysis/whole_genome_an
 # Valores de interes resumen
 
 ```{r}
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/"
+
 c_ll_ki_n013_c_ll_no_n008_gene_info_FST <- read.table(paste(wd, "fst_comparisons/c_ll_ki_n013_c_ll_no_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_no_n008_genes_info_FST.bed", sep="")) %>% group_by(V8) %>% summarise(wmean_FST=weighted.mean(V4,w=V9))
 
 c_ll_ki_n013_c_ll_po_n008_gene_info_FST <- read.table(paste(wd, "fst_comparisons/c_ll_ki_n013_c_ll_po_n008_GO_info_GO_enriched_c_ll_ki_n013_c_ll_po_n008_genes_info_FST.bed", sep="")) %>% group_by(V8) %>% summarise(wmean_FST=weighted.mean(V4,w=V9))
@@ -254,11 +260,11 @@ c_ll_ki_n013_c_ll_po_n008_FST <- read.table("/Users/marialucenaperez/Documents/W
 ##  Plot
 
 ```{r}
-library(ggplot2); theme_set(theme_minimal())
 
 ggplot() +
   geom_histogram(data=c_lp_sm_n019_c_lp_do_n012_FST, aes(V4), binwidth = 0.005) +
   geom_histogram (data=c_lp_sm_n019_c_lp_do_n012_gene_info_FST, aes(wmean_FST, colour="red"))
+  
 
 ggplot() +
   geom_histogram(data=c_ll_ki_n013_c_ll_no_n008_FST, aes(V4), binwidth = 0.005) +
@@ -273,14 +279,19 @@ ggplot() +
 
 ```{r}
 
-all_FST <- rbind (c_lp_sm_n019_c_lp_do_n012_FST %>% mutate(comparison="c_lp_sm_n019_c_lp_do_n012_general"),c_ll_ki_n013_c_ll_po_n008_FST %>% mutate(comparison="c_ll_ki_n013_c_ll_po_n008_general") , c_ll_ki_n013_c_ll_no_n008_FST %>% mutate(comparison="c_ll_ki_n013_c_ll_no_n008_general"))
+all_FST <- rbind (c_ll_ki_n013_c_ll_po_n008_FST %>% mutate(comparison="Kirov-NE_Poland") %>% mutate(dataset="Overall") , c_ll_ki_n013_c_ll_no_n008_FST %>% mutate (comparison="Kirov-Norway") %>% mutate(dataset="Overall"), c_lp_sm_n019_c_lp_do_n012_FST %>% mutate(comparison="Andujar-Doñana") %>% mutate(dataset="Overall"))
 
 
-all_FST_interest <- rbind (c_ll_ki_n013_c_ll_po_n008_gene_info_FST %>% mutate(comparison="c_ll_ki_n013_c_ll_po_n008_genes_interest"), c_ll_ki_n013_c_ll_no_n008_gene_info_FST %>% mutate (comparison="c_ll_ki_n013_c_ll_no_n0081_genes_interest"),c_lp_sm_n019_c_lp_do_n012_gene_info_FST %>% mutate(comparison="c_lp_sm_n019_c_lp_do_n0121_genes_interest"))
+all_FST_interest <- rbind (c_ll_ki_n013_c_ll_po_n008_gene_info_FST %>% mutate(comparison="Kirov-NE_Poland") %>% mutate(dataset="Genes of interest"), c_ll_ki_n013_c_ll_no_n008_gene_info_FST %>% mutate (comparison="Kirov-Norway") %>% mutate(dataset="Genes of interest"),c_lp_sm_n019_c_lp_do_n012_gene_info_FST %>% mutate(comparison="Andujar-Doñana") %>% mutate(dataset="Genes of interest"))
 
 ggplot() +
-  geom_boxplot(data=all_FST, aes(comparison, V4)) +
-  geom_boxplot(data=all_FST_interest, aes(comparison, wmean_FST)) 
+  geom_boxplot(data=all_FST, aes(dataset, V4)) +
+  geom_boxplot(data=all_FST_interest, aes(dataset, wmean_FST)) +
+  theme(axis.text.x = element_text(hjust=1,angle=65), axis.title.x=element_blank()) +
+  facet_wrap(~comparison)
+  scale_y_continuous(name="FST") +
+  ggsave(paste(wd_output,"FST_genes_of_interest_GO_term_vs_overall.pdf",sep=""))
+
   
 
 
