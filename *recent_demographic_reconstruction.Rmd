@@ -318,7 +318,7 @@ for (i in 1:length(finsNeAll))
 
 # 2. Stairway plot
 
-Vamos a correr un programa que se llama stairway plot que genera un skyline plot demográfico. Este programa corre en java. Como entrada necesita: numero de sitios monomórficos + polimorficos, el sfs, y el número de alelos (numero de individuos * 2). Todos estos datos los tengo en el espectro de frecuencias alélicas, que aunque está espresado en likelihood, el programa lo acepta. 
+Vamos a correr un programa que se llama stairway plot que genera un skyline plot demográfico. Este programa corre en java. Como entrada necesita: numero de sitios monomórficos + polimorficos, el sfs, y el número de alelos (numero de individuos * 2). Todos estos datos los tengo en el espectro de frecuencias alélicas, que aunque está expresado en likelihood, el programa lo acepta. 
 
 Para que corra tienes que generar un archivos txt que el programa transforma en sh usando java, y despues este .sh se lanza. 
 Un ejemplo de un archivo de entrada es este (en mi ordenador):
@@ -492,7 +492,175 @@ done
 # Para pintar solo el plot
 
 java -Xmx1g -cp stairway_plot_es/ Stairpainter c_lp_sm_n012.blueprint
+
 ```
+
+
+# R: Custom drawing
+
+Primero tengo que coger los dtos de los que se hace el dibujo. Estan en un archivo que se llama .final.summary, en cada carpeta de cada poblacion. Voy a pintarlos todos juntos, así que creo una super carpeta, que ya separaré si lo necesito en R. Aquí solo añado la info que me interesa. 
+
+
+En el archivo que se llama summary con el que puedo pintar:
+
+1st col: time measured in the expected number of mutation(s) per site
+2nd col: number of estimates used
+3rd col: the median of the population size measured in θ per site
+4th col: the 2.5 percentile estimation of the population size measured in θ per site
+5th col: the 97.5 percentile estimation of the population size measured in θ per site
+6th col: time measured in years
+7th col: the median of the population size measured in individuals
+8th col: the 2.5 percentile estimation of the population size measured in individuals
+9th col: the 97.5 percentile estimation of the population size measured in individuals
+10th col: the 12.5 percentile estimation of the population size measured in individuals
+11th col: the 87.5 percentile estimation of the population size measured in individuals
+
+Copio la columna 7, 8, 9, 10, 11.
+
+```{bash}
+
+cd /home/mlucena/recent_demographic_reconstruction/stairway_plot
+# Creo la carpeta donde vamos a guardar nuestro archivo de interes =
+mkdir /home/mlucena/recent_demographic_reconstruction/stairway_plot/custom_output
+
+# Creo el header para el archivo que voy a generar
+cd /home/mlucena/recent_demographic_reconstruction/stairway_plot/c_ll_cr_n006/c_ll_cr_n006
+head -n1 c_ll_cr_n006.final.summary |  awk -v OFS='\t' '{print $6, $7, $8, $9, $10, $11, "population", "specie"}' > /home/mlucena/recent_demographic_reconstruction/stairway_plot/custom_output/final_summary_custom_output.tsv 
+
+# First we summarise the output files, and add a column with info of interest
+populations=(c_ll_cr_n006 c_ll_ki_n013 c_ll_la_n006 c_ll_no_n008 c_ll_po_n008 c_ll_to-c_ll_ka-c_ll_og_n008 c_ll_tu_n006 c_ll_ur_n006 c_ll_vl_n008 c_ll_ya_n008 c_lp_do_n012 c_lp_sm_n019)
+
+
+# Loop para concatenar las distintas poblaciones. 
+cd /home/mlucena/recent_demographic_reconstruction/stairway_plot
+for population in ${populations[@]}
+do
+echo $population
+cd /home/mlucena/recent_demographic_reconstruction/stairway_plot/$population/$population
+sp=`echo $population | cut -d'.' -f 1 | cut -d '_' -f 2`
+if [ -z ${sp} ]; then  sp=NA;  fi
+awk -v OFS='\t' -v pop="$population" -v sp="$sp" '{print $6, $7, $8, $9, $10, $11, pop, sp }' <(tail -n+2 "${population}".final.summary) >> /home/mlucena/recent_demographic_reconstruction/stairway_plot/custom_output/final_summary_custom_output.tsv
+unset sp
+cd /home/mlucena/recent_demographic_reconstruction/stairway_plot
+
+done
+
+```
+
+Me lo copio al local
+
+```{bash}
+
+scp mlucena@genomics-b.ebd.csic.es://home/mlucena/recent_demographic_reconstruction/stairway_plot/custom_output/final_summary_custom_output.tsv /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/stairway_plot/custom_plot_script 
+
+```
+
+Script para pintarlo
+
+```{r}
+library(viridis)
+library(ggplot2); theme_set(theme_minimal())
+library(tidyr)
+library(tidyverse)
+library(plyr)
+library(dplyr)
+library(data.table)
+library(RColorBrewer)
+
+
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/stairway_plot/custom_plot_script/"
+wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/stairway_plot/custom_plot_script/output_R/"
+
+demographic_data_all_pops <- read.table(paste(wd, "final_summary_custom_output.tsv", sep=""), header=T, na.strings = c("NA", "na")) 
+
+
+demographic_data_lp <- demographic_data_all_pops %>% filter(specie=="lp") %>% filter(year>100) %>% filter(year<100000)
+
+# https://ggplot2.tidyverse.org/reference/annotation_logticks.html
+ggplot () +
+  geom_line(data=demographic_data_lp , aes(x=year, y=Ne_median, group=population, colour=population)) +
+  #scale_colour_manual(values = cols) +
+  scale_x_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))
+) +
+  annotation_logticks()
+
+
+
+
+
+demographic_data_ll <- demographic_data_all_pops %>% filter(specie=="ll") %>% filter(year>1) %>% 
+  mutate (., Populations =  ifelse (population == "c_ll_po_n008", "NE-Poland",
+                           ifelse (population == "c_ll_ur_n006", "Urals", 
+                           ifelse (population == "c_ll_ki_n013", "Kirov", 
+                           ifelse (population == "c_ll_la_n006", "Latvia", 
+                           ifelse (population == "c_ll_no_n008", "Norway", 
+                           ifelse (population == "c_ll_cr_n006","Carpathians", 
+                           ifelse (population == "c_ll_to-c_ll_ka-c_ll_og_n008", "Mongolia", 
+                           ifelse (population == "c_ll_tu_n006", "Tuva", 
+                           ifelse (population == "c_ll_vl_n008", "Vladivostok",  
+                           ifelse (population == "c_ll_ya_n008", "Yakutia", NA))))))))))) %>% 
+  mutate (., region =  ifelse (population == "c_ll_po_n008", "West",
+                           ifelse (population == "c_ll_ur_n006", "West", 
+                           ifelse (population == "c_ll_ki_n013", "West", 
+                           ifelse (population == "c_ll_la_n006", "West", 
+                           ifelse (population == "c_ll_no_n008", "West", 
+                           ifelse (population == "c_ll_cr_n006","West", 
+                           ifelse (population == "c_ll_to-c_ll_ka-c_ll_og_n008", "East", 
+                           ifelse (population == "c_ll_tu_n006", "East", 
+                           ifelse (population == "c_ll_vl_n008", "East",  
+                           ifelse (population == "c_ll_ya_n008", "East", NA))))))))))) %>% filter(year>100) %>% filter(year<100000) %>% 
+  mutate(.,period = ifelse (year<1000, "recent", 
+                            ifelse (year<10000, "holocene",
+                                    ifelse(year<100000, "pleistocene", NA)))
+)
+
+cols <- c("NE-Poland"=brewer.pal(12,"Paired")[4], 
+          "Urals"=brewer.pal(9,"RdPu")[6], 
+          "Carpathians"=brewer.pal(12,"Paired")[9], 
+          "Kirov"=brewer.pal(12,"Paired")[1], 
+          "Latvia"=brewer.pal(12,"Paired")[3], 
+          "Norway"=brewer.pal(12,"Paired")[2], 
+          "Mongolia"=brewer.pal(12,"Paired")[12], 
+          "Tuva"=brewer.pal(12,"Paired")[8], 
+          "Vladivostok"=brewer.pal(12,"Paired")[5], 
+          "Yakutia"=brewer.pal(12,"Paired")[6])
+
+ggplot () +
+  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=Populations, linetype=region)) +
+  scale_colour_manual(values = cols) +
+  scale_x_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))
+) +
+  annotation_logticks()
+
+
+
+ggplot () +
+  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=region)) +
+  #scale_colour_manual(values = cols) +
+  scale_x_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))
+) +
+  facet_wrap(~period, scales ="free")+
+  scale_colour_viridis_d()+
+  annotation_logticks()
+
+
+
++
+ scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))
+ ) 
+```
+
+
+
 
 
 
