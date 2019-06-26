@@ -799,6 +799,12 @@ awk -v OFS='\t' '{print $1,"manual","intergenic",$2+1,$3,".", "-", ".", "ID=inte
 # lp23.s41700	manual	intergenic	1	200	.	-	.	ID=intergenic_region_65795
 
 rm *.DO_NOT_USE.*
+
+# ¿Cuanto supone este intergénico?
+  
+awk 'sum+=($3-$2){print sum}' LYPA23C.intergenic.PLUS1000.bed
+# 1481584282 bases
+# total: 2413209059; por tanto suponen un 61.4% del genoma
 ```
 
 
@@ -806,7 +812,6 @@ rm *.DO_NOT_USE.*
 
 
 ```{r, engine=bash, eval=FALSE}
-
 
 # Now I merge it with the gff3 file.
 
