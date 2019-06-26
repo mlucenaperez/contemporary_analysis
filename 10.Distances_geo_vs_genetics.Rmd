@@ -206,7 +206,7 @@ ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, l
 # Article --> color
 
   ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, linetype=comparison, fill=comparison, color=comparison)) +
-  geom_point(alpha = 0.05, aes(shape=comparison)) +
+  geom_point(alpha = 0.4, aes(shape=comparison)) +
   scale_shape_manual(values=c(3, 17, 16)) +
   scale_linetype_manual(values=c("twodash", "solid", "dotted")) +
   theme_classic() +
@@ -215,7 +215,7 @@ ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, l
     x = "log(Geographic distance (Km))",
     y = "Genetic distance" ) +
   theme(legend.position="top", legend.title = element_blank()) 
-  ggsave("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/figures_article/genetic_distance_vs_geographic_distance_color.pdf")
+  ggsave("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/genetic_distance_vs_geographic_distance_color.pdf")
   
   
 
