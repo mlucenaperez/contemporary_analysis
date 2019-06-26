@@ -574,6 +574,7 @@ wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phyloge
 
 demographic_data_all_pops <- read.table(paste(wd, "final_summary_custom_output.tsv", sep=""), header=T, na.strings = c("NA", "na")) 
 
+# Lynx pardinus
 
 demographic_data_lp <- demographic_data_all_pops %>% filter(specie=="lp") %>% filter(year>100) %>% filter(year<100000)
 
@@ -588,8 +589,7 @@ ggplot () +
   annotation_logticks()
 
 
-
-
+# Lynx lynx
 
 demographic_data_ll <- demographic_data_all_pops %>% filter(specie=="ll") %>% filter(year>1) %>% 
   mutate (., Populations =  ifelse (population == "c_ll_po_n008", "NE-Poland",
@@ -611,7 +611,7 @@ demographic_data_ll <- demographic_data_all_pops %>% filter(specie=="ll") %>% fi
                            ifelse (population == "c_ll_to-c_ll_ka-c_ll_og_n008", "East", 
                            ifelse (population == "c_ll_tu_n006", "East", 
                            ifelse (population == "c_ll_vl_n008", "East",  
-                           ifelse (population == "c_ll_ya_n008", "East", NA))))))))))) %>% filter(year>100) %>% filter(year<100000) %>% 
+                           ifelse (population == "c_ll_ya_n008", "East", NA))))))))))) %>%  filter(year<100000) %>% # filter(year>100) %>%
   mutate(.,period = ifelse (year<1000, "recent", 
                             ifelse (year<10000, "holocene",
                                     ifelse(year<100000, "pleistocene", NA)))
@@ -628,6 +628,8 @@ cols <- c("NE-Poland"=brewer.pal(12,"Paired")[4],
           "Vladivostok"=brewer.pal(12,"Paired")[5], 
           "Yakutia"=brewer.pal(12,"Paired")[6])
 
+
+# Last 100 yrs
 ggplot () +
   geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=Populations, linetype=region)) +
   scale_colour_manual(values = cols) +
@@ -635,28 +637,123 @@ ggplot () +
    breaks = scales::trans_breaks("log10", function(x) 10^x),
    labels = scales::trans_format("log10", scales::math_format(10^.x))
 ) +
-  annotation_logticks()
+  annotation_logticks() +
+  coord_cartesian(xlim=c(1,100),ylim=c(0,1000)) 
+ggsave(paste(wd_output, "stairway_plot_custom_xlim1-100_ylim0-1000_color_per_pop_line_type_region.pdf",sep=""))
 
+
+twelve_col_pals = brewer.pal.info[brewer.pal.info$maxcolors == '12',] 
+col_vector = unlist(mapply(brewer.pal, twelve_col_pals$maxcolors, rownames(twelve_col_pals)))
+# pie(rep(1,n), col=sample(col_vector, n))
+my_paired_colours <- as.vector(col_vector)
 
 
 ggplot () +
-  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=region)) +
-  #scale_colour_manual(values = cols) +
+  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=region, linetype=region)) +
+scale_fill_manual(values=my_paired_colours) +
   scale_x_log10(
    breaks = scales::trans_breaks("log10", function(x) 10^x),
    labels = scales::trans_format("log10", scales::math_format(10^.x))
 ) +
-  facet_wrap(~period, scales ="free")+
-  scale_colour_viridis_d()+
-  annotation_logticks()
+  annotation_logticks() +
+  coord_cartesian(xlim=c(1,100),ylim=c(0,1000)) 
+ggsave(paste(wd_output, "stairway_plot_custom_xlim1-100_ylim0-1000_color_region_line_type_region.pdf",sep=""))
 
 
 
-+
- scale_y_log10(
+# Last 200 yrs
+ggplot () +
+  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=Populations, linetype=region)) +
+  scale_colour_manual(values = cols) +
+  scale_x_log10(
    breaks = scales::trans_breaks("log10", function(x) 10^x),
    labels = scales::trans_format("log10", scales::math_format(10^.x))
- ) 
+) +
+  annotation_logticks() +
+  coord_cartesian(xlim=c(1,200),ylim=c(0,2000)) 
+ggsave(paste(wd_output, "stairway_plot_custom_xlim1-200_ylim0-2000_color_per_pop_line_type_region.pdf",sep=""))
+
+
+twelve_col_pals = brewer.pal.info[brewer.pal.info$maxcolors == '12',] 
+col_vector = unlist(mapply(brewer.pal, twelve_col_pals$maxcolors, rownames(twelve_col_pals)))
+# pie(rep(1,n), col=sample(col_vector, n))
+my_paired_colours <- as.vector(col_vector)
+
+
+ggplot () +
+  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=region, linetype=region)) +
+scale_fill_manual(values=my_paired_colours) +
+  scale_x_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))
+) +
+  annotation_logticks() +
+  coord_cartesian(xlim=c(1,200),ylim=c(0,2000)) 
+ggsave(paste(wd_output, "stairway_plot_custom_xlim1-200_ylim0-2000_color_region_line_type_region.pdf",sep=""))
+
+
+# Last 1000ya
+ggplot () +
+  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=Populations, linetype=region)) +
+  scale_colour_manual(values = cols) +
+  scale_x_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))
+) +
+  annotation_logticks() +
+  coord_cartesian(xlim=c(1,1000),ylim=c(0,5000)) 
+ggsave(paste(wd_output, "stairway_plot_custom_xlim1-1000_ylim0-5000_color_per_pop_line_type_region.pdf",sep=""))
+
+
+twelve_col_pals = brewer.pal.info[brewer.pal.info$maxcolors == '12',] 
+col_vector = unlist(mapply(brewer.pal, twelve_col_pals$maxcolors, rownames(twelve_col_pals)))
+# pie(rep(1,n), col=sample(col_vector, n))
+my_paired_colours <- as.vector(col_vector)
+
+
+ggplot () +
+  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=region, linetype=region)) +
+scale_fill_manual(values=my_paired_colours) +
+  scale_x_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))
+) +
+  annotation_logticks() +
+  coord_cartesian(xlim=c(1,1000),ylim=c(0,5000)) 
+ggsave(paste(wd_output, "stairway_plot_custom_xlim1-1000_ylim0-5000_color_region_line_type_region.pdf",sep=""))
+
+
+
+
+# All periods
+
+ggplot () +
+  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=Populations, linetype=region, size=2)) +
+  scale_colour_manual(values = cols) +
+  scale_x_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))
+) +
+  annotation_logticks() +
+ggsave(paste(wd_output, "stairway_plot_custom_color_per_pop_line_type_region.pdf",sep=""))
+
+
+
+ggplot () +
+  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=Populations, linetype=region)) +
+  #geom_point(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=region))+
+  geom_smooth(method="lm", data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_x_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))) +
+   scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))) +
+  annotation_logticks() +
+ggsave(paste(wd_output, "stairway_plot_custom_color_region_line_type_region.pdf",sep=""))
+
+
 ```
 
 
