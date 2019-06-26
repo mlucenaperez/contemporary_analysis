@@ -540,7 +540,7 @@ Necesito que el archivo sea algo parecido a los de Admixture, así que comprimo 
 zip -r all_runs.zip $(ls *qopt | grep -v K13 | sort | uniq)
 
 
-
+zip -r K2-K6_all_runs.zip $(ls *qopt | grep -v K13 | sort | uniq | grep -v "K1" | grep -v "K9" | grep -v "K8" | grep -v "K7")
 
 ```
 
