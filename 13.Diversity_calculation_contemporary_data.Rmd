@@ -611,16 +611,18 @@ rm (DATAFRAME)
 ```{r}
 
 data_diversity_filtered_recomb_cat_zero_variable <- data_diversity_filtered_recomb_cat %>% 
-mutate (watterson_zero = ifelse (pop=="c_lp_sm_n019"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_sm_n019")$min_density_value_watterson) | 
-	                               pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson) | 
-	                               pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson) | 
-	                               pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson) | 
-	                               pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
-	  mutate (pairwise_zero = ifelse (pop=="c_lp_sm_n019"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_sm_n019")$min_density_value_pairwise) | 
-	                                   pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise) | 
-	                                   pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise) | 
-	                                   pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise) | 
-	                                   pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),0,pairwise_ave)) 
+  dplyr::mutate (watterson_zero = ifelse (pop=="c_lp_sm_n019"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_sm_n019")$min_density_value_watterson) | 
+                                            pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson) | 
+                                            pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson) | 
+                                            pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson) | 
+                                            pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
+  dplyr::mutate (pairwise_zero = ifelse (pop=="c_lp_sm_n019"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_sm_n019")$min_density_value_pairwise) | 
+                                           pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise) | 
+                                           pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise) | 
+                                           pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise) | 
+                                           pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),0,pairwise_ave)) %>%
+  dplyr::mutate(tajimaD_transformed = ifelse(watterson_zero!="0" | pairwise_zero!="0", tajimaD, NA)) %>% select (-tajimaD) %>%  dplyr::rename(.,"tajimaD"="tajimaD_transformed")
+
 	
 rm (data_diversity_filtered_recomb_cat)
 ```
@@ -808,16 +810,17 @@ diversity_stats_pop <- function(diversity_df)
                        
                        mean_watterson_ave=mean(watterson_ave),
                        mean_pairwise_ave=mean(pairwise_ave),
-                       mean_tajimaD=mean(tajimaD),
+                       mean_tajimaD=mean(tajimaD, na.rm = TRUE),
+
 
                        median_watterson_ave=median(watterson_ave),
                        median_pairwise_ave=median(pairwise_ave),
 
+ 
                        wmean_watterson_ave=weighted.mean(watterson_ave,w=informative_sites),
-                       wmean_pairwise_ave=mean(pairwise_ave,w=informative_sites),
-                      wmean_tajimaD=mean(tajimaD,w=informative_sites),
+                       wmean_pairwise_ave=weighted.mean(pairwise_ave,w=informative_sites),
+                       wmean_tajimaD=weighted.mean(tajimaD,w=informative_sites, na.rm = TRUE),
 
-                       
                        q25_watterson_ave=quantile(watterson_ave,0.25),
                        q25_pairwise_ave=quantile(pairwise_ave,0.25),
 
@@ -849,7 +852,7 @@ diversity_stats_pop <- function(diversity_df)
                        median_pairwise_zero=median(pairwise_zero, na.rm = TRUE),
                        
                        wmean_watterson_zero=weighted.mean(watterson_zero,w=informative_sites, na.rm = TRUE),
-                       wmean_pairwise_zero=mean(pairwise_zero,w=informative_sites, na.rm = TRUE),
+                       wmean_pairwise_zero=weighted.mean(pairwise_zero,w=informative_sites, na.rm = TRUE),
                        
                        q25_watterson_zero=quantile(watterson_zero,0.25, na.rm = TRUE),
                        q25_pairwise_zero=quantile(pairwise_zero,0.25, na.rm = TRUE),
@@ -881,7 +884,7 @@ diversity_stats_pop <- function(diversity_df)
                        median_pairwise_zero_zero=median(pairwise_zero_zero, na.rm = TRUE),
                        
                        wmean_watterson_zero_zero=weighted.mean(watterson_zero_zero,w=informative_sites, na.rm = TRUE),
-                       wmean_pairwise_zero_zero=mean(pairwise_zero_zero,w=informative_sites, na.rm = TRUE),
+                       wmean_pairwise_zero_zero=weighted.mean(pairwise_zero_zero,w=informative_sites, na.rm = TRUE),
                        
                        q25_watterson_zero_zero=quantile(watterson_zero_zero,0.25, na.rm = TRUE),
                        q25_pairwise_zero_zero=quantile(pairwise_zero_zero,0.25, na.rm = TRUE),
@@ -949,8 +952,8 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
 { diversity_stats_df_grouped <- 
              DATAFRAME %>% 
              dplyr::group_by_("pop",GROUP) %>%
-             mutate(watterson_zero_zero=ifelse(watterson_zero==0, NA,watterson_zero)) %>% 
-             mutate(pairwise_zero_zero=ifelse(pairwise_zero==0, NA,pairwise_zero)) %>% 
+             dplyr::mutate(watterson_zero_zero=ifelse(watterson_zero==0, NA,watterson_zero)) %>% 
+             dplyr::mutate(pairwise_zero_zero=ifelse(pairwise_zero==0, NA,pairwise_zero)) %>% 
              dplyr::summarise(
                        total_count=n(), 
 
@@ -958,31 +961,31 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
                        
                        mean_watterson_ave=mean(watterson_ave),
                        mean_pairwise_ave=mean(pairwise_ave),
-                       mean_tajimaD=mean(tajimaD),
+                       mean_tajimaD=mean(tajimaD, na.rm = TRUE),
                        
                        median_watterson_ave=median(watterson_ave),
                        median_pairwise_ave=median(pairwise_ave),
-                       median_tajimaD=median(tajimaD),
+                       median_tajimaD=median(tajimaD, na.rm = TRUE),
                        
                        wmean_watterson_ave=weighted.mean(watterson_ave,w=informative_sites),
                        wmean_pairwise_ave=weighted.mean(pairwise_ave,w=informative_sites),
-                       wmean_tajimaD=mean(tajimaD,w =informative_sites),
+                       wmean_tajimaD=weighted.mean(tajimaD,w =informative_sites, na.rm = TRUE),
   
                        q25_watterson_ave=quantile(watterson_ave,0.25),
                        q25_pairwise_ave=quantile(pairwise_ave,0.25),
-                       q25_tajimaD=quantile(tajimaD,0.25),
+                       q25_tajimaD=quantile(tajimaD,0.25, na.rm = TRUE),
                        
                        q75_watterson_ave=quantile(watterson_ave,0.75),
                        q75_pairwise_ave=quantile(pairwise_ave,0.75),
-                       q75_tajimaD=quantile(tajimaD,0.75),
+                       q75_tajimaD=quantile(tajimaD,0.75, na.rm = TRUE),
                        
                        q05_watterson_ave=quantile(watterson_ave,0.05),
                        q05_pairwise_ave=quantile(pairwise_ave,0.05),
-                       q05_tajimaD=quantile(tajimaD,0.05),
+                       q05_tajimaD=quantile(tajimaD,0.05, na.rm = TRUE),
                        
                        q95_watterson_ave=quantile(watterson_ave,0.95),
                        q95_pairwise_ave=quantile(pairwise_ave,0.95),
-                       q95_tajimaD=quantile(tajimaD,0.95),
+                       q95_tajimaD=quantile(tajimaD,0.95, na.rm = TRUE),
                        
                        IQR_watterson_ave = q75_watterson_ave - q25_watterson_ave,
                        IQR_pairwise_ave  = q75_pairwise_ave  - q25_pairwise_ave,
@@ -1003,9 +1006,8 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
                        median_watterson_zero=median(watterson_zero, na.rm = TRUE),
                        median_pairwise_zero=median(pairwise_zero, na.rm = TRUE),
                        
-                       
                        wmean_watterson_zero=weighted.mean(watterson_zero,w=informative_sites, na.rm = TRUE),
-                       wmean_pairwise_zero=mean(pairwise_zero,w=informative_sites, na.rm = TRUE),
+                       wmean_pairwise_zero=weighted.mean(pairwise_zero,w=informative_sites, na.rm = TRUE),
                        
                        q25_watterson_zero=quantile(watterson_zero,0.25, na.rm = TRUE),
                        q25_pairwise_zero=quantile(pairwise_zero,0.25, na.rm = TRUE),
@@ -1037,7 +1039,7 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
                        median_pairwise_zero_zero=median(pairwise_zero_zero, na.rm = TRUE),
                        
                        wmean_watterson_zero_zero=weighted.mean(watterson_zero_zero,w=informative_sites, na.rm = TRUE),
-                       wmean_pairwise_zero_zero=mean(pairwise_zero_zero,w=informative_sites, na.rm = TRUE),
+                       wmean_pairwise_zero_zero=weighted.mean(pairwise_zero_zero,w=informative_sites, na.rm = TRUE),
                        
                        q25_watterson_zero_zero=quantile(watterson_zero_zero,0.25, na.rm = TRUE),
                        q25_pairwise_zero_zero=quantile(pairwise_zero_zero,0.25, na.rm = TRUE),
@@ -1068,15 +1070,15 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
                        # Valores divergencia
                        
                        mean_divergence_rate=mean(divergence, na.rm=TRUE),
-                       wmean_divergence_rate=weighted.mean(divergence,w=informative_sites_substitutions, na.rm=TRUE)
-                      
-                     ) %>% 
-  mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "NE_Poland",
+                       wmean_divergence_rate=weighted.mean(divergence,w=informative_sites_substitutions, na.rm=TRUE)) %>% 
+                       
+  dplyr::mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "NE_Poland",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
                             ifelse (pop == "c_ll_no_n008", "Norway", 
                             ifelse (pop == "c_lp_sm_n019", "Andujar",  
                             ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
-  mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
+    
+  dplyr::mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
                             ifelse (pop == "c_ll_ki_n013", "L.lynx", 
                             ifelse (pop == "c_ll_no_n008", "L.lynx", 
                             ifelse (pop == "c_lp_sm_n019", "L.pardinus",
@@ -1139,31 +1141,31 @@ diversity_stats_doble_grouped <- function(DATAFRAME, GROUP1, GROUP2)
 
                        mean_watterson_ave=mean(watterson_ave),
                        mean_pairwise_ave=mean(pairwise_ave),
-                       mean_tajimaD=mean(tajimaD),
+                       mean_tajimaD=mean(tajimaD, na.rm = TRUE),
                        
                        median_watterson_ave=median(watterson_ave),
                        median_pairwise_ave=median(pairwise_ave),
-                       median_tajimaD=median(tajimaD),
+                       median_tajimaD=median(tajimaD, na.rm = TRUE),
                        
                        wmean_watterson_ave=weighted.mean(watterson_ave,w=informative_sites),
                        wmean_pairwise_ave=weighted.mean(pairwise_ave,w=informative_sites),
-                       wmean_tajimaD=mean(tajimaD,w =informative_sites),
+                       wmean_tajimaD=weighted.mean(tajimaD,w =informative_sites, na.rm = TRUE),
   
                        q25_watterson_ave=quantile(watterson_ave,0.25),
                        q25_pairwise_ave=quantile(pairwise_ave,0.25),
-                       q25_tajimaD=quantile(tajimaD,0.25),
+                       q25_tajimaD=quantile(tajimaD,0.25, na.rm = TRUE),
                        
                        q75_watterson_ave=quantile(watterson_ave,0.75),
                        q75_pairwise_ave=quantile(pairwise_ave,0.75),
-                       q75_tajimaD=quantile(tajimaD,0.75),
+                       q75_tajimaD=quantile(tajimaD,0.75, na.rm = TRUE),
                        
                        q05_watterson_ave=quantile(watterson_ave,0.05),
                        q05_pairwise_ave=quantile(pairwise_ave,0.05),
-                       q05_tajimaD=quantile(tajimaD,0.05),
+                       q05_tajimaD=quantile(tajimaD,0.05, na.rm = TRUE),
                        
                        q95_watterson_ave=quantile(watterson_ave,0.95),
                        q95_pairwise_ave=quantile(pairwise_ave,0.95),
-                       q95_tajimaD=quantile(tajimaD,0.95),
+                       q95_tajimaD=quantile(tajimaD,0.95, na.rm = TRUE),
                        
                        IQR_watterson_ave = q75_watterson_ave - q25_watterson_ave,
                        IQR_pairwise_ave  = q75_pairwise_ave  - q25_pairwise_ave,
@@ -1186,7 +1188,7 @@ diversity_stats_doble_grouped <- function(DATAFRAME, GROUP1, GROUP2)
                        
                        
                        wmean_watterson_zero=weighted.mean(watterson_zero,w=informative_sites, na.rm = TRUE),
-                       wmean_pairwise_zero=mean(pairwise_zero,w=informative_sites, na.rm = TRUE),
+                       wmean_pairwise_zero=weighted.mean(pairwise_zero,w=informative_sites, na.rm = TRUE),
                        
                        q25_watterson_zero=quantile(watterson_zero,0.25, na.rm = TRUE),
                        q25_pairwise_zero=quantile(pairwise_zero,0.25, na.rm = TRUE),
@@ -4054,11 +4056,12 @@ for (POP in POPS)
 Sobre la de stats de cada población. ¡¡Es el ratio de las medias!!!
 
 #### One factor: Ratio and pairwise table
+
 ##### Feature
 
 ```{r}
 
-# Calculo el ratio para la mediana:
+# Calculo el ratio para la mediana, y también reporto las wmean para poder plotearla:
 
 bootleneck_vs_non_bootleneck_ratio_median_feature <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
   
@@ -4104,10 +4107,7 @@ bootleneck_vs_non_bootleneck_ratio_median_feature <- function (dataframe_POP1, d
   
   # Calculo de los ratios globales.
   
-  ratio_averages_POP1_POP2 <- full_join ( 
-    select ( dataframe_POP1, pop, feature, total_count, median_pairwise_ave, median_watterson_ave,  type_chr, median_pairwise_zero, median_watterson_zero), 
-    select ( dataframe_POP2, pop, feature, total_count, median_pairwise_ave, median_watterson_ave,  type_chr, median_pairwise_zero, median_watterson_zero), 
-                                          by=c("feature", "type_chr")) %>% 
+  ratio_averages_POP1_POP2 <- full_join ( dataframe_POP1, dataframe_POP2, by=c("feature", "type_chr")) %>% 
       
   # All values
 
@@ -4120,26 +4120,19 @@ bootleneck_vs_non_bootleneck_ratio_median_feature <- function (dataframe_POP1, d
     mutate (ratio_median_pairwise_zero = median_pairwise_zero.y/median_pairwise_zero.x) %>% 
     mutate (ratio_median_watterson_zero = median_watterson_zero.y/median_watterson_zero.x) %>% 
   
+
+  # All values corrected by intergenic
     
-    
-    
-  # All values
-    
-    # PI    
     mutate (ratio_median_pairwise_corrected = ifelse(type_chr=="autosomes",                  (median_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median), 
  # else
 (median_pairwise_ave.y/chrX_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/chrX_pairwise_average_intergenic_per_unit_pop1_median))) %>% 
   
-    # WATTERSON
     mutate (ratio_median_watterson_corrected = ifelse(type_chr=="autosomes",                  (median_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_median), 
 # else
 (median_watterson_ave.y/chrX_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/chrX_watterson_average_intergenic_per_unit_pop1_median))) %>% 
     
-    
-    
-  # Replacing low values -> 0
+  # Replacing low values -> 0 corrected by intergenic
   
-    # PI    
     mutate (ratio_median_pairwise_corrected_zero = ifelse(type_chr=="autosomes",                  (median_pairwise_zero.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median_zero)/(median_pairwise_zero.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median_zero), 
  # else
 (median_pairwise_zero.y/chrX_pairwise_average_intergenic_per_unit_pop2_median_zero)/(median_pairwise_zero.x/chrX_pairwise_average_intergenic_per_unit_pop1_median_zero))) %>% 
@@ -4165,7 +4158,6 @@ Creo las data frame
 # Dataframe Kirov-Norway
 
 bootleneck_vs_non_bootleneck_ratio_median_feature(c_ll_ki_n013_stats_feature,c_ll_no_n008_stats_feature, deparse(substitute(c_ll_ki_n013_stats_feature)),deparse(substitute(c_ll_no_n008_stats_feature)))
-
 write.table(ratio_median_c_ll_ki_n013_stats_feature_c_ll_no_n008_stats_feature, paste(wd_output,"ratio_median_autosomes_feature_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 
@@ -4233,10 +4225,7 @@ bootleneck_vs_non_bootleneck_ratio_median_region <- function (dataframe_POP1, da
   
   # Calculo de los ratios globales.
   
-  ratio_averages_POP1_POP2 <- full_join ( 
-    select ( dataframe_POP1, pop, region, total_count, median_pairwise_ave, median_watterson_ave,  type_chr, median_pairwise_zero, median_watterson_zero), 
-    select ( dataframe_POP2, pop, region, total_count, median_pairwise_ave, median_watterson_ave,  type_chr, median_pairwise_zero, median_watterson_zero), 
-                                          by=c("region", "type_chr")) %>% 
+  ratio_averages_POP1_POP2 <- full_join (dataframe_POP1, dataframe_POP2, by=c("region", "type_chr")) %>% 
       
   # All values
 
@@ -4319,7 +4308,6 @@ write.table(ratio_median_c_lp_sm_n019_stats_region_c_lp_do_n012_stats_region, pa
 bootleneck_vs_non_bootleneck_ratio_median_chr <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
   
   # Nombre de las poblaciones
-  
   POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
   POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
    
@@ -4360,10 +4348,11 @@ bootleneck_vs_non_bootleneck_ratio_median_chr <- function (dataframe_POP1, dataf
   
   # Calculo de los ratios globales.
   
-  ratio_averages_POP1_POP2 <- full_join ( 
-    select ( dataframe_POP1, chr, pop, total_count, median_pairwise_ave, median_watterson_ave, median_pairwise_zero, median_watterson_zero), 
-    select ( dataframe_POP2, chr, pop, total_count, median_pairwise_ave, median_watterson_ave, median_pairwise_zero, median_watterson_zero), 
-                                          by=c("chr")) %>% 
+  ratio_averages_POP1_POP2 <- full_join (dataframe_POP1, dataframe_POP2, by=c("chr")) %>% 
+    
+    # Adding_chr_notation
+  
+    mutate(type_chr=ifelse(chr!="chrX", "autosome", "chrX")) %>% 
       
   # All values
 
@@ -4378,32 +4367,29 @@ bootleneck_vs_non_bootleneck_ratio_median_chr <- function (dataframe_POP1, dataf
   
     
     
-  # All values
+  # All values corrected intergenic
     
-    # PI    
-    mutate (ratio_median_pairwise_corrected = ifelse(chr!="chrX",                  (median_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median), 
+   mutate (ratio_median_pairwise_corrected = ifelse(chr!="chrX",                  (median_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median), 
  # else
 (median_pairwise_ave.y/chrX_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/chrX_pairwise_average_intergenic_per_unit_pop1_median))) %>% 
   
-    # WATTERSON
-    mutate (ratio_median_watterson_corrected = ifelse(chr!="chrX",                  (median_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_median), 
+   mutate (ratio_median_watterson_corrected = ifelse(chr!="chrX",                  (median_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_median), 
 # else
 (median_watterson_ave.y/chrX_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/chrX_watterson_average_intergenic_per_unit_pop1_median))) %>% 
     
     
     
-  # Replacing low values -> 0
+  # Replacing low values -> 0  corrected intergenic
   
-    # PI    
     mutate (ratio_median_pairwise_corrected_zero = ifelse(chr!="chrX",                  (median_pairwise_zero.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median_zero)/(median_pairwise_zero.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median_zero), 
  # else
 (median_pairwise_zero.y/chrX_pairwise_average_intergenic_per_unit_pop2_median_zero)/(median_pairwise_zero.x/chrX_pairwise_average_intergenic_per_unit_pop1_median_zero))) %>% 
   
-    # WATTERSON
     mutate (ratio_median_watterson_corrected_zero = ifelse(chr!="chrX",                  (median_watterson_zero.y/autosomes_watterson_average_intergenic_per_unit_pop2_median_zero)/(median_watterson_zero.x/autosomes_watterson_average_intergenic_per_unit_pop1_median_zero), 
 # else
 (median_watterson_zero.y/chrX_watterson_average_intergenic_per_unit_pop2_median_zero)/(median_watterson_zero.x/chrX_watterson_average_intergenic_per_unit_pop1_median_zero)))
 
+  
   
   dataframename <- paste ("ratio_median", name_POP1, name_POP2,  sep="_")
   assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
@@ -4429,8 +4415,51 @@ write.table(ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr, paste(wd
 
 ```
 
+# --------------------
+
+##### Plot Chr MB vs EB
+
+```{r}
+
+library(ggpmisc)
+my.formula <- y ~ x
+
+
+DATAFRAMES=c(
+"ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr", "ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr", "ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr")
+INDEXES=c("wmean_watterson_ave", "wmean_pairwise_ave")
+
+for (DATAFRAME in DATAFRAMES)
+{
+  for (INDEX in INDEXES)
+  {
+  POP1=as.character(get(DATAFRAME) %>% ungroup() %>% select (pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1]) 
+  POP2=as.character(get(DATAFRAME) %>% ungroup() %>% select (pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1]) 
+
+  ggplot (data=get(DATAFRAME) %>% filter(type_chr=="autosome"), mapping=aes_string(paste(INDEX, ".y", sep=""), paste(INDEX, ".x", sep=""), fill="type_chr", colour="type_chr")) +
+  geom_point() +
+  geom_smooth(method='lm', formula=y~x) +
+  geom_abline(intercept = 0) +
+  stat_poly_eq(formula = my.formula,coef.digits=2 ,
+                aes(label = paste(..eq.label..)), 
+                parse = TRUE, label.y = 0.97 * max(get(DATAFRAME)$wmean_watterson_ave.x)) +  
+  stat_poly_eq(formula = my.formula, 
+                aes(label = paste(..rr.label..)), 
+                parse = TRUE, label.y = 0.99 * max(get(DATAFRAME)$wmean_watterson_ave.x)) +
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+  expand_limits(x = 0, y = 0)
+  # theme(text=element_text(family = 'Times', size = 12, color = 'black'), axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  ggsave(paste(wd_output, POP1,"_",POP2,"_", INDEX,"_lm_chr.pdf", sep=""))
+}
+  }
+```
+
+
 ##### Plot for ratio
 
+No lo corro.
 ```{r}
 
 DATAFRAMES=c(
@@ -4451,11 +4480,11 @@ ggplot (get(DATAFRAME) %>% filter (type_chr!="chrX"), aes_string("feature", INDE
   
   ggsave(paste(wd_output, DATAFRAME,"_", INDEX,".pdf", sep=""))
 }
-}
-
+  }
 
 
 ```
+
 
 #### Two factors: Interaction table
 
