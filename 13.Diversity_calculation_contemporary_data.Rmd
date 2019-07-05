@@ -2670,11 +2670,12 @@ skeweness_watterson$Group.2 <- factor (skeweness_watterson$Group.2, levels=c("ln
 
 skeweness_watterson$Group.1 <- factor (skeweness_watterson$Group.1, levels=c("Kirov-Norway", "Kirov-NE_Poland", "Andujar-Donana"))
  
-  ggplot(skeweness_watterson, aes(x=Group.2, y=x, fill=Group.1, color=Group.1, shape=Group.1)) +
+  ggplot(skeweness_watterson %>% filter(Group.2!="All"), aes(x=Group.2, y=x, fill=Group.1, color=Group.1, shape=Group.1)) +
     geom_point() +
-    labs(title=paste("Skewness for the Delta comparing Watterson: no -1 or +1",sep =" "),
+    geom_hline(data=skeweness_pairwise %>% filter(Group.2=="All"), aes(yintercept=x, colour = Group.1)) +
+    labs(title=paste("Skewness for the Delta comparing Pairwise: no -1 or +1",sep =" "),
          x ="Feature", y = "Skewness") +    
-    coord_flip() +
+    coord_flip()  +
     scale_fill_viridis_d (option = "plasma") +
     scale_colour_viridis_d (option = "plasma") +
     ggsave (paste(wd_output,"delta_zero_watterson_skewness_per_feature.pdf", sep=""))
@@ -2692,8 +2693,10 @@ skeweness_pairwise <- rbind(skeweness_pairwise_comparison_feature, skeweness_pai
  skeweness_pairwise$Group.1 <- factor (skeweness_pairwise$Group.1, levels=c("Kirov-Norway", "Kirov-NE_Poland", "Andujar-Donana"))
 
  
-ggplot(skeweness_pairwise, aes(x=Group.2, y=x, fill=Group.1, color=Group.1, shape=Group.1)) +
+ 
+ggplot(data=skeweness_pairwise %>% filter(Group.2!="All"), aes(x=Group.2, y=x, fill=Group.1, color=Group.1, shape=Group.1)) +
     geom_point() +
+    geom_hline(data=skeweness_pairwise %>% filter(Group.2=="All"), aes(yintercept=x, colour = Group.1)) +
     labs(title=paste("Skewness for the Delta comparing Pairwise: no -1 or +1",sep =" "),
          x ="Feature", y = "Skewness") +    
     coord_flip() +
@@ -2740,11 +2743,13 @@ for (DATAFRAME in DATAFRAMES)
   # WATTERSON
   # Mean dr distribution
 
+  # Calculo el valor medio por feature para sacar el maximo y mínimo para luego establecer los límites del plot
 mean <- get(DATAFRAME) %>% 
              dplyr::group_by(feature) %>%
              dplyr::summarise(
             delta_watterson_average_normalized_zero_ave=mean(delta_watterson_average_normalized_zero,na.rm=TRUE)) %>% select(-feature) %>% as.vector(.)
   
+# Plot de la media global
  a <- ggplot (get(DATAFRAME)) +
     stat_summary(aes(x=comparison, y=delta_watterson_average_normalized_zero), fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
     labs(title=paste("Mean for the Delta comparing Watterson:", POPULATION2,"vs", POPULATION1, sep =" ")) +    
@@ -2762,8 +2767,31 @@ mean <- get(DATAFRAME) %>%
           ncol = 1, nrow = 2, align="hv", heights=c(1,6))
   
     ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_mean_feature.pdf", sep=""),a.b, width = 20, height = 25, units = "cm")
-  
-  
+
+     
+    
+    ## Plot combinado de mean per feature, con una raya para la media
+    
+    ggplot (get(DATAFRAME)) +
+      geom_hline(yintercept=mean(get(DATAFRAME)$delta_watterson_average_normalized_zero, na.rm=TRUE), colour ="grey60")  +
+      stat_summary(aes(x=feature, y=delta_watterson_average_normalized_zero), fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+      labs(x ="Feature", y = "Mean") +
+      coord_flip(ylim = c(min(mean)-0.1, max(mean)+0.1)) +
+      ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_mean_feature_one_pannel.pdf", sep=""), width = 20, height = 25, units = "cm")
+    
+   ## Plot combinado de mean per feature, con una raya para la media wo -1 and +1
+    
+    ggplot (get(DATAFRAME) %>% filter(delta_watterson_average_normalized_zero!=1 & delta_watterson_average_normalized_zero!=-1)) +
+      geom_hline(data=get(DATAFRAME) %>% filter(delta_watterson_average_normalized_zero!=1 & delta_watterson_average_normalized_zero!=-1), aes(yintercept=mean(delta_watterson_average_normalized_zero, na.rm=TRUE)), color ="grey60")  +
+      stat_summary(aes(x=feature, y=delta_watterson_average_normalized_zero), fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+      labs(x ="Feature", y = "Mean") +
+      coord_flip() +
+      ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_mean_feature_one_pannel_wo_1_&_minu1.pdf", sep=""), width = 20, height = 25, units = "cm")
+   
+    
+    
+# Plot de la distribución de delta global
+      
   ggplot(get(DATAFRAME), aes(x=(delta_watterson_average_normalized_zero))) + 
     geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
     geom_histogram(data = get(DATAFRAME) %>% filter(delta_watterson_average_normalized_zero!=-1 & delta_watterson_average_normalized_zero!=1) %>% mutate(subset = "Subset"), binwidth = 0.05) +
@@ -2771,7 +2799,8 @@ mean <- get(DATAFRAME) %>%
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_average_distribution.pdf", sep=""))
   
-  
+  # Plot de la distribución de delta para cada feature
+
  ggplot() + 
     aes(x = delta_watterson_average_normalized_zero) +
     geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
@@ -2805,7 +2834,26 @@ mean <- get(DATAFRAME) %>%
           ncol = 1, nrow = 2, align="hv", heights=c(1,6))
   
     ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_mean_feature.pdf", sep=""),a.b, width = 20, height = 25, units = "cm")
-  
+    
+    ## Plot combinado de mean per feature, con una raya para la media
+    
+    ggplot (get(DATAFRAME)) +
+      geom_hline(yintercept=mean(get(DATAFRAME)$delta_pairwise_average_normalized_zero, na.rm=TRUE), colour ="grey60")  +
+      stat_summary(aes(x=feature, y=delta_pairwise_average_normalized_zero), fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+      labs(x ="Feature", y = "Mean") +
+      coord_flip(ylim = c(min(mean)-0.1, max(mean)+0.1)) +
+      ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_mean_feature_one_pannel.pdf", sep=""), width = 20, height = 25, units = "cm")
+    
+       ## Plot combinado de mean per feature, con una raya para la media wo -1 and +1
+    
+    ggplot (get(DATAFRAME) %>% filter(delta_pairwise_average_normalized_zero!=1 & delta_pairwise_average_normalized_zero!=-1)) +
+      geom_hline(data=get(DATAFRAME) %>% filter(delta_pairwise_average_normalized_zero!=1 & delta_pairwise_average_normalized_zero!=-1), aes(yintercept=mean(delta_pairwise_average_normalized_zero, na.rm=TRUE)), color ="grey60")  +
+      stat_summary(aes(x=feature, y=delta_pairwise_average_normalized_zero), fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+      labs(x ="Feature", y = "Mean") +
+      coord_flip() +
+      ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_mean_feature_one_pannel_wo_1_&_minu1.pdf", sep=""), width = 20, height = 25, units = "cm")
+   
+    
 
   # Distribution 
     
@@ -2825,10 +2873,6 @@ mean <- get(DATAFRAME) %>%
     theme(axis.text.x = element_text(angle=90, hjust=1)) +
     ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
   
-  
-  
-  
-
 }
 
 ```
@@ -3342,6 +3386,39 @@ grid.draw(venn.plot)
 
 ```
 
+### Count units in ND->D in different regions.
+
+```{r}
+DATAFRAMES=c(
+data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise, data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise, data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise, data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson, data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson, data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson)
+
+
+for (DATAFRAME in DATAFRAMES)
+  {
+    POP1=DATAFRAME %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+    POP2=DATAFRAME %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  DIVERSITY_MEASURE_CONSIDERED=DATAFRAME %>% 
+    dplyr::select(evolution_category) %>% 
+    dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
+    head(.,1) %>% 
+    dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
+                              ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
+    dplyr::select(diversity) %>% 
+    .[1,1]
+
+  
+  tabla_test <- full_join(
+  # Contamos las unidades que están en el ND-D para cada feature y cada region
+  as.data.frame(DATAFRAME %>% filter(evolution_category==paste("ND_D_",DIVERSITY_MEASURE_CONSIDERED, sep="" )) %>% group_by(feature,region) %>% summarise (ND_D=n())),
+  # Contamos las unidades para cada feature y cada region totales
+  as.data.frame(DATAFRAME %>% group_by(feature,region) %>% summarise ( total_count=n()), by =c("feature", "region"))) %>% 
+    mutate(ND_D/total_count*100)
+ write.table(tabla_test, paste(wd_output, POP1, "_", POP2,"_",DIVERSITY_MEASURE_CONSIDERED, "_percentage_of_ND_D_in_different_regions.tsv", sep=""))
+   
+}
+
+```
 
 
 
@@ -3575,7 +3652,16 @@ results_watteson <- shapiro.test(DATAFRAME_filtered$watterson_ave.x[0:5000])
 b <- results_watteson$p.value
 write.csv(b,paste0(wd_output, "diversity_test_HD_pop_MB/",POP1,"_",POP2,"_",DIVERSITY_MEASURE_CONSIDERED,"_HD_normality_p_value.csv"))
   }
+
+  # Añadimos una categoría que sería, evaluación de perdida de watterson, pero basandonos en los cuadrantes de pi
   
+  if (DIVERSITY_MEASURE_CONSIDERED=="watterson") {
+results_watteson2 <- shapiro.test(DATAFRAME_filtered$pairwise_ave.x[0:5000])
+b <- results_watteson2$p.value
+write.csv(b,paste0(wd_output, "diversity_test_HD_pop_MB/",POP1,"_",POP2,"_",DIVERSITY_MEASURE_CONSIDERED,"_pairwise_evaluated_HD_normality_p_value.csv"))
+  }
+  
+    
 }
 
 
@@ -3625,8 +3711,6 @@ diversity.greater <- with(DATAFRAME_filtered,
 diversity.less <- with(DATAFRAME_filtered,
        by(DATAFRAME_filtered, feature,
           function(x) wilcox.test(pairwise_ave.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
-
-
 }
 
 
@@ -3639,8 +3723,23 @@ diversity.greater <- with(DATAFRAME_filtered,
 diversity.less <- with(DATAFRAME_filtered,
        by(DATAFRAME_filtered, feature,
           function(x) wilcox.test(watterson_ave.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+# Definimos cuadrantes para watterson pero los evaluamos en función de pi. Es decir, iro si los cuadrantes que han perdido o ganado diversidad para watterson, están influidos por la pi inicial. 
+
+diversity.greater.PI <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(pairwise_ave.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)  
+
+diversity.less.PI <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(pairwise_ave.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+lista_results_diversity_melted.PI <- melt(list(diversity.greater.PI , diversity.less.PI)) %>% mutate(genomic_variable="pairwise_evaluation_watterson_quadrants") %>% spread(., variable, value)
+
+write.table(format(lista_results_diversity_melted.PI, digits=8, scientific=T), paste(wd_output,ruta_UMW_test_diversity,POP1,"_",POP2,"_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt",sep=""), row.names = F)
+
 }
-  
+
 lista_results_diversity_melted <- melt(list(diversity.greater , diversity.less)) %>% mutate(genomic_variable=DIVERSITY_MEASURE_CONSIDERED) %>% spread(., variable, value)
 
 write.table(format(lista_results_diversity_melted, digits=8, scientific=T), paste(wd_output,ruta_UMW_test_diversity,POP1,"_",POP2,"_features_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,"_HD.txt",sep=""), row.names = F)
@@ -4063,13 +4162,16 @@ Sobre la de stats de cada población. ¡¡Es el ratio de las medias!!!
 
 # Calculo el ratio para la mediana, y también reporto las wmean para poder plotearla:
 
-bootleneck_vs_non_bootleneck_ratio_median_feature <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+bootleneck_vs_non_bootleneck_interaction_stats_feature <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
   
   # Nombre de las poblaciones
   
   POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
   POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
    
+  complete_pop_name1=as.character(as.data.frame(dataframe_POP1) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+  complete_pop_name2=as.character(as.data.frame(dataframe_POP2) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+
 # AUTOSOMES
   
   # All values
@@ -4107,7 +4209,8 @@ bootleneck_vs_non_bootleneck_ratio_median_feature <- function (dataframe_POP1, d
   
   # Calculo de los ratios globales.
   
-  ratio_averages_POP1_POP2 <- full_join ( dataframe_POP1, dataframe_POP2, by=c("feature", "type_chr")) %>% 
+  ratio_averages_POP1_POP2 <- full_join ( dataframe_POP1, dataframe_POP2, by=c("feature", "type_chr", "Species")) %>% mutate (comparison=paste(complete_pop_name1,"-", complete_pop_name2, sep="")) %>% 
+    
       
   # All values
 
@@ -4143,7 +4246,7 @@ bootleneck_vs_non_bootleneck_ratio_median_feature <- function (dataframe_POP1, d
 (median_watterson_zero.y/chrX_watterson_average_intergenic_per_unit_pop2_median_zero)/(median_watterson_zero.x/chrX_watterson_average_intergenic_per_unit_pop1_median_zero)))
 
   
-  dataframename <- paste ("ratio_median", name_POP1, name_POP2,  sep="_")
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
   assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
 }
 
@@ -4156,21 +4259,19 @@ Creo las data frame
 # Create data frame
 
 # Dataframe Kirov-Norway
-
-bootleneck_vs_non_bootleneck_ratio_median_feature(c_ll_ki_n013_stats_feature,c_ll_no_n008_stats_feature, deparse(substitute(c_ll_ki_n013_stats_feature)),deparse(substitute(c_ll_no_n008_stats_feature)))
-write.table(ratio_median_c_ll_ki_n013_stats_feature_c_ll_no_n008_stats_feature, paste(wd_output,"ratio_median_autosomes_feature_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
+bootleneck_vs_non_bootleneck_interaction_stats_feature(c_ll_ki_n013_stats_feature,c_ll_no_n008_stats_feature, deparse(substitute(c_ll_ki_n013_stats_feature)),deparse(substitute(c_ll_no_n008_stats_feature)))
 
 # Dataframe Kirov-Poland
-
-bootleneck_vs_non_bootleneck_ratio_median_feature(c_ll_ki_n013_stats_feature,c_ll_po_n008_stats_feature, deparse(substitute(c_ll_ki_n013_stats_feature)),deparse(substitute(c_ll_po_n008_stats_feature)))
-write.table(ratio_median_c_ll_ki_n013_stats_feature_c_ll_po_n008_stats_feature, paste(wd_output,"ratio_median_autosomes_feature_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
+bootleneck_vs_non_bootleneck_interaction_stats_feature(c_ll_ki_n013_stats_feature,c_ll_po_n008_stats_feature, deparse(substitute(c_ll_ki_n013_stats_feature)),deparse(substitute(c_ll_po_n008_stats_feature)))
 
 # Dataframe Sierra_Morena-Doñana
+bootleneck_vs_non_bootleneck_interaction_stats_feature(c_lp_sm_n019_stats_feature, c_lp_do_n012_stats_feature, deparse(substitute(c_lp_sm_n019_stats_feature)),deparse(substitute(c_lp_do_n012_stats_feature)))
 
-bootleneck_vs_non_bootleneck_ratio_median_feature(c_lp_sm_n019_stats_feature, c_lp_do_n012_stats_feature, deparse(substitute(c_lp_sm_n019_stats_feature)),deparse(substitute(c_lp_do_n012_stats_feature)))
-write.table(ratio_median_c_lp_sm_n019_stats_feature_c_lp_do_n012_stats_feature, paste(wd_output,"ratio_median_autosomes_feature_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+interaction_stats_all_pops_feature <- rbind (interaction_stats_c_ll_ki_n013_stats_feature_c_ll_no_n008_stats_feature, interaction_stats_c_ll_ki_n013_stats_feature_c_ll_po_n008_stats_feature, interaction_stats_c_lp_sm_n019_stats_feature_c_lp_do_n012_stats_feature)
+
+write.table(interaction_stats_all_pops_feature, paste(wd_output,"interaction_stats_autosomes_feature_all_pops.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
 
 ```
 
@@ -4181,13 +4282,16 @@ write.table(ratio_median_c_lp_sm_n019_stats_feature_c_lp_do_n012_stats_feature, 
 
 # Calculo el ratio para la mediana:
 
-bootleneck_vs_non_bootleneck_ratio_median_region <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+bootleneck_vs_non_bootleneck_interaction_stats_region <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
   
   # Nombre de las poblaciones
   
   POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
   POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
    
+  complete_pop_name1=as.character(as.data.frame(dataframe_POP1) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+  complete_pop_name2=as.character(as.data.frame(dataframe_POP2) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+
 # AUTOSOMES
   
   # All values
@@ -4196,7 +4300,6 @@ bootleneck_vs_non_bootleneck_ratio_median_region <- function (dataframe_POP1, da
   
   autosomes_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
   autosomes_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic))  
-  
   
   # Replacing low values -> 0
   autosomes_pairwise_average_intergenic_per_unit_pop1_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_zero_intergenic)) 
@@ -4222,53 +4325,42 @@ bootleneck_vs_non_bootleneck_ratio_median_region <- function (dataframe_POP1, da
   chrX_pairwise_average_intergenic_per_unit_pop2_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_zero_intergenic)) 
   chrX_watterson_average_intergenic_per_unit_pop2_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_zero_intergenic))  
   
-  
   # Calculo de los ratios globales.
   
-  ratio_averages_POP1_POP2 <- full_join (dataframe_POP1, dataframe_POP2, by=c("region", "type_chr")) %>% 
-      
+  ratio_averages_POP1_POP2 <- full_join (dataframe_POP1, dataframe_POP2, by=c("region", "type_chr", "Species")) %>% mutate (comparison=paste(complete_pop_name1,"-", complete_pop_name2, sep="")) %>% 
+  
   # All values
 
     mutate (ratio_median_pairwise = median_pairwise_ave.y/median_pairwise_ave.x) %>% 
     mutate (ratio_median_watterson = median_watterson_ave.y/median_watterson_ave.x) %>% 
 
-    
   # Replacing low values -> 0
 
     mutate (ratio_median_pairwise_zero = median_pairwise_zero.y/median_pairwise_zero.x) %>% 
     mutate (ratio_median_watterson_zero = median_watterson_zero.y/median_watterson_zero.x) %>% 
-  
+ 
+  # All values corrected intergenic
     
-    
-    
-  # All values
-    
-    # PI    
     mutate (ratio_median_pairwise_corrected = ifelse(type_chr=="autosomes",                  (median_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median), 
  # else
 (median_pairwise_ave.y/chrX_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/chrX_pairwise_average_intergenic_per_unit_pop1_median))) %>% 
-  
-    # WATTERSON
-    mutate (ratio_median_watterson_corrected = ifelse(type_chr=="autosomes",                  (median_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_median), 
+   mutate (ratio_median_watterson_corrected = ifelse(type_chr=="autosomes",                  (median_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_median), 
 # else
 (median_watterson_ave.y/chrX_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/chrX_watterson_average_intergenic_per_unit_pop1_median))) %>% 
     
-    
-    
-  # Replacing low values -> 0
+  # Replacing low values -> 0 corrected intergenic
   
-    # PI    
+
     mutate (ratio_median_pairwise_corrected_zero = ifelse(type_chr=="autosomes",                  (median_pairwise_zero.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median_zero)/(median_pairwise_zero.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median_zero), 
  # else
 (median_pairwise_zero.y/chrX_pairwise_average_intergenic_per_unit_pop2_median_zero)/(median_pairwise_zero.x/chrX_pairwise_average_intergenic_per_unit_pop1_median_zero))) %>% 
   
-    # WATTERSON
     mutate (ratio_median_watterson_corrected_zero = ifelse(type_chr=="autosomes",                  (median_watterson_zero.y/autosomes_watterson_average_intergenic_per_unit_pop2_median_zero)/(median_watterson_zero.x/autosomes_watterson_average_intergenic_per_unit_pop1_median_zero), 
 # else
 (median_watterson_zero.y/chrX_watterson_average_intergenic_per_unit_pop2_median_zero)/(median_watterson_zero.x/chrX_watterson_average_intergenic_per_unit_pop1_median_zero)))
 
   
-  dataframename <- paste ("ratio_median", name_POP1, name_POP2,  sep="_")
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
   assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
 }
 
@@ -4282,20 +4374,20 @@ Create data frames
 # Create data frame
 
 # Dataframe Kirov-Norway
-
-bootleneck_vs_non_bootleneck_ratio_median_region(c_ll_ki_n013_stats_region,c_ll_no_n008_stats_region, deparse(substitute(c_ll_ki_n013_stats_region)),deparse(substitute(c_ll_no_n008_stats_region)))
-write.table(ratio_median_c_ll_ki_n013_stats_region_c_ll_no_n008_stats_region, paste(wd_output,"ratio_median_autosomes_region_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+bootleneck_vs_non_bootleneck_interaction_stats_region(c_ll_ki_n013_stats_region,c_ll_no_n008_stats_region, deparse(substitute(c_ll_ki_n013_stats_region)),deparse(substitute(c_ll_no_n008_stats_region)))
 
 # Dataframe Kirov-Poland
-
-bootleneck_vs_non_bootleneck_ratio_median_region(c_ll_ki_n013_stats_region,c_ll_po_n008_stats_region, deparse(substitute(c_ll_ki_n013_stats_region)),deparse(substitute(c_ll_po_n008_stats_region)))
-write.table(ratio_median_c_ll_ki_n013_stats_region_c_ll_po_n008_stats_region, paste(wd_output,"ratio_median_autosomes_region_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
+bootleneck_vs_non_bootleneck_interaction_stats_region(c_ll_ki_n013_stats_region,c_ll_po_n008_stats_region, deparse(substitute(c_ll_ki_n013_stats_region)),deparse(substitute(c_ll_po_n008_stats_region)))
 
 # Dataframe Sierra_Morena-Doñana
+bootleneck_vs_non_bootleneck_interaction_stats_region(c_lp_sm_n019_stats_region, c_lp_do_n012_stats_region, deparse(substitute(c_lp_sm_n019_stats_region)),deparse(substitute(c_lp_do_n012_stats_region)))
 
-bootleneck_vs_non_bootleneck_ratio_median_region(c_lp_sm_n019_stats_region, c_lp_do_n012_stats_region, deparse(substitute(c_lp_sm_n019_stats_region)),deparse(substitute(c_lp_do_n012_stats_region)))
-write.table(ratio_median_c_lp_sm_n019_stats_region_c_lp_do_n012_stats_region, paste(wd_output,"ratio_median_autosomes_region_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+interaction_stats_all_pops_region <- rbind (interaction_stats_c_ll_ki_n013_stats_region_c_ll_no_n008_stats_region, interaction_stats_c_ll_ki_n013_stats_region_c_ll_po_n008_stats_region, interaction_stats_c_lp_sm_n019_stats_region_c_lp_do_n012_stats_region)
+
+write.table(interaction_stats_all_pops_region, paste(wd_output,"interaction_stats_autosomes_region_all_pops.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
 
 ```
 
@@ -4305,12 +4397,15 @@ write.table(ratio_median_c_lp_sm_n019_stats_region_c_lp_do_n012_stats_region, pa
 
 # Calculo el ratio para la media:
 
-bootleneck_vs_non_bootleneck_ratio_median_chr <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+bootleneck_vs_non_bootleneck_interaction_stats_chr <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
   
   # Nombre de las poblaciones
   POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
   POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
    
+  complete_pop_name1=as.character(as.data.frame(dataframe_POP1) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+  complete_pop_name2=as.character(as.data.frame(dataframe_POP2) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+
 # AUTOSOMES
   
   # All values
@@ -4320,7 +4415,6 @@ bootleneck_vs_non_bootleneck_ratio_median_chr <- function (dataframe_POP1, dataf
   autosomes_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
   autosomes_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic))  
   
-  
   # Replacing low values -> 0
   autosomes_pairwise_average_intergenic_per_unit_pop1_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_zero_intergenic)) 
   autosomes_watterson_average_intergenic_per_unit_pop1_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_zero_intergenic))  
@@ -4328,7 +4422,6 @@ bootleneck_vs_non_bootleneck_ratio_median_chr <- function (dataframe_POP1, dataf
   autosomes_pairwise_average_intergenic_per_unit_pop2_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_zero_intergenic)) 
   autosomes_watterson_average_intergenic_per_unit_pop2_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_zero_intergenic))  
   
-
 # CHRX.
 
   # All values
@@ -4345,10 +4438,9 @@ bootleneck_vs_non_bootleneck_ratio_median_chr <- function (dataframe_POP1, dataf
   chrX_pairwise_average_intergenic_per_unit_pop2_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_zero_intergenic)) 
   chrX_watterson_average_intergenic_per_unit_pop2_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_zero_intergenic))  
   
-  
   # Calculo de los ratios globales.
   
-  ratio_averages_POP1_POP2 <- full_join (dataframe_POP1, dataframe_POP2, by=c("chr")) %>% 
+  ratio_averages_POP1_POP2 <- full_join (dataframe_POP1, dataframe_POP2, by=c("chr", "Species")) %>% mutate (comparison=paste(complete_pop_name1,"-", complete_pop_name2, sep="")) %>% 
     
     # Adding_chr_notation
   
@@ -4359,15 +4451,12 @@ bootleneck_vs_non_bootleneck_ratio_median_chr <- function (dataframe_POP1, dataf
     mutate (ratio_median_pairwise = median_pairwise_ave.y/median_pairwise_ave.x) %>% 
     mutate (ratio_median_watterson = median_watterson_ave.y/median_watterson_ave.x) %>% 
 
-    
-  # Replacing low values -> 0
+    # Replacing low values -> 0
 
     mutate (ratio_median_pairwise_zero = median_pairwise_zero.y/median_pairwise_zero.x) %>% 
     mutate (ratio_median_watterson_zero = median_watterson_zero.y/median_watterson_zero.x) %>% 
   
-    
-    
-  # All values corrected intergenic
+    # All values corrected intergenic
     
    mutate (ratio_median_pairwise_corrected = ifelse(chr!="chrX",                  (median_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median), 
  # else
@@ -4376,8 +4465,6 @@ bootleneck_vs_non_bootleneck_ratio_median_chr <- function (dataframe_POP1, dataf
    mutate (ratio_median_watterson_corrected = ifelse(chr!="chrX",                  (median_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_median), 
 # else
 (median_watterson_ave.y/chrX_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/chrX_watterson_average_intergenic_per_unit_pop1_median))) %>% 
-    
-    
     
   # Replacing low values -> 0  corrected intergenic
   
@@ -4389,9 +4476,7 @@ bootleneck_vs_non_bootleneck_ratio_median_chr <- function (dataframe_POP1, dataf
 # else
 (median_watterson_zero.y/chrX_watterson_average_intergenic_per_unit_pop2_median_zero)/(median_watterson_zero.x/chrX_watterson_average_intergenic_per_unit_pop1_median_zero)))
 
-  
-  
-  dataframename <- paste ("ratio_median", name_POP1, name_POP2,  sep="_")
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
   assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
 }
 
@@ -4401,60 +4486,232 @@ Create data frame
 ```{r}
 
 # Dataframe Kirov-Norway
-bootleneck_vs_non_bootleneck_ratio_median_chr(c_ll_ki_n013_stats_chr,c_ll_no_n008_stats_chr, deparse(substitute(c_ll_ki_n013_stats_chr)),deparse(substitute(c_ll_no_n008_stats_chr)))
-write.table(ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr, paste(wd_output,"ratio_median_autosomes_chr_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
+bootleneck_vs_non_bootleneck_interaction_stats_chr(c_ll_ki_n013_stats_chr,c_ll_no_n008_stats_chr, deparse(substitute(c_ll_ki_n013_stats_chr)),deparse(substitute(c_ll_no_n008_stats_chr)))
 
 # Dataframe Kirov-Poland
-bootleneck_vs_non_bootleneck_ratio_median_chr(c_ll_ki_n013_stats_chr,c_ll_po_n008_stats_chr, deparse(substitute(c_ll_ki_n013_stats_chr)),deparse(substitute(c_ll_po_n008_stats_chr)))
-write.table(ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr, paste(wd_output,"ratio_median_autosomes_chr_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+bootleneck_vs_non_bootleneck_interaction_stats_chr(c_ll_ki_n013_stats_chr,c_ll_po_n008_stats_chr, deparse(substitute(c_ll_ki_n013_stats_chr)),deparse(substitute(c_ll_po_n008_stats_chr)))
 
 # Dataframe Sierra_Morena-Doñana
-bootleneck_vs_non_bootleneck_ratio_median_chr(c_lp_sm_n019_stats_chr, c_lp_do_n012_stats_chr, deparse(substitute(c_lp_sm_n019_stats_chr)),deparse(substitute(c_lp_do_n012_stats_chr)))
-write.table(ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr, paste(wd_output,"ratio_median_autosomes_chr_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+bootleneck_vs_non_bootleneck_interaction_stats_chr(c_lp_sm_n019_stats_chr, c_lp_do_n012_stats_chr, deparse(substitute(c_lp_sm_n019_stats_chr)),deparse(substitute(c_lp_do_n012_stats_chr)))
+
+
+interaction_stats_all_pops_chr <- rbind (interaction_stats_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr, interaction_stats_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr, interaction_stats_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr)
+
+write.table(interaction_stats_all_pops_chr, paste(wd_output,"interaction_stats_autosomes_region_all_pops.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 ```
 
 # --------------------
 
-##### Plot Chr MB vs EB
+#### Two factors: Interaction table
+
+##### Feature-Chr
+```{r}
+
+# Calculo el ratio para la mediana:
+
+bootleneck_vs_non_bootleneck_interaction_stats_feature_chr <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+  
+  # Nombre de las poblaciones
+  
+  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+   
+  complete_pop_name1=as.character(as.data.frame(dataframe_POP1) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+  complete_pop_name2=as.character(as.data.frame(dataframe_POP2) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+
+  # Create interaction table:
+  ratio_averages_POP1_POP2 <- full_join ( dataframe_POP1, dataframe_POP2, by=c("chr", "feature", "Species")) %>% mutate (comparison=paste(complete_pop_name1,"-", complete_pop_name2, sep=""))
+  
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
+  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
+  
+}
+
+# Create data frame
+
+# Dataframe Kirov-Norway
+bootleneck_vs_non_bootleneck_interaction_stats_feature_chr(c_ll_ki_n013_stats_feature_chr,c_ll_no_n008_stats_feature_chr, deparse(substitute(c_ll_ki_n013_stats_feature_chr)),deparse(substitute(c_ll_no_n008_stats_feature_chr)))
+
+# Dataframe Kirov-Poland
+bootleneck_vs_non_bootleneck_interaction_stats_feature_chr(c_ll_ki_n013_stats_feature_chr,c_ll_po_n008_stats_feature_chr, deparse(substitute(c_ll_ki_n013_stats_feature_chr)),deparse(substitute(c_ll_po_n008_stats_feature_chr)))
+
+# Dataframe Sierra_Morena-Doñana
+bootleneck_vs_non_bootleneck_interaction_stats_feature_chr(c_lp_sm_n019_stats_feature_chr, c_lp_do_n012_stats_feature_chr, deparse(substitute(c_lp_sm_n019_stats_feature_chr)),deparse(substitute(c_lp_do_n012_stats_feature_chr)))
+
+```
+
+##### Feature-Region
 
 ```{r}
 
+# Calculo el ratio para la media:
+
+bootleneck_vs_non_bootleneck_interaction_stats_feature_region <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+  
+  # Nombre de las poblaciones
+  
+  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+  
+  complete_pop_name1=as.character(as.data.frame(dataframe_POP1) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+  complete_pop_name2=as.character(as.data.frame(dataframe_POP2) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+
+  # Create interaction table:
+  ratio_averages_POP1_POP2 <- full_join ( dataframe_POP1, dataframe_POP2, by=c("region", "feature", "Species"))  %>% mutate (comparison=paste(complete_pop_name1,"-", complete_pop_name2, sep=""))
+  
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
+  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
+}
+
+# Create data frame
+
+# Dataframe Kirov-Norway
+bootleneck_vs_non_bootleneck_interaction_stats_feature_region(c_ll_ki_n013_stats_feature_region,c_ll_no_n008_stats_feature_region, deparse(substitute(c_ll_ki_n013_stats_feature_region)),deparse(substitute(c_ll_no_n008_stats_feature_region)))
+
+# Dataframe Kirov-Poland
+bootleneck_vs_non_bootleneck_interaction_stats_feature_region(c_ll_ki_n013_stats_feature_region,c_ll_po_n008_stats_feature_region, deparse(substitute(c_ll_ki_n013_stats_feature_region)),deparse(substitute(c_ll_po_n008_stats_feature_region)))
+
+# Dataframe Sierra_Morena-Doñana
+bootleneck_vs_non_bootleneck_interaction_stats_feature_region(c_lp_sm_n019_stats_feature_region,c_lp_do_n012_stats_feature_region, deparse(substitute(c_lp_sm_n019_stats_feature_region)),deparse(substitute(c_lp_do_n012_stats_feature_region)))
+
+```
+
+
+##### Region-Chr 
+
+```{r}
+
+# Calculo el ratio para la mediana:
+
+bootleneck_vs_non_bootleneck_interaction_stats_region_chr <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+  
+  # Nombre de las poblaciones
+
+  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+  
+  complete_pop_name1=as.character(as.data.frame(dataframe_POP1) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+  complete_pop_name2=as.character(as.data.frame(dataframe_POP2) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+
+  # Create interaction table:
+  ratio_averages_POP1_POP2 <- full_join ( dataframe_POP1, dataframe_POP2, by=c("region", "chr", "Species"))  %>% mutate (comparison=paste(complete_pop_name1,"-", complete_pop_name2, sep=""))
+  
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
+  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
+}
+
+# Create data frame
+
+# Dataframe Kirov-Norway
+bootleneck_vs_non_bootleneck_interaction_stats_region_chr(c_ll_ki_n013_stats_region_chr,c_ll_no_n008_stats_region_chr, deparse(substitute(c_ll_ki_n013_stats_region_chr)),deparse(substitute(c_ll_no_n008_stats_region_chr)))
+
+# Dataframe Kirov-Poland
+bootleneck_vs_non_bootleneck_interaction_stats_region_chr(c_ll_ki_n013_stats_region_chr,c_ll_po_n008_stats_region_chr, deparse(substitute(c_ll_ki_n013_stats_region_chr)),deparse(substitute(c_ll_po_n008_stats_region_chr)))
+
+# Dataframe Sierra_Morena-Doñana
+bootleneck_vs_non_bootleneck_interaction_stats_region_chr(c_lp_sm_n019_stats_region_chr, c_lp_do_n012_stats_region_chr, deparse(substitute(c_lp_sm_n019_stats_region_chr)),deparse(substitute(c_lp_do_n012_stats_region_chr)))
+
+# Fusiono las tablas y con la info de gato
+
+interaction_stats_all_pops_region_chr_cat_info <-  rbind (interaction_stats_c_ll_ki_n013_stats_region_chr_c_ll_po_n008_stats_region_chr ,interaction_stats_c_ll_ki_n013_stats_region_chr_c_ll_no_n008_stats_region_chr, interaction_stats_c_lp_sm_n019_stats_region_chr_c_lp_do_n012_stats_region_chr) %>% dplyr::full_join(., cat_chr_info_divergence, by="chr") 
+
+
+
+```
+# ------------------------------
+
+
+
+##### Plot panel comparison MB & EB
+
+```{r}
+
+library (ggpubr)
+library(ggrepel)
 library(ggpmisc)
-my.formula <- y ~ x
+library("gridExtra")
 
+formula <- y ~ x
 
-DATAFRAMES=c(
-"ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr", "ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr", "ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr")
-INDEXES=c("wmean_watterson_ave", "wmean_pairwise_ave")
+interaction_stats_all_pops_region_chr_cat_info$comparison <- factor (interaction_stats_all_pops_region_chr_cat_info$comparison, levels=c("Kirov-NE_Poland", "Kirov-Norway", "Andujar-Donana"))
+interaction_stats_all_pops_feature$comparison <- factor (interaction_stats_all_pops_feature$comparison, levels=c("Kirov-NE_Poland", "Kirov-Norway", "Andujar-Donana"))
 
-for (DATAFRAME in DATAFRAMES)
+DIVERSITY_MEASURES=c( "wmean_pairwise_ave", "wmean_watterson_ave")
+
+  for (DIVERSITY_MEASURE in DIVERSITY_MEASURES)
 {
-  for (INDEX in INDEXES)
-  {
-  POP1=as.character(get(DATAFRAME) %>% ungroup() %>% select (pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1]) 
-  POP2=as.character(get(DATAFRAME) %>% ungroup() %>% select (pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1]) 
+    
+# Region and chr 
+    
+    ## Lynx lynx
+    
+region_chr_colour_recomb <- ggplot(data=interaction_stats_all_pops_region_chr_cat_info %>% filter(chr!="chrX") , mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""), paste(DIVERSITY_MEASURE,".x",sep="")))+
+  facet_grid (region~comparison) +
+  scale_fill_viridis(option="magma") +
+  scale_colour_viridis(option="magma") +
+  geom_abline(colour="grey", linetype = "dashed") +
+  geom_point (colour="grey80", fill="grey80") +
+  geom_smooth (method = "lm", colour="grey30", fill="grey60", size=0.5) +
+  theme(axis.title.x = element_blank(), legend.position = "none") +
+  coord_equal(ratio=1) +
+  stat_poly_eq(aes(label =  paste("atop(",stat(adj.rr.label),",",stat(eq.label), ")", sep = "")), 
+               formula = formula, parse = TRUE,size = 2.5, label.x.npc = "right",
+                  label.y.npc = "bottom")
 
-  ggplot (data=get(DATAFRAME) %>% filter(type_chr=="autosome"), mapping=aes_string(paste(INDEX, ".y", sep=""), paste(INDEX, ".x", sep=""), fill="type_chr", colour="type_chr")) +
-  geom_point() +
-  geom_smooth(method='lm', formula=y~x) +
-  geom_abline(intercept = 0) +
+
+# Plot Feature MB vs EB
+
+feature_colour_feature <- ggplot (interaction_stats_all_pops_feature %>% filter(type_chr!="chrX"), 
+          mapping=aes_string(paste(DIVERSITY_MEASURE, ".y", sep=""), paste(DIVERSITY_MEASURE, ".x", sep=""))) +
+    facet_wrap (~comparison) +
+    scale_fill_viridis_d() +
+    scale_colour_viridis_d() +
+    geom_abline (colour="grey", linetype = "dashed") +
+    geom_smooth (method = "lm", colour="grey80", fill="grey80", size=0.5) +
+    geom_point (aes(fill=feature, colour=feature)) +
+    coord_equal(ratio=1) +
+    theme(legend.position = "none", strip.text.x = element_blank()) +
+    geom_text_repel(aes(label = feature),
+                  box.padding   = 1, 
+                  point.padding = 0.1,
+                  size          = 2.5,
+                  force         = 80,
+                  segment.size  = 0.2,
+                  segment.color = 'grey50') 
+  
+
+  
+  
+
+ figure <- ggarrange(region_chr_colour_recomb, feature_colour_feature, 
+          labels = c("A", "B"),
+          ncol = 1, nrow = 2,   heights = c(2, 1))
+ggsave(paste(wd_output, "panel_regions_feature_", DIVERSITY_MEASURE,".pdf", sep=""), figure, width = 20, height = 30, units = "cm")
+
+}
+
+```
+
+##### Plot chr solo 
+No lo corro
+```{r}
+
+  ggplot (interaction_stats_all_pops_chr %>% filter(type_chr=="autosome"), mapping=aes_string(paste(DIVERSITY_MEASURE, ".y", sep=""), paste(DIVERSITY_MEASURE, ".x", sep=""), fill="type_chr", colour="type_chr")) +
+  geom_point(interaction_stats_all_pops_chr %>% filter(type_chr=="autosome"), mapping=aes_string(paste(DIVERSITY_MEASURE, ".y", sep=""), paste(DIVERSITY_MEASURE, ".x", sep=""), fill="type_chr", colour="type_chr")) +
+  geom_smooth (method = "lm", colour="grey80", fill="grey80", size=0.5) +
+  geom_abline(colour="grey", linetype = "dashed") +
+  facet_wrap (~comparison) +
   stat_poly_eq(formula = my.formula,coef.digits=2 ,
                 aes(label = paste(..eq.label..)), 
-                parse = TRUE, label.y = 0.97 * max(get(DATAFRAME)$wmean_watterson_ave.x)) +  
+                parse = TRUE, label.y = 1.05 * min(interaction_stats_all_pops_chr$wmean_watterson_ave.x)) +  
   stat_poly_eq(formula = my.formula, 
                 aes(label = paste(..rr.label..)), 
-                parse = TRUE, label.y = 0.99 * max(get(DATAFRAME)$wmean_watterson_ave.x)) +
+                parse = TRUE, label.y = min(interaction_stats_all_pops_chr$wmean_watterson_ave.x)) +
   scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
-  expand_limits(x = 0, y = 0)
-  # theme(text=element_text(family = 'Times', size = 12, color = 'black'), axis.text.x = element_text(angle = 45, hjust = 1))
-  
-  ggsave(paste(wd_output, POP1,"_",POP2,"_", INDEX,"_lm_chr.pdf", sep=""))
-}
-  }
+  scale_fill_viridis(discrete=TRUE) 
 ```
+
 
 
 ##### Plot for ratio
@@ -4480,156 +4737,8 @@ ggplot (get(DATAFRAME) %>% filter (type_chr!="chrX"), aes_string("feature", INDE
   
   ggsave(paste(wd_output, DATAFRAME,"_", INDEX,".pdf", sep=""))
 }
-  }
 
 
-```
-
-
-#### Two factors: Interaction table
-
-##### Feature-Chr
-```{r}
-# Calculo el ratio para la mediana:
-
-bootleneck_vs_non_bootleneck_ratio_median_feature_chr <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
-  
-  # Nombre de las poblaciones
-  
-  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
-  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
-   
-  # Create interaction table:
-  ratio_averages_POP1_POP2 <- full_join ( select ( dataframe_POP1, feature, pop, chr, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
-                                          select ( dataframe_POP2, feature, pop, chr, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
-                                          by=c("chr", "feature")) %>% mutate (comparison=paste(POP1,"_", POP2, sep=""))
-  
-  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
-  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
-  
-}
-
-# Create data frame
-
-# Dataframe Kirov-Norway
-bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_ll_ki_n013_stats_feature_chr,c_ll_no_n008_stats_feature_chr, deparse(substitute(c_ll_ki_n013_stats_feature_chr)),deparse(substitute(c_ll_no_n008_stats_feature_chr)))
-
-# Dataframe Kirov-Poland
-bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_ll_ki_n013_stats_feature_chr,c_ll_po_n008_stats_feature_chr, deparse(substitute(c_ll_ki_n013_stats_feature_chr)),deparse(substitute(c_ll_po_n008_stats_feature_chr)))
-
-# Dataframe Sierra_Morena-Doñana
-bootleneck_vs_non_bootleneck_ratio_median_feature_chr(c_lp_sm_n019_stats_feature_chr, c_lp_do_n012_stats_feature_chr, deparse(substitute(c_lp_sm_n019_stats_feature_chr)),deparse(substitute(c_lp_do_n012_stats_feature_chr)))
-
-```
-
-##### Feature-Region
-
-```{r}
-
-# Calculo el ratio para la media:
-
-bootleneck_vs_non_bootleneck_ratio_median_feature_region <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
-  
-  # Nombre de las poblaciones
-  
-  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
-  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
-   
-  # Create interaction table:
-  ratio_averages_POP1_POP2 <- full_join ( select ( dataframe_POP1, feature, pop, region, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
-                                          select ( dataframe_POP2, feature, pop, region, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
-                                          by=c("region", "feature"))  %>% mutate (comparison=paste(POP1,"_", POP2, sep=""))
-  
-  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
-  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
-}
-
-# Create data frame
-
-# Dataframe Kirov-Norway
-bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_ll_ki_n013_stats_feature_region,c_ll_no_n008_stats_feature_region, deparse(substitute(c_ll_ki_n013_stats_feature_region)),deparse(substitute(c_ll_no_n008_stats_feature_region)))
-
-# Dataframe Kirov-Poland
-bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_ll_ki_n013_stats_feature_region,c_ll_po_n008_stats_feature_region, deparse(substitute(c_ll_ki_n013_stats_feature_region)),deparse(substitute(c_ll_po_n008_stats_feature_region)))
-
-# Dataframe Sierra_Morena-Doñana
-bootleneck_vs_non_bootleneck_ratio_median_feature_region(c_lp_sm_n019_stats_feature_region,c_lp_do_n012_stats_feature_region, deparse(substitute(c_lp_sm_n019_stats_feature_region)),deparse(substitute(c_lp_do_n012_stats_feature_region)))
-
-```
-
-
-##### Region-Chr 
-```{r}
-
-# Calculo el ratio para la mediana:
-
-bootleneck_vs_non_bootleneck_ratio_median_region_chr <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
-  
-  # Nombre de las poblaciones
-
-  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
-  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
-   
-  # Create interaction table:
-  ratio_averages_POP1_POP2 <- full_join ( select ( dataframe_POP1, chr, pop, region, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
-                                          select ( dataframe_POP2, chr, pop, region, total_count, wmean_watterson_ave, wmean_pairwise_ave, wmean_tajimaD), 
-                                          by=c("region", "chr"))  %>% mutate (comparison=paste(POP1,"_", POP2, sep=""))
-  
-  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
-  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
-}
-
-# Create data frame
-
-# Dataframe Kirov-Norway
-bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_ll_ki_n013_stats_region_chr,c_ll_no_n008_stats_region_chr, deparse(substitute(c_ll_ki_n013_stats_region_chr)),deparse(substitute(c_ll_no_n008_stats_region_chr)))
-
-# Dataframe Kirov-Poland
-bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_ll_ki_n013_stats_region_chr,c_ll_po_n008_stats_region_chr, deparse(substitute(c_ll_ki_n013_stats_region_chr)),deparse(substitute(c_ll_po_n008_stats_region_chr)))
-
-# Dataframe Sierra_Morena-Doñana
-bootleneck_vs_non_bootleneck_ratio_median_region_chr(c_lp_sm_n019_stats_region_chr, c_lp_do_n012_stats_region_chr, deparse(substitute(c_lp_sm_n019_stats_region_chr)),deparse(substitute(c_lp_do_n012_stats_region_chr)))
-```
-
-
-##### Plot diversity one pop vs the other chr-region
-
-```{r}
-library (ggpubr)
-
-DIVERSITY_MEASURES=c( "wmean_pairwise_ave", "wmean_watterson_ave")
-
-interaction_stats_all_comparison_region_chr_cat_info <-  rbind (interaction_stats_c_ll_ki_n013_stats_region_chr_c_ll_po_n008_stats_region_chr ,interaction_stats_c_ll_ki_n013_stats_region_chr_c_ll_no_n008_stats_region_chr, interaction_stats_c_lp_sm_n019_stats_region_chr_c_lp_do_n012_stats_region_chr) %>% dplyr::full_join(., cat_chr_info_divergence, by="chr") 
-
-interaction_stats_all_comparison_region_chr_cat_info$comparison <- factor (interaction_stats_all_comparison_region_chr_cat_info$comparison, levels=c("c_ll_ki_n013_c_ll_po_n008","c_ll_ki_n013_c_ll_no_n008", "c_lp_sm_n019_c_lp_do_n012"))
-
-
-  for (DIVERSITY_MEASURE in DIVERSITY_MEASURES)
-{
-    
-ggplot(data=interaction_stats_all_comparison_region_chr_cat_info %>% filter(chr!="chrX"), mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""), paste(DIVERSITY_MEASURE,".x",sep="")))+
-  facet_wrap (region~comparison) +
-  geom_point (aes(colour=cM.Mb)) +
-  scale_fill_viridis() +
-  scale_colour_viridis() +
-  geom_abline(colour="grey") +
-  geom_smooth (method = "lm", se = FALSE, colour="black", size=0.5) 
-
-ggsave (paste(wd_output,"comparisons_region_vs_chr_",DIVERSITY_MEASURE, "_colour_recomb.pdf", sep=""), width = 25, height = 25, units = "cm")
-
-
-
-ggplot(data=interaction_stats_all_comparison_region_chr_cat_info %>% filter(chr!="chrX"), mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""), paste(DIVERSITY_MEASURE,".x",sep="")))+
-  facet_wrap (region~comparison) +
-  geom_point (aes(colour=chr)) +
-  scale_fill_viridis_d() +
-  scale_colour_viridis_d() +
-  geom_abline(colour="grey") +
-  geom_smooth (method = "lm", se = FALSE, colour="black", size=0.5) 
-
-ggsave (paste(wd_output,"comparisons_region_vs_chr_",DIVERSITY_MEASURE, "_colour_chr.pdf", sep=""), width = 25, height = 25, units = "cm")
-
-}
 
 ```
 
