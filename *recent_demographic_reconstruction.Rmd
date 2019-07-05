@@ -617,6 +617,11 @@ demographic_data_ll <- demographic_data_all_pops %>% filter(specie=="ll") %>% fi
                                     ifelse(year<100000, "pleistocene", NA)))
 )
 
+
+### PLOTS:
+
+
+
 cols <- c("NE-Poland"=brewer.pal(12,"Paired")[4], 
           "Urals"=brewer.pal(9,"RdPu")[6], 
           "Carpathians"=brewer.pal(12,"Paired")[9], 
@@ -627,6 +632,7 @@ cols <- c("NE-Poland"=brewer.pal(12,"Paired")[4],
           "Tuva"=brewer.pal(12,"Paired")[8], 
           "Vladivostok"=brewer.pal(12,"Paired")[5], 
           "Yakutia"=brewer.pal(12,"Paired")[6])
+
 
 
 # Last 100 yrs
@@ -756,7 +762,73 @@ ggsave(paste(wd_output, "stairway_plot_custom_color_region_line_type_region.pdf"
 
 ```
 
+#### Effect of drift on the populations
+```{r}
 
+
+# Formula of lost of diversity:
+
+ratio_Hf_Ho_formula <- function(Ne, t) {
+  ratio_Hf_Ho <- (1 - 1/Ne)^t
+  return(ratio_Hf_Ho)}
+
+# Time
+t=5000-200
+
+# 
+harmonic_mean_Ne_ratio_Hf_Ho_by_pop <- demographic_data_ll %>%  filter(year>200) %>%  filter(year<5000) %>% group_by(population) %>% summarise(media_harmonica=harmonic.mean(Ne_median), ratio_Hf_Ho=ratio_Hf_Ho_formula(media_harmonica, t))
+
+# Tengo que ratio Hf/Ho para mis poblaciones segun la formula es uno. 
+# Como asumo que parten de una población inicial que es igual, puedo ver como se relaciona con mi ratio de diversidad empirica.
+
+# Valor para kirov del ratio: 0.102
+# Valor para polonia: 0.00414
+
+# Ratio de ambas Hfhealthy/Hferoded
+
+# kirov-poland
+0.102/0.00414
+#24.63768
+0.153/0.0109
+# Kirov-Norway
+0.102/0.00104
+# 98.07692
+
+
+# Ratio empírico
+# pop     watterson pi
+# Yakutia	4,50E-04	5,27E-04
+# Ural m.	3,95E-04	4,51E-04
+# Tuva	4,89E-04	5,45E-04
+# Primorsky Krai	4,25E-04	5,01E-04
+# Norway	2,66E-04	3,41E-04
+# NE-Poland	2,86E-04	3,67E-04
+# Mongolia	4,63E-04	5,36E-04
+# Latvia	3,74E-04	4,38E-04
+# Kirov	3,58E-04	4,64E-04
+# Carpathian m.	3,15E-04	3,74E-04
+
+# kirov-poland
+
+# Pi kirov/Poland
+4.64E-04/3.67E-04
+# 1.26
+# Watterson Kirov/Poland
+3.58E-04/2.86E-04
+# 1.251748
+
+# Kirov-Norway
+
+# Pi kirov/Norway
+3.58E-04/2.66E-04
+# 1.345865
+
+# Mi ratio empírico es más pequeño, porque o bien la diversidad de polonia/Norway es mayor que la esperada, o la de kirov, menor. 
+
+
+
+
+```
 
 
 
