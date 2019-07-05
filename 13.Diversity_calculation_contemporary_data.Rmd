@@ -2672,8 +2672,8 @@ skeweness_watterson$Group.1 <- factor (skeweness_watterson$Group.1, levels=c("Ki
  
   ggplot(skeweness_watterson %>% filter(Group.2!="All"), aes(x=Group.2, y=x, fill=Group.1, color=Group.1, shape=Group.1)) +
     geom_point() +
-    geom_hline(data=skeweness_pairwise %>% filter(Group.2=="All"), aes(yintercept=x, colour = Group.1)) +
-    labs(title=paste("Skewness for the Delta comparing Pairwise: no -1 or +1",sep =" "),
+    geom_hline(data=skeweness_watterson %>% filter(Group.2=="All"), aes(yintercept=x, colour = Group.1)) +
+    labs(title=paste("Skewness for the Delta comparing Watterson: no -1 or +1",sep =" "),
          x ="Feature", y = "Skewness") +    
     coord_flip()  +
     scale_fill_viridis_d (option = "plasma") +
@@ -3390,15 +3390,17 @@ grid.draw(venn.plot)
 
 ```{r}
 DATAFRAMES=c(
-data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise, data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise, data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise, data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson, data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson, data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson)
+"data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson")
 
 
 for (DATAFRAME in DATAFRAMES)
   {
-    POP1=DATAFRAME %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-    POP2=DATAFRAME %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
   
-  DIVERSITY_MEASURE_CONSIDERED=DATAFRAME %>% 
+  
+    POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+    POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  DIVERSITY_MEASURE_CONSIDERED= get(DATAFRAME) %>% 
     dplyr::select(evolution_category) %>% 
     dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
     head(.,1) %>% 
@@ -3409,13 +3411,24 @@ for (DATAFRAME in DATAFRAMES)
 
   
   tabla_test <- full_join(
-  # Contamos las unidades que están en el ND-D para cada feature y cada region
-  as.data.frame(DATAFRAME %>% filter(evolution_category==paste("ND_D_",DIVERSITY_MEASURE_CONSIDERED, sep="" )) %>% group_by(feature,region) %>% summarise (ND_D=n())),
-  # Contamos las unidades para cada feature y cada region totales
-  as.data.frame(DATAFRAME %>% group_by(feature,region) %>% summarise ( total_count=n()), by =c("feature", "region"))) %>% 
-    mutate(ND_D/total_count*100)
- write.table(tabla_test, paste(wd_output, POP1, "_", POP2,"_",DIVERSITY_MEASURE_CONSIDERED, "_percentage_of_ND_D_in_different_regions.tsv", sep=""))
-   
+    # Contamos las unidades que están en el ND-D para cada feature y cada region
+    as.data.frame(get(DATAFRAME) %>% filter(evolution_category==paste("ND_D_",DIVERSITY_MEASURE_CONSIDERED, sep="" )) %>% group_by(feature,region) %>% summarise (ND_D=n())),
+    # Contamos las unidades que están en el ND-ND para cada feature y cada region
+    as.data.frame(get(DATAFRAME) %>% filter(evolution_category==paste("ND_ND_",DIVERSITY_MEASURE_CONSIDERED, sep="" )) %>% group_by(feature,region) %>% summarise (ND_ND=n())),by =c("feature", "region")) %>% 
+    full_join(.,
+              # Contamos las unidades que están en el D-D para cada feature y cada region
+              as.data.frame(get(DATAFRAME) %>% filter(evolution_category==paste("D_D_",DIVERSITY_MEASURE_CONSIDERED, sep="" )) %>% group_by(feature,region) %>% summarise (D_D=n())),by =c("feature", "region")) %>% 
+    full_join(.,
+              # Contamos las unidades que están en el D-D para cada feature y cada region
+              as.data.frame(get(DATAFRAME) %>% filter(evolution_category==paste("D_ND_",DIVERSITY_MEASURE_CONSIDERED, sep="" )) %>% group_by(feature,region) %>% summarise (D_ND=n())),by =c("feature", "region")) %>% 
+    full_join(.,
+              # Contamos las unidades para cada feature y cada region totales
+              as.data.frame(get(DATAFRAME) %>% group_by(feature,region) %>% summarise ( total_count=n()), by =c("feature", "region"))) 
+
+write.table(tabla_test, paste(wd_output, POP1, "_", POP2,"_",DIVERSITY_MEASURE_CONSIDERED, "_percentage_of_ND_D_in_different_regions.tsv", sep=""))
+
+
+
 }
 
 ```
