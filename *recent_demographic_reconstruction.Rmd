@@ -830,6 +830,55 @@ harmonic_mean_Ne_ratio_Hf_Ho_by_pop <- demographic_data_ll %>%  filter(year>200)
 
 ```
 
+# 3. NE-Estimator
+
+Primero voy a generar 5 dataset por poblacion con un 1% de los SNPs que tienen en el original para que pueda correr el programa.
+
+```{bash}
+# los files con SNPs están en la carpeta: home/mlucena/recent_demographic_reconstruction/SNeP
+
+cd /home/mlucena/recent_demographic_reconstruction/SNeP
+VCF_FILES=($(ls *intergenic_filtered_more_than_2000_SNPS.vcf | uniq))
+mkdir /home/mlucena/recent_demographic_reconstruction/Ne_Estimator
+OUTPUT_PATH="/home/mlucena/recent_demographic_reconstruction/Ne_Estimator"
+
+
+for VCF_FILE in ${VCF_FILES[@]}
+do
+echo $VCF_FILE
+echo 1
+vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset1.vcf}
+echo 2
+vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset2.vcf}
+echo 3
+vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset3.vcf}
+echo 4
+vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset4.vcf}
+echo 5
+vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset5.vcf}
+done
+
+
+# ¿Cuantos SNPs me quedan?
+
+cd /home/mlucena/recent_demographic_reconstruction/Ne_Estimator
+VCF_FILES=($(ls *.vcf | uniq))
+for VCF_FILE in ${VCF_FILES[@]}
+do
+echo $VCF_FILE
+grep -v "#" $VCF_FILE | wc -l
+done
+
+
+# Me los copio
+
+scp -p mlucena@genomics-b.ebd.csic.es:///home/mlucena/recent_demographic_reconstruction/Ne_Estimator/*vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/Ne_estimator 
+
+```
+
+
+Ahora sobre estos archivos genero los GENEPOP usando PGD spider. 
+Despues el archivo genepop generado lo corro en Ne-Estimator. 
 
 
 
