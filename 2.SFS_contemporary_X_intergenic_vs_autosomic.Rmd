@@ -5,7 +5,7 @@ output: html_document
 
 
 # NOTA: Aqui valores de diversidad (una medida) para autosomico y para X
-
+No ventanas. No están corregidos por el factor de conversión para watterson, para el chr X y no son los que reporto en el paper. Son simplemente la media. 
 
 # Copy transformed thetas from datos.
 
