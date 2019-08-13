@@ -4748,7 +4748,7 @@ feature_colour_feature <- ggplot (interaction_stats_all_pops_feature %>% filter(
     geom_smooth (method = "lm", colour="grey80", fill="grey80", size=0.5) +
     geom_point (aes(fill=feature, colour=feature)) +
     coord_equal(ratio=1) +
-    theme(legend.position = "none", strip.text.x = element_blank()) +
+    theme(legend.position = "none") +
     geom_text_repel(aes(label = feature),
                   box.padding   = 1, 
                   point.padding = 0.1,
