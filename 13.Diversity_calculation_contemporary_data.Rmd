@@ -1775,7 +1775,7 @@ cor(cat_chr_info_filtered, use = "complete.obs")
 lowerFn <- function(data, mapping, method = "lm", ...) {
   p <- ggplot(data = data, mapping = mapping) +
     geom_point(colour = "black") +
-    geom_smooth(method = method, color = "black", ...) +
+    geom_smooth(method = method, color = "black", ...) 
   p
 }
 
@@ -1978,7 +1978,7 @@ Esta sería la forma corta de hacerlo, no haría falta hacer el bootstrapping co
 #    scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) 
 # 
 ```
-
+## Boot data
 
 ```{r}
 
@@ -2648,6 +2648,8 @@ data_diversity_all_comparisons <- rbind (data_diversity_c_ll_ki_n013_diversity_c
   
 ```
 
+
+
 #### Delta skewness and mean
 
 
@@ -3072,7 +3074,18 @@ for (DATAFRAME in DATAFRAMES)
     theme(legend.position="none") +
    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise.pdf", sep=""), width = 7, height = 7)
    
-   
+#  ggplot (data=DATAFRAME_modif_pairwise, aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x) )) +
+#stat_density2d(aes(fill = ..density..^0.25), geom = "tile", contour = FALSE, n = 200) +
+#    geom_abline(intercept = 0, color='grey20') +
+#    geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
+#    geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
+#    facet_wrap(~feature) +
+#    theme_minimal() +
+#    theme(legend.position="none")
+
+ 
+  
+  
   ggplot() +
     geom_point(data=DATAFRAME_modif_pairwise %>% filter(., feature=="CDS") %>% filter(col=="shit"),
                aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x)), alpha = 1/10, colour="grey41", size=1 ) +
@@ -3126,6 +3139,57 @@ min_non_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterso
 }
 
 ```
+
+#### Density marginal plot scatter plot
+
+```{r}
+
+DATAFRAME="data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity"
+
+POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+  # Pairwise:
+
+min_non_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POP1) %>% .[1,2] )
+min_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POP2) %>% .[1,2] )
+
+above95_non_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & pop==POP1) %>% dplyr::select ("q95_pairwise_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+
+above95_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% filter(feature=="CDS" & pop==POP2) %>% dplyr::select ("q95_pairwise_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+
+  # Añadimos una columna para que se coloreen los genes que luego vamos a pasarle al GO term enrichment. Estos genes son: ls¡os que presentan ALTA diversidad en ambas poblaciones, y un ratio parecido. 
+  
+  DATAFRAME_modif_pairwise <- get(DATAFRAME) %>% mutate (col=ifelse(log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & ratio_pairwise_average>0.6 & ratio_pairwise_average<1.4 & feature=="CDS" & pairwise_ave.x > above95_non_bootleneck_pop_value_pairwise & pairwise_ave.y > above95_bootleneck_pop_value_pairwise, "interesting_genes", "shit"))
+
+  # Plot de todas las features
+  
+scatter <- ggplot(data=DATAFRAME_modif_pairwise, aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x) )) +
+    geom_point(alpha = 1/100, color='grey41') +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
+    theme_minimal() +
+    theme(legend.position="none") 
+
+
+  
+hist_top <- ggplot()+geom_density(data=DATAFRAME_modif_pairwise, aes(log10(pairwise_ave.x)))
+
+hist_right <- ggplot()+geom_density(data=DATAFRAME_modif_pairwise, aes(log10(pairwise_ave.y)))+coord_flip()
+
+
+  empty <- ggplot()+geom_point(aes(1,1), colour="white")+
+         theme(axis.ticks=element_blank(), 
+               panel.background=element_blank(), 
+               axis.text.x=element_blank(), axis.text.y=element_blank(),           
+               axis.title.x=element_blank(), axis.title.y=element_blank())
+  
+
+
+```
+
+
 
 
 #####  GOterm enrichment & dataset prep
