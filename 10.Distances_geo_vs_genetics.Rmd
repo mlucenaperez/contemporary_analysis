@@ -37,7 +37,7 @@ geo_distances_proper_names <- dplyr::left_join( geo_distances, sequence_samples,
   
 # I made another dataframe with the inverse values.
 
-geo_distances_proper_names_2 <- geo_distances_proper_names %>% rename(ind2=ind1, ind1=ind2) 
+geo_distances_proper_names_2 <- geo_distances_proper_names %>% dplyr::rename(ind2=ind1, ind1=ind2) 
 
 # Merge both
 
@@ -164,31 +164,38 @@ mantel(as.dist(geo_distances_complete_matrix), as.dist(genetic_distances_matrix)
 ```{r}
  
  geo_genetic_distances <- melt(geo_distances_complete_matrix)  %>% 
-  rename(ind1=Var1, ind2=Var2, distances_km_Winkel_Tripel=value) %>% 
-  mutate (pair_ind=paste(ind1,ind2, sep="-")) %>% 
-  full_join ((melt(genetic_distances_matrix) %>%   
-  mutate (pair_ind=paste(Var1,Var2, sep="-"))),., by ="pair_ind" ) %>% 
-  rename (genetic_distance=value, geographic_distance=distances_km_Winkel_Tripel) %>% 
-  mutate (pop1=substr(ind1, 0, 7)) %>% 
-  mutate (pop2=substr(ind2, 0, 7)) %>% 
-  mutate (area_pop1 =  
+  dplyr::rename(ind1=Var1, ind2=Var2, distances_km_Winkel_Tripel=value) %>% 
+  dplyr::mutate (pair_ind=paste(ind1,ind2, sep="-")) %>% 
+  dplyr::full_join ((melt(genetic_distances_matrix) %>%   
+  dplyr::mutate (pair_ind=paste(Var1,Var2, sep="-"))),., by ="pair_ind" ) %>% 
+  dplyr::rename (genetic_distance=value, geographic_distance=distances_km_Winkel_Tripel) %>% 
+  dplyr::mutate (pop1=substr(ind1, 0, 7)) %>% 
+  dplyr::mutate (pop2=substr(ind2, 0, 7)) %>% 
+  dplyr::mutate (area_pop1 =  
             ifelse (pop1 == "c_ll_po" | pop1 == "c_ll_ur" | pop1 == "c_ll_ki" | pop1 == "c_ll_la" | pop1 == "c_ll_no" | pop1 == "c_ll_ba" | pop1 == "h_ll_ba" | pop1 == "c_ll_cr" , "West" , 
             ifelse (pop1 == "c_ll_to" | pop1 == "c_ll_tu" | pop1 == "c_ll_ka" | pop1 == "c_ll_og" | pop1 == "c_ll_vl" | pop1 == "c_ll_ya", "East", NA))) %>% 
-  mutate (area_pop2 =  
+  dplyr::mutate (area_pop2 =  
             ifelse (pop2 == "c_ll_po" | pop2 == "c_ll_ur" | pop2 == "c_ll_ki" | pop2 == "c_ll_la" | pop2 == "c_ll_no" | pop2 == "c_ll_ba" | pop2 == "h_ll_ba" | pop2 == "c_ll_cr" , "West" , 
             ifelse (pop2 == "c_ll_to" | pop2 == "c_ll_tu" | pop2 == "c_ll_ka" | pop2 == "c_ll_og" | pop2 == "c_ll_vl" | pop2 == "c_ll_ya", "East", NA))) %>% 
-  mutate (comparison = 
+  dplyr::mutate (comparison = 
             ifelse (area_pop1 == "West" & area_pop2 =="West", "West-West",
             ifelse (area_pop1=="West" & area_pop2 =="East", "West-East",
             ifelse (area_pop1=="East" & area_pop2 =="West", "West-East",
             ifelse (area_pop1=="East" & area_pop2 =="East", "East-East", NA))))) %>% 
-  mutate (self_comparison =ifelse (ind1==ind2, "SELF", "DISTINCT")) %>% 
+  dplyr::mutate (self_comparison =ifelse (ind1==ind2, "SELF", "DISTINCT")) %>% 
   filter(self_comparison!="SELF") %>% 
  filter(pop1 != "c_ll_ba" , pop1!="h_ll_ba", pop2 != "c_ll_ba" , pop2!="h_ll_ba") %>% 
+  mutate(pop_status = 
+            ifelse (pop1 == "c_ll_po" | pop2 =="c_ll_po" | 
+                    pop1 == "c_ll_no" | pop2 =="c_ll_no" | 
+                    pop1 == "c_ll_cr" | pop2 =="c_ll_cr",  "B-comparison", "NB-comparison"))
+
+
  filter(pop1 != "c_ll_no" , pop1!="c_ll_po", pop2 != "c_ll_no" , pop2!="c_ll_po") #%>% filter(pop1 != "c_ll_cr" , pop2 != "c_ll_cr") 
 
 
 # Article
+ 
 
 ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, linetype=comparison)) +
   geom_point(alpha = 0.05, aes(shape=comparison)) +
@@ -203,8 +210,36 @@ ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, l
   ggsave("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/figures_article/genetic_distance_vs_geographic_distance.pdf")
 
   
+  ggplot(geo_genetic_distances %>% filter(comparison=="West-West"), aes (log(geographic_distance), genetic_distance, fill=pop_status, color=pop_status)) +
+  geom_point(alpha = 0.05, aes(shape=comparison)) +
+  scale_shape_manual(values=c(3, 17, 16)) +
+  scale_linetype_manual(values=c("twodash", "solid", "dotted")) +
+  theme_classic() +
+  geom_smooth(method='lm', color="black") +
+  labs(
+    x = "log(Geographic distance (Km))",
+    y = "Genetic distance" ) +
+  stat_regline_equation()+
+  theme(legend.position="top", legend.title = element_blank()) 
+  ggsave("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/figures_article/genetic_distance_vs_geographic_distance.pdf")
+
+
+  
 # Article --> color
 
+  ggplot(geo_genetic_distances %>% filter(pop1 != "c_ll_no" , pop1!="c_ll_po", pop2 != "c_ll_no" , pop2!="c_ll_po", pop1 != "c_ll_cr" , pop2 != "c_ll_cr") 
+         , aes (log(geographic_distance), genetic_distance, linetype=comparison, fill=comparison, color=comparison)) +
+  geom_point(alpha = 0.4, aes(shape=comparison)) +
+  scale_shape_manual(values=c(3, 17, 16)) +
+  scale_linetype_manual(values=c("twodash", "solid", "dotted")) +
+  theme_classic() +
+  geom_smooth(method='lm') +
+  labs(
+    x = "log(Geographic distance (Km))",
+    y = "Genetic distance" ) +
+  theme(legend.position="top", legend.title = element_blank()) 
+  ggsave("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/Geo_distances/genetic_distance_vs_geographic_distance_color_nobt.pdf")
+  
   ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, linetype=comparison, fill=comparison, color=comparison)) +
   geom_point(alpha = 0.4, aes(shape=comparison)) +
   scale_shape_manual(values=c(3, 17, 16)) +
@@ -215,9 +250,8 @@ ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, l
     x = "log(Geographic distance (Km))",
     y = "Genetic distance" ) +
   theme(legend.position="top", legend.title = element_blank()) 
-  ggsave("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/genetic_distance_vs_geographic_distance_color.pdf")
-  
-  
+  ggsave("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/Geo_distances/genetic_distance_vs_geographic_distance_color_all_pops.pdf")
+
 
 # Power Point
 ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, fill=comparison, color=comparison)) +
