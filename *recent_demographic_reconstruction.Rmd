@@ -611,7 +611,17 @@ demographic_data_ll <- demographic_data_all_pops %>% filter(specie=="ll") %>% fi
                            ifelse (population == "c_ll_to-c_ll_ka-c_ll_og_n008", "East", 
                            ifelse (population == "c_ll_tu_n006", "East", 
                            ifelse (population == "c_ll_vl_n008", "East",  
-                           ifelse (population == "c_ll_ya_n008", "East", NA))))))))))) %>%  filter(year<100000) %>% # filter(year>100) %>%
+                           ifelse (population == "c_ll_ya_n008", "East", NA))))))))))) %>%  
+  mutate (., conservation = ifelse (population == "c_ll_po_n008", "Impacted",
+                           ifelse (population == "c_ll_ur_n006", "Not_impacted", 
+                           ifelse (population == "c_ll_ki_n013", "Not_impacted", 
+                           ifelse (population == "c_ll_la_n006", "Not_impacted", 
+                           ifelse (population == "c_ll_no_n008", "Impacted", 
+                           ifelse (population == "c_ll_cr_n006","Impacted", 
+                           ifelse (population == "c_ll_to-c_ll_ka-c_ll_og_n008", "Not_impacted", 
+                           ifelse (population == "c_ll_tu_n006", "Not_impacted", 
+                           ifelse (population == "c_ll_vl_n008", "Not_impacted",  
+                           ifelse (population == "c_ll_ya_n008", "Not_impacted", NA))))))))))) %>% filter(year<100000) %>% # filter(year>100) %>%
   mutate(.,period = ifelse (year<1000, "recent", 
                             ifelse (year<10000, "holocene",
                                     ifelse(year<100000, "pleistocene", NA)))
@@ -734,14 +744,14 @@ ggsave(paste(wd_output, "stairway_plot_custom_xlim1-1000_ylim0-5000_color_region
 # All periods
 
 ggplot () +
-  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=Populations, linetype=region, size=2)) +
+  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=Populations, linetype=conservation)) +
   scale_colour_manual(values = cols) +
   scale_x_log10(
    breaks = scales::trans_breaks("log10", function(x) 10^x),
    labels = scales::trans_format("log10", scales::math_format(10^.x))
 ) +
   annotation_logticks() +
-ggsave(paste(wd_output, "stairway_plot_custom_color_per_pop_line_type_region.pdf",sep=""))
+ggsave(paste(wd_output, "stairway_plot_custom_color_per_pop_line_type_conservation.pdf",sep=""), width = 5, height = 7)
 
 
 
@@ -757,7 +767,7 @@ ggplot () +
    breaks = scales::trans_breaks("log10", function(x) 10^x),
    labels = scales::trans_format("log10", scales::math_format(10^.x))) +
   annotation_logticks() +
-ggsave(paste(wd_output, "stairway_plot_custom_color_region_line_type_region.pdf",sep=""))
+ggsave(paste(wd_output, "stairway_plot_custom_color_region_line_type_region.pdf",sep=""), width = 5, height = 7)
 
 
 ```
