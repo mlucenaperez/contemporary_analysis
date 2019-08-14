@@ -497,20 +497,20 @@ minY_position <- which(DensityWatterson.Y == minY_value)
 minX_value <- density(log10(DATAFRAME$watterson_ave))$x[minY_position] 
 
 
-ggplot(DATAFRAME, aes(log10(watterson_ave))) + 
-   geom_density() + 
-   scale_color_viridis(discrete=TRUE) +
-   scale_fill_viridis(discrete=TRUE) +
-   geom_vline(xintercept = density(log10(DATAFRAME$watterson_ave))$x[minY_position]) +
-  ggsave(paste0(wd_output, POP,"_density_watterson.pdf"))
-
-ggplot(DATAFRAME, aes(log10(watterson_ave))) + 
-   geom_density() + 
-   facet_wrap(~feature) +
-   scale_color_viridis(discrete=TRUE) +
-   scale_fill_viridis(discrete=TRUE) +
-   geom_vline(xintercept = density(log10(DATAFRAME$watterson_ave))$x[minY_position]) +
-  ggsave(paste0(wd_output, POP,"_density_feature_watterson.pdf"))
+# ggplot(DATAFRAME, aes(log10(watterson_ave))) + 
+#   geom_density() + 
+#   scale_color_viridis(discrete=TRUE) +
+#   scale_fill_viridis(discrete=TRUE) +
+#   geom_vline(xintercept = density(log10(DATAFRAME$watterson_ave))$x[minY_position]) +
+#   ggsave(paste0(wd_output, POP,"_density_watterson.pdf"))
+# 
+# ggplot(DATAFRAME, aes(log10(watterson_ave))) + 
+#   geom_density() + 
+#   facet_wrap(~feature) +
+#   scale_color_viridis(discrete=TRUE) +
+#   scale_fill_viridis(discrete=TRUE) +
+#   geom_vline(xintercept = density(log10(DATAFRAME$watterson_ave))$x[minY_position]) +
+#   ggsave(paste0(wd_output, POP,"_density_feature_watterson.pdf"))
 
 
 assign(paste0(POP,"_density_min_value_watterson"), c(POP,minX_value))
@@ -570,20 +570,20 @@ minY_position <- which(Densitypairwise.Y == minY_value)
 minX_value <- density(log10(DATAFRAME$pairwise_ave))$x[minY_position] 
 
 
-ggplot(DATAFRAME, aes(log10(pairwise_ave))) + 
-   geom_density() + 
-   scale_color_viridis(discrete=TRUE) +
-   scale_fill_viridis(discrete=TRUE) +
-   geom_vline(xintercept = density(log10(DATAFRAME$pairwise_ave))$x[minY_position]) +
-  ggsave(paste0(wd_output, POP,"_density_pairwise.pdf"))
-
-ggplot(DATAFRAME, aes(log10(pairwise_ave))) + 
-   geom_density() + 
-  facet_wrap (~feature)+
-   scale_color_viridis(discrete=TRUE) +
-   scale_fill_viridis(discrete=TRUE) +
-   geom_vline(xintercept = density(log10(DATAFRAME$pairwise_ave))$x[minY_position]) +
-  ggsave(paste0(wd_output, POP,"_density_feature_pairwise.pdf"))
+# ggplot(DATAFRAME, aes(log10(pairwise_ave))) + 
+#    geom_density() + 
+#    scale_color_viridis(discrete=TRUE) +
+#    scale_fill_viridis(discrete=TRUE) +
+#    geom_vline(xintercept = density(log10(DATAFRAME$pairwise_ave))$x[minY_position]) +
+#   ggsave(paste0(wd_output, POP,"_density_pairwise.pdf"))
+# 
+# ggplot(DATAFRAME, aes(log10(pairwise_ave))) + 
+#    geom_density() + 
+#   facet_wrap (~feature)+
+#    scale_color_viridis(discrete=TRUE) +
+#    scale_fill_viridis(discrete=TRUE) +
+#    geom_vline(xintercept = density(log10(DATAFRAME$pairwise_ave))$x[minY_position]) +
+#   ggsave(paste0(wd_output, POP,"_density_feature_pairwise.pdf"))
 
 assign(paste0(POP,"_density_min_value_pairwise"), c(POP,minX_value))
 
@@ -1354,6 +1354,26 @@ ggplot(data_diversity_autosomes_filtered_ave_corrected,aes(region,recombination_
   scale_fill_viridis(discrete=TRUE) +
   stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
  ggsave(paste (wd_output, "boxplot_violin_plot/","recombination_rate_per_region_mean_se.pdf", sep="" ))
+
+
+```
+
+### Divergence and regions
+
+```{r}
+
+ggplot(data_diversity_autosomes_filtered_ave_corrected,aes(region,divergence))+
+  geom_boxplot() + #geom_violin
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+ ggsave(paste (wd_output, "boxplot_violin_plot/","divergence_per_region.pdf", sep="" ))
+
+
+ggplot(data_diversity_autosomes_filtered_ave_corrected,aes(region,divergence))+
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+  stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
+ ggsave(paste (wd_output, "boxplot_violin_plot/","divergence_per_region_mean_se.pdf", sep="" ),height = 7, width = 7)
 
 
 ```
@@ -3450,6 +3470,8 @@ grid.draw(venn.plot)
 
 ```
 
+##---------
+
 ### Count units in ND->D in different regions.
 
 ```{r}
@@ -3497,6 +3519,63 @@ write.table(tabla_test, paste(wd_output, POP1, "_", POP2,"_",DIVERSITY_MEASURE_C
 
 ```
 
+## Contingency test
+
+```{r}
+library(corrplot)
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
+wd_output_contingency <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/contingency_test_ND_D_distribution_regions"
+
+# c_ll_ki_n013_c_ll_no_n008_pairwise_percentage_of_ND_D_in_different_regions.tsv
+# c_ll_ki_n013_c_ll_po_n008_pairwise_percentage_of_ND_D_in_different_regions.tsv
+# c_lp_sm_n019_c_lp_do_n012_pairwise_percentage_of_ND_D_in_different_regions.tsv
+# c_ll_ki_n013_c_ll_po_n008_watterson_percentage_of_ND_D_in_different_regions.tsv
+# c_ll_ki_n013_c_ll_no_n008_watterson_percentage_of_ND_D_in_different_regions.tsv
+# c_lp_sm_n019_c_lp_do_n012_watterson_percentage_of_ND_D_in_different_regions.tsv
+
+DATA="c_lp_sm_n019_c_lp_do_n012_pairwise_percentage_of_ND_D_in_different_regions.tsv"
+
+
+DATAFRAME <- read.table(paste0(wd, DATA),stringsAsFactors = F) %>% select (-total_count)
+POPS=substr(DATA, 1, 25)
+DIVERSITY_MEASURE=substr(DATA, 27, 34)
+  
+DATAFRAME_SPLITTED <- split(DATAFRAME, DATAFRAME$feature) 
+number_of_data_frames <- unique(DATAFRAME$feature) %>% length()
+my.list <- vector("list", number_of_data_frames)
+
+
+for(FEATURE_NUMBER in 1:number_of_data_frames)
+{
+  print (FEATURE_NUMBER)
+  temp_data <- DATAFRAME_SPLITTED[[FEATURE_NUMBER]] 
+  temp_data[is.na(temp_data)] <- 0
+  FEATURE <- as.character(temp_data %>% select(feature) %>% .[1,])
+  temp_data_matrix <- temp_data %>% select (-feature, -D_D, -D_ND)
+  rownames(temp_data_matrix) <- temp_data_matrix[,1] 
+  temp_data_matrix_ready <- temp_data_matrix %>%  select (-1) 
+  chisq_results <- chisq.test( temp_data_matrix_ready) 
+  my.list[[FEATURE_NUMBER]] <- merge(FEATURE, chisq_results$p.value)
+  #chisq_results$expected
+  if (chisq_results$p.value > 0.05)
+  {jpeg(paste0(wd_output_contingency,"/no_sig/", POPS,"_",DIVERSITY_MEASURE,"_",FEATURE ,".jpg"))
+  corrplot(chisq_results$residuals, is.cor = FALSE)
+  dev.off()} 
+  else {
+  jpeg(paste0(wd_output_contingency,"/sig/", POPS,"_",DIVERSITY_MEASURE,"_",FEATURE ,".jpg"))
+  corrplot(chisq_results$residuals, is.cor = FALSE)
+  dev.off()
+  }
+  
+  rm(temp_data, temp_data_matrix, chisq_results, FEATURE)
+ }
+
+
+df_results <- do.call("rbind", my.list) 
+write.table( df_results, paste0(wd_output_contingency,"/", POPS,"_",DIVERSITY_MEASURE,".tsv"))
+rm (df_results)
+```
 
 
 #------------
