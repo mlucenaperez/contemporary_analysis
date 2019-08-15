@@ -4815,6 +4815,20 @@ region_chr_colour_recomb <- ggplot(data=interaction_stats_all_pops_region_chr_ca
                formula = formula, parse = TRUE,size = 2.5, label.x.npc = "right",
                   label.y.npc = "bottom")
 
+# # Prueba en la que coloreamos por porcentage de genes. 
+# region_chr_colour_recomb2 <- ggplot(data=interaction_stats_all_pops_region_chr_cat_info %>% filter(chr!="chrX") , mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""),                                                                                                                        paste(DIVERSITY_MEASURE,".x",sep=""), fill="percentage_genes", colour="percentage_genes"))+
+#   facet_grid (region~comparison) +
+#   scale_fill_viridis(option="magma") +
+#   scale_colour_viridis(option="magma") +
+#   geom_abline(colour="grey", linetype = "dashed") +
+#   geom_point () + #colour="grey80", fill="grey80"
+#   geom_smooth (method = "lm", colour="grey30", fill="grey60", size=0.5) +
+#   theme(axis.title.x = element_blank() ) + # legend.position = "none"
+#   coord_equal(ratio=1) +
+#   stat_poly_eq(aes(label =  paste("atop(",stat(adj.rr.label),",",stat(eq.label), ")", sep = "")), 
+#                formula = formula, parse = TRUE,size = 2.5, label.x.npc = "right",
+#                   label.y.npc = "bottom")
+
 
 # Plot Feature MB vs EB
 
