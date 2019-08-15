@@ -247,7 +247,7 @@ PC <- PC %>%  mutate(.,
                           ifelse(Pop == "c_ll_vl", "L.l.stroganovi", 
                           ifelse(Pop == "c_ll_ya", "L.l.wrangeli",     
                                  NA)))))))) %>% 
-  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Bialowieza",
+  mutate (., Populations =  ifelse (Pop == "c_ll_po", "NE-Poland",
                           ifelse (Pop == "c_ll_ur", "Urals",
                           ifelse (Pop == "c_ll_ki", "Kirov",
                           ifelse (Pop == "c_ll_la", "Latvia",
@@ -262,31 +262,16 @@ PC <- PC %>%  mutate(.,
                           ifelse (Pop == "c_ll_ya", "Yakutia",
                           ifelse (Pop == "c_lp_sm", "Sierra Morena",
                           ifelse (Pop == "c_lp_do", "Doñana", NA)))))))))))))))) %>% 
-    mutate (., color =  ifelse (Populations == "Bialowieza", brewer.pal(12,"Paired")[4], 
-                      ifelse (Populations == "Urals", brewer.pal(9,"RdPu")[6], 
-                      ifelse (Populations == "Balkans", brewer.pal(12,"Paired")[10], 
-                      ifelse (Populations == "Carpathians", brewer.pal(12,"Paired")[9], 
-                      ifelse (Populations == "Kirov", brewer.pal(12,"Paired")[1], 
-                      ifelse (Populations == "Latvia", brewer.pal(12,"Paired")[3], 
-                      ifelse (Populations == "Norway", brewer.pal(12,"Paired")[2], 
-                      ifelse (Populations == "Töv", brewer.pal(12,"Paired")[12], 
-                      ifelse (Populations == "Tuva", brewer.pal(12,"Paired")[8], 
-                      ifelse (Populations == "Khentii", brewer.pal(12,"Paired")[7], 
-                      ifelse (Populations == "Ömnögovi", brewer.pal(12,"Paired")[11], 
-                      ifelse (Populations == "Vladivostok", brewer.pal(12,"Paired")[5], 
-                      ifelse (Populations == "Yakutia", brewer.pal(12,"Paired")[6],
-                      ifelse (Populations == "Sierra Morena", brewer.pal(8, "Greys") [5],
-                      ifelse (Populations == "Doñana", brewer.pal(8, "Greys") [8], NA)))))))))))))))) %>% 
-  mutate (., seq = ifelse (Ind == "c_ll_vl_0112" | Ind == "c_ll_vl_0112" | Ind == "c_ll_ya_0146" | Ind == "c_ll_cr_0212" | Ind == "c_ll_ki_0090" , "MACROGEN", "CNAG")) 
+     mutate (., seq = ifelse (Ind == "c_ll_vl_0112" | Ind == "c_ll_vl_0112" | Ind == "c_ll_ya_0146" | Ind == "c_ll_cr_0212" | Ind == "c_ll_ki_0090" , "MACROGEN", "CNAG")) 
 
-cols <- c("Bialowieza"=brewer.pal(12,"Paired")[4], 
-          "Urals"=brewer.pal(11,"BrBG")[9], 
+cols <- c("NE-Poland"=viridis_pal()(5)[3], 
+          "Urals"="#54BAB3", 
           "Balkans"=brewer.pal(12,"Paired")[10], 
           "Carpathians"=brewer.pal(12,"Paired")[9], 
-          "Kirov"=brewer.pal(12,"Paired")[1], 
+          "Kirov"=viridis_pal()(5)[1], 
           "Latvia"=brewer.pal(12,"Paired")[3], 
-          "Norway"=brewer.pal(12,"Paired")[2], 
-          "Töv"=brewer.pal(12,"Paired")[12], 
+       "Norway"=viridis_pal()(5)[2], 
+       "Töv"=brewer.pal(12,"Paired")[12], 
           "Tuva"=brewer.pal(12,"Paired")[8], 
           "Khentii"=brewer.pal(12,"Paired")[7], 
           "Ömnögovi"=brewer.pal(12,"Paired")[11], 
@@ -304,7 +289,7 @@ PC_coordinates <- inner_join(PC,coordenadas, by =c("Ind"="id"))
 # To spanish:
 
 PC_coordinates <- PC_coordinates %>% 
-    mutate (., Población =  ifelse (Populations == "Bialowieza", "Bialowieza", 
+    mutate (., Población =  ifelse (Populations == "NE-Poland", "NE-Poland", 
                       ifelse (Populations == "Urals", "Urales", 
                       ifelse (Populations == "Balkans", "Balcanes", 
                       ifelse (Populations == "Carpathians", "Carpatos", 
@@ -321,22 +306,21 @@ PC_coordinates <- PC_coordinates %>%
 
 # Create coordinates per pop:
 
-coordenadas_per_pop <- coordenadas %>% rename (Pop=pop) %>%
-  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Bialowieza",
-                          ifelse (Pop == "c_ll_ur", "Urals",
-                          ifelse (Pop == "c_ll_ki", "Kirov",
-                          ifelse (Pop == "c_ll_la", "Latvia",
-                          ifelse (Pop == "c_ll_no", "Norway",
-                          ifelse (Pop == "c_ll_ba" | Pop == "h_ll_ba", "Balkans" ,
-                          ifelse (Pop == "c_ll_cr","Carpathians",
-                          ifelse (Pop == "c_ll_to", "Töv",
-                          ifelse (Pop == "c_ll_tu", "Tuva",
-                          ifelse (Pop == "c_ll_ka", "Khentii", 
-                          ifelse (Pop == "c_ll_og", "Ömnögovi", 
-                          ifelse (Pop == "c_ll_vl", "Vladivostok", 
-                          ifelse (Pop == "c_ll_ya", "Yakutia",
-                          ifelse (Pop == "c_lp_sm", "Sierra Morena",
-                          ifelse (Pop == "c_lp_do", "Doñana", NA)))))))))))))))) %>%  group_by(Populations) %>%  summarise(latitude = mean(latitude), longitude=mean(longitude))
+coordenadas_per_pop <- coordenadas %>%  dplyr::mutate (., Populations =  ifelse (pop == "c_ll_po", "NE-Poland",
+                          ifelse (pop == "c_ll_ur", "Urals",
+                          ifelse (pop == "c_ll_ki", "Kirov",
+                          ifelse (pop == "c_ll_la", "Latvia",
+                          ifelse (pop == "c_ll_no", "Norway",
+                          ifelse (pop == "c_ll_ba" | pop == "h_ll_ba", "Balkans" ,
+                          ifelse (pop == "c_ll_cr","Carpathians",
+                          ifelse (pop == "c_ll_to", "Töv",
+                          ifelse (pop == "c_ll_tu", "Tuva",
+                          ifelse (pop == "c_ll_ka", "Khentii", 
+                          ifelse (pop == "c_ll_og", "Ömnögovi", 
+                          ifelse (pop == "c_ll_vl", "Vladivostok", 
+                          ifelse (pop == "c_ll_ya", "Yakutia",
+                          ifelse (pop == "c_lp_sm", "Sierra Morena",
+                          ifelse (pop == "c_lp_do", "Doñana", NA)))))))))))))))) %>%  dplyr::group_by(Populations) %>%  dplyr::summarise(latitude = mean(latitude), longitude=mean(longitude))
 
 
 
@@ -355,15 +339,15 @@ p <-procrustes(PC_matrix,coord_matrix,translation=TRUE,dilation=TRUE)
 
 # Cbind with all the infor for the plot.
 
-PCA_procrustes <- data.frame(p$X.new) %>% cbind (., dplyr::select(PC,Ind,Populations,color ))
+PCA_procrustes <- data.frame(p$X.new) %>% cbind (., dplyr::select(PC,Ind,Populations))
 
 write.csv(PCA_procrustes, "/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/procrustes_map.csv", row.names =F) 
 
 
 # Order factors for legend:
 
-PCA_procrustes$Populations <- factor (PCA_procrustes$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii", "Ömnögovi",  "Yakutia", "Vladivostok"))
-PC_coordinates$Populations <- factor (PCA_procrustes$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii", "Ömnögovi",  "Yakutia", "Vladivostok"))
+PCA_procrustes$Populations <- factor (PCA_procrustes$Populations, levels=c("Norway", "Balkans", "Carpathians", "NE-Poland", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii", "Ömnögovi",  "Yakutia", "Vladivostok"))
+PC_coordinates$Populations <- factor (PCA_procrustes$Populations, levels=c("Norway", "Balkans", "Carpathians", "NE-Poland", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii", "Ömnögovi",  "Yakutia", "Vladivostok"))
 
 
 # Fisrt I get the limits of my PCA and my sampling:
@@ -384,7 +368,7 @@ min_lat_sampling=min(PC_coordinates$latitude)
 
 # Get KML layer
 
-distribution_layer <- readOGR("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/Lynx_lynx distribution.kml")
+distribution_layer <- readOGR("/Users/marialucenaperez/Owncloud/publico/Phd/Eurasian_lynx_phylogeography/Lynx_lynx distribution.kml")
 
 # North png file
 
@@ -403,7 +387,7 @@ min_lat=min_lat_sampling
 
 general_map <- ggplot() +
   borders(database = "world", fill="gray95", color="gray95", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
-  geom_spatial(distribution_layer, fill="gray85", alpha=0.5, inherit.aes = NULL, show.legend = F) +
+  #geom_spatial_polygon(data=distribution_layer, aes(fill="gray85", alpha=0.5, inherit.aes = NULL, show.legend = F)) +
   theme (legend.position="none",panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
 panel.background = element_rect(fill="white"), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25)) +
   geom_point(data=coordenadas_per_pop, aes(x=longitude, y=latitude, fill=Populations), size=2, shape=20) + scale_fill_manual(values = cols) +
@@ -466,7 +450,7 @@ min_lat=min_lat_sampling
 
 sampling_map <- ggplot() +
   borders(database = "world", fill="gray95", color="gray95", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
-  geom_spatial(distribution_layer, fill="gray85", alpha=0.5, inherit.aes = NULL, show.legend = F) +
+ # geom_spatial(distribution_layer, fill="gray85", alpha=0.5, inherit.aes = NULL, show.legend = F) +
   theme (legend.justification="top", panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
 panel.background = element_rect(fill="white"), legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18), title=element_text(size=25),  
 legend.key = element_rect(colour = 'white', fill = 'white', inherit.blank = T)) +
@@ -494,8 +478,7 @@ scaleBar(lon = 140, lat = 35, distanceLon = 1000, distanceLat = 10, distanceLege
 
 ########################################################################################################## 
 
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/maps/",pop,"_sampling_map.pdf", sep=""), sampling_map2, device = pdf)
-
+ggsave(paste0("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/maps/all_pops_sampling_map.pdf"), plot=sampling_map, width = 30, height = 20)
 # Whole world : 15.1 x 13.7 
 # West: Saving 12.9 x 13.7 in image
 
@@ -520,7 +503,7 @@ title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," /
 
 PCA_map <- ggplot() +
   borders(database = "world", fill="gray95", color="gray95", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
-  geom_spatial(distribution_layer, fill="gray85", alpha=0.5, inherit.aes = NULL, show.legend = F) +
+ # geom_spatial(distribution_layer, fill="gray85", alpha=0.5, inherit.aes = NULL, show.legend = F) +
   theme (legend.position="left", panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
   panel.background = element_rect(fill="white"), legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18),   title=element_text(size=25),  
   legend.key = element_rect(colour = 'white', fill = 'white', inherit.blank = T)) +
@@ -551,11 +534,30 @@ PCA_map2 <- cowplot::ggdraw(PCA_map) + cowplot::draw_grob(north_image ,x=0.89, y
 
 ########################################################################################################## 
 
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/maps/",pop,"_PCA_map.pdf", sep=""),  PCA_map2  ,device = pdf)
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/maps/",pop,"_PCA_map.pdf", sep=""),  PCA_map)
 
 
 
 
+# -------
+# PRUEBA
+
+ggplot() +
+  borders(database = "world", fill="gray95", color="gray95", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
+  geom_point(data = PC_coordinates, aes(x=longitude, y=latitude, fill=Populations), size=5, shape=21, color="dimgrey", pch=15, inherit.aes = F) +
+  geom_point(data = PCA_procrustes, aes (X1, X2,  fill=Populations), color="dimgrey", size=3, shape=23) +
+  theme (legend.position="left", panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill="white"), legend.text=element_text(size=18),legend.title = element_text(size=20), axis.title = element_text(size = 20), axis.text = element_text(size=18),   title=element_text(size=25),  
+  legend.key = element_rect(colour = 'white', fill = 'white', inherit.blank = T)) +
+  ggtitle(title) + 
+  coord_map("gilbert", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
+  scale_fill_manual("Populations",
+  values = cols) +  
+scaleBar(lon = 138, lat = 27, distanceLon = 1000, distanceLat = 10, distanceLegend = 200, dist.unit = "km", orientation = FALSE) +
+  # geom_segment(data = merge(PC_coordinates, PCA_procrustes, by = 'Ind'), 
+   #            aes(x = longitude, xend = X1, y = latitude, yend = X2)) +
+  guides(fill = FALSE)
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/maps/",pop,"_PCA_map_with_sampling_data_no_lines.pdf", sep=""),  PCA_map)
 
 ```
 ```{r}
