@@ -4825,10 +4825,10 @@ region_chr_colour_recomb <- ggplot(data=interaction_stats_all_pops_region_chr_ca
 #   geom_smooth (method = "lm", colour="grey30", fill="grey60", size=0.5) +
 #   theme(axis.title.x = element_blank() ) + # legend.position = "none"
 #   coord_equal(ratio=1) +
-#   stat_poly_eq(aes(label =  paste("atop(",stat(adj.rr.label),",",stat(eq.label), ")", sep = "")), 
+#   stat_poly_eq(aes(label =  paste("atop(",stat(adj.rr.label),",",stat(eq.label), ")", sep = "")),
 #                formula = formula, parse = TRUE,size = 2.5, label.x.npc = "right",
 #                   label.y.npc = "bottom")
-
+# Esta guardado como: comparisons_region_vs_chr_wmean_pairwise_ave_colour_gene_percentage
 
 # Plot Feature MB vs EB
 
