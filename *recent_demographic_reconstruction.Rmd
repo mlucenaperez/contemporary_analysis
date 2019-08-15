@@ -632,12 +632,12 @@ demographic_data_ll <- demographic_data_all_pops %>% filter(specie=="ll") %>% fi
 
 
 
-cols <- c("NE-Poland"=brewer.pal(12,"Paired")[4], 
-          "Urals"=brewer.pal(9,"RdPu")[6], 
+cols <- c("NE-Poland"=viridis_pal()(5)[3], 
+          "Urals"="#54BAB3", 
           "Carpathians"=brewer.pal(12,"Paired")[9], 
-          "Kirov"=brewer.pal(12,"Paired")[1], 
+          "Kirov"=viridis_pal()(5)[1], 
           "Latvia"=brewer.pal(12,"Paired")[3], 
-          "Norway"=brewer.pal(12,"Paired")[2], 
+          "Norway"=viridis_pal()(5)[2], 
           "Mongolia"=brewer.pal(12,"Paired")[12], 
           "Tuva"=brewer.pal(12,"Paired")[8], 
           "Vladivostok"=brewer.pal(12,"Paired")[5], 
