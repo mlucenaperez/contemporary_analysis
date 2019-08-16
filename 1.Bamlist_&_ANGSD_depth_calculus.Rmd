@@ -78,7 +78,7 @@ IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
 for POP1 in "${POPS1[@]}"
 do
 echo "$POP --> $POP1"
-ls /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/*${POP1}_*_recal_round-1.bam  >> "$POP".bamlist
+ls /GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/*${POP1}_*_recal_round-1.bam  >> "$POP".bamlist
 done
 NUMBER_IND=$(printf "%03d" `wc -l "$POP".bamlist | cut -f1 -d " "`);
 mv "$POP".bamlist "$POP"_n"$NUMBER_IND".bamlist
@@ -312,6 +312,8 @@ POPS=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_
 POPS=(c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
 # Only pardinus: --> Done 20/06/2017
 POPS=(c_lp_do-c_lp_sm)
+# Lynx lynx wo balcans: --> Done 16/08/2019
+POPS=(c_ll_no-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
 
 # Done: --> 14/09/2017
 POPS=(c_ll_ur)
@@ -337,7 +339,7 @@ IFS='-' read -r -a POPS1 <<< "$POP" # this creates an array stripping by "-"
 for POP1 in "${POPS1[@]}"
 do
 echo "$POP --> $POP1"
-ls /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic/*${POP1}*intergenic.bam  >> "$POP".intergenic.bamlist
+ls /GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final//BAM_intergenic_5x/*${POP1}*intergenic.bam  >> "$POP".intergenic.bamlist
 done
 NUMBER_IND=$(printf "%03d" `wc -l "$POP".intergenic.bamlist | cut -f1 -d " "`);
 mv "$POP".intergenic.bamlist "$POP"_n"$NUMBER_IND".intergenic.bamlist
@@ -427,6 +429,9 @@ POPS=(c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_
 --> Only lynx lynx:  
 POPS=(c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
 
+--> Lynx lynx wo balcans (16/08/2019)
+POPS=(c_ll_no-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
+
 --> Oriental lynx lynx:  
 POPS=(c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl)
 
@@ -442,13 +447,11 @@ cd /home/mlucena/ANGSD_analysis/depth_calculus
 screen -S oriental_lynx_lyxn_do_depth
 script oriental_lynx_lyxn_do_depth_qc.log
 
-POP=(c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n030)
+POP=(c_ll_no-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n077)
 
 REF="/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa"
 THREADS=20                    # no. of computer cores used 20 = OK, >20 = ask people first!
 REGIONFILE="no_genes_Lypa_10000longest_center_final_slop20_dot.rf"
-
-# BAMLIST=$(ls /home/mlucena/ANGSD_analysis/whole_genome_analysis/"$POP".bamlist)
 
 BAMLIST=$(ls /home/mlucena/ANGSD_analysis/intergenic_analysis/"$POP".intergenic.bamlist)
 OUT_NAME="/home/mlucena/ANGSD_analysis/depth_calculus/"$POP".intergenic.qc"
