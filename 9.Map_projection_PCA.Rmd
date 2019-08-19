@@ -4,7 +4,7 @@ output: html_document
 ---
 
 
-## First creating funtion:
+## Scale Bar
 
 Modify from:
 
@@ -153,38 +153,35 @@ scaleBar <- function(lon, lat, distanceLon, distanceLat, distanceLegend, dist.un
 
 
 
-# Whole species:
-
+# PCA projection on map
 
 
 ```{r}
 
-# PCA projection on map
-
 # http://www.molecularecologist.com/2015/04/procrustes-analyses-in-r/
 
-library(png)
-library(maps)
-library(maptools)
-library(ggplot2)
-library(grid)
-library(ggmap) 
-library(mapr)
-library(raster)
+library("png")
+library("maps")
+library("maptools")
+library("ggplot2")
+library("grid")
+library("ggmap") 
+library("mapr")
+library("raster")
 library("sp")
-library(MCMCpack)
-library(rworldmap)
+library("MCMCpack")
+library("rworldmap")
 library("ggmap")
 library("optparse")
-library(methods)
-library(optparse)
-library(dplyr)
-library(threejs)
-library(RColorBrewer)
+library("methods")
+library("optparse")
+library("dplyr")
+library("threejs")
+library("RColorBrewer")
 require("knitr")
-library(rgdal)
+library("rgdal")
 library("ggspatial")
-
+library("viridis")
 
 # Now we load our PCA analysis:
 
@@ -540,7 +537,11 @@ ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phyloge
 
 
 # -------
-# PRUEBA
+# PROCRUSTES & SAMPLING
+
+
+title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
+
 
 ggplot() +
   borders(database = "world", fill="gray95", color="gray95", xlim = c(min_long-20, max_long+20),ylim = c(min_lat-20, max_lat+20))+
@@ -554,10 +555,9 @@ ggplot() +
   scale_fill_manual("Populations",
   values = cols) +  
 scaleBar(lon = 138, lat = 27, distanceLon = 1000, distanceLat = 10, distanceLegend = 200, dist.unit = "km", orientation = FALSE) +
-  # geom_segment(data = merge(PC_coordinates, PCA_procrustes, by = 'Ind'), 
-   #            aes(x = longitude, xend = X1, y = latitude, yend = X2)) +
-  guides(fill = FALSE)
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/maps/",pop,"_PCA_map_with_sampling_data_no_lines.pdf", sep=""),  PCA_map)
+ # geom_segment(data = merge(PC_coordinates, PCA_procrustes, by = 'Ind'), aes(x = longitude, xend = X1, y = latitude, yend = X2)) +
+  guides(fill = FALSE) +
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/maps/",pop,"_PCA_map_with_sampling_data_no_lines.pdf", sep=""), device="pdf")
 
 ```
 ```{r}
