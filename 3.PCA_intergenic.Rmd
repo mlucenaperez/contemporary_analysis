@@ -28,6 +28,8 @@ Lynx lynx, oriental populations:
 
 c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n030
 
+Lynx lynx, wo balcans
+c_ll_no-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n077
 
 ```{bash}
 
@@ -46,10 +48,10 @@ cd /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_PCA
 #To launch one by one ( because otherwise it's too slow I'll launch single pops in a and groups in b)
 #Lanzo cada uno en una sesión de screen diferente y con un log distinto ( mediante script). lanzo el script conpleto dandole como input el csv que acabo de crear. Ejemplo:
 
-screen -S pca_lynx_lynx_oriental
-script pca_lynx_lynx_oriental.log
+screen -S pca_lynx_lynx_wobalcans
+script pca_lynx_lynx_wobalcans.log
 
-POP="c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl"  # <--CHANGE POP HERE
+POP="c_ll_no-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl"  # <--CHANGE POP HERE
 
 
 read POP mean sd mean_truncated sd_truncated maxDepth minDepth maxDepth_truncated minDepth_truncated < /home/mlucena/ANGSD_analysis/depth_calculus/"$POP"_n*_mean_sd_depthGlobal_lynx_per_pop_mean_folds_0.95.csv
@@ -66,10 +68,9 @@ FILTER1=" -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -baq 1 -C 50 "
 FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
 N_IND=$(echo ${POP: -3} )
 MIN_IND=$(expr $N_IND / 2) 
-
-
-SNP_PVAL="1e-4"
-
+N_ALLELES=$(expr $N_IND \* 2)
+SNP_pval_filter=$(echo "1/(2*$N_IND)" | bc -l | awk '{printf "%.10f\n", $0}')
+# SNP_pval = #ind*(2allelos/ind) = x alelos ; 1/x = y  # esto sería un filtro aceptable. En mi caso el dataset más pequeño (h_lypa_all) es de 55 indivíduos (1/(2*55)=9e-3) y el más grande (x_lyxx_all) de 189 (1/(2*189)=2.6e-3)
 
 
 # Sanity checks:
@@ -79,7 +80,7 @@ echo $N_IND
 echo $MIN_IND
 echo $maxDepth
 echo $minDepth
-echo $SNP_PVAL
+echo $SNP_pval_filter
 
 
 ### Calling genotype likelihoods: 
@@ -88,7 +89,7 @@ $ANGSD/angsd -P $THREADS -b /home/mlucena/ANGSD_analysis/intergenic_analysis/$PO
 $FILTER1 $FILTER2 \
 -minInd $MIN_IND -setMaxDepth $maxDepth -setMinDepth $minDepth  \
 -GL 1 -doMajorMinor 1 -doMaf 1 -skipTriallelic 1 \
--SNP_pval $SNP_PVAL \
+-SNP_pval $SNP_pval_filter \
 -doGeno 32 -doPost 1
 
 
@@ -105,7 +106,7 @@ $FILTER1 $FILTER2 \
 # Only works with the -minInd filter. Change the minimum depth the individuals must have in order to keep the site. Default is 1.
 
 
-# SNP_pval = #ind*(2allelos/ind) = x alelos ; 1/x = y  # esto sería un filtro aceptable. En mi caso el dataset más pequeño (h_lypa_all) es de 55 indivíduos (1/(2*55)=9e-3) y el más grande (x_lyxx_all) de 189 (1/(2*189)=2.6e-3)
+# SNP_pval = #ind*(2allelos/ind) = x alelos ; 1/x = y  # esto sería un filtro aceptable. En mi caso el dataset más pequeño (h_lypa_all) es de 77 indivíduos (1/(2*77)=9e-3) y el más grande (x_lyxx_all) de 189 (1/(2*189)=2.6e-3)
 # Para el PCA vamos a usar 1e-3 porque es un filtro suuuper light.
 
 ### OJO! NO ES TAN SUPER LIGHT!!!
