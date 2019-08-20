@@ -163,71 +163,58 @@ mantel(as.dist(geo_distances_complete_matrix), as.dist(genetic_distances_matrix)
 
 ```{r}
  
- geo_genetic_distances <- melt(geo_distances_complete_matrix)  %>% 
+geo_genetic_distances <- melt(geo_distances_complete_matrix)  %>% 
   dplyr::rename(ind1=Var1, ind2=Var2, distances_km_Winkel_Tripel=value) %>% 
   dplyr::mutate (pair_ind=paste(ind1,ind2, sep="-")) %>% 
   dplyr::full_join ((melt(genetic_distances_matrix) %>%   
-  dplyr::mutate (pair_ind=paste(Var1,Var2, sep="-"))),., by ="pair_ind" ) %>% 
+                       dplyr::mutate (pair_ind=paste(Var1,Var2, sep="-"))),., by ="pair_ind" ) %>% 
   dplyr::rename (genetic_distance=value, geographic_distance=distances_km_Winkel_Tripel) %>% 
   dplyr::mutate (pop1=substr(ind1, 0, 7)) %>% 
   dplyr::mutate (pop2=substr(ind2, 0, 7)) %>% 
   dplyr::mutate (area_pop1 =  
-            ifelse (pop1 == "c_ll_po" | pop1 == "c_ll_ur" | pop1 == "c_ll_ki" | pop1 == "c_ll_la" | pop1 == "c_ll_no" | pop1 == "c_ll_ba" | pop1 == "h_ll_ba" | pop1 == "c_ll_cr" , "West" , 
-            ifelse (pop1 == "c_ll_to" | pop1 == "c_ll_tu" | pop1 == "c_ll_ka" | pop1 == "c_ll_og" | pop1 == "c_ll_vl" | pop1 == "c_ll_ya", "East", NA))) %>% 
+                   ifelse (pop1 == "c_ll_po" | pop1 == "c_ll_ur" | pop1 == "c_ll_ki" | pop1 == "c_ll_la" | pop1 == "c_ll_no" | pop1 == "c_ll_ba" | pop1 == "h_ll_ba" | pop1 == "c_ll_cr" , "West" , 
+                           ifelse (pop1 == "c_ll_to" | pop1 == "c_ll_tu" | pop1 == "c_ll_ka" | pop1 == "c_ll_og" | pop1 == "c_ll_vl" | pop1 == "c_ll_ya", "East", NA))) %>% 
   dplyr::mutate (area_pop2 =  
-            ifelse (pop2 == "c_ll_po" | pop2 == "c_ll_ur" | pop2 == "c_ll_ki" | pop2 == "c_ll_la" | pop2 == "c_ll_no" | pop2 == "c_ll_ba" | pop2 == "h_ll_ba" | pop2 == "c_ll_cr" , "West" , 
-            ifelse (pop2 == "c_ll_to" | pop2 == "c_ll_tu" | pop2 == "c_ll_ka" | pop2 == "c_ll_og" | pop2 == "c_ll_vl" | pop2 == "c_ll_ya", "East", NA))) %>% 
+                   ifelse (pop2 == "c_ll_po" | pop2 == "c_ll_ur" | pop2 == "c_ll_ki" | pop2 == "c_ll_la" | pop2 == "c_ll_no" | pop2 == "c_ll_ba" | pop2 == "h_ll_ba" | pop2 == "c_ll_cr" , "West" , 
+                           ifelse (pop2 == "c_ll_to" | pop2 == "c_ll_tu" | pop2 == "c_ll_ka" | pop2 == "c_ll_og" | pop2 == "c_ll_vl" | pop2 == "c_ll_ya", "East", NA))) %>% 
   dplyr::mutate (comparison = 
-            ifelse (area_pop1 == "West" & area_pop2 =="West", "West-West",
-            ifelse (area_pop1=="West" & area_pop2 =="East", "West-East",
-            ifelse (area_pop1=="East" & area_pop2 =="West", "West-East",
-            ifelse (area_pop1=="East" & area_pop2 =="East", "East-East", NA))))) %>% 
+                   ifelse (area_pop1 == "West" & area_pop2 =="West", "West-West",
+                           ifelse (area_pop1=="West" & area_pop2 =="East", "West-East",
+                                   ifelse (area_pop1=="East" & area_pop2 =="West", "West-East",
+                                           ifelse (area_pop1=="East" & area_pop2 =="East", "East-East", NA))))) %>% 
   dplyr::mutate (self_comparison =ifelse (ind1==ind2, "SELF", "DISTINCT")) %>% 
   filter(self_comparison!="SELF") %>% 
- filter(pop1 != "c_ll_ba" , pop1!="h_ll_ba", pop2 != "c_ll_ba" , pop2!="h_ll_ba") %>% 
+  filter(pop1 != "c_ll_ba" , pop1!="h_ll_ba", pop2 != "c_ll_ba" , pop2!="h_ll_ba") %>% 
   mutate(pop_status = 
-            ifelse (pop1 == "c_ll_po" | pop2 =="c_ll_po" | 
-                    pop1 == "c_ll_no" | pop2 =="c_ll_no" | 
-                    pop1 == "c_ll_cr" | pop2 =="c_ll_cr",  "B-comparison", "NB-comparison"))
+           ifelse (pop1 == "c_ll_po" | pop2 =="c_ll_po" | 
+                     pop1 == "c_ll_no" | pop2 =="c_ll_no" | 
+                     pop1 == "c_ll_cr" | pop2 =="c_ll_cr",  "B-comparison", "NB-comparison")) %>% 
+  mutate(tipo_de_comparacion=
+           ifelse(pop1 == pop2, "same_pop", "distinct_pop")) 
+
+  
 
 
- filter(pop1 != "c_ll_no" , pop1!="c_ll_po", pop2 != "c_ll_no" , pop2!="c_ll_po") #%>% filter(pop1 != "c_ll_cr" , pop2 != "c_ll_cr") 
+# Plot
 
+## All pops including self pop comparison
 
-# Article
- 
-
-ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, linetype=comparison)) +
-  geom_point(alpha = 0.05, aes(shape=comparison)) +
+ggplot(geo_genetic_distances , aes (log(geographic_distance), genetic_distance, linetype=comparison, fill=comparison, color=comparison)) +
+  geom_point(alpha = 0.4, aes(shape=comparison)) +
   scale_shape_manual(values=c(3, 17, 16)) +
   scale_linetype_manual(values=c("twodash", "solid", "dotted")) +
   theme_classic() +
-  geom_smooth(method='lm', color="black") +
+  geom_smooth(method='lm') +
   labs(
     x = "log(Geographic distance (Km))",
     y = "Genetic distance" ) +
-  theme(legend.position="top", legend.title = element_blank()) 
-  ggsave("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/figures_article/genetic_distance_vs_geographic_distance.pdf")
-
-  
-  ggplot(geo_genetic_distances %>% filter(comparison=="West-West"), aes (log(geographic_distance), genetic_distance, fill=pop_status, color=pop_status)) +
-  geom_point(alpha = 0.05, aes(shape=comparison)) +
-  scale_shape_manual(values=c(3, 17, 16)) +
-  scale_linetype_manual(values=c("twodash", "solid", "dotted")) +
-  theme_classic() +
-  geom_smooth(method='lm', color="black") +
-  labs(
-    x = "log(Geographic distance (Km))",
-    y = "Genetic distance" ) +
-  stat_regline_equation()+
-  theme(legend.position="top", legend.title = element_blank()) 
-  ggsave("/Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/figures_article/genetic_distance_vs_geographic_distance.pdf")
+  theme(legend.position="top", legend.title = element_blank()) +
+  ggsave("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/Geo_distances/genetic_distance_vs_geographic_distance_color_all_pops_w_selfcomparison.pdf")
 
 
-  
-# Article --> color
+## Only nb pops including self pop comparison
 
-  ggplot(geo_genetic_distances %>% filter(pop1 != "c_ll_no" , pop1!="c_ll_po", pop2 != "c_ll_no" , pop2!="c_ll_po", pop1 != "c_ll_cr" , pop2 != "c_ll_cr") 
+ggplot(geo_genetic_distances %>% filter(pop1 != "c_ll_no" , pop1!="c_ll_po", pop2 != "c_ll_no" , pop2!="c_ll_po", pop1 != "c_ll_cr" , pop2 != "c_ll_cr") 
          , aes (log(geographic_distance), genetic_distance, linetype=comparison, fill=comparison, color=comparison)) +
   geom_point(alpha = 0.4, aes(shape=comparison)) +
   scale_shape_manual(values=c(3, 17, 16)) +
@@ -237,10 +224,13 @@ ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, l
   labs(
     x = "log(Geographic distance (Km))",
     y = "Genetic distance" ) +
-  theme(legend.position="top", legend.title = element_blank()) 
-  ggsave("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/Geo_distances/genetic_distance_vs_geographic_distance_color_nobt.pdf")
+  theme(legend.position="top", legend.title = element_blank()) +
+  ggsave("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/Geo_distances/genetic_distance_vs_geographic_distance_color_nobt_w_selfcomparison.pdf")
   
-  ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, linetype=comparison, fill=comparison, color=comparison)) +
+  
+## All pops not including self comparison
+
+ggplot(geo_genetic_distances %>% filter (tipo_de_comparacion=="distinct_pop") , aes (log(geographic_distance), genetic_distance, linetype=comparison, fill=comparison, color=comparison)) +
   geom_point(alpha = 0.4, aes(shape=comparison)) +
   scale_shape_manual(values=c(3, 17, 16)) +
   scale_linetype_manual(values=c("twodash", "solid", "dotted")) +
@@ -249,24 +239,61 @@ ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, l
   labs(
     x = "log(Geographic distance (Km))",
     y = "Genetic distance" ) +
-  theme(legend.position="top", legend.title = element_blank()) 
-  ggsave("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/Geo_distances/genetic_distance_vs_geographic_distance_color_all_pops.pdf")
+  theme(legend.position="top", legend.title = element_blank()) +
+  ggsave("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/Geo_distances/genetic_distance_vs_geographic_distance_color_all_pops_wo_selfcomparison.pdf")
 
 
-# Power Point
-ggplot(geo_genetic_distances, aes (log(geographic_distance), genetic_distance, fill=comparison, color=comparison)) +
-  geom_point(alpha = 0.01) +
+## Only nb pops including self pop comparison
+
+ggplot(geo_genetic_distances %>% filter(pop1 != "c_ll_no" , pop1!="c_ll_po", pop2 != "c_ll_no" , pop2!="c_ll_po", pop1 != "c_ll_cr" , pop2 != "c_ll_cr") %>% filter (tipo_de_comparacion=="distinct_pop"), aes (log(geographic_distance), genetic_distance, linetype=comparison, fill=comparison, color=comparison)) +
+  geom_point(alpha = 0.4, aes(shape=comparison)) +
+  scale_shape_manual(values=c(3, 17, 16)) +
+  scale_linetype_manual(values=c("twodash", "solid", "dotted")) +
   theme_classic() +
-  geom_smooth(method='lm') 
+  geom_smooth(method='lm') +
+  labs(
+    x = "log(Geographic distance (Km))",
+    y = "Genetic distance" ) +
+  theme(legend.position="top", legend.title = element_blank()) +
+  ggsave("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/Geo_distances/genetic_distance_vs_geographic_distance_color_nobt_wo_selfcomparison.pdf")
   
+  
+# Comparison only west
+library(ggpubr)
+  
+ggplot() +
+  geom_point (data=geo_genetic_distances %>% filter(comparison=="West-West"), aes (log(geographic_distance), genetic_distance, shape=comparison, fill=pop_status, color=pop_status), alpha = 0.4, ) +
+   geom_smooth          (data=geo_genetic_distances %>% filter(comparison=="West-West"), aes (log(geographic_distance), genetic_distance), method='lm', color="red") +
+   stat_regline_equation(data=geo_genetic_distances %>% filter(comparison=="West-West"), aes (log(geographic_distance), genetic_distance), colour="red") +
+  geom_smooth          (data=geo_genetic_distances %>% filter(comparison=="West-West") %>% filter (pop_status!="B-comparison"), aes (log(geographic_distance), genetic_distance), method='lm', color="blue") +
+  stat_regline_equation(data=geo_genetic_distances %>% filter(comparison=="West-West") %>% filter (pop_status!="B-comparison"), aes (log(geographic_distance), genetic_distance), colour="blue", position="identity",label.x.npc = "left", label.y.npc = "bottom") +
+  theme_minimal() +
+  scale_shape_manual (values=c(3, 17, 16)) +
+  scale_linetype_manual (values=c("twodash", "solid", "dotted")) +
+  labs(
+    x = "log(Geographic distance (Km))",
+    y = "Genetic distance" ) +
+ theme(legend.position="top", legend.title = element_blank()) +
+ ggsave("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/Geo_distances/genetic_distance_vs_geographic_distance_only_west_b_vs_nb_w_selfcomparison.pdf")
 
-ggsave("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/plot_comparison_distances_no_balcans_poland_norway-carpathians.png")
 
-mod1 <- aov (geo_genetic_distances$genetic_distance ~ geo_genetic_distances$geographic_distance * geo_genetic_distances$comparison) 
+  
+ggplot() +
+  geom_point (data=geo_genetic_distances %>% filter(comparison=="West-West") %>% filter (tipo_de_comparacion=="distinct_pop"), aes (log(geographic_distance), genetic_distance, shape=comparison, fill=pop_status, color=pop_status), alpha = 0.4) +
+  geom_smooth          (data=geo_genetic_distances %>% filter(comparison=="West-West") %>% filter (tipo_de_comparacion=="distinct_pop"), aes (log(geographic_distance), genetic_distance), method='lm', color="red") +
+  stat_regline_equation(data=geo_genetic_distances %>% filter(comparison=="West-West") %>% filter (tipo_de_comparacion=="distinct_pop"), aes (log(geographic_distance), genetic_distance), colour="red") +
+  geom_smooth (data=geo_genetic_distances %>% filter(comparison=="West-West") %>% filter (pop_status!="B-comparison") %>% filter (tipo_de_comparacion=="distinct_pop"), aes (log(geographic_distance), genetic_distance), method='lm', color="blue") +
+  stat_regline_equation(data=geo_genetic_distances %>% filter(comparison=="West-West") %>% filter (pop_status!="B-comparison") %>% filter (tipo_de_comparacion=="distinct_pop"), aes (log(geographic_distance), genetic_distance), colour="blue", position="identity",label.x.npc = "left", label.y.npc = "bottom") +
 
-summary(mod1) 
- 
- 
+  theme_minimal() +
+  scale_shape_manual (values=c(3, 17, 16)) +
+  scale_linetype_manual (values=c("twodash", "solid", "dotted")) +
+  labs(
+    x = "log(Geographic distance (Km))",
+    y = "Genetic distance" ) +
+ theme(legend.position="top", legend.title = element_blank()) +
+ ggsave("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/Geo_distances/genetic_distance_vs_geographic_distance_only_west_b_vs_nb_wo_selfcomparison.pdf")
+
 ```
 
 # Partial mantel test
@@ -307,4 +334,40 @@ mantel(as.dist(east_genetic_matrix), as.dist(east_geographic_matrix))
 ```
 
 
+# Partial mantel test Bottleneck
 
+```{r}
+
+# General yes/no matrix if the comparison is among west-east=1
+geo_genetic_distances_yes_no_matrix_no_drift <- data=geo_genetic_distances %>% filter(comparison=="West-West") %>% filter (tipo_de_comparacion=="distinct_pop") %>% mutate(west_east= ifelse (comparison == "West-East", "1", "0")) %>% 
+  select (ind1, ind2, west_east) %>%
+  dplyr:: select(-starts_with("c_ll_no")) %>% 
+  dplyr::select(-starts_with("c_ll_po")) %>% 
+  dplyr::select(-starts_with("c_ll_ba")) %>% 
+  dplyr::select(-starts_with("h_ll_ba")) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1') %>% data.matrix(.)
+
+geo_genetic_distances_yes_no_matrix_no_drift <- geo_genetic_distances_yes_no_matrix_no_drift[order(rownames(geo_genetic_distances_yes_no_matrix_no_drift)), order(colnames(geo_genetic_distances_yes_no_matrix_no_drift))]
+
+genetic_distances_matrix_no_drift <- genetic_distances_matrix_no_drift[order(rownames(genetic_distances_matrix_no_drift)), order(colnames(genetic_distances_matrix_no_drift))]
+
+geo_distances_complete_matrix_no_drift <- geo_distances_complete_matrix_no_drift[order(rownames(geo_distances_complete_matrix_no_drift)), order(colnames(geo_distances_complete_matrix_no_drift))]
+
+mantel.partial(as.dist(genetic_distances_matrix_no_drift), as.dist(geo_distances_complete_matrix_no_drift), as.dist(geo_genetic_distances_yes_no_matrix_no_drift), method = "pearson", permutations = 999)
+
+
+# Now I will create a matrix with west-west east-west east-east comparisons.
+west_genetic_matrix <- geo_genetic_distances %>% filter (comparison=="West-West") %>% select (ind1, ind2, genetic_distance) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1') %>% data.matrix(.)
+
+east_genetic_matrix <- geo_genetic_distances %>% filter (comparison=="East-East") %>% select (ind1, ind2, genetic_distance) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1') %>% data.matrix(.)
+
+west_geographic_matrix <- geo_genetic_distances %>% filter (comparison=="West-West") %>% select (ind1, ind2, geographic_distance) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1') %>% data.matrix(.)
+
+east_geographic_matrix <- geo_genetic_distances %>% filter (comparison=="East-East") %>% select (ind1, ind2, geographic_distance) %>% dcast(., formula = ind1~ind2) %>% column_to_rownames('ind1') %>% data.matrix(.)
+
+
+# Mantel test in the west,east and west-east
+mantel(as.dist(west_genetic_matrix), as.dist(west_geographic_matrix))
+mantel(as.dist(east_genetic_matrix), as.dist(east_geographic_matrix))
+
+
+```
