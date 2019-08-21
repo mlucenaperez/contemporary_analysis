@@ -633,7 +633,7 @@ demographic_data_ll <- demographic_data_all_pops %>% filter(specie=="ll") %>% fi
 
 
 cols <- c("NE-Poland"=viridis_pal()(5)[3], 
-          "Urals"="#54BAB3", 
+          "Urals"="#0F4909", 
           "Carpathians"=brewer.pal(12,"Paired")[9], 
           "Kirov"=viridis_pal()(5)[1], 
           "Latvia"=brewer.pal(12,"Paired")[3], 
@@ -744,14 +744,15 @@ ggsave(paste(wd_output, "stairway_plot_custom_xlim1-1000_ylim0-5000_color_region
 # All periods
 
 ggplot () +
-  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=Populations, linetype=conservation)) +
+  geom_line(data=demographic_data_ll , aes(x=year, y=Ne_median, group=Populations, colour=Populations, linetype=region)) +
   scale_colour_manual(values = cols) +
   scale_x_log10(
    breaks = scales::trans_breaks("log10", function(x) 10^x),
    labels = scales::trans_format("log10", scales::math_format(10^.x))
 ) +
+  theme_classic() +
   annotation_logticks() +
-ggsave(paste(wd_output, "stairway_plot_custom_color_per_pop_line_type_conservation.pdf",sep=""), width = 5, height = 7)
+ggsave(paste(wd_output, "stairway_plot_custom_color_per_pop_line_type_region.pdf",sep=""), width = 5, height = 7)
 
 
 
@@ -767,6 +768,7 @@ ggplot () +
    breaks = scales::trans_breaks("log10", function(x) 10^x),
    labels = scales::trans_format("log10", scales::math_format(10^.x))) +
   annotation_logticks() +
+  theme_classic() +
 ggsave(paste(wd_output, "stairway_plot_custom_color_region_line_type_region.pdf",sep=""), width = 5, height = 7)
 
 
