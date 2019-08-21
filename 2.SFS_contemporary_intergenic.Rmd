@@ -1483,24 +1483,53 @@ summary_boot_ratio_X_autosomic <- rbind (summary_boot_ratio_X_autosomic_tW, summ
 rm  (summary_boot_ratio_X_autosomic_tW, summary_boot_ratio_X_autosomic_tP)
 summary_boot_ratio_X_autosomic$Populations <- factor (summary_boot_ratio_X_autosomic$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Khentii", "Töv", "Ömnögovi", "Mongolia",  "Yakutia", "Vladivostok"))
 
-
-
 write.table(summary_boot_mean_autosomic, "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/diversity_per_pop_windows_mean_stderror_autosomic.tsv", row.names = F, quote = F)
+write.table(summary_boot_ratio_X_autosomic, "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/ratio_per_pop_windows_mean_stderror_autosomic_Xchr.tsv", row.names = F, quote = F)
 
-cols <- c("Carpathians"=brewer.pal(12,"Paired")[9], 
-           "Kirov"=brewer.pal(12,"Paired")[1],  
-           "Latvia"=brewer.pal(12,"Paired")[3],  
-           "Norway"=brewer.pal(12,"Paired")[2],  
-           "Bialowieza"=brewer.pal(12,"Paired")[4],  
-           "Mongolia"=brewer.pal(12,"Paired")[12], 
-           "Töv"=brewer.pal(12,"Paired")[12], 
+```
+
+
+
+# Plot articulo
+
+```{r}
+library (dplyr)
+library (ggplot2)
+library (tidyr)
+library (boot)
+library (broom)
+library (RColorBrewer)
+library (viridis)
+
+# Read tables
+summary_boot_mean_autosomic <- read.csv ("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/diversity_per_pop_windows_mean_stderror_autosomic.tsv", sep=" ", dec=".")
+summary_boot_ratio_X_autosomic <- read.csv( "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/ratio_per_pop_windows_mean_stderror_autosomic_Xchr.tsv", sep=" ", dec=".")
+
+# Rename factors
+summary_boot_mean_autosomic$Populations <- plyr::revalue(summary_boot_mean_autosomic$Populations, c("Khentii"="Mongolia", "Töv"="Mongolia", "Ömnögovi"="Mongolia", "Bialowieza"="NE-Poland"))
+summary_boot_ratio_X_autosomic$Populations <- plyr::revalue(summary_boot_ratio_X_autosomic$Populations, c("Khentii"="Mongolia", "Töv"="Mongolia", "Ömnögovi"="Mongolia", "Bialowieza"="NE-Poland"))
+
+# Order factors
+summary_boot_mean_autosomic$Populations <- factor (summary_boot_mean_autosomic$Populations, levels=c("Norway", "Balkans", "Carpathians", "NE-Poland", "Latvia", "Kirov", "Urals", "Tuva", "Mongolia",  "Yakutia", "Vladivostok"))
+summary_boot_ratio_X_autosomic$Populations <- factor (summary_boot_ratio_X_autosomic$Populations, levels=c("Norway", "Balkans", "Carpathians", "NE-Poland", "Latvia", "Kirov", "Urals", "Tuva", "Mongolia",  "Yakutia", "Vladivostok"))
+
+
+
+cols <- c("NE-Poland"=viridis_pal()(5)[3], 
+          "Urals"="#0F4909", 
+          "Balkans"="#A035AF", 
+          "Carpathians"=brewer.pal(12,"Paired")[9], 
+          "Kirov"=viridis_pal()(5)[1], 
+          "Latvia"=brewer.pal(12,"Paired")[3], 
+       "Norway"=viridis_pal()(5)[2], 
+       "Töv"=brewer.pal(12,"Paired")[12], 
+          "Tuva"=brewer.pal(12,"Paired")[8], 
           "Khentii"=brewer.pal(12,"Paired")[7], 
           "Ömnögovi"=brewer.pal(12,"Paired")[11], 
-            "Tuva"=brewer.pal(12,"Paired")[8],  
-           "Urals"=brewer.pal(11,"BrBG")[9],  
-           "Vladivostok"=brewer.pal(12,"Paired")[5], 
-           "Yakutia"=brewer.pal(12,"Paired")[6], 
-           "Balkans"=brewer.pal(12,"Paired")[10])  
+          "Vladivostok"=brewer.pal(12,"Paired")[5], 
+          "Yakutia"=brewer.pal(12,"Paired")[6],
+          "Sierra Morena"=brewer.pal(8, "Greys") [5],
+          "Doñana"=brewer.pal(8, "Greys") [8])
 
  
 
@@ -1510,15 +1539,16 @@ cols <- c("Carpathians"=brewer.pal(12,"Paired")[9],
 
 for (INDICE in unique(summary_boot_mean_autosomic$index))
 {
- ggplot (filter(summary_boot_mean_autosomic, index==INDICE), aes(y=statistic, x=Populations)) + 
-   geom_bar(stat = "identity", fill="grey70") + 
-   geom_errorbar(aes(ymin=statistic-std.error, ymax=statistic+std.error), colour="black", width=.1) +
-   # scale_fill_manual(values = cols) + 
+ ggplot (filter(summary_boot_mean_autosomic, index==INDICE), aes(y=statistic, x=Populations, fill=Populations, colour=Populations)) + 
+   geom_errorbar(aes(fill=Populations, colour=Populations, ymin=statistic-std.error, ymax=statistic+std.error)) +
+   geom_point(aes(fill=Populations, colour=Populations), size=1) + 
+   scale_fill_manual(values = cols) + 
+   scale_colour_manual(values = cols) + 
    # scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
    ylab (paste(INDICE, sep="")) +  
-   theme_light() +
-   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/autosomic_mean_",INDICE,"_boot.pdf", sep=""),  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
+   theme_minimal() +
+   theme (legend.position = "none", axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/autosomic_mean_",INDICE,"_boot2.pdf", sep=""),  width = 10, height = 10, units = "cm",  useDingbats=FALSE) 
 
  }
 
@@ -1527,55 +1557,18 @@ ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phyloge
 
 for (INDICE in unique(summary_boot_ratio_X_autosomic$index))
 {
- ggplot (filter(summary_boot_ratio_X_autosomic, index==INDICE), aes(x=Populations, y=mean)) + 
+ ggplot (filter(summary_boot_ratio_X_autosomic, index==INDICE), aes(x=Populations, y=mean, fill=Populations, colour=Populations)) + 
    geom_point(size=2, shape=20) + 
-   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), colour="black", width=.1) +
-   # scale_fill_manual(values = cols) + 
-   # scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.1) +
+   scale_fill_manual(values = cols) + 
+   scale_colour_manual(values = cols) + 
    ylab (paste(INDICE, sep="")) + 
-   theme_light() +
-   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/ratio_X_autosomic_",INDICE,"_boot.pdf", sep=""),   width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
+   theme_minimal() +
+   theme (legend.position = "none", axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
+ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/ratio_X_autosomic_",INDICE,"_boot2.pdf", sep=""),   width = 10, height = 10, units = "cm",  useDingbats=FALSE) 
 
  }
 
-
-## COLOR
-
-# Autosomic
-
-for (INDICE in unique(summary_boot_mean_autosomic$index))
-{
- ggplot (filter(summary_boot_mean_autosomic, index==INDICE), aes(x=Populations, y=statistic, fill=Populations, color=Populations)) + 
-   geom_point(size=2, shape=20) + 
-   geom_errorbar(aes(ymin=statistic-std.error, ymax=statistic+std.error), colour="black", width=.1) +
-   # scale_fill_manual(values = cols) + 
-   # scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
-   ylab (paste(INDICE, sep="")) +  
-   theme_light() +
-   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/autosomic_mean_",INDICE,"_boot_color.pdf", sep=""),  width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
-
- }
-
-
-# COLOR:
-
-# Ratio
-
-for (INDICE in unique(summary_boot_ratio_X_autosomic$index))
-{
- ggplot (filter(summary_boot_ratio_X_autosomic, index==INDICE), aes(x=Populations, y=mean, fill=Populations, color=Populations)) + 
-   geom_point(size=2, shape=20) + 
-   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), colour="black", width=.1) +
-   # scale_fill_manual(values = cols) + 
-   # scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
-   ylab (paste(INDICE, sep="")) +  
-   theme_light() +
-   theme (legend.text=element_text(size=10), axis.title = element_text(size = 12), axis.text = element_text(size=10), axis.title.x = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
-ggsave(paste("/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_sfs/ratio_X_autosomic_",INDICE,"_boot_color.pdf", sep=""),   width = 20, height = 10, units = "cm",  useDingbats=FALSE) 
-
- }
 
 ```
 
