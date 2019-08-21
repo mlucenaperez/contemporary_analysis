@@ -208,7 +208,6 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analy
 ## R representation
 
 ```{r "setup", include=FALSE}
-install.packages("optparse")
 library(methods)
 library(optparse)
 library(ggplot2)
@@ -223,7 +222,7 @@ require("knitr")
 
 WORKING_DIR="/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_PCA/"
 # samples_info <-read.csv("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena/c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba.ALL.clst")
-# pop=c("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080")
+pop=c("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080")
 pop=c("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur_n050")
 # pop= c("c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n111")
 pop=c("c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n030")
@@ -277,7 +276,7 @@ PC <- PC %>%  mutate(.,
                           ifelse(Pop == "c_ll_vl", "L.l.stroganovi", 
                           ifelse(Pop == "c_ll_ya", "L.l.wrangeli",     
                                  NA)))))))) %>% 
-  mutate (., Populations =  ifelse (Pop == "c_ll_po", "Bialowieza",
+  mutate (., Populations =  ifelse (Pop == "c_ll_po", "NE-Poland",
                           ifelse (Pop == "c_ll_ur", "Urals",
                           ifelse (Pop == "c_ll_ki", "Kirov",
                           ifelse (Pop == "c_ll_la", "Latvia",
@@ -292,13 +291,13 @@ PC <- PC %>%  mutate(.,
                           ifelse (Pop == "c_ll_ya", "Yakutia",
                           ifelse (Pop == "c_lp_sm", "Sierra Morena",
                           ifelse (Pop == "c_lp_do", "Doñana", NA)))))))))))))))) %>% 
-    mutate (., color =  ifelse (Populations == "Bialowieza", brewer.pal(12,"Paired")[4], 
-                      ifelse (Populations == "Urals", brewer.pal(11,"BrBG")[9], 
-                      ifelse (Populations == "Balkans", brewer.pal(12,"Paired")[10], 
+    mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
+                      ifelse (Populations == "Urals", "#0F4909", 
+                      ifelse (Populations == "Balkans", "#A035AF", 
                       ifelse (Populations == "Carpathians", brewer.pal(12,"Paired")[9], 
-                      ifelse (Populations == "Kirov", brewer.pal(12,"Paired")[1], 
+                      ifelse (Populations == "Kirov", viridis_pal()(5)[1], 
                       ifelse (Populations == "Latvia", brewer.pal(12,"Paired")[3], 
-                      ifelse (Populations == "Norway", brewer.pal(12,"Paired")[2], 
+                      ifelse (Populations == "Norway", viridis_pal()(5)[2], 
                       ifelse (Populations == "Töv", brewer.pal(12,"Paired")[12], 
                       ifelse (Populations == "Tuva", brewer.pal(12,"Paired")[8], 
                       ifelse (Populations == "Khentii-Aimag", brewer.pal(12,"Paired")[7], 
@@ -312,21 +311,22 @@ PC <- PC %>%  mutate(.,
                            
                            
                            
-cols <- c("Bialowieza"=brewer.pal(12,"Paired")[4], 
-          "Urals"=brewer.pal(11,"BrBG")[9], 
+cols <- c("NE-Poland"=viridis_pal()(5)[3], 
+          "Urals"="#0F4909", 
           "Balkans"=brewer.pal(12,"Paired")[10], 
           "Carpathians"=brewer.pal(12,"Paired")[9], 
-          "Kirov"=brewer.pal(12,"Paired")[1], 
+          "Kirov"=viridis_pal()(5)[1], 
           "Latvia"=brewer.pal(12,"Paired")[3], 
-          "Norway"=brewer.pal(12,"Paired")[2], 
-          "Töv"=brewer.pal(12,"Paired")[12], 
+       "Norway"=viridis_pal()(5)[2], 
+       "Töv"=brewer.pal(12,"Paired")[12], 
           "Tuva"=brewer.pal(12,"Paired")[8], 
-          "Khentii-Aimag"=brewer.pal(12,"Paired")[7], 
+          "Khentii"=brewer.pal(12,"Paired")[7], 
           "Ömnögovi"=brewer.pal(12,"Paired")[11], 
           "Vladivostok"=brewer.pal(12,"Paired")[5], 
           "Yakutia"=brewer.pal(12,"Paired")[6],
           "Sierra Morena"=brewer.pal(8, "Greys") [5],
           "Doñana"=brewer.pal(8, "Greys") [8])
+
 
 PC$Populations <- factor (PC$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii-Aimag", "Ömnögovi",  "Yakutia", "Vladivostok"))
 
@@ -763,20 +763,21 @@ PC <- PC %>%  mutate(.,
                            
                            
                            
-cols <- c("Poland"=brewer.pal(12,"Paired")[4], 
-          "Urals"=brewer.pal(9,"RdPu")[6], 
+cols <- c("NE-Poland"=viridis_pal()(5)[3], 
+          "Urals"="#54BAB3", 
           "Balkans"=brewer.pal(12,"Paired")[10], 
           "Carpathians"=brewer.pal(12,"Paired")[9], 
-          "Kirov"=brewer.pal(12,"Paired")[1], 
+          "Kirov"=viridis_pal()(5)[1], 
           "Latvia"=brewer.pal(12,"Paired")[3], 
-          "Norway"=brewer.pal(12,"Paired")[2], 
-          "Tov"=brewer.pal(12,"Paired")[12], 
+       "Norway"=viridis_pal()(5)[2], 
+       "Töv"=brewer.pal(12,"Paired")[12], 
           "Tuva"=brewer.pal(12,"Paired")[8], 
-          "Khentii-Aimag"=brewer.pal(12,"Paired")[7], 
-          "Omnogovi"=brewer.pal(12,"Paired")[11], 
+          "Khentii"=brewer.pal(12,"Paired")[7], 
+          "Ömnögovi"=brewer.pal(12,"Paired")[11], 
           "Vladivostok"=brewer.pal(12,"Paired")[5], 
           "Yakutia"=brewer.pal(12,"Paired")[6],
-          "Zoo"=brewer.pal(8, "Greys") [5])
+          "Sierra Morena"=brewer.pal(8, "Greys") [5],
+          "Doñana"=brewer.pal(8, "Greys") [8])
 
 title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
 
