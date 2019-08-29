@@ -142,7 +142,7 @@ echo $N_SITES
 # I have 2096552 sites only lynx lynx. Oct 2017.
 # I have 1773532 sites only lynx lynx oriental. Oct 2017.
 # I have 1488015 sites only lynx lynx west. Nov 2017.
-
+# I have 2597651 sites only lynx lynx wo balcans. Aug 2019.
 
 
 # Does it make sense?
@@ -195,9 +195,13 @@ rm $POP.*clst.borrar
 
 
 ```{bash}
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_PCA/*.ALL.clst /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_PCA/
+# scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_PCA/*77*.ALL.clst /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_PCA/
 
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_PCA/*.covar /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_PCA/
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_PCA/*.ALL.clst /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_PCA/
+
+# scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_PCA/*.covar /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_PCA/
+
+scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_PCA/*.covar /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_PCA/
 
 # scp mlucena@genomics-a.ebd.csic.es:/opt/ngsTools_19092016/Scripts/plotPCA.R /Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA
 
@@ -220,12 +224,14 @@ require("knitr")
 # getwd()
 # opts_knit$set(root.dir = normalizePath("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena"))
 
-WORKING_DIR="/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_PCA/"
+WORKING_DIR="/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/ANGSD_analysis/analysis_PCA/"
 # samples_info <-read.csv("/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/analysis_PCA/test_intergenic_elena/c_ll_ba-c_ll_cr-c_ll_ka-c_ll_ki-c_ll_la-c_ll_no-c_ll_og-c_ll_po-c_ll_to-c_ll_tu-c_ll_vl-c_ll_ya-c_lp_do-c_lp_sm-h_ll_ba.ALL.clst")
-pop=c("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080")
-pop=c("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur_n050")
+
+pop=c("c_ll_no-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n077")
+# pop=c("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n080")
+# pop=c("c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur_n050")
 # pop= c("c_lp_do-c_lp_sm-c_ll_no-c_ll_ba-h_ll_ba-c_ll_cr-c_ll_po-c_ll_la-c_ll_ki-c_ll_ur-c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n111")
-pop=c("c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n030")
+# pop=c("c_ll_tu-c_ll_to-c_ll_ka-c_ll_og-c_ll_ya-c_ll_vl_n030")
 
 # 
 ###########################################################################################
@@ -317,10 +323,10 @@ cols <- c("NE-Poland"=viridis_pal()(5)[3],
           "Carpathians"=brewer.pal(12,"Paired")[9], 
           "Kirov"=viridis_pal()(5)[1], 
           "Latvia"=brewer.pal(12,"Paired")[3], 
-       "Norway"=viridis_pal()(5)[2], 
-       "Töv"=brewer.pal(12,"Paired")[12], 
+          "Norway"=viridis_pal()(5)[2], 
+          "Töv"=brewer.pal(12,"Paired")[12], 
           "Tuva"=brewer.pal(12,"Paired")[8], 
-          "Khentii"=brewer.pal(12,"Paired")[7], 
+          "Khentii-Aimag"=brewer.pal(12,"Paired")[7], 
           "Ömnögovi"=brewer.pal(12,"Paired")[11], 
           "Vladivostok"=brewer.pal(12,"Paired")[5], 
           "Yakutia"=brewer.pal(12,"Paired")[6],
@@ -328,7 +334,7 @@ cols <- c("NE-Poland"=viridis_pal()(5)[3],
           "Doñana"=brewer.pal(8, "Greys") [8])
 
 
-PC$Populations <- factor (PC$Populations, levels=c("Norway", "Balkans", "Carpathians", "Bialowieza", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii-Aimag", "Ömnögovi",  "Yakutia", "Vladivostok"))
+PC$Populations <- factor (PC$Populations, levels=c("Norway", "Balkans", "Carpathians", "NE-Poland", "Latvia", "Kirov", "Urals", "Tuva", "Töv", "Khentii-Aimag", "Ömnögovi",  "Yakutia", "Vladivostok"))
 
 
 title <- paste("PC",comp[1]," (",signif(eig$val[comp[1]], digits=3)*100,"%)"," / PC",comp[2]," (",signif(eig$val[comp[2]], digits=3)*100,"%)",sep="",collapse="")
