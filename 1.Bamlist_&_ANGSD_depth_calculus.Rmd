@@ -586,6 +586,9 @@ my_sd_truncated_DF <- get_sd (freq_table_truncated_DF)
 
 maxDepth_DF = my_mean_DF + (mean_folds * my_mean_DF)
 minDepth_DF  = my_mean_DF - (mean_folds * my_mean_DF)
+
+## Ojo la forumula para calcular truncated y no truncated son distintas. En principio nosotros queríamos aplicar la primera, pero por error, hemos mantenido la segunda. En cualquier caso, no nos parece mala idea. Estamos filtrando aprox una desviacióne standard. 
+
 maxDepth_truncated_DF = my_mean_truncated_DF + (mean_folds * my_sd_truncated_DF)
 minDepth_truncated_DF  = my_mean_truncated_DF - (mean_folds * my_sd_truncated_DF)
 
@@ -1087,7 +1090,7 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/depth_calculus/d
   
 ```
 
-# RScript:
+# RScript
 
 ```{r}
 
