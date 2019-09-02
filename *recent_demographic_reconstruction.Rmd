@@ -292,14 +292,74 @@ scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstructi
 ```{r}
 # Leo la tabla de Ne.
 
-
+library (data.table)
 library(ggplot2)
-library(RColorBrewer)
+library (dplyr)
+library (magrittr)
+library(plyr)
+library (tidyr)
+library(viridis)
 
 wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/SNeP/"
 
 
-finsNeAll = list.files(path = wd, pattern="*NeAll$")
+sample_files = list.files(path = wd, pattern="*NeAll$")
+list_Ne<- lapply( sample_files, function (x) 
+     # Aquí leo la tabla
+  fread(paste0(wd,x)))
+#names the list using the basename from `l`
+# this also is the step to manipuly the filesnamaes to whatever you like
+names(list_Ne) <- basename( sample_files )
+#bind the rows from the list togetgher, putting the filenames into the colum "id"
+Ne_reconstruction <- rbindlist( list_Ne, idcol = "pop1" ) %>% 
+  # Corto este string para que sea igual en los dos dataset
+  mutate(pop=substr(.$pop1, 1, 7) ) %>% 
+  # Elimino el valor que no me interesa
+  select (-pop1)%>% 
+  mutate (., Populations =  ifelse (pop == "c_ll_po", "NE-Poland",
+                          ifelse (pop == "c_ll_ur", "Urals",
+                          ifelse (pop == "c_ll_ki", "Kirov",
+                          ifelse (pop == "c_ll_la", "Latvia",
+                          ifelse (pop == "c_ll_no", "Norway",
+                          ifelse (pop == "c_ll_ba" | pop == "h_ll_ba", "Balkans" ,
+                          ifelse (pop == "c_ll_cr","Carpathians",
+                          ifelse (pop == "c_ll_to", "Töv",
+                          ifelse (pop == "c_ll_tu", "Tuva",
+                          ifelse (pop == "c_ll_ka", "Khentii-Aimag",
+                          ifelse (pop == "c_ll_mo", "Mongolia",
+                          ifelse (pop == "c_ll_og", "Ömnögovi", 
+                          ifelse (pop == "c_ll_vl", "Vladivostok", 
+                          ifelse (pop == "c_ll_ya", "Yakutia",
+                          ifelse (pop == "c_lp_sm", "Sierra Morena",
+                          ifelse (pop == "c_lp_do", "Doñana", NA))))))))))))))))) %>% 
+  mutate(YBP=GenAgo*5)
+
+
+cols <- c("NE-Poland"=viridis_pal()(5)[3], 
+          "Urals"="#0F4909", 
+          "Carpathians"=brewer.pal(12,"Paired")[9], 
+          "Kirov"=viridis_pal()(5)[1], 
+          "Latvia"=brewer.pal(12,"Paired")[3], 
+          "Norway"=viridis_pal()(5)[2], 
+          "Mongolia"=brewer.pal(12,"Paired")[12], 
+          "Tuva"=brewer.pal(12,"Paired")[8], 
+          "Vladivostok"=brewer.pal(12,"Paired")[5], 
+          "Yakutia"=brewer.pal(12,"Paired")[6])
+
+
+ ggplot (Ne_reconstruction, aes(YBP, Ne, fill=Populations, colour=Populations)) +
+    geom_point(alpha=0.1) +
+    geom_smooth() + 
+    theme_classic() +
+    scale_colour_manual(values = cols)+
+    scale_fill_manual(values = cols) +
+   ggsave(paste(wd,"all_pop.pdf", sep=""), device = "pdf")
+
+
+ 
+ 
+
+
 
 for (i in 1:length(finsNeAll))
 {
