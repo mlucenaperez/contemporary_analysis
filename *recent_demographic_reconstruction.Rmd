@@ -893,5 +893,18 @@ Ahora sobre estos archivos genero los GENEPOP usando PGD spider.
 Despues el archivo genepop generado lo corro en Ne-Estimator. 
 
 
+# 4. LinkNe
+
+Daniel Kleinman y María Lucena
+
+Copio los vcf con mas de 2000 SNPs que hemos usado para SNeP en local para transformarlos a GENEPOP usando PDGSpider
+
+```{bash}
+scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/ll*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
+scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/lp*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
+
+```
+
+Ahora los transformo en local, para que Dani los lance. 
 
 
