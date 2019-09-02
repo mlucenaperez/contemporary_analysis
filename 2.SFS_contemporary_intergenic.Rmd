@@ -1529,7 +1529,8 @@ cols <- c("NE-Poland"=viridis_pal()(5)[3],
           "Vladivostok"=brewer.pal(12,"Paired")[5], 
           "Yakutia"=brewer.pal(12,"Paired")[6],
           "Sierra Morena"=brewer.pal(8, "Greys") [5],
-          "Doñana"=brewer.pal(8, "Greys") [8])
+          "Doñana"=brewer.pal(8, "Greys") [8],
+          "Mongolia"=brewer.pal(12,"Paired")[12])
 
  
 
