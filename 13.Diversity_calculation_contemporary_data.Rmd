@@ -758,26 +758,64 @@ for (POP in POPS)
 
 ```{r}
 
-c_ll_ki_n013_diversity <- rbind (c_ll_ki_n013_autosomes_diversity, c_ll_ki_n013_chrX_diversity ) 
-c_ll_no_n008_diversity <- rbind (c_ll_no_n008_autosomes_diversity, c_ll_no_n008_chrX_diversity )
-c_ll_po_n008_diversity <- rbind (c_ll_po_n008_autosomes_diversity, c_ll_po_n008_chrX_diversity )
-c_lp_sm_n019_diversity <- rbind (c_lp_sm_n019_autosomes_diversity, c_lp_sm_n019_chrX_diversity )
-c_lp_do_n012_diversity <- rbind (c_lp_do_n012_autosomes_diversity, c_lp_do_n012_chrX_diversity )
+c_ll_ki_n013_diversity <- rbind (c_ll_ki_n013_autosomes_diversity, c_ll_ki_n013_chrX_diversity ) %>% 
+  mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
+                      ifelse (Populations == "Kirov", viridis_pal()(5)[1], 
+                      ifelse (Populations == "Norway", viridis_pal()(5)[2], 
+                      ifelse (Populations == "Andujar", "#5DC863FF",
+                      ifelse (Populations == "Doñana", "#FDE725FF", NA)))))) 
+c_ll_no_n008_diversity <- rbind (c_ll_no_n008_autosomes_diversity, c_ll_no_n008_chrX_diversity )%>% 
+  mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
+                      ifelse (Populations == "Kirov", viridis_pal()(5)[1], 
+                      ifelse (Populations == "Norway", viridis_pal()(5)[2], 
+                      ifelse (Populations == "Andujar", "#5DC863FF",
+                      ifelse (Populations == "Doñana", "#FDE725FF", NA)))))) 
+c_ll_po_n008_diversity <- rbind (c_ll_po_n008_autosomes_diversity, c_ll_po_n008_chrX_diversity )%>% 
+  mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
+                      ifelse (Populations == "Kirov", viridis_pal()(5)[1], 
+                      ifelse (Populations == "Norway", viridis_pal()(5)[2], 
+                      ifelse (Populations == "Andujar", "#5DC863FF",
+                      ifelse (Populations == "Doñana", "#FDE725FF", NA)))))) 
+c_lp_sm_n019_diversity <- rbind (c_lp_sm_n019_autosomes_diversity, c_lp_sm_n019_chrX_diversity )%>% 
+  mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
+                      ifelse (Populations == "Kirov", viridis_pal()(5)[1], 
+                      ifelse (Populations == "Norway", viridis_pal()(5)[2], 
+                      ifelse (Populations == "Andujar", "#5DC863FF",
+                      ifelse (Populations == "Doñana", "#FDE725FF", NA)))))) 
+c_lp_do_n012_diversity <- rbind (c_lp_do_n012_autosomes_diversity, c_lp_do_n012_chrX_diversity )%>% 
+  mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
+                      ifelse (Populations == "Kirov", viridis_pal()(5)[1], 
+                      ifelse (Populations == "Norway", viridis_pal()(5)[2], 
+                      ifelse (Populations == "Andujar", "#5DC863FF",
+                      ifelse (Populations == "Doñana", "#FDE725FF", NA)))))) 
 
 
 ### Autosomas
 
-data_diversity_autosomes_filtered_ave_corrected <- rbind (c_ll_ki_n013_autosomes_diversity, c_ll_no_n008_autosomes_diversity, c_ll_po_n008_autosomes_diversity,  c_lp_sm_n019_autosomes_diversity, c_lp_do_n012_autosomes_diversity) 
+data_diversity_autosomes_filtered_ave_corrected <- rbind (c_ll_ki_n013_autosomes_diversity, c_ll_no_n008_autosomes_diversity, c_ll_po_n008_autosomes_diversity,  c_lp_sm_n019_autosomes_diversity, c_lp_do_n012_autosomes_diversity) %>% 
+  mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
+                      ifelse (Populations == "Kirov", viridis_pal()(5)[1], 
+                      ifelse (Populations == "Norway", viridis_pal()(5)[2], 
+                      ifelse (Populations == "Andujar", "#5DC863FF",
+                      ifelse (Populations == "Doñana", "#FDE725FF", NA)))))) 
 
 ### ChrX
 
-data_diversity_chrX_filtered_ave_corrected <- rbind (c_ll_ki_n013_chrX_diversity, c_ll_no_n008_chrX_diversity, c_ll_po_n008_chrX_diversity,  c_lp_sm_n019_chrX_diversity, c_lp_do_n012_chrX_diversity) 
+data_diversity_chrX_filtered_ave_corrected <- rbind (c_ll_ki_n013_chrX_diversity, c_ll_no_n008_chrX_diversity, c_ll_po_n008_chrX_diversity,  c_lp_sm_n019_chrX_diversity, c_lp_do_n012_chrX_diversity) %>% 
+  mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
+                      ifelse (Populations == "Kirov", viridis_pal()(5)[1], 
+                      ifelse (Populations == "Norway", viridis_pal()(5)[2], 
+                      ifelse (Populations == "Andujar", "#5DC863FF",
+                      ifelse (Populations == "Doñana", "#FDE725FF", NA)))))) 
+
 # Uno ambas tablas
 
 data_diversity_filtered_ave_corrected <- rbind (data_diversity_autosomes_filtered_ave_corrected, data_diversity_chrX_filtered_ave_corrected)
 
 rm (data_diversity_filtered_autosomes)
 rm (data_diversity_filtered_chrX)
+
+
 
 ```
 
