@@ -367,19 +367,19 @@ rm (c_lp_sm_n019)
 
 # Analisis de la diversidad
 
-
-## Load table
+## Load library
 ```{r}
-
 library(viridis)
 library(ggplot2); theme_set(theme_minimal())
 library(tidyr)
 library(plyr)
 library(dplyr)
 library(data.table)
+library("arules")
+```
 
-
-
+## Load table
+```{r}
 wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
 wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
 
@@ -388,115 +388,72 @@ data_diversity_filtered <- read.table(paste(wd, "global.per.unit.averages.chr.al
   filter(., !is.na(chr)) %>% 
   filter(., !is.na(region))
 # En esta tabla hay valores de watterson que son 0 a pesar de ser valores que teníamos anteriormente, y que tengamos valores para pi. Esto es por la transformación de watterson para chr, y que hemos realizado. Para los autosomas, hemos dejado el valor como está y para los chr X hemos aplicado una corrección. Como en algunos casoa unque tnga valores de diversidad no tngo valores de chr, al aplicar la corrección se queda en cero. Lo que tngo que hacer ahora es filtrar para los valores que no tengan info de chr. Y eso lo hago aquí, al principio. 
+```
 
+## *Plot: Unit size
+```{r}
 # Tamaño de las unidades
-
 ggplot (data = data_diversity_filtered, aes(length)) +
   geom_histogram() +
   scale_fill_viridis() +
   facet_wrap (~feature, scales = "free")
 ggsave(paste (wd_output, "length_per_unit_all_pops.pdf", sep=""))
 
-
 for (pop in unique(data_diversity_filtered$Populations))
   {
-  
   print (pop)
   ggplot (data=dplyr::filter(data_diversity_filtered,data_diversity_filtered$Populations==!!pop), aes(length)) +
   geom_histogram() +
   scale_fill_viridis() +
   facet_wrap (~feature, scales = "free") 
   ggsave(paste (wd_output, "length_per_unit_",pop,".pdf", sep="" ), device="pdf")
-
   }
- 
 ```
 
-
-## Feature per chr
+## *Table: number of feature per chr
 
 ```{r}
-
 cuentas_perfeature_per_chr <- data_diversity_filtered %>% mutate (autosome_chrX = ifelse(chr=="chrX", "chrX" , ifelse(chr=="chrA1" | chr=="chrC1" | chr=="chrB1" | chr=="chrA2" | chr=="chrC2" | chr=="chrB2" | chr=="chrB3" | chr=="chrB4" | chr=="chrA3" | chr=="chrD1" | chr=="chrD3" | chr=="chrD4" | chr=="chrD2" | chr=="chrF2" | chr=="chrF1" | chr=="chrE2" | chr=="chrE1", "autosome", NA))) %>% dplyr::group_by(feature, autosome_chrX) %>% dplyr::summarise(total_count=n()) 
-
 write.csv(cuentas_perfeature_per_chr, paste (wd_output, "counts_autosome_vs_chrX.csv", sep="" ), quote = F, row.names = F)
-
 ```
 
-## Modifying dataframe
-
-## 1.  Recombination categories
-
-Realmente esto no lo voy a usar más adelante, pero lo dejo por si fuese util. 
+## *Plot: Recombination rate histogram
 
 ```{r}
-
-# Primero hacemos un plot para ver la distribución de los valores, cogemos por ejemplo la población de kirov.
-
+# Hacemos un plot para ver la distribución de los valores, cogemos por ejemplo la población de kirov.
 ggplot(filter(data_diversity_filtered, pop=="c_ll_ki_n013"), aes(x=recombination_rate)) + 
   geom_histogram(binwidth=1, color="black", fill="white") +
   ggsave(paste (wd_output, "histogram_recombination_rate.pdf", sep=""))
-
-
-# Viendo el gráfico, las categorías que hago son:
-
-# <=3 
-# >3 a <=7
-# >7 a <=10
-# >10 a <=20
-# >20
-
-data_diversity_filtered_recomb_cat  <- data_diversity_filtered %>% 
-  dplyr::mutate (recombination_category = ifelse (recombination_rate <=1, "<=1",
-                                   ifelse (recombination_rate <=2, "<=2",
-                                   ifelse (recombination_rate <= 3, "<=3", 
-                                   ifelse (recombination_rate <=7, "<=7",
-                                   ifelse (recombination_rate > 7, ">7", NA))))))
-
-
-data_diversity_filtered_recomb_cat$recombination_category <- factor(data_diversity_filtered_recomb_cat$recombination_category,levels=c("<=0.5", "<=1", "<=2", "<=3",">3&<=7", ">7", ">7&<=10",">10&<=20",">20"))
-
-rm (data_diversity_filtered)
-
 ```
 
-
+## Modifying dataframe
+## 1.  Recombination categories
+```{r}
+# I used a function that discritize a continious variable, based on values of the variable itself (interval), or on the frequency of units under this variable (frequency)
+discrete_recomb <- discretize(data_diversity_filtered$recombination_rate, method = "interval", breaks = 20)
+data_diversity_filtered_recomb_cat  <- cbind (data_diversity_filtered, as.data.frame(discrete_recomb))
+# rm (data_diversity_filtered)
+```
 
 ## 2. Density plot watterson
-
+Now we are plotting a density plot of the diversity (watterson and pi) of the populations. Those are bimodal. Therefore I will get the lowest value of this density plot in order to stablish a threshold for "no diverse" vs "diverse" units. 
 ```{r}
-
-
-# En primer lugar hacemos los density plot de las diversidades para cada población. Como ya los habíamos explorado, vemos que eran bimodales, así que con este código fabrico una tablita que recoge el punto más bajo en ese density plot y lo guarda para usarlo despues como punto de corte. 
-
-# Vamos a intentar sacar el punto más bajo en la distribución de los density plot. 
-
-# Todo esta hecho para watterson
 
 POPS=c("c_ll_ki_n013","c_ll_no_n008", "c_ll_po_n008", "c_lp_sm_n019", "c_lp_do_n012")
 
 for (POP in POPS)
 {
-  
-  
 DATAFRAME <- data_diversity_filtered_recomb_cat %>% dplyr::filter (pop==POP)
-  
 maxY1_position <- which.max(density(log10(DATAFRAME$watterson_ave))$y)
 maxX1_value <- density(log10(DATAFRAME$watterson_ave))$x[maxY1_position] 
-
 maxY_value <- max(density(log10(DATAFRAME$watterson_ave))$y[density(log10(DATAFRAME$watterson_ave))$x>(maxX1_value+3)])
-
 maxY2_position <- which(density(log10(DATAFRAME$watterson_ave))$y == maxY_value)
 maxX2_value <- density(log10(DATAFRAME$watterson_ave))$x[maxY2_position] 
-
 DensityWatterson.Y <- density(log10(DATAFRAME$watterson_ave))$y
 DensityWatterson.X <- density(log10(DATAFRAME$watterson_ave))$x
-
 minY_value <- min(DensityWatterson.Y[DensityWatterson.X < maxX2_value & DensityWatterson.X > maxX1_value])
 minY_position <- which(DensityWatterson.Y == minY_value)
 minX_value <- density(log10(DATAFRAME$watterson_ave))$x[minY_position] 
-
-
 # ggplot(DATAFRAME, aes(log10(watterson_ave))) + 
 #   geom_density() + 
 #   scale_color_viridis(discrete=TRUE) +
@@ -511,18 +468,14 @@ minX_value <- density(log10(DATAFRAME$watterson_ave))$x[minY_position]
 #   scale_fill_viridis(discrete=TRUE) +
 #   geom_vline(xintercept = density(log10(DATAFRAME$watterson_ave))$x[minY_position]) +
 #   ggsave(paste0(wd_output, POP,"_density_feature_watterson.pdf"))
-
-
 assign(paste0(POP,"_density_min_value_watterson"), c(POP,minX_value))
-
 }
 
-# Uno las distintas tablas de puntos de corte. 
+# Join different tables. 
 
 density_min_values_watterson <- as.data.frame(rbind (c_lp_sm_n019_density_min_value_watterson, c_lp_do_n012_density_min_value_watterson, c_ll_ki_n013_density_min_value_watterson, c_ll_po_n008_density_min_value_watterson, c_ll_no_n008_density_min_value_watterson)) 
 names(density_min_values_watterson) <- c("pop", "min_density_value_watterson")
 density_min_values_watterson$min_density_value_watterson <- as.numeric(as.character(density_min_values_watterson$min_density_value_watterson))
-
 
 rm (c_lp_sm_n019_density_min_value_watterson)
 rm (c_lp_do_n012_density_min_value_watterson)
@@ -530,46 +483,27 @@ rm (c_ll_ki_n013_density_min_value_watterson)
 rm (c_ll_po_n008_density_min_value_watterson)
 rm (c_ll_no_n008_density_min_value_watterson) 
 rm (DATAFRAME)
-
-
-
 ```
 
 ## 3. Density plot pairwise
 
 ```{r}
 
-
-# En primer lugar hacemos los density plot de las diversidades para cada población. Como ya los habíamos explorado, vemos que eran bimodales, así que con este código fabrico una tablita que recoge el punto más bajo en ese density plot y lo guarda para usarlo despues como punto de corte. 
-
-# Vamos a intentar sacar el punto más bajo en la distribución de los density plot. 
-
-# Todo esta hecho para pairwise
-
 POPS=c("c_ll_ki_n013","c_ll_no_n008", "c_ll_po_n008", "c_lp_sm_n019", "c_lp_do_n012")
 
 for (POP in POPS)
 {
-  
-  
 DATAFRAME <- data_diversity_filtered_recomb_cat %>% dplyr::filter (pop==POP)
-  
 maxY1_position <- which.max(density(log10(DATAFRAME$pairwise_ave))$y)
 maxX1_value <- density(log10(DATAFRAME$pairwise_ave))$x[maxY1_position] 
-
 maxY_value <- max(density(log10(DATAFRAME$pairwise_ave))$y[density(log10(DATAFRAME$pairwise_ave))$x>(maxX1_value+3)])
-
 maxY2_position <- which(density(log10(DATAFRAME$pairwise_ave))$y == maxY_value)
 maxX2_value <- density(log10(DATAFRAME$pairwise_ave))$x[maxY2_position] 
-
 Densitypairwise.Y <- density(log10(DATAFRAME$pairwise_ave))$y
 Densitypairwise.X <- density(log10(DATAFRAME$pairwise_ave))$x
-
 minY_value <- min(Densitypairwise.Y[Densitypairwise.X < maxX2_value & Densitypairwise.X > maxX1_value])
 minY_position <- which(Densitypairwise.Y == minY_value)
 minX_value <- density(log10(DATAFRAME$pairwise_ave))$x[minY_position] 
-
-
 # ggplot(DATAFRAME, aes(log10(pairwise_ave))) + 
 #    geom_density() + 
 #    scale_color_viridis(discrete=TRUE) +
@@ -584,9 +518,7 @@ minX_value <- density(log10(DATAFRAME$pairwise_ave))$x[minY_position]
 #    scale_fill_viridis(discrete=TRUE) +
 #    geom_vline(xintercept = density(log10(DATAFRAME$pairwise_ave))$x[minY_position]) +
 #   ggsave(paste0(wd_output, POP,"_density_feature_pairwise.pdf"))
-
 assign(paste0(POP,"_density_min_value_pairwise"), c(POP,minX_value))
-
 }
 
 # Uno las distintas tablas de puntos de corte. 
@@ -595,169 +527,111 @@ density_min_values_pairwise <- as.data.frame(rbind (c_lp_sm_n019_density_min_val
 names(density_min_values_pairwise) <- c("pop", "min_density_value_pairwise")
 density_min_values_pairwise$min_density_value_pairwise <- as.numeric(as.character(density_min_values_pairwise$min_density_value_pairwise))
 
-
 rm (c_lp_sm_n019_density_min_value_pairwise)
 rm (c_lp_do_n012_density_min_value_pairwise)
 rm (c_ll_ki_n013_density_min_value_pairwise)
 rm (c_ll_po_n008_density_min_value_pairwise)
 rm (c_ll_no_n008_density_min_value_pairwise) 
 rm (DATAFRAME)
-
-
 ```
 
 ## 4. Create new variable low values to zero
-
+Now I create a new variable replacing the diversity of units below the minimun of the density plot by 0; i.e. below the minimum value of the bimodal distributions, units are not variable, and hence, 0. 
 ```{r}
-
 data_diversity_filtered_recomb_cat_zero_variable <- data_diversity_filtered_recomb_cat %>% 
   dplyr::mutate (watterson_zero = ifelse (pop=="c_lp_sm_n019"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_sm_n019")$min_density_value_watterson) | 
-                                            pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson) | 
-                                            pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson) | 
-                                            pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson) | 
-                                            pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
+pop=="c_lp_do_n012"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_lp_do_n012")$min_density_value_watterson) | 
+pop=="c_ll_ki_n013"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_ki_n013")$min_density_value_watterson) | 
+pop=="c_ll_po_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_po_n008")$min_density_value_watterson) | 
+pop=="c_ll_no_n008"&log10(watterson_ave)<(filter(density_min_values_watterson,pop=="c_ll_no_n008")$min_density_value_watterson),0,watterson_ave)) %>% 
   dplyr::mutate (pairwise_zero = ifelse (pop=="c_lp_sm_n019"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_sm_n019")$min_density_value_pairwise) | 
-                                           pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise) | 
-                                           pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise) | 
-                                           pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise) | 
-                                           pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),0,pairwise_ave)) %>%
+pop=="c_lp_do_n012"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_lp_do_n012")$min_density_value_pairwise) | 
+pop=="c_ll_ki_n013"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_ki_n013")$min_density_value_pairwise) | 
+pop=="c_ll_po_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_po_n008")$min_density_value_pairwise) | 
+pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=="c_ll_no_n008")$min_density_value_pairwise),0,pairwise_ave)) %>%
   dplyr::mutate(tajimaD_transformed = ifelse(watterson_zero!="0" | pairwise_zero!="0", tajimaD, NA)) %>% select (-tajimaD) %>%  dplyr::rename(.,"tajimaD"="tajimaD_transformed")
 
-	
 rm (data_diversity_filtered_recomb_cat)
 ```
 
 ## 5. Rename & order factors
 
 ```{r}
-
 data_diversity_filtered_recomb_cat_zero_variable$Populations <- factor (data_diversity_filtered_recomb_cat_zero_variable$Populations, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
-
 data_diversity_filtered_recomb_cat_zero_variable$feature <- plyr::revalue(data_diversity_filtered_recomb_cat_zero_variable$feature, c("intergenic"="Intergenic", "promoter_gene_1000"="Gen_promoter", "5UTR"="5UTR", "CDS"="CDS", "intron"="Intron", "3UTR"="3UTR", "promoter_lncRNA_1000"="lncRNA_promoter", "lncRNA"="lncRNA_exons", "intron_lncRNA"="lncRNA_intron", "ncRNA"="ncRNA", "UCNE"="UCNE"))
-
 data_diversity_filtered_recomb_cat_zero_variable$feature <- factor (data_diversity_filtered_recomb_cat_zero_variable$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
-
 ```
-
-
 ## 6. Autosomes vs chrX
-
-A partir de ahora debería separar todo el rato cromosomas chrXes de no chrXes. 
-
+Now I split my data.frame between X and autosomes. 
+Consideramos como autosomicas todas aquellas posiciones que no estén en un cromosoma chrX.
 ```{r}
-
-# Consideramos como autosomicas todas aquellas posiciones que no estén en un cromosoma chrX.
-
 data_diversity_filtered_autosomes <- data_diversity_filtered_recomb_cat_zero_variable %>% dplyr::filter (chr!="chrX") %>% dplyr::mutate (type_chr="autosomes")
 data_diversity_filtered_chrX <- data_diversity_filtered_recomb_cat_zero_variable %>% dplyr::filter (chr=="chrX") %>% dplyr::mutate (type_chr="chrX")
-
-
 rm (data_diversity_filtered_recomb_cat_zero_variable)
-
 ```
-
 ## 7. Corrected with intergenic
-
 Corrijo los valores individuales para la media de intergénico
-
 Los datos para qcada poblacion van a tener el mismo dibujo, pero en los ratios si afecta.
-
+Primero calculo los valores para intergénico para poder corregir por ellos, de media y mediana, pero voy a usar media para corregir. La media o mediana que uso para corregir es la sacada de los valores originales, no la que contempla los ceros, pero en realidad estos valores corregidos no se van a usar en ningún análisis posterior, aunque los dejo, por si necesitasemos usarlos en el futuro.
 ```{r}
 
-# Primero calculo los valores para intergénico para poder corregir por ellos, de media y mediana, pero voy a usar media para corregir. La media o mediana que uso para corregir es la sacada de los valores originales, no la que contempla los ceros, pero en realidad estos valores corregidos no se van a usar en ningún análisis posterior, aunque los dejo, por si necesitasemos usarlos en el futuro.
-
-# Dataframe con mis valores para corregir del autosoma:
-
+# Autosomes
 autosomes_intergenic_average_values <- data_diversity_filtered_autosomes  %>% dplyr::filter (feature=="Intergenic") %>% dplyr::group_by(pop) %>%
              dplyr::summarise(
                        total_count=n(), 
                        mean_watterson_ave_intergenic=mean(watterson_ave),
                        mean_pairwise_ave_intergenic=mean(pairwise_ave),
-
                        median_watterson_ave_intergenic=median(watterson_ave),
                        median_pairwise_ave_intergenic=median(pairwise_ave),
-                       
                       # Values considering zeros.
-
                        mean_watterson_ave_zero_intergenic=mean(watterson_zero),
                        mean_pairwise_ave_zero_intergenic=mean(pairwise_zero),
-
                        median_watterson_ave_zero_intergenic=median(watterson_zero),
                        median_pairwise_ave_zero_intergenic=median(pairwise_zero))
 
-  
-# Dataframe con mis valores para corregir del chrX:
-
+# ChrX:
 chrX_intergenic_average_values <- data_diversity_filtered_chrX  %>% dplyr::filter (feature=="Intergenic") %>% dplyr::group_by(pop) %>%
              dplyr::summarise(
                        total_count=n(), 
                        mean_watterson_ave_intergenic=mean(watterson_ave),
                        mean_pairwise_ave_intergenic=mean(pairwise_ave),
-
                        median_watterson_ave_intergenic=median(watterson_ave),
                        median_pairwise_ave_intergenic=median(pairwise_ave),
-                       
                       # Values considering zeros.
-
                        mean_watterson_ave_zero_intergenic=mean(watterson_zero),
                        mean_pairwise_ave_zero_intergenic=mean(pairwise_zero),
-
                        median_watterson_ave_zero_intergenic=median(watterson_zero),
                        median_pairwise_ave_zero_intergenic=median(pairwise_zero))
 
-  
-  
 # Saco las tablas para cada población y añado una columna en la que corrijo por la media de pairwise, per unit. 
 # Los valores calculados, también me servirán a posteriori para calcular la mediana corregida. 
-
 # Realmente aunque no vaya a usar los valores corregidos esto es util pq separo en poblaciones
-
 POPS=c("c_ll_ki_n013","c_ll_no_n008","c_ll_po_n008", "c_lp_sm_n019","c_lp_do_n012")
-
 for (POP in POPS)
 {
   print (POP)
-
   # 1.- Media de intergénico por poblacion.
-  
   ## autosomes
-  
   autosomes_pairwise_average_intergenic_per_unit <- as.numeric(autosomes_intergenic_average_values %>% dplyr::filter (pop==as.character(POP)) %>% dplyr::select (mean_pairwise_ave_intergenic)) 
   autosomes_watterson_average_intergenic_per_unit <- as.numeric(autosomes_intergenic_average_values %>% dplyr::filter (pop==as.character(POP)) %>% dplyr::select (mean_watterson_ave_intergenic))
-  
-
   dataframe_autosomes <-  data_diversity_filtered_autosomes %>%  dplyr::filter (pop==as.character(POP)) %>% 
   mutate(pairwise_ave_corrected = pairwise_ave/autosomes_pairwise_average_intergenic_per_unit) %>%  
   mutate(watterson_ave_corrected= watterson_ave/autosomes_watterson_average_intergenic_per_unit) 
-  
-  
-  assign(paste(POP,"_autosomes_diversity", sep=""), dataframe_autosomes)
+   assign(paste(POP,"_autosomes_diversity", sep=""), dataframe_autosomes)
   rm (dataframe_autosomes)
-  
-  
-  ## chrX
-
+   ## chrX
   chrX_pairwise_average_intergenic_per_unit <- as.numeric(chrX_intergenic_average_values %>% dplyr::filter (pop==as.character(POP)) %>% dplyr::select (mean_pairwise_ave_intergenic)) 
   chrX_watterson_average_intergenic_per_unit <- as.numeric(chrX_intergenic_average_values %>% dplyr::filter (pop==as.character(POP)) %>% dplyr::select (mean_watterson_ave_intergenic))
-  
-
-   dataframe_chrX <-  data_diversity_filtered_chrX %>%  dplyr::filter (pop==as.character(POP)) %>% 
+    dataframe_chrX <-  data_diversity_filtered_chrX %>%  dplyr::filter (pop==as.character(POP)) %>% 
   mutate(pairwise_ave_corrected = pairwise_ave/chrX_pairwise_average_intergenic_per_unit) %>%  
   mutate(watterson_ave_corrected = watterson_ave/chrX_watterson_average_intergenic_per_unit) 
-  
-  
-  assign(paste(POP,"_chrX_diversity", sep=""), dataframe_chrX)
+    assign(paste(POP,"_chrX_diversity", sep=""), dataframe_chrX)
   rm (dataframe_chrX)
 }
 
 ```
-
-
 ## 8. Fusiono tablas:
-
-
 ```{r}
-
 c_ll_ki_n013_diversity <- rbind (c_ll_ki_n013_autosomes_diversity, c_ll_ki_n013_chrX_diversity ) %>% 
   mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
                       ifelse (Populations == "Kirov", viridis_pal()(5)[1], 
@@ -788,51 +662,33 @@ c_lp_do_n012_diversity <- rbind (c_lp_do_n012_autosomes_diversity, c_lp_do_n012_
                       ifelse (Populations == "Norway", viridis_pal()(5)[2], 
                       ifelse (Populations == "Andujar", "#5DC863FF",
                       ifelse (Populations == "Doñana", "#FDE725FF", NA)))))) 
-
-
 ### Autosomas
-
 data_diversity_autosomes_filtered_ave_corrected <- rbind (c_ll_ki_n013_autosomes_diversity, c_ll_no_n008_autosomes_diversity, c_ll_po_n008_autosomes_diversity,  c_lp_sm_n019_autosomes_diversity, c_lp_do_n012_autosomes_diversity) %>% 
   mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
                       ifelse (Populations == "Kirov", viridis_pal()(5)[1], 
                       ifelse (Populations == "Norway", viridis_pal()(5)[2], 
                       ifelse (Populations == "Andujar", "#5DC863FF",
                       ifelse (Populations == "Doñana", "#FDE725FF", NA)))))) 
-
 ### ChrX
-
 data_diversity_chrX_filtered_ave_corrected <- rbind (c_ll_ki_n013_chrX_diversity, c_ll_no_n008_chrX_diversity, c_ll_po_n008_chrX_diversity,  c_lp_sm_n019_chrX_diversity, c_lp_do_n012_chrX_diversity) %>% 
   mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
                       ifelse (Populations == "Kirov", viridis_pal()(5)[1], 
                       ifelse (Populations == "Norway", viridis_pal()(5)[2], 
                       ifelse (Populations == "Andujar", "#5DC863FF",
                       ifelse (Populations == "Doñana", "#FDE725FF", NA)))))) 
-
 # Uno ambas tablas
-
 data_diversity_filtered_ave_corrected <- rbind (data_diversity_autosomes_filtered_ave_corrected, data_diversity_chrX_filtered_ave_corrected)
-
 rm (data_diversity_filtered_autosomes)
 rm (data_diversity_filtered_chrX)
-
-
-
 ```
 
 # -----------------------------------------------------------------
-
 ## General stats: Per pop
-
 ### Empirical values per pop
-
 Ahora, usando las tablas que acabo de crear saco los estadísticos de todos los valores que me interesan. 
-
-
 ```{r}
-
 # Basic stats per unit per pop. 
 library("Hmisc")
-
 diversity_stats_pop <- function(diversity_df)
 {
   diversity_stats_df <- 
@@ -968,18 +824,11 @@ return(diversity_stats_df)
 
 stats_df_pop_autosomes <- diversity_stats_pop(data_diversity_autosomes_filtered_ave_corrected) %>%  mutate (type_chr="autosomes")
 stats_df_pop_chrX <- diversity_stats_pop(data_diversity_chrX_filtered_ave_corrected) %>%  mutate (type_chr="chrX")
-
-
 # Las fusiono y las guardo
-
 stats_df_pop <- rbind (stats_df_pop_autosomes, stats_df_pop_chrX)
-
 write.table(stats_df_pop, paste(wd_output,"stats_diversity_per_pop.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
-
 #rm (stats_df_pop_autosomes)
 #rm (stats_df_pop_chrX)
-
-
 ```
 
 ### Empirical valuer per pop & different group (feature, chr, region) 
@@ -1099,39 +948,26 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
 
                        upperw_watterson_zero_zero = q75_watterson_zero_zero + 1.5 * IQR_watterson_zero_zero,
                        upperw_pairwise_zero_zero  = q75_pairwise_zero_zero  + 1.5 * IQR_pairwise_zero_zero,
-                       
                        # Valores recombinación
-                       
                        mean_recombination_rate=mean(recombination_rate, na.rm=TRUE),
                        wmean_recombination_rate=weighted.mean(recombination_rate,w=informative_sites, na.rm=TRUE),
-                       
                        # Valores divergencia
-                       
                        mean_divergence_rate=mean(divergence, na.rm=TRUE),
                        wmean_divergence_rate=weighted.mean(divergence,w=informative_sites_substitutions, na.rm=TRUE)) %>% 
-                       
   dplyr::mutate (., Populations =  ifelse (pop == "c_ll_po_n008", "NE_Poland",
                             ifelse (pop == "c_ll_ki_n013", "Kirov", 
                             ifelse (pop == "c_ll_no_n008", "Norway", 
                             ifelse (pop == "c_lp_sm_n019", "Andujar",  
                             ifelse (pop == "c_lp_do_n012", "Donana", NA)))))) %>% 
-    
   dplyr::mutate (., Species =ifelse (pop == "c_ll_po_n008", "L.lynx",
                             ifelse (pop == "c_ll_ki_n013", "L.lynx", 
                             ifelse (pop == "c_ll_no_n008", "L.lynx", 
                             ifelse (pop == "c_lp_sm_n019", "L.pardinus",
                             ifelse (pop == "c_lp_do_n012", "L.pardinus", NA))))))
-
-
-
 diversity_stats_df_grouped$Populations <- factor (diversity_stats_df_grouped$Populations, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
-
 if("chr" %in% colnames(diversity_stats_df_grouped))
 {diversity_stats_df_grouped$chr <- factor(diversity_stats_df_grouped$chr, levels = c("chrA1","chrC1","chrB1","chrA2","chrB2","chrC2","chrA3","chrB3","chrB4","chrD1","chrD2","chrD3","chrD4","chrE1","chrE2","chrF1","chrF2","chrX"))}
-
-
 return (diversity_stats_df_grouped)
-
 }
 
 
@@ -1308,6 +1144,12 @@ write.table(stats_df_pop_region_chr, paste(wd_output,"stats_diversity_per_pop_pe
 
 ```
 
+# ----------
+## GLM on chr
+
+```{r}
+
+```
 
 
 # ----------
