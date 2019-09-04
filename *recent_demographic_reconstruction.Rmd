@@ -265,7 +265,7 @@ for PED_FILE in *.ped
 do
 declare POP=$(echo $PED_FILE | cut -d "." -f 1)
 #declare SAMPLE_SIZE=$(grep $POP sample_size_file.csv | cut -d"," -f 2)
-SNePv1.1 -ped $PED_FILE -out ./$POP -ld -recrate 1.9e-8  -svedf -samplesize 1
+SNePv1.1 -ped $PED_FILE -out ./$POP -ld -recrate 1.9e-8  -svedf -samplesize 1 #The sex-averaged recombination rate across the cat genome was 1.9 cM/Mb (see: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4889657/)
 done
 
 # Otras variantes del script están en mi máquina virtual en UBUNTU.
@@ -955,16 +955,157 @@ Despues el archivo genepop generado lo corro en Ne-Estimator.
 
 # 4. LinkNe
 
-Daniel Kleinman y María Lucena
+Daniel Kleinman y María Lucena. Seguimos las indicaciones de https://github.com/chollenbeck/LinkNe
 
-Copio los vcf con mas de 2000 SNPs que hemos usado para SNeP en local para transformarlos a GENEPOP usando PDGSpider
-
+##Puesta a punto del programa:
 ```{bash}
-scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/ll*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
-scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/lp*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
+
+#Primero descargo el programa de https://github.com/chollenbeck/LinkNe y lo guardo en mi ordenador en /Users/dani/ownCloud/publico/Eurasian lynx phylogeography/recent_demographic_reconstruction/LinkNe/input/LinkNe-master/
+
+#Pruebo a lanzarlo sin archivos de entrada y me da un error de perl de ausencia de dependencias necesarias. Desde la terminal, descargo en mi ordenador los siguientes módulos:
+cpan Data::Dumper
+cpan Getopt::Long
+cpan Pod::Usage
+cpan Statistics::Distributions
 
 ```
 
-Ahora los transformo en local, para que Dani los lance. 
+##Obtención de los archivos input:
+###Matrices de tasas de recombinación (muy lento, descartado).
+```{bash}
 
+cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
+
+#En primer lugar, pasamos de vcf a bed para que los archivos sean más manejables.
+INPUT_VCFS=$(ls *.vcf)
+for vcf in ${INPUT_VCFS[@]}
+  do
+  POP=$(echo ${vcf} | cut -d'.' -f 4 | cut -d'_' -f-3)
+  echo ${POP}
+  ggrep -v '#' ${vcf} | awk -F"\t" '{printf ("%s\t%s\t%s\n", $1,$2-1,$2)}' > ${vcf/.vcf/.bed}
+  done
+
+#En segundo lugar, para cada archivo de población iteramos sobre cada posición y calculamos la distancia física respecto a cada una de las otras posiciones (si están en el mismo scaffold), y convertimos a distancia genética (asumimos 0.5 si están en distintos scaffolds). Guardamos dichos valores en columnas (una por cada posición) que vamos uniendo en un solo archivo. Es lentísimo, tardaría meses o años.
+FILE=lp_perspecies.trimmed_filtered1.ann.c_lp_sm_intergenic_filtered_more_than_2000_SNPS.bed
+TOTAL=$(< $FILE wc -l)
+COUNTER=0
+awk -F"\t" '{printf ("%s_%s\n", $1,$3)}' $FILE > ../output/${FILE/.bed/.rec_matrix}
+mapfile -t ROWS < $FILE
+for row in "${ROWS[@]}"
+  do
+  SCAFFOLD=$(echo "$row" | cut -f1)
+  rm ../output/temporary_column.borrar
+  for row_bis in "${ROWS[@]}"
+    do
+    SCAFFOLD_BIS=$(echo "$row_bis" | cut -f1)
+    if [ $SCAFFOLD == $SCAFFOLD_BIS ]
+      then
+      POSITION=$(echo "$row" | cut -f3)
+      POSITION_BIS=$(echo "$row_bis" | cut -f3)
+      PHYSICAL_DISTANCE=$((POSITION-POSITION_BIS))
+      GENETIC_DISTANCE=$(echo ${PHYSICAL_DISTANCE#-}*0.000000019 | bc) #1.9cM/Mb means 0.019M for 10^6bp, which means 1.9*10^-8M/bp
+      else
+      GENETIC_DISTANCE=0.5
+    fi
+    echo -e "$GENETIC_DISTANCE" >> ../output/temporary_column.borrar
+    done
+  paste ../output/${FILE/.bed/.rec_matrix} ../output/temporary_column.borrar
+  rm ../output/temporary_column.borrar
+  ((COUNTER++))
+  if [ $(( $COUNTER % 1000 )) == 0 ]
+    then
+    echo "processed $COUNTER rows out of $TOTAL"
+  fi
+  done
+
+#Opción alternativa que calcula tasas de recombinación dentro de cada scaffold y las guarda como tabla. Posteriormente, en R se puede importar la tabla y convertirla a matriz (paquete reshape o muchas otras opciones), automáticamente rellenando con NAs las comparaciones que falten. Reemplazar los NAs por 0.5 sería el último paso. Aunque es mucho más rápido que el anterior método, sigue siendo demasiado lento, tardaría muchos días.
+cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
+rm ../output/${FILE/.bed/.distance}
+FILE=lp_perspecies.trimmed_filtered1.ann.c_lp_sm_intergenic_filtered_more_than_2000_SNPS.bed
+SCAFFOLDS=$(cut -f1 $FILE | uniq)
+for s in ${SCAFFOLDS[@]}
+  do
+  echo ${s}
+  SUBSET=$(grep $s $FILE)
+  while IFS="\n" read -r row
+    do
+    #echo $row
+    POSITION=$(echo "${row}" | cut -f3)
+    while IFS="\n" read -r row_bis
+      do
+      #echo $row_bis
+      POSITION_BIS=$(echo "$row_bis" | cut -f3)
+      PHYSICAL_DISTANCE=$((POSITION-POSITION_BIS))
+      GENETIC_DISTANCE=$(echo ${PHYSICAL_DISTANCE#-}*0.000000019 | bc) #1.9cM/Mb means 0.019M for 10^6bp, which means 1.9*10^-8M/bp
+      echo -e "$s_$POSITION\t$s_$POSITION_BIS\t$GENETIC_DISTANCE" >> ../output/${FILE/.bed/.distance}
+      done <<< "$SUBSET"
+    done <<< "$SUBSET"
+  done
+
+```
+
+###Mapas genéticos:
+```{bash}
+
+cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
+
+INPUT_BEDS=$(ls *.bed)
+for pop in ${INPUT_BEDS[@]}
+  do 
+  #echo ${pop}
+  echo -e "locus\tchromosome\tposition" > ${pop/.bed/.map}
+  POP=$(echo ${pop} | cut -d'.' -f 4 | cut -d'_' -f-3)
+  echo ${POP}
+  LC_NUMERIC=C awk -F"\t" '{printf ("%s_%s\t%s\t%.9f\n", $1,$3,$1,$3*0.000000019)}' ${pop} | sed 's/lp23\.s//g' >> ${pop/.bed/.map} #LC_NUMERIC=C to force a dot as the decimal separator. Otherwise it will print commas even though I've set my mac to use dots as the default...
+  done
+
+```
+
+###Genotipos en formato genepop:
+```{bash}
+
+#Copio los vcf con mas de 2000 SNPs que hemos usado para SNeP en local para transformarlos a GENEPOP usando PDGSpider:
+
+scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/ll*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
+scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/lp*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
+
+#Ahora los transformo en local, para que Dani los lance.
+
+#Como los nombres de los SNPs son diferentes que en los map, modifico los genepop.
+cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
+GENEPOP_LIST=$(ls *intergenic_filtered_more_than_2000_SNPs.txt)
+for file in ${GENEPOP_LIST[@]}
+  do
+  #echo ${file}
+  POP=$(echo ${file} | cut -d'_' -f-3)
+  echo ${POP}
+  SPECIES=$(echo ${file} | cut -d'_' -f 2)
+  N_PED=$(sed '/Pop/q' ${file} | ghead -n -1 | wc -l)
+  N_MAP=$(< ${SPECIES}_perspecies.trimmed_filtered1.ann.${file/txt/map} wc -l)
+  if [ $N_PED == $N_MAP ]
+    then echo "correct SNP number"
+    else echo "wrong SNP number"
+  fi
+  GENOTYPES=$(sed -n '/Pop/,$p' ${file})
+  echo $POP > ${file/txt/genepop}
+  gtail -n +2 ${SPECIES}_perspecies.trimmed_filtered1.ann.${file/txt/map} | cut -f 1 >> ${file/txt/genepop}
+  echo "$GENOTYPES" >> ${file/txt/genepop}
+  done
+
+```
+
+##Ejecución del programa:
+```{bash}
+
+cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
+
+POPS=$(ls *.bed | cut -d'.' -f 4 | cut -d'_' -f-3)
+for pop in ${POPS[@]}
+  do
+  echo ${pop}
+  SPECIES=$(echo ${pop} | cut -d'_' -f 2)
+  perl LinkNe-master/LinkNe.pl -i ${pop}_intergenic_filtered_more_than_2000_SNPs.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic_filtered_more_than_2000_SNPs.map -o ../output/${pop}_intergenic_filtered_more_than_2000_SNPs.linkne
+  done
+
+```
 
