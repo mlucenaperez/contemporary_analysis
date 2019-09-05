@@ -691,6 +691,96 @@ data_diversity_filtered_ave_corrected$Populations <- factor (data_diversity_filt
 
 data_diversity_filtered_ave_corrected$feature <- factor (data_diversity_filtered_ave_corrected$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
 ```
+
+## --------
+# Plot empirical data
+
+## Set up colours
+
+```{r}
+cols <- c("NE_Poland"=viridis_pal()(5)[3], 
+          "Kirov"=viridis_pal()(5)[1], 
+          "Norway"=viridis_pal()(5)[2], 
+          "Andujar"="#5DC863FF",
+          "Donana"="#FDE725FF")
+```
+## *Unit size
+```{r}
+# Tamaño de las unidades
+ggplot (data = data_diversity_filtered_ave_corrected, aes(length)) +
+  geom_histogram() +
+  scale_fill_viridis() +
+  facet_wrap (~feature, scales = "free")
+ggsave(paste (wd_output, "length_per_unit_all_pops.pdf", sep=""))
+
+for (pop in unique(data_diversity_filtered_ave_corrected$Populations))
+  {
+  print (pop)
+  ggplot (data=dplyr::filter(data_diversity_filtered_ave_corrected,data_diversity_filtered_ave_corrected$Populations==!!pop), aes(length)) +
+  geom_histogram() +
+  scale_fill_viridis() +
+  facet_wrap (~feature, scales = "free") 
+  ggsave(paste (wd_output, "length_per_unit_",pop,".pdf", sep="" ), device="pdf")
+  }
+```
+
+## *Recombination histogram
+
+```{r}
+# Hacemos un plot para ver la distribución de los valores, cogemos por ejemplo la población de kirov.
+ggplot(filter(data_diversity_filtered_ave_corrected, pop=="c_ll_ki_n013"), aes(x=recombination_rate)) + 
+  geom_histogram(binwidth=1, color="black", fill="white") +
+  ggsave(paste (wd_output, "histogram_recombination_rate.pdf", sep=""))
+```
+
+## *Recombination and regions
+```{r}
+
+  
+ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), aes(region,recombination_rate))+
+  geom_boxplot() + #geom_violin
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+ ggsave(paste (wd_output, "boxplot_violin_plot/","recombination_rate_per_region.pdf", sep="" ))
+
+
+ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), aes(region,recombination_rate))+
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+  stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
+ ggsave(paste (wd_output, "boxplot_violin_plot/","recombination_rate_per_region_mean_se.pdf", sep="" ))
+
+```
+
+## *Divergence  histogram
+
+```{r}
+ggplot(filter(data_diversity_filtered_ave_corrected, pop=="c_ll_ki_n013"), aes(x=divergence)) + 
+  geom_histogram(color="black", fill="white") +
+  ggsave(paste (wd_output, "histogram_divergence.pdf", sep=""))
+```
+
+##*Divergence and regions
+
+```{r}
+
+ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"),aes(region,divergence))+
+  geom_boxplot() + #geom_violin
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+ ggsave(paste (wd_output, "boxplot_violin_plot/","divergence_per_region.pdf", sep="" ))
+
+
+ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"),aes(region,divergence))+
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+  stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
+ ggsave(paste (wd_output, "boxplot_violin_plot/","divergence_per_region_mean_se.pdf", sep="" ),height = 7, width = 7)
+
+
+```
+
+
 # ----------
 ## Population metrics
 Primero creo una formula para poder calcular la stdev basada en bootstrapping.
@@ -939,8 +1029,7 @@ write.table(stats_df_pop_region_recomb, paste(wd_output,"stats_diversity_per_pop
 
 # ----------
 
-## *Plot basic stats
-
+# Plot summarized data
 ## Set up colours
 
 ```{r}
@@ -951,33 +1040,57 @@ cols <- c("NE_Poland"=viridis_pal()(5)[3],
           "Donana"="#FDE725FF")
 ```
 
-## *Unit size
-```{r}
-# Tamaño de las unidades
-ggplot (data = data_diversity_filtered_ave_corrected, aes(length)) +
-  geom_histogram() +
-  scale_fill_viridis() +
-  facet_wrap (~feature, scales = "free")
-ggsave(paste (wd_output, "length_per_unit_all_pops.pdf", sep=""))
 
-for (pop in unique(data_diversity_filtered_ave_corrected$Populations))
-  {
-  print (pop)
-  ggplot (data=dplyr::filter(data_diversity_filtered_ave_corrected,data_diversity_filtered_ave_corrected$Populations==!!pop), aes(length)) +
-  geom_histogram() +
-  scale_fill_viridis() +
-  facet_wrap (~feature, scales = "free") 
-  ggsave(paste (wd_output, "length_per_unit_",pop,".pdf", sep="" ), device="pdf")
-  }
-```
-
-## *Recombination histogram
+## *Features and diversity
 
 ```{r}
-# Hacemos un plot para ver la distribución de los valores, cogemos por ejemplo la población de kirov.
-ggplot(filter(data_diversity_filtered_ave_corrected, pop=="c_ll_ki_n013"), aes(x=recombination_rate)) + 
-  geom_histogram(binwidth=1, color="black", fill="white") +
-  ggsave(paste (wd_output, "histogram_recombination_rate.pdf", sep=""))
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+              aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+                aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"feature_categories_vs_watterson_autosomes.pdf",sep=""))
+
+
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+              aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+                aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"feature_categories_vs_pairwise_autosomes.pdf",sep=""))
+  
+  
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_chrX_feature, !is.na(feature)), 
+              aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_chrX_feature, !is.na(feature)), 
+                aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"feature_categories_vs_watterson_chrX.pdf",sep=""))
+
+
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+              aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+                aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"feature_categories_vs_pairwise_chrX.pdf",sep=""))
+
 ```
 
 
@@ -1030,20 +1143,6 @@ ggplot() +
   facet_wrap(~Species, ncol=1, scales="free_y") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
   ggsave(paste(wd_output,"recombination_categories_vs_pairwise_chrX.pdf",sep=""))
-  
-  
-
-# ggplot(data_diversity_autosomes_filtered_ave_corrected,aes(recombination_rate,watterson_ave))+
-#   geom_point() +
-#   scale_color_viridis(discrete=TRUE) +
-#   scale_fill_viridis(discrete=TRUE) +
-#   facet_grid(~pop)
-# 
-# ggplot(data_diversity_autosomes_filtered_ave_corrected,aes(recombination_rate,pairwise_ave, fill=pop, colour=pop))+
-#   geom_point() +
-#   scale_color_viridis(discrete=TRUE) +
-#   scale_fill_viridis(discrete=TRUE) +
-#   facet_grid(~pop)
 
 ```
 
@@ -1076,26 +1175,11 @@ ggplot() +
   
   
 
-  
-ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), aes(region,recombination_rate))+
-  geom_boxplot() + #geom_violin
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
- ggsave(paste (wd_output, "boxplot_violin_plot/","recombination_rate_per_region.pdf", sep="" ))
-
-
-ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), aes(region,recombination_rate))+
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
-  stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
- ggsave(paste (wd_output, "boxplot_violin_plot/","recombination_rate_per_region_mean_se.pdf", sep="" ))
-
 
 ```
+
 ## *Recombination and features
-
 ```{r}
-
 ggplot() + 
   geom_point (data=subset(stats_df_pop_autosomes_feature_recomb , !is.na(discrete_recomb)), 
               aes(x=discrete_recomb, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
@@ -1145,26 +1229,6 @@ ggplot() +
 
    
 ```
-## **Divergence and regions
-
-```{r}
-
-ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"),aes(region,divergence))+
-  geom_boxplot() + #geom_violin
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
- ggsave(paste (wd_output, "boxplot_violin_plot/","divergence_per_region.pdf", sep="" ))
-
-
-ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"),aes(region,divergence))+
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
-  stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
- ggsave(paste (wd_output, "boxplot_violin_plot/","divergence_per_region_mean_se.pdf", sep="" ),height = 7, width = 7)
-
-
-```
-
 
 # ---------------------------------------
 
