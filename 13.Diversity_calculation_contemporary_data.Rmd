@@ -938,6 +938,16 @@ write.table(stats_df_pop_feature_recomb, paste(wd_output,"stats_diversity_per_po
 
 ## *Plot basic stats
 
+## Set up colours
+
+```{r}
+cols <- c("NE_Poland"=viridis_pal()(5)[3], 
+          "Kirov"=viridis_pal()(5)[1], 
+          "Norway"=viridis_pal()(5)[2], 
+          "Andujar"="#5DC863FF",
+          "Donana"="#FDE725FF")
+```
+
 ## *Unit size
 ```{r}
 # Tamaño de las unidades
@@ -958,7 +968,7 @@ for (pop in unique(data_diversity_filtered_ave_corrected$Populations))
   }
 ```
 
-## *Recombination rate histogram
+## *Recombination histogram
 
 ```{r}
 # Hacemos un plot para ver la distribución de los valores, cogemos por ejemplo la población de kirov.
@@ -968,39 +978,33 @@ ggplot(filter(data_diversity_filtered_ave_corrected, pop=="c_ll_ki_n013"), aes(x
 ```
 
 
-### *Recombination and diversity
+## *Recombination and diversity
 
 ```{r}
-stats_df_pop_autosomes_recomb_category$pop <- factor (stats_df_pop_autosomes_recomb_category$pop, levels=c("c_ll_ki_n013", "c_ll_po_n008", "c_ll_no_n008", "c_lp_sm_n019", "c_lp_do_n012"))
-
-ggplot(data=subset(stats_df_pop_autosomes_recomb_category, !is.na(discrete_recomb)),aes(discrete_recomb, wmean_watterson_ave, fill=pop, colour=pop))+
-  geom_boxplot() +
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
-  facet_grid(~pop) 
-
-ggplot(data=subset(stats_df_pop_autosomes_recomb_category, !is.na(discrete_recomb)),aes(discrete_recomb,   wmean_pairwise_ave, fill=pop, colour=pop))+
-  geom_boxplot() +
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
-  facet_grid(~pop) 
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_autosomes_recomb_category, !is.na(discrete_recomb)), 
+              aes(x=discrete_recomb, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_autosomes_recomb_category, !is.na(discrete_recomb)), 
+                aes(x = discrete_recomb, xend=discrete_recomb, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"recombination_categories_vs_watterson.pdf",sep=""))
 
 
-# Con este plot vemos q efectivamente, cuanto menos recombinación, menos diversidad. 
-# Con este plot no vemos una mierda.
-# ggplot(data=subset(data_diversity_autosomes_filtered_ave_corrected, !is.na(discrete_recomb)),aes(discrete_recomb,pairwise_ave, fill=pop, colour=pop))+
-#   geom_boxplot() +
-#   scale_color_viridis(discrete=TRUE) +
-#   scale_fill_viridis(discrete=TRUE) +
-#   facet_grid(~pop) +
-#   ggsave(paste(wd_output,"recombination_categories_vs_pairwise.pdf",sep=""))
-# 
-# ggplot(data=subset(data_diversity_autosomes_filtered_ave_corrected, !is.na(discrete_recomb)),aes(discrete_recomb,pairwise_ave, fill=pop, colour=pop))+
-#   geom_boxplot() +
-#   scale_color_viridis(discrete=TRUE) +
-#   scale_fill_viridis(discrete=TRUE) +
-#   facet_grid(~pop) +
-#   ggsave(paste(wd_output,"recombination_categories_vs_watterson.pdf",sep=""))
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_autosomes_recomb_category, !is.na(discrete_recomb)), 
+              aes(x=discrete_recomb, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_autosomes_recomb_category, !is.na(discrete_recomb)), 
+                aes(x = discrete_recomb, xend=discrete_recomb, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"recombination_categories_vs_pairwise.pdf",sep=""))
+  
+
 # ggplot(data_diversity_autosomes_filtered_ave_corrected,aes(recombination_rate,watterson_ave))+
 #   geom_point() +
 #   scale_color_viridis(discrete=TRUE) +
@@ -1015,7 +1019,7 @@ ggplot(data=subset(stats_df_pop_autosomes_recomb_category, !is.na(discrete_recom
 
 ```
 
-### Recombination and regions
+## *Recombination and regions
 
 ```{r}
 
