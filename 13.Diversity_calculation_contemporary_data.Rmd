@@ -780,9 +780,22 @@ ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"),
 
 ```
 
+# ----------
+# GLM
+De que depende la diversidad?
+Recombinación?
+feature?
+chr?
+```{r}
+
+```
+
+
 
 # ----------
 ## Population metrics
+Esto no tengo que correlo. Puedo cargar las tablas. 
+
 Primero creo una formula para poder calcular la stdev basada en bootstrapping.
 ```{r}
 sample.wtd.mean <- function(x, w, d) {
@@ -848,7 +861,6 @@ write.table(stats_df_pop, paste(wd_output,"stats_diversity_per_pop.tsv",sep=""),
 ```
 
 ### Summary stats per pop & different group (feature, chr, region, recom_category) 
-
 ```{r}
 diversity_stats_grouped <- function(DATAFRAME ,GROUP)
 { diversity_stats_df_grouped <- 
@@ -935,8 +947,6 @@ write.table(stats_df_pop_recomb, paste(wd_output,"stats_diversity_per_pop_per_re
 
 
 ###  Summary stats per pop & different group - group (feature-chr, feature-region, chr-region) 
-
-
 ```{r}
 
 diversity_stats_doble_grouped <- function(DATAFRAME, GROUP1, GROUP2)
@@ -1024,6 +1034,25 @@ write.table(stats_df_pop_region_recomb, paste(wd_output,"stats_diversity_per_pop
 
 #rm (stats_df_pop_autosomes_feature_region)
 #rm (stats_df_pop_chrX_feature_region)
+
+```
+
+# -----
+
+# Load summarize data
+
+```{r}
+stats_df_pop <- read.table(paste(wd_output,"stats_diversity_per_pop.tsv",sep=""), row.names = NULL, sep =";", dec="," )
+stats_df_pop_feature <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature.tsv",sep=""), row.names = NULL, sep =";", dec="," )
+stats_df_pop_region <- read.table(paste(wd_output,"stats_diversity_per_pop_per_region.tsv",sep=""), row.names = NULL, sep =";", dec="," )
+stats_df_pop_chr <- read.table(paste(wd_output,"stats_diversity_per_pop_per_chr.tsv",sep=""), row.names = NULL, sep =";", dec="," )
+stats_df_pop_recomb <- read.table(paste(wd_output,"stats_diversity_per_pop_per_recomb.tsv",sep=""), row.names = NULL, sep =";", dec="," )
+stats_df_pop_feature_chr <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature_chr.tsv",sep=""), row.names = NULL, sep =";", dec="," )
+stats_df_pop_region_chr <- read.table(paste(wd_output,"stats_diversity_per_pop_per_region_chr.tsv",sep=""), row.names = NULL, sep =";", dec="," )
+stats_df_pop_recomb_chr <- read.table(paste(wd_output,"stats_diversity_per_pop_per_recomb_chr.tsv",sep=""), row.names = NULL, sep =";", dec="," )
+stats_df_pop_feature_region <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature_region.tsv",sep=""), row.names = NULL, sep =";", dec="," )
+stats_df_pop_feature_recomb <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature_recomb.tsv",sep=""),row.names = NULL, sep =";", dec="," )
+stats_df_pop_region_recomb <- read.table(paste(wd_output,"stats_diversity_per_pop_per_region_recomb.tsv",sep=""), row.names = NULL, sep =";", dec="," )
 
 ```
 
@@ -1179,6 +1208,8 @@ ggplot() +
 
    
 ```
+
+
 ## *Features and diversity
 
 ```{r}
