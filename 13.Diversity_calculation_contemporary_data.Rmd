@@ -1041,58 +1041,6 @@ cols <- c("NE_Poland"=viridis_pal()(5)[3],
 ```
 
 
-## *Features and diversity
-
-```{r}
-ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
-              aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
-                aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
-  scale_colour_manual(values = cols) +
-  scale_fill_manual(values = cols) +
-  facet_wrap(~Species, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  ggsave(paste(wd_output,"feature_categories_vs_watterson_autosomes.pdf",sep=""))
-
-
-ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
-              aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
-                aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
-  scale_colour_manual(values = cols) +
-  scale_fill_manual(values = cols) +
-  facet_wrap(~Species, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  ggsave(paste(wd_output,"feature_categories_vs_pairwise_autosomes.pdf",sep=""))
-  
-  
-ggplot() + 
-  geom_point (data=subset(stats_df_pop_chrX_feature, !is.na(feature)), 
-              aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_chrX_feature, !is.na(feature)), 
-                aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
-  scale_colour_manual(values = cols) +
-  scale_fill_manual(values = cols) +
-  facet_wrap(~Species, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  ggsave(paste(wd_output,"feature_categories_vs_watterson_chrX.pdf",sep=""))
-
-
-ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
-              aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
-                aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
-  scale_colour_manual(values = cols) +
-  scale_fill_manual(values = cols) +
-  facet_wrap(~Species, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  ggsave(paste(wd_output,"feature_categories_vs_pairwise_chrX.pdf",sep=""))
-
-```
-
 
 ## *Recombination and diversity
 
@@ -1134,9 +1082,9 @@ ggplot() +
 
 
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_recomb, !is.na(discrete_recomb)), 
+  geom_point (data=subset(stats_df_pop_chrX_recomb, !is.na(discrete_recomb)), 
               aes(x=discrete_recomb, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_recomb, !is.na(discrete_recomb)), 
+  geom_segment (data=subset(stats_df_pop_chrX_recomb, !is.na(discrete_recomb)), 
                 aes(x = discrete_recomb, xend=discrete_recomb, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1145,6 +1093,8 @@ ggplot() +
   ggsave(paste(wd_output,"recombination_categories_vs_pairwise_chrX.pdf",sep=""))
 
 ```
+
+
 
 ## *Recombination and regions
 
@@ -1229,6 +1179,119 @@ ggplot() +
 
    
 ```
+## *Features and diversity
+
+```{r}
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+              aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+                aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"feature_categories_vs_watterson_autosomes.pdf",sep=""))
+
+
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+              aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+                aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"feature_categories_vs_pairwise_autosomes.pdf",sep=""))
+  
+  
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_chrX_feature, !is.na(feature)), 
+              aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_chrX_feature, !is.na(feature)), 
+                aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"feature_categories_vs_watterson_chrX.pdf",sep=""))
+
+
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_chrX_feature, !is.na(feature)), 
+              aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_chrX_feature, !is.na(feature)), 
+                aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"feature_categories_vs_pairwise_chrX.pdf",sep=""))
+
+```
+
+## *Features and regions
+
+```{r}
+
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_autosomes_feature_region, !is.na(feature)), 
+              aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_autosomes_feature_region, !is.na(feature)), 
+                aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(region~Populations, ncol=3, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"feature_categories_vs_watterson_per_region.pdf",sep=""))
+  
+  
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_autosomes_feature_region, !is.na(feature)), 
+              aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_autosomes_feature_region, !is.na(feature)), 
+                aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(region~Populations, ncol=3, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"feature_categories_vs_pairwise_per_region.pdf",sep=""))
+  
+  
+
+
+```
+
+## *Region and diversity
+
+
+```{r}
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_autosomes_region, !is.na(region)), 
+              aes(x=region, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_autosomes_region, !is.na(region)), 
+                aes(x = region, xend=region, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"region_categories_vs_watterson_autosomes.pdf",sep=""))
+
+
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_autosomes_region, !is.na(region)), 
+              aes(x=region, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_autosomes_region, !is.na(region)), 
+                aes(x = region, xend=region, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"region_categories_vs_pairwise_autosomes.pdf",sep=""))
+
+```
+
 
 # ---------------------------------------
 
