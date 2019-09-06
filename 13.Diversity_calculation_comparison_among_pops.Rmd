@@ -1,0 +1,2999 @@
+---
+title: "13.Diversity_calculation_comparison_among_pops"
+output: html_document
+---
+
+
+## Load library & wd
+```{r}
+library(viridis)
+library(ggplot2); theme_set(theme_minimal())
+library(tidyr)
+library(plyr)
+library(dplyr)
+library(data.table)
+library(arules)
+wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
+wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
+```
+
+## Load data
+```{r}
+c_ll_ki_n013_diversity <- read.csv(paste(wd, "c_ll_ki_n013_diversity.csv", sep=""), header=T, na.strings = c("NA", "na"),  stringsAsFactors = F, row.names=NULL)%>% 
+  mutate (., color =  viridis_pal()(5)[1])
+
+c_ll_no_n008_diversity <- read.csv(paste(wd, "c_ll_no_n008_diversity.csv", sep=""), header=T, na.strings = c("NA", "na"),  stringsAsFactors = F, row.names=NULL)%>% 
+  mutate (., color = viridis_pal()(5)[2])
+
+c_ll_po_n008_diversity <- read.csv(paste(wd, "c_ll_po_n008_diversity.csv", sep=""), header=T, na.strings = c("NA", "na"),  stringsAsFactors = F, row.names=NULL)%>% 
+  mutate (., color =  viridis_pal()(5)[3])
+          
+c_lp_sm_n019_diversity <- read.csv(paste(wd, "c_lp_sm_n019_diversity.csv", sep=""), header=T, na.strings = c("NA", "na"),  stringsAsFactors = F, row.names=NULL)%>% 
+  mutate (., color =  "#5DC863FF")
+
+c_lp_do_n012_diversity <- read.csv(paste(wd, "c_lp_do_n012_diversity.csv", sep=""), header=T, na.strings = c("NA", "na"),  stringsAsFactors = F, row.names=NULL)%>% 
+  mutate (., color =  "#FDE725FF")
+```
+
+
+
+## Tablas interacción non-bootleneck vs bootleneck
+
+# -------------------------------------------------
+
+
+# Per unit
+
+Aquí tengo los ratios de las unidades particulares.
+
+```{r}
+
+# Dataframe Kirov-Norway
+
+# Function:
+
+# Cuidado porque aquí estoy asumiendo que la region es igual, y esto parece que es asi, pero no estoy 100% segura de que no haya podido pasar que en una población se haya definido como telomérico y en otra no por falta de bases. 
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_POP1, name_POP2){
+  
+    POPULATION1=POP1 %>% select(Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1] 
+    POPULATION2=POP2 %>% select(Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1] 
+ 
+  data_diversity_POP1_POP2 <- dplyr::inner_join (POP1, POP2, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id", "recombination_rate", "recombination_category", "type_chr", "divergence", "informative_sites_substitutions", "substitutions", "GC_content")) %>%  
+    
+    # Hago cero cuando las dos medidas de diversidad en la poblacion bottleneck y no, tienen cero. 
+    ## Watterson.x
+    dplyr::mutate (watterson_zero.x.ok = (ifelse(watterson_zero.x==0 & watterson_zero.y==0, NA,watterson_zero.x))) %>% 
+    dplyr::select (- watterson_zero.x) %>% 
+    dplyr::rename(watterson_zero.x=watterson_zero.x.ok) %>% 
+    
+    ## Watterson.y
+    dplyr::mutate (watterson_zero.y.ok = (ifelse(watterson_zero.y==0 & watterson_zero.x==0, NA,watterson_zero.y))) %>% 
+    dplyr::select (- watterson_zero.y) %>% 
+    dplyr::rename(watterson_zero.y=watterson_zero.y.ok) %>% 
+
+    ## pairwise.x
+    dplyr::mutate (pairwise_zero.x.ok = (ifelse(pairwise_zero.x==0 & pairwise_zero.y==0, NA,pairwise_zero.x))) %>% 
+    dplyr::select (- pairwise_zero.x) %>% 
+    dplyr::rename(pairwise_zero.x=pairwise_zero.x.ok) %>% 
+    
+    ## pairwise.y
+    dplyr::mutate (pairwise_zero.y.ok = (ifelse(pairwise_zero.y==0 & pairwise_zero.x==0, NA,pairwise_zero.y))) %>% 
+    dplyr::select (- pairwise_zero.y) %>% 
+    dplyr::rename(pairwise_zero.y=pairwise_zero.y.ok) %>% 
+    
+    # Calculo el ratio
+    dplyr::mutate (ratio_pairwise_average = pairwise_ave.y/pairwise_ave.x) %>% 
+    dplyr::mutate (ratio_watterson_average = watterson_ave.y/watterson_ave.x) %>% 
+    dplyr::mutate (ratio_pairwise_average_zero = pairwise_zero.y/pairwise_zero.x) %>%
+    dplyr::mutate (ratio_watterson_average_zero = watterson_zero.y/watterson_zero.x) %>%
+    
+    # Calculo el delta normalizado para la suma de los valores de diversidad
+    dplyr::mutate (delta_pairwise_average_normalized = ((pairwise_ave.y - pairwise_ave.x) / (pairwise_ave.y + pairwise_ave.x))) %>% 
+    dplyr::mutate (delta_watterson_average_normalized = ((watterson_ave.y - watterson_ave.x) / (watterson_ave.y + watterson_ave.x))) %>% 
+   
+    dplyr::mutate (delta_pairwise_average_normalized_zero = ((pairwise_zero.y - pairwise_zero.x) / (pairwise_zero.y + pairwise_zero.x))) %>% 
+    dplyr::mutate (delta_watterson_average_normalized_zero = ((watterson_zero.y - watterson_zero.x) / (watterson_zero.y + watterson_zero.x))) %>% 
+    
+    # Add comparison title  
+    
+    dplyr::mutate(comparison=paste(POPULATION1, "-", POPULATION2, sep=""))
+    
+
+  dataframename <- paste ("data_diversity", name_POP1, name_POP2, sep="_")
+  assign (dataframename, data_diversity_POP1_POP2,.GlobalEnv)
+}
+
+# Create data frame
+
+# Dataframe Kirov-Norway
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity,c_ll_no_n008_diversity, deparse(substitute(c_ll_ki_n013_diversity)),deparse(substitute(c_ll_no_n008_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_autosomes_diversity,c_ll_no_n008_autosomes_diversity, deparse(substitute(c_ll_ki_n013_autosomes_diversity)),deparse(substitute(c_ll_no_n008_autosomes_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_chrX_diversity,c_ll_no_n008_chrX_diversity, deparse(substitute(c_ll_ki_n013_chrX_diversity)),deparse(substitute(c_ll_no_n008_chrX_diversity)))
+
+# Dataframe Kirov-Poland
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity,c_ll_po_n008_diversity, deparse(substitute(c_ll_ki_n013_diversity)),deparse(substitute(c_ll_po_n008_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_autosomes_diversity,c_ll_po_n008_autosomes_diversity, deparse(substitute(c_ll_ki_n013_autosomes_diversity)),deparse(substitute(c_ll_po_n008_autosomes_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_chrX_diversity,c_ll_po_n008_chrX_diversity, deparse(substitute(c_ll_ki_n013_chrX_diversity)),deparse(substitute(c_ll_po_n008_chrX_diversity)))
+
+
+# Dataframe Sierra_Morena-Doñana
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_diversity,c_lp_do_n012_diversity, deparse(substitute(c_lp_sm_n019_diversity)),deparse(substitute(c_lp_do_n012_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_autosomes_diversity,c_lp_do_n012_autosomes_diversity, deparse(substitute(c_lp_sm_n019_autosomes_diversity)),deparse(substitute(c_lp_do_n012_autosomes_diversity)))
+
+calculus_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n019_chrX_diversity,c_lp_do_n012_chrX_diversity, deparse(substitute(c_lp_sm_n019_chrX_diversity)),deparse(substitute(c_lp_do_n012_chrX_diversity)))
+
+
+# write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_no_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+# write.table(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity, paste(wd_output,"data_diversity_c_ll_ki_n013_c_ll_po_n008.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+# write.table(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity, paste(wd_output,"data_diversity_c_lp_sm_n019_c_lp_do_n012.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
+
+# También las creo a lo largo para poder lanzar modelos
+# c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model <- rbind(c_ll_ki_n013_diversity, c_ll_po_n008_diversity)
+# rm(data_diversity)
+# rm(c_ll_ki_n013_diversity)
+# rm(c_ll_po_n008_diversity)
+# rm(c_ll_no_n008_diversity)
+# rm(c_lp_sm_n019_diversity)
+# rm(c_lp_do_n012_diversity)
+
+```
+
+#### Combined comparisons & sort factors
+
+```{r}
+
+data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity$feature <- factor (data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity$feature, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic"))
+
+data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity$feature <- factor (data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity$feature, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic"))
+
+data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity$feature <- factor (data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity$feature, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic"))
+
+
+# Combine comparisons
+data_diversity_all_comparisons <- rbind (data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity, data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity,data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity)
+  
+```
+
+
+
+#### Delta skewness and mean
+
+
+
+```{r}
+library (psych)
+
+# Skewness watterson
+# La skewness se calcula del tipo 3, por defecto. He corrido el tipo 1 para ver que no había diferencias, y las diferencias son algo de escala pero nada de colocación, así que dejo este tipo que es el que viene por defecto. Type 3 is b1 = [(n-1)/n]^{3/2} m_3/m_2^{3/2} and b2 = [(n-1)/n]^{3/2} m_4/m_2^2).
+
+data_diversity_all_comparisons_filtered_watterson <- data_diversity_all_comparisons %>%  filter(delta_watterson_average_normalized_zero!=-1 & delta_watterson_average_normalized_zero!=1)
+
+skeweness_watterson_comparison_feature <- aggregate(data_diversity_all_comparisons_filtered_watterson$delta_watterson_average_normalized_zero, list(data_diversity_all_comparisons_filtered_watterson$comparison, data_diversity_all_comparisons_filtered_watterson$feature), skew)
+  
+skeweness_watterson_comparison_all <- aggregate(data_diversity_all_comparisons_filtered_watterson$delta_watterson_average_normalized_zero, list(data_diversity_all_comparisons_filtered_watterson$comparison), skew) %>% mutate(Group.2="All")
+
+skeweness_watterson <- rbind(skeweness_watterson_comparison_feature, skeweness_watterson_comparison_all)
+  
+skeweness_watterson$Group.2 <- factor (skeweness_watterson$Group.2, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic","All"))
+
+skeweness_watterson$Group.1 <- factor (skeweness_watterson$Group.1, levels=c("Kirov-Norway", "Kirov-NE_Poland", "Andujar-Donana"))
+ 
+  ggplot(skeweness_watterson %>% filter(Group.2!="All"), aes(x=Group.2, y=x, fill=Group.1, color=Group.1, shape=Group.1)) +
+    geom_point() +
+    geom_hline(data=skeweness_watterson %>% filter(Group.2=="All"), aes(yintercept=x, colour = Group.1)) +
+    labs(title=paste("Skewness for the Delta comparing Watterson: no -1 or +1",sep =" "),
+         x ="Feature", y = "Skewness") +    
+    coord_flip()  +
+    scale_fill_viridis_d (option = "plasma") +
+    scale_colour_viridis_d (option = "plasma") +
+    ggsave (paste(wd_output,"delta_zero_watterson_skewness_per_feature.pdf", sep=""))
+
+  
+# Skewness Pi
+data_diversity_all_comparisons_filtered_pairwise <- data_diversity_all_comparisons %>%  filter(delta_pairwise_average_normalized_zero!=-1 & delta_pairwise_average_normalized_zero!=1)
+
+skeweness_pairwise_comparison_feature <- aggregate(data_diversity_all_comparisons_filtered_pairwise$delta_pairwise_average_normalized_zero, list(data_diversity_all_comparisons_filtered_pairwise$comparison, data_diversity_all_comparisons_filtered_pairwise$feature), skew)
+  
+skeweness_pairwise_comparison_all <- aggregate(data_diversity_all_comparisons_filtered_pairwise$delta_pairwise_average_normalized_zero, list(data_diversity_all_comparisons_filtered_pairwise$comparison), skew) %>% mutate(Group.2="All")
+skeweness_pairwise <- rbind(skeweness_pairwise_comparison_feature, skeweness_pairwise_comparison_all)
+  
+ skeweness_pairwise$Group.2 <- factor (skeweness_pairwise$Group.2, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic","All"))
+ skeweness_pairwise$Group.1 <- factor (skeweness_pairwise$Group.1, levels=c("Kirov-Norway", "Kirov-NE_Poland", "Andujar-Donana"))
+
+ 
+ 
+ggplot(data=skeweness_pairwise %>% filter(Group.2!="All"), aes(x=Group.2, y=x, fill=Group.1, color=Group.1, shape=Group.1)) +
+    geom_point() +
+    geom_hline(data=skeweness_pairwise %>% filter(Group.2=="All"), aes(yintercept=x, colour = Group.1)) +
+    labs(title=paste("Skewness for the Delta comparing Pairwise: no -1 or +1",sep =" "),
+         x ="Feature", y = "Skewness") +    
+    coord_flip() +
+    scale_fill_viridis_d (option = "plasma") +
+    scale_colour_viridis_d (option = "plasma") +
+    ggsave (paste(wd_output,"delta_zero_pairwise_skewness_per_feature.pdf", sep=""))
+
+#### Global
+
+# Mean
+
+# ggplot () +
+#     #geom_boxplot() +
+#     stat_summary(fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+#     labs(title=paste("Mean for the Delta comparing Watterson: All comparisonss", sep =" "),
+#          x ="Feature", y = "Mean") +    
+#     coord_flip() +
+#     ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_mean_all.pdf", sep=""))
+   
+     
+  
+```
+
+
+##### Delta distribution
+
+```{r}
+
+library(ggpubr)
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+for (DATAFRAME in DATAFRAMES) 
+{
+  
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  POPULATION1=get(DATAFRAME) %>% select(Populations.x) %>% mutate(Populations.x=as.character(Populations.x)) %>% .[1,1] 
+  POPULATION2=get(DATAFRAME) %>% select(Populations.y) %>% mutate(Populations.y=as.character(Populations.y)) %>% .[1,1] 
+  
+  # Low values to zero:
+  
+  # WATTERSON
+  # Mean dr distribution
+
+  # Calculo el valor medio por feature para sacar el maximo y mínimo para luego establecer los límites del plot
+mean <- get(DATAFRAME) %>% 
+             dplyr::group_by(feature) %>%
+             dplyr::summarise(
+            delta_watterson_average_normalized_zero_ave=mean(delta_watterson_average_normalized_zero,na.rm=TRUE)) %>% select(-feature) %>% as.vector(.)
+  
+# Plot de la media global
+ a <- ggplot (get(DATAFRAME)) +
+    stat_summary(aes(x=comparison, y=delta_watterson_average_normalized_zero), fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+    labs(title=paste("Mean for the Delta comparing Watterson:", POPULATION2,"vs", POPULATION1, sep =" ")) +    
+   theme(axis.title = element_blank())+
+    coord_flip(ylim = c(min(mean)-0.1, max(mean)+0.1)) 
+ 
+ b <-  ggplot (get(DATAFRAME)) +
+    stat_summary(aes(x=feature, y=delta_watterson_average_normalized_zero), fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+   labs(x ="Feature", y = "Mean") +
+    coord_flip(ylim = c(min(mean)-0.1, max(mean)+0.1)) 
+
+ 
+ a.b <- ggarrange(a, b,  
+          labels = c("A", "B"),
+          ncol = 1, nrow = 2, align="hv", heights=c(1,6))
+  
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_mean_feature.pdf", sep=""),a.b, width = 20, height = 25, units = "cm")
+
+     
+    
+    ## Plot combinado de mean per feature, con una raya para la media
+    
+    ggplot (get(DATAFRAME)) +
+      geom_hline(yintercept=mean(get(DATAFRAME)$delta_watterson_average_normalized_zero, na.rm=TRUE), colour ="grey60")  +
+      stat_summary(aes(x=feature, y=delta_watterson_average_normalized_zero), fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+      labs(x ="Feature", y = "Mean") +
+      coord_flip(ylim = c(min(mean)-0.1, max(mean)+0.1)) +
+      ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_mean_feature_one_pannel.pdf", sep=""), width = 20, height = 25, units = "cm")
+    
+   ## Plot combinado de mean per feature, con una raya para la media wo -1 and +1
+    
+    ggplot (get(DATAFRAME) %>% filter(delta_watterson_average_normalized_zero!=1 & delta_watterson_average_normalized_zero!=-1)) +
+      geom_hline(data=get(DATAFRAME) %>% filter(delta_watterson_average_normalized_zero!=1 & delta_watterson_average_normalized_zero!=-1), aes(yintercept=mean(delta_watterson_average_normalized_zero, na.rm=TRUE)), color ="grey60")  +
+      stat_summary(aes(x=feature, y=delta_watterson_average_normalized_zero), fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+      labs(x ="Feature", y = "Mean") +
+      coord_flip() +
+      ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_mean_feature_one_pannel_wo_1_&_minu1.pdf", sep=""), width = 20, height = 25, units = "cm")
+   
+    
+    
+# Plot de la distribución de delta global
+      
+  ggplot(get(DATAFRAME), aes(x=(delta_watterson_average_normalized_zero))) + 
+    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
+    geom_histogram(data = get(DATAFRAME) %>% filter(delta_watterson_average_normalized_zero!=-1 & delta_watterson_average_normalized_zero!=1) %>% mutate(subset = "Subset"), binwidth = 0.05) +
+    facet_wrap(~subset, scales = "free", nrow=2)  +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_average_distribution.pdf", sep=""))
+  
+  # Plot de la distribución de delta para cada feature
+
+ ggplot() + 
+    aes(x = delta_watterson_average_normalized_zero) +
+    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
+    geom_histogram(data = get(DATAFRAME) %>% filter(delta_watterson_average_normalized_zero!=-1 & delta_watterson_average_normalized_zero!=1) %>% mutate(subset = "Subset"), binwidth = 0.05) +
+    facet_wrap(feature~subset, scales = "free", nrow=4)  +
+    theme(axis.text.x = element_text(angle=90, hjust=1)) +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
+  
+  
+  # PI
+  # Mean dr distribution
+  mean <- get(DATAFRAME) %>% 
+             dplyr::group_by(feature) %>%
+             dplyr::summarise(
+            delta_pairwise_average_normalized_zero_ave=mean(delta_pairwise_average_normalized_zero,na.rm=TRUE)) %>% select(-feature) %>% as.vector(.)
+
+ a <- ggplot (get(DATAFRAME)) +
+    stat_summary(aes(x=comparison, y=delta_pairwise_average_normalized_zero), fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+    labs(title=paste("Mean for the Delta comparing pairwise:", POPULATION2,"vs", POPULATION1, sep =" ")) +    
+   theme(axis.title = element_blank())+
+    coord_flip(ylim = c(min(mean)-0.1, max(mean)+0.1)) 
+ 
+ b <-  ggplot (get(DATAFRAME)) +
+    stat_summary(aes(x=feature, y=delta_pairwise_average_normalized_zero), fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+   labs(x ="Feature", y = "Mean") +
+    coord_flip(ylim = c(min(mean)-0.1, max(mean)+0.1)) 
+
+ 
+ a.b <- ggarrange(a, b,  
+          labels = c("A", "B"),
+          ncol = 1, nrow = 2, align="hv", heights=c(1,6))
+  
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_mean_feature.pdf", sep=""),a.b, width = 20, height = 25, units = "cm")
+    
+    ## Plot combinado de mean per feature, con una raya para la media
+    
+    ggplot (get(DATAFRAME)) +
+      geom_hline(yintercept=mean(get(DATAFRAME)$delta_pairwise_average_normalized_zero, na.rm=TRUE), colour ="grey60")  +
+      stat_summary(aes(x=feature, y=delta_pairwise_average_normalized_zero), fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+      labs(x ="Feature", y = "Mean") +
+      coord_flip(ylim = c(min(mean)-0.1, max(mean)+0.1)) +
+      ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_mean_feature_one_pannel.pdf", sep=""), width = 20, height = 25, units = "cm")
+    
+       ## Plot combinado de mean per feature, con una raya para la media wo -1 and +1
+    
+    ggplot (get(DATAFRAME) %>% filter(delta_pairwise_average_normalized_zero!=1 & delta_pairwise_average_normalized_zero!=-1)) +
+      geom_hline(data=get(DATAFRAME) %>% filter(delta_pairwise_average_normalized_zero!=1 & delta_pairwise_average_normalized_zero!=-1), aes(yintercept=mean(delta_pairwise_average_normalized_zero, na.rm=TRUE)), color ="grey60")  +
+      stat_summary(aes(x=feature, y=delta_pairwise_average_normalized_zero), fun.data = "mean_cl_boot", colour = "black", size = 0.5) +
+      labs(x ="Feature", y = "Mean") +
+      coord_flip() +
+      ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_mean_feature_one_pannel_wo_1_&_minu1.pdf", sep=""), width = 20, height = 25, units = "cm")
+   
+    
+
+  # Distribution 
+    
+  ggplot(get(DATAFRAME), aes(x=(delta_pairwise_average_normalized_zero))) + 
+    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
+    geom_histogram(data = get(DATAFRAME) %>% filter(delta_pairwise_average_normalized_zero!=-1 & delta_pairwise_average_normalized_zero!=1) %>% mutate(subset = "Subset"), binwidth = 0.05) +
+    facet_wrap(~subset, scales = "free", nrow=2)  +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_average_distribution.pdf", sep=""))
+  
+  
+  ggplot() + 
+    aes(x = delta_pairwise_average_normalized_zero) +
+    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
+    geom_histogram(data = get(DATAFRAME) %>% filter(delta_pairwise_average_normalized_zero!=-1 & delta_pairwise_average_normalized_zero!=1) %>% mutate(subset = "Subset"), binwidth = 0.05) +
+    facet_wrap(feature~subset, scales = "free", nrow=4)  +
+    theme(axis.text.x = element_text(angle=90, hjust=1)) +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
+  
+}
+
+```
+### Delta in a heat map
+
+Primero genero las tablas que me van a servir para el heatmap.
+
+```{r}
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+VARIABLES=c("delta_pairwise_average_normalized_zero", "delta_watterson_average_normalized_zero")
+
+
+for (DATAFRAME in DATAFRAMES) 
+{
+  for (VARIABLE in VARIABLES)
+  {
+    
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+# Feature & region
+DATAFRAME_FR <- get(DATAFRAME) %>% filter(chr!="chrF1" & chr!="chrF2" & chr!="chrX") %>%             
+             dplyr::group_by(region, feature) %>%
+             dplyr::summarise(
+               total=n(),
+               mean_result = mean(get(VARIABLE), na.rm = TRUE),  
+               median_result = median(get(VARIABLE), na.rm = TRUE))  
+
+
+ggplot(DATAFRAME_FR, aes(x = region, y = feature, fill = mean_result)) + 
+  geom_tile() + 
+  scale_fill_viridis(alpha = 0.9) +
+  geom_text(DATAFRAME_FR , mapping = aes(x = region, y = feature, label=total), size=4) +  
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  ggsave (paste(wd_output,"heatmap/", POP1, "_",POP2,"_", VARIABLE, "_region_vs_feature_mean.pdf", sep=""), width = 15, height = 15)
+
+
+ggplot(DATAFRAME_FR, aes(x = region, y = feature, fill = median_result)) + 
+  geom_tile() + 
+  scale_fill_viridis(alpha = 0.9) +
+  geom_text(DATAFRAME_FR , mapping = aes(x = region, y = feature, label=total), size=4)+  
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+ggsave (paste(wd_output,"heatmap/", POP1, "_",POP2,"_", VARIABLE, "_region_vs_feature_median.pdf", sep=""), width = 15, height = 15)
+
+
+# Feature & chromosome
+DATAFRAME_FC <- get(DATAFRAME)%>% filter(chr!="chrF1" & chr!="chrF2" & chr!="chrX") %>%          
+             dplyr::group_by(chr, feature) %>%
+             dplyr::summarise(
+               total=n(),
+               mean_result = mean(get(VARIABLE), na.rm = TRUE),  
+               median_result = median(get(VARIABLE), na.rm = TRUE))  
+
+                                           
+ggplot(DATAFRAME_FC, aes(x = chr, y = feature, fill = mean_result)) + 
+  geom_tile() + 
+  scale_fill_viridis(alpha = 0.9) +
+  geom_text(DATAFRAME_FC , mapping = aes(x = chr, y = feature, label=total), size=4)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+ggsave (paste(wd_output,"heatmap/", POP1, "_",POP2,"_", VARIABLE, "_chr_vs_feature_mean.pdf", sep=""), width = 15, height = 15)
+
+
+ggplot(DATAFRAME_FC, aes(x = chr, y = feature, fill = median_result)) + 
+  geom_tile() + 
+  scale_fill_viridis(alpha = 0.9) +
+  geom_text(DATAFRAME_FC , mapping = aes(x = chr, y = feature, label=total), size=4)+  
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+ggsave (paste(wd_output,"heatmap/", POP1, "_",POP2,"_", VARIABLE, "_chr_vs_feature_median.pdf", sep=""), width = 15, height = 15)
+
+
+# Feature & chromosome & region
+DATAFRAME_FCR <- get(DATAFRAME)%>% filter(chr!="chrF1" & chr!="chrF2" & chr!="chrX") %>%          
+             dplyr::group_by(chr, feature, region) %>%
+             dplyr::summarise(
+               total=n(),
+               mean_result = mean(get(VARIABLE), na.rm = TRUE),  
+               median_result = median(get(VARIABLE), na.rm = TRUE))  
+                                           
+ggplot(DATAFRAME_FCR, aes(x = region, y = feature, fill = mean_result)) + 
+  geom_tile() +
+  facet_wrap(~chr) +
+  scale_fill_viridis(alpha = 0.9) +
+  geom_text(DATAFRAME_FCR , mapping = aes(x = region, y = feature, label=total), size=4) +  
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+ggsave (paste(wd_output,"heatmap/", POP1, "_",POP2,"_", VARIABLE, "_region_vs_chr_vs_feature_mean.pdf", sep=""), width = 25, height = 25)
+
+
+ggplot(DATAFRAME_FCR, aes(x = region, y = feature, fill = median_result)) + 
+  geom_tile() + 
+  facet_wrap(~chr) +
+  scale_fill_viridis(alpha = 0.9) +
+  geom_text(DATAFRAME_FCR , mapping = aes(x = region, y = feature, label=total), size=4) +  
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+ggsave (paste(wd_output,"heatmap/", POP1, "_",POP2,"_", VARIABLE, "_region_vs_chr_vs_feature_median.pdf", sep=""), width = 25, height = 25)
+                       
+  }
+}
+
+```
+
+
+
+
+### Delta vs genomic variables
+
+```{r}
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+for (DATAFRAME in DATAFRAMES) 
+{
+  
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+
+    # RECOMBINATION WATTERSON
+  
+    ggplot (get(DATAFRAME), aes(x=recombination_rate, y=delta_watterson_average_normalized_zero)) +
+    geom_point() +
+    ggsave (paste(wd_output,POP1,"_",POP2, "_recombination_vs_delta_zero_watterson.pdf", sep=""))
+  
+     # DIVERGENCE WATTERSON
+  
+    ggplot (get(DATAFRAME), aes(x=divergence, y=delta_watterson_average_normalized_zero)) +
+    geom_point() +
+    ggsave (paste(wd_output,POP1,"_",POP2, "_divergence_vs_delta_zero_watterson.pdf", sep=""))
+
+     # GC_CONTENT WATTERSON
+  
+    ggplot (get(DATAFRAME), aes(x=GC_content, y=delta_watterson_average_normalized_zero)) +
+    geom_point() +
+    ggsave (paste(wd_output,POP1,"_",POP2, "_GC_content_vs_delta_zero_watterson.pdf", sep=""))
+    
+    # RECOMBINATION pairwise
+  
+    ggplot (get(DATAFRAME), aes(x=recombination_rate, y=delta_pairwise_average_normalized_zero)) +
+    geom_point() +
+    ggsave (paste(wd_output,POP1,"_",POP2, "_recombination_vs_delta_zero_pairwise.pdf", sep=""))
+  
+     # DIVERGENCE pairwise
+  
+    ggplot (get(DATAFRAME), aes(x=divergence, y=delta_pairwise_average_normalized_zero)) +
+    geom_point() +
+    ggsave (paste(wd_output,POP1,"_",POP2, "_divergence_vs_delta_zero_pairwise.pdf", sep=""))
+
+     # GC_CONTENT pairwise
+  
+    ggplot (get(DATAFRAME), aes(x=GC_content, y=delta_pairwise_average_normalized_zero)) +
+    geom_point() +
+    ggsave (paste(wd_output,POP1,"_",POP2, "_GC_content_vs_delta_zero_pairwise.pdf", sep=""))
+
+
+}
+  
+```
+
+# --------------------
+##### Diversity plot pop1 vs pop2
+
+```{r}
+
+# Plot de diversidad de una población frente a otra, con el corte de los valores más bajos en el density plot para ambos casos, y graficamente ploteados esos cortes. 
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+for (DATAFRAME in DATAFRAMES) 
+{
+ 
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+  # Pairwise:
+
+  min_non_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POP1) %>% .[1,2] )
+  min_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POP2) %>% .[1,2] )
+
+  above95_non_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & pop==POP1) %>% dplyr::select ("q95_pairwise_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+  
+  above95_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% filter(feature=="CDS" & pop==POP2) %>% dplyr::select ("q95_pairwise_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+
+  # Añadimos una columna para que se coloreen los genes que luego vamos a pasarle al GO term enrichment. Estos genes son: ls¡os que presentan ALTA diversidad en ambas poblaciones, y un ratio parecido. 
+  
+  DATAFRAME_modif_pairwise <- get(DATAFRAME) %>% mutate (col=ifelse(log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & ratio_pairwise_average>0.6 & ratio_pairwise_average<1.4 & feature=="CDS" & pairwise_ave.x > above95_non_bootleneck_pop_value_pairwise & pairwise_ave.y > above95_bootleneck_pop_value_pairwise, "interesting_genes", "shit"))
+
+  # Plot de todas las features
+  
+  ggplot(data=DATAFRAME_modif_pairwise, aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x) )) +
+    geom_point(alpha = 1/100, color='grey41') +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
+    facet_wrap(~feature) +
+    theme_minimal() +
+    theme(legend.position="none") +
+   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise.pdf", sep=""), width = 7, height = 7)
+   
+#  ggplot (data=DATAFRAME_modif_pairwise, aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x) )) +
+#stat_density2d(aes(fill = ..density..^0.25), geom = "tile", contour = FALSE, n = 200) +
+#    geom_abline(intercept = 0, color='grey20') +
+#    geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
+#    geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
+#    facet_wrap(~feature) +
+#    theme_minimal() +
+#    theme(legend.position="none")
+
+ 
+  
+  
+  ggplot() +
+    geom_point(data=DATAFRAME_modif_pairwise %>% filter(., feature=="CDS") %>% filter(col=="shit"),
+               aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x)), alpha = 1/10, colour="grey41", size=1 ) +
+    geom_point(data=DATAFRAME_modif_pairwise %>% filter(., feature=="CDS") %>% filter(col=="interesting_genes"),
+               aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x)), colour="#FF0000", size=1 ) +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
+    theme_minimal() +
+    theme(legend.position="none") +
+    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise_interesting_CDS.pdf", sep=""), width = 7, height = 7)
+min_non_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POP1) %>% .[1,2] )
+  min_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POP2) %>% .[1,2] )
+
+  
+  # Watterson
+  
+  above95_non_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & pop==POP1) %>% dplyr::select ("q95_watterson_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+  
+  above95_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% filter(feature=="CDS" & pop==POP2) %>% dplyr::select ("q95_watterson_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+
+  # Añadimos una columna para que se coloreen los genes que luego vamos a pasarle al GO term enrichment. Estos genes son: ls¡os que presentan ALTA diversidad en ambas poblaciones, y un ratio parecido. 
+  
+  DATAFRAME_modif_watterson <- get(DATAFRAME) %>% mutate (col=ifelse(log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson & ratio_watterson_average>0.6 & ratio_watterson_average<1.4 & feature=="CDS" & watterson_ave.x > above95_non_bootleneck_pop_value_watterson & watterson_ave.y > above95_bootleneck_pop_value_watterson, "interesting_genes", "shit"))
+
+  # Plot de todas las features
+  
+  ggplot(data=DATAFRAME_modif_watterson, aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x) )) +
+    geom_point(alpha = 1/100, color='grey41') +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_watterson, color='grey20') +
+    facet_wrap(~feature) +
+    theme(legend.position="none") +
+   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson.pdf", sep=""), width = 7, height = 7)
+   
+   
+  ggplot() +
+    geom_point(data=DATAFRAME_modif_watterson %>% filter(., feature=="CDS") %>% filter(col=="shit"),
+               aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x)), alpha = 1/10, colour="grey41", size=1 ) +
+    geom_point(data=DATAFRAME_modif_watterson %>% filter(., feature=="CDS") %>% filter(col=="interesting_genes"),
+               aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x)), colour="#FF0000", size=1 ) +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_watterson, color='grey20') +
+    theme(legend.position="none") +
+    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson_interesting_CDS.pdf", sep=""), width = 7, height = 7)
+
+
+   rm (DATAFRAME_modif_watterson, DATAFRAME_modif_pairwise)
+}
+
+```
+
+#### Density marginal plot scatter plot
+
+```{r}
+
+DATAFRAME="data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity"
+
+POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+  # Pairwise:
+
+min_non_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POP1) %>% .[1,2] )
+min_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POP2) %>% .[1,2] )
+
+above95_non_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & pop==POP1) %>% dplyr::select ("q95_pairwise_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+
+above95_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% filter(feature=="CDS" & pop==POP2) %>% dplyr::select ("q95_pairwise_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+
+  # Añadimos una columna para que se coloreen los genes que luego vamos a pasarle al GO term enrichment. Estos genes son: ls¡os que presentan ALTA diversidad en ambas poblaciones, y un ratio parecido. 
+  
+  DATAFRAME_modif_pairwise <- get(DATAFRAME) %>% mutate (col=ifelse(log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & ratio_pairwise_average>0.6 & ratio_pairwise_average<1.4 & feature=="CDS" & pairwise_ave.x > above95_non_bootleneck_pop_value_pairwise & pairwise_ave.y > above95_bootleneck_pop_value_pairwise, "interesting_genes", "shit"))
+
+  # Plot de todas las features
+  
+scatter <- ggplot(data=DATAFRAME_modif_pairwise, aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x) )) +
+    geom_point(alpha = 1/100, color='grey41') +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
+    theme_minimal() +
+    theme(legend.position="none") 
+
+
+  
+hist_top <- ggplot()+geom_density(data=DATAFRAME_modif_pairwise, aes(log10(pairwise_ave.x)))
+
+hist_right <- ggplot()+geom_density(data=DATAFRAME_modif_pairwise, aes(log10(pairwise_ave.y)))+coord_flip()
+
+
+  empty <- ggplot()+geom_point(aes(1,1), colour="white")+
+         theme(axis.ticks=element_blank(), 
+               panel.background=element_blank(), 
+               axis.text.x=element_blank(), axis.text.y=element_blank(),           
+               axis.title.x=element_blank(), axis.title.y=element_blank())
+  
+
+
+```
+
+
+
+
+#####  GOterm enrichment & dataset prep
+
+```{r}
+# Ahora vamos a intentar sacar las unidades que quedan por encima de ese minimo en la distribución para ambas poblaciones: serían valores que con alta diversidad en las dos poblaciones. Además queremos que esos valores tengan un ratio similar a uno: tienen alta diveridad y en las dos poblaciones, muy parecida. 
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+for (DATAFRAME in DATAFRAMES) 
+{
+  
+  POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  # Pi
+  
+  min_non_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% filter(pop==POP1) %>% .[1,2] )
+  min_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% filter(pop==POP2) %>% .[1,2] )
+
+  above95_non_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & pop==POP1) %>% dplyr::select ("q95_pairwise_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+  above95_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% filter(feature=="CDS" & pop==POP2) %>% dplyr::select ("q95_pairwise_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+  
+  # Aqui categorizo las unidades que tienen diversidad y ni pierden ni ganan diversidad (D_D), las unidades que tiene no diversidad en la non-bottleneck pero ganan en la bottleneck (ND_D ), las que tienen alta diversidad en la non bottleneck pero baja en la bottleneck (D_ND), y las que no tienen diversidad en ambas (ND_ND). 
+
+  data_diversity_categories_pairwise <- get(DATAFRAME) %>% 
+  mutate (evolution_category=
+            ifelse (log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "D_D_pairwise",
+            ifelse (log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "D_ND_pairwise",
+            ifelse (log10(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)<min_bootleneck_pop_value_pairwise, "ND_ND_pairwise",
+            ifelse (log10(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise, "ND_D_pairwise",NA))))) %>% 
+  mutate (diversity_category=
+            ifelse (log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise, "HD_pairwise",
+            ifelse (log10(pairwise_ave.x)<min_non_bootleneck_pop_value_pairwise, "LD_pairwise",NA)))
+
+data_diversity_categories_pairwise$evolution_category <- factor (data_diversity_categories_pairwise$evolution_category, levels=c("D_ND_pairwise", "D_D_pairwise", "ND_ND_pairwise", "ND_D_pairwise"))
+data_diversity_categories_pairwise$diversity_category <- factor (data_diversity_categories_pairwise$diversity_category, levels=c("HD_pairwise", "LD_pairwise"))
+
+  assign(paste0("data_diversity_",POP1, "_diversity_", POP2,"_diversity_categories_pairwise"), data_diversity_categories_pairwise)
+
+  
+  
+      ## DATASET D_D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment pairwise
+  
+  list_of_CDS_HD_HD_pairwise <- get(DATAFRAME) %>% filter(., log10(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y) > min_bootleneck_pop_value_pairwise & ratio_pairwise_average > 0.6 & ratio_pairwise_average < 1.4 & feature=="CDS" & pairwise_ave.x > above95_non_bootleneck_pop_value_pairwise & pairwise_ave.y > above95_bootleneck_pop_value_pairwise) %>% dplyr::select (unique_id) %>% tidyr::separate(., unique_id, into =c("Gen", "start", "end", "feature") ) %>% dplyr::select (Gen)
+    
+  assign(paste0(POP1, "_", POP2,"_list_of_CDS_HD_HD_ratio_1_pairwise"), list_of_CDS_HD_HD_pairwise)
+
+    ## DATASET ND_D_pairwise --> Inspecting the GO term.
+      
+  list_of_genes_ND_D_pairwise <- get(DATAFRAME) %>% dplyr::filter(., log10(pairwise_ave.x) > min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y) < min_bootleneck_pop_value_pairwise & feature=="CDS") %>% dplyr::select ( unique_id) %>% tidyr::separate(., unique_id, into =c("Gen", "start", "end", "feature") ) %>% dplyr::select (Gen)
+  
+  assign(paste0(POP1, "_", POP2,"_list_CDS_ND_D_pairwise"), list_of_genes_ND_D_pairwise)
+  
+
+  # Watterson
+  
+  min_non_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% filter(pop==POP1) %>% .[1,2] )
+  min_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% filter(pop==POP2) %>% .[1,2] )
+
+  above95_non_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & pop==POP1) %>% dplyr::select ("q95_watterson_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+  above95_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_autosomes_feature %>% dplyr::ungroup() %>% filter(feature=="CDS" & pop==POP2) %>% dplyr::select ("q95_watterson_zero_zero") %>% as.data.frame(.) %>%  .[1,1] )
+  
+  # Aqui categorizo las unidades que tienen diversidad y ni pierden ni ganan diversidad (D_D), las unidades que tiene no diversidad en la non-bottleneck pero ganan en la bottleneck (ND_D ), las que tienen alta diversidad en la non bottleneck pero baja en la bottleneck (D_ND), y las que no tienen diversidad en ambas (ND_ND). 
+
+  data_diversity_categories_watterson <- get(DATAFRAME) %>% 
+  dplyr::mutate (evolution_category=
+            ifelse ( (log10 (watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) > min_bootleneck_pop_value_watterson), "D_D_watterson",
+            ifelse ( (log10 (watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) < min_bootleneck_pop_value_watterson), "D_ND_watterson",
+            ifelse ( (log10 (watterson_ave.x) < min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) < min_bootleneck_pop_value_watterson), "ND_ND_watterson",
+            ifelse ( (log10 (watterson_ave.x) < min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) > min_bootleneck_pop_value_watterson), "ND_D_watterson",NA))))) %>% 
+    
+  dplyr::mutate (diversity_category=
+            ifelse (log10 (watterson_ave.x) > min_non_bootleneck_pop_value_watterson, "HD_watterson",
+            ifelse (log10 (watterson_ave.x) < min_non_bootleneck_pop_value_watterson, "LD_watterson",NA)))
+
+data_diversity_categories_watterson$evolution_category <- factor (data_diversity_categories_watterson$evolution_category, levels=c("D_ND_watterson", "D_D_watterson", "ND_ND_watterson", "ND_D_watterson"))
+data_diversity_categories_watterson$diversity_category <- factor (data_diversity_categories_watterson$diversity_category, levels=c("HD_watterson", "LD_watterson"))
+
+  assign(paste0("data_diversity_",POP1, "_diversity_", POP2,"_diversity_categories_watterson"), data_diversity_categories_watterson)
+
+   div_recom_GC_by_categ_summary_watterson <- 
+             data_diversity_categories_watterson %>% dplyr::filter (type_chr=="autosomes") %>% 
+             dplyr::group_by(diversity_category, evolution_category) %>%
+             dplyr::summarise(
+                       total_count=n()) 
+  
+  
+      ## DATASET D_D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment watterson
+  
+  list_of_CDS_HD_HD_watterson <- get(DATAFRAME) %>% filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) > min_bootleneck_pop_value_watterson & ratio_watterson_average > 0.6 & ratio_watterson_average < 1.4 & feature=="CDS" & watterson_ave.x > above95_non_bootleneck_pop_value_watterson & watterson_ave.y > above95_bootleneck_pop_value_watterson) %>% dplyr::select (unique_id) %>% tidyr::separate(., unique_id, into =c("Gen", "start", "end", "feature") ) %>% dplyr::select (Gen)
+    
+  assign(paste0(POP1, "_", POP2,"_list_of_CDS_HD_HD_ratio_1_watterson"), list_of_CDS_HD_HD_watterson)
+
+    ## DATASET ND_D_watterson --> Inspecting the GO term.
+      
+  list_of_genes_ND_D_watterson <- get(DATAFRAME) %>% dplyr::filter(., log10(watterson_ave.x) > min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y) < min_bootleneck_pop_value_watterson & feature=="CDS") %>% dplyr::select ( unique_id) %>% tidyr::separate(., unique_id, into =c("Gen", "start", "end", "feature") ) %>% dplyr::select (Gen)
+  
+  assign(paste0(POP1, "_", POP2,"_list_CDS_ND_D_watterson"), list_of_genes_ND_D_watterson)
+
+  rm (data_diversity_categories_pairwise, data_diversity_categories_watterson)
+ 
+  
+  }
+
+
+###########################################################################
+
+## sort factors
+
+# Pi
+data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise$feature <- factor (data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise$feature  <- factor (data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise$feature  <- factor (data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+
+#Watterson
+data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson$feature <- factor (data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson$feature  <- factor (data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson$feature  <- factor (data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+
+
+
+## DATASET D_D (high diversity and ratio =1 ) --> GO term enrichment and pathway enrichment pairwise
+
+# Pi
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise)
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise)
+
+# Waterson
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson)
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson)
+
+
+## DATASET ND_D_pairwise --> Inspecting the GO term.
+
+# Pi
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise, c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise)
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise, c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise)
+
+# Watterson
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson, c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson)
+c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson <- dplyr::inner_join(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson, c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson) %>% dplyr::inner_join(., c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson)
+
+## Write all tables:
+
+# Pi
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise" , quote = F, row.names = F)
+write.table(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise", quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_pairwise" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise" , quote = F, row.names = F)
+write.table(c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_pairwise" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_pairwise", quote = F, row.names = F)
+
+# Watterson:
+write.table(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson" , quote = F, row.names = F)
+write.table(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson", quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_list_CDS_ND_D_watterson" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson" , quote = F, row.names = F)
+write.table(c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_list_CDS_ND_D_watterson" , quote = F, row.names = F)
+write.table(c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson, "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/Lypa23c_GO_terms_KO_terms_annotation/input_data/c_ll_ki_n013_c_ll_no_n008_c_ll_ki_n013_c_ll_po_n008_c_lp_sm_n019_c_lp_do_n012_list_CDS_ND_D_watterson", quote = F, row.names = F)
+
+
+
+```
+
+
+##### Venh-diagram
+
+Sobre estas tablas que acabo de crear donde están TODAS las unidades y el ratio entre par de poblaciones, voy a sacar todas las unidades con un ratio mayor que uno y voy a hacer un diagrama de Venh. 
+
+
+Ojo!
+
+Tengo que copiarlas a la terminal y de ahí guardarlas a mano. 
+
+
+```{r}
+
+# https://stackoverflow.com/questions/8713994/venn-diagram-proportional-and-color-shading-with-semi-transparency
+# https://rstudio-pubs-static.s3.amazonaws.com/13301_6641d73cfac741a59c0a851feb99e98b.html
+# Al final uso --> https://www.r-bloggers.com/working-with-venn-diagrams/
+
+library(VennDiagram)
+
+
+### Pairwise ### 
+
+# All features:
+# CDS
+
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_list_pairwise <- lapply(as.list(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_pairwise), function(x) x[x != ""]) 
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_list_pairwise <- lapply(as.list(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_pairwise), function(x) x[x != ""])
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_list_pairwise <- lapply(as.list(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_pairwise), function(x) x[x != ""])
+
+
+names(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_list_pairwise) <- c("c_ll_ki_n013_c_ll_no_n008")
+names(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_list_pairwise) <- c("c_ll_ki_n013_c_ll_po_n008")
+names(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_list_pairwise) <- c("c_lp_sm_n019_c_lp_do_n012")
+  
+  
+ll_lp_list_of_CDS_HD_HD_ratio_1_pairwise <- c(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_list_pairwise, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_list_pairwise, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_list_pairwise)
+
+# Now we can plot a Venn diagram with the VennDiagram R package, as follows:
+VENN.LIST <- ll_lp_list_of_CDS_HD_HD_ratio_1_pairwise
+venn.plot <- venn.diagram(VENN.LIST , 
+                          filename = NULL,
+                          scaled = TRUE,
+                          fill=c("palegreen", "steelblue1", "pink"), 
+                          lty = "blank", 
+                          cex = 1,
+                          print.mode=c("raw", "percent"),
+                          alpha=c(0.3,0.3, 0.3), 
+                          cat.fontface=4, main="Genes with diversity in bottleneck & non-bottleneck pairwise")
+
+# To plot the venn diagram we will use the grid.draw() function to plot the venn diagram
+grid.draw(venn.plot)
+
+### Watterson ### 
+
+# All features:
+
+# CDS
+
+c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_list_watterson <- lapply(as.list(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_watterson), function(x) x[x != ""])
+c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_list_watterson <- lapply(as.list(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_watterson), function(x) x[x != ""])
+c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_list_watterson <- lapply(as.list(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_watterson), function(x) x[x != ""])
+
+names(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_list_watterson) <- c("c_ll_ki_n013_c_ll_no_n008")
+names(c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_list_watterson) <- c("c_ll_ki_n013_c_ll_po_n008")
+names(c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_list_watterson) <- c("c_lp_sm_n019_c_lp_do_n012")
+
+
+ll_lp_list_of_CDS_HD_HD_ratio_1_watterson <- c(c_ll_ki_n013_c_ll_no_n008_list_of_CDS_HD_HD_ratio_1_list_watterson, c_ll_ki_n013_c_ll_po_n008_list_of_CDS_HD_HD_ratio_1_list_watterson, c_lp_sm_n019_c_lp_do_n012_list_of_CDS_HD_HD_ratio_1_list_watterson)
+
+# Now we can plot a Venn diagram with the VennDiagram R package, as follows:
+
+VENN.LIST <- ll_lp_list_of_CDS_HD_HD_ratio_1_watterson
+venn.plot <- venn.diagram(VENN.LIST , 
+                          filename = NULL,
+                          scaled = TRUE,
+                          fill=c("palegreen", "steelblue1", "pink"), 
+                          lty = "blank", 
+                          cex = 1,
+                          print.mode=c("raw", "percent"),
+                          alpha=c(0.3,0.3, 0.3), 
+                          cat.fontface=4, main="Genes with diversity in bottleneck & non-bottleneck watterson")
+
+# To plot the venn diagram we will use the grid.draw() function to plot the venn diagram
+grid.draw(venn.plot)
+
+```
+
+##---------
+
+### Count units in ND->D in different regions.
+
+```{r}
+DATAFRAMES=c(
+"data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson")
+
+
+for (DATAFRAME in DATAFRAMES)
+  {
+  
+  
+    POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+    POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  DIVERSITY_MEASURE_CONSIDERED= get(DATAFRAME) %>% 
+    dplyr::select(evolution_category) %>% 
+    dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
+    head(.,1) %>% 
+    dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
+                              ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
+    dplyr::select(diversity) %>% 
+    .[1,1]
+
+  
+  tabla_test <- full_join(
+    # Contamos las unidades que están en el ND-D para cada feature y cada region
+    as.data.frame(get(DATAFRAME) %>% filter(evolution_category==paste("ND_D_",DIVERSITY_MEASURE_CONSIDERED, sep="" )) %>% group_by(feature,region) %>% summarise (ND_D=n())),
+    # Contamos las unidades que están en el ND-ND para cada feature y cada region
+    as.data.frame(get(DATAFRAME) %>% filter(evolution_category==paste("ND_ND_",DIVERSITY_MEASURE_CONSIDERED, sep="" )) %>% group_by(feature,region) %>% summarise (ND_ND=n())),by =c("feature", "region")) %>% 
+    full_join(.,
+              # Contamos las unidades que están en el D-D para cada feature y cada region
+              as.data.frame(get(DATAFRAME) %>% filter(evolution_category==paste("D_D_",DIVERSITY_MEASURE_CONSIDERED, sep="" )) %>% group_by(feature,region) %>% summarise (D_D=n())),by =c("feature", "region")) %>% 
+    full_join(.,
+              # Contamos las unidades que están en el D-D para cada feature y cada region
+              as.data.frame(get(DATAFRAME) %>% filter(evolution_category==paste("D_ND_",DIVERSITY_MEASURE_CONSIDERED, sep="" )) %>% group_by(feature,region) %>% summarise (D_ND=n())),by =c("feature", "region")) %>% 
+    full_join(.,
+              # Contamos las unidades para cada feature y cada region totales
+              as.data.frame(get(DATAFRAME) %>% group_by(feature,region) %>% summarise ( total_count=n()), by =c("feature", "region"))) 
+
+write.table(tabla_test, paste(wd_output, POP1, "_", POP2,"_",DIVERSITY_MEASURE_CONSIDERED, "_percentage_of_ND_D_in_different_regions.tsv", sep=""))
+
+
+
+}
+
+```
+
+## Contingency test
+
+```{r}
+library(corrplot)
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
+wd_output_contingency <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/contingency_test_ND_D_distribution_regions"
+
+# c_ll_ki_n013_c_ll_no_n008_pairwise_percentage_of_ND_D_in_different_regions.tsv
+# c_ll_ki_n013_c_ll_po_n008_pairwise_percentage_of_ND_D_in_different_regions.tsv
+# c_lp_sm_n019_c_lp_do_n012_pairwise_percentage_of_ND_D_in_different_regions.tsv
+# c_ll_ki_n013_c_ll_po_n008_watterson_percentage_of_ND_D_in_different_regions.tsv
+# c_ll_ki_n013_c_ll_no_n008_watterson_percentage_of_ND_D_in_different_regions.tsv
+# c_lp_sm_n019_c_lp_do_n012_watterson_percentage_of_ND_D_in_different_regions.tsv
+
+DATA="c_lp_sm_n019_c_lp_do_n012_pairwise_percentage_of_ND_D_in_different_regions.tsv"
+
+
+DATAFRAME <- read.table(paste0(wd, DATA),stringsAsFactors = F) %>% select (-total_count)
+POPS=substr(DATA, 1, 25)
+DIVERSITY_MEASURE=substr(DATA, 27, 34)
+  
+DATAFRAME_SPLITTED <- split(DATAFRAME, DATAFRAME$feature) 
+number_of_data_frames <- unique(DATAFRAME$feature) %>% length()
+my.list <- vector("list", number_of_data_frames)
+
+
+for(FEATURE_NUMBER in 1:number_of_data_frames)
+{
+  print (FEATURE_NUMBER)
+  temp_data <- DATAFRAME_SPLITTED[[FEATURE_NUMBER]] 
+  temp_data[is.na(temp_data)] <- 0
+  FEATURE <- as.character(temp_data %>% select(feature) %>% .[1,])
+  temp_data_matrix <- temp_data %>% select (-feature, -D_D, -D_ND)
+  rownames(temp_data_matrix) <- temp_data_matrix[,1] 
+  temp_data_matrix_ready <- temp_data_matrix %>%  select (-1) 
+  chisq_results <- chisq.test( temp_data_matrix_ready) 
+  my.list[[FEATURE_NUMBER]] <- merge(FEATURE, chisq_results$p.value)
+  #chisq_results$expected
+  if (chisq_results$p.value > 0.05)
+  {jpeg(paste0(wd_output_contingency,"/no_sig/", POPS,"_",DIVERSITY_MEASURE,"_",FEATURE ,".jpg"))
+  corrplot(chisq_results$residuals, is.cor = FALSE)
+  dev.off()} 
+  else {
+  jpeg(paste0(wd_output_contingency,"/sig/", POPS,"_",DIVERSITY_MEASURE,"_",FEATURE ,".jpg"))
+  corrplot(chisq_results$residuals, is.cor = FALSE)
+  dev.off()
+  }
+  
+  rm(temp_data, temp_data_matrix, chisq_results, FEATURE)
+ }
+
+
+df_results <- do.call("rbind", my.list) 
+write.table( df_results, paste0(wd_output_contingency,"/", POPS,"_",DIVERSITY_MEASURE,".tsv"))
+rm (df_results)
+```
+
+
+#------------
+
+##### Stats de divergence, recombination and GC content by feature, taking into consideration categories.
+
+###### Diversity vs evolutionary category
+
+Vamos a testar primero si todas las relaciones que veo con divergencia, recombinación, etc, vienen exclusivamente determinadas por la relación de estas con la diversidad
+
+```{r}
+DATAFRAMES=c(
+data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise, data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise, data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise, data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson, data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson, data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson)
+
+
+
+
+```
+
+
+
+
+###### Recombinación divergencia y GC content para cada categoría evolutiva. 
+
+```{r}
+
+divergence_recomb_and_GC_by_evol_category <- function(DATAFRAME)
+{
+  POP1=DATAFRAME %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=DATAFRAME %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+  DIVERSITY_MEASURE_CONSIDERED=DATAFRAME %>% 
+    dplyr::select(evolution_category) %>% 
+    dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
+    head(.,1) %>% 
+    dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
+                              ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
+    select(diversity) %>% 
+    .[1,1]
+
+  
+  div_recom_GC_by_categ_summary <- 
+             DATAFRAME %>% dplyr::filter (type_chr=="autosomes") %>% 
+             dplyr::group_by(diversity_category, evolution_category) %>%
+             dplyr::summarise(
+                       total_count=n(), 
+                       
+                       mean_diversity_MB=ifelse(DIVERSITY_MEASURE_CONSIDERED=="pairwise", mean(pairwise_ave.x, na.rm = T), 
+                                         ifelse(DIVERSITY_MEASURE_CONSIDERED=="watterson", mean(watterson_ave.x, na.rm = T), NA)),
+                       
+                       mean_diversity_EB=ifelse(DIVERSITY_MEASURE_CONSIDERED=="pairwise", mean(pairwise_ave.y, na.rm = T), 
+                                         ifelse(DIVERSITY_MEASURE_CONSIDERED=="watterson", mean(watterson_ave.y, na.rm = T), NA)),
+                      
+                       median_diversity_MB=ifelse(DIVERSITY_MEASURE_CONSIDERED=="pairwise", median(pairwise_ave.x, na.rm = T), 
+                                         ifelse(DIVERSITY_MEASURE_CONSIDERED=="watterson", median(watterson_ave.x, na.rm = T), NA)),
+                       
+                       
+                       median_diversity_EB=ifelse(DIVERSITY_MEASURE_CONSIDERED=="pairwise", median(pairwise_ave.y, na.rm = T), 
+                                         ifelse(DIVERSITY_MEASURE_CONSIDERED=="watterson", median(watterson_ave.y, na.rm = T), NA)),
+                    
+                       
+                       # Distribución sin corregir
+                       mean_divergence=mean(divergence, na.rm = T),
+                       stdev_divergence=sqrt(var(divergence, na.rm = T)),
+                       
+                       median_divergence=median(divergence, na.rm = T),
+
+                       mean_recombination_rate=mean(recombination_rate,  na.rm = T),
+                       stdev_recombination_rate=sqrt(var(recombination_rate, na.rm = T)),
+
+                       median_recombination_rate=median(recombination_rate,  na.rm = T),
+
+                       mean_GC_content=mean(GC_content,  na.rm = T),
+                       stdev_GC_content=sqrt(var(GC_content, na.rm = T)),
+  
+                       median_GC_content=median(GC_content,  na.rm = T))
+
+ plyr::rename(div_recom_GC_by_categ_summary,c('mean_diversity_MB'=paste0("mean_",DIVERSITY_MEASURE_CONSIDERED,"_MB",sep="")) )
+ plyr::rename(div_recom_GC_by_categ_summary,c('mean_diversity_EB'=paste0("mean_",DIVERSITY_MEASURE_CONSIDERED,"_EB",sep="")) )
+ plyr::rename(div_recom_GC_by_categ_summary,c('median_diversity_MB'=paste0("median_",DIVERSITY_MEASURE_CONSIDERED,"_MB",sep="")) )
+ plyr::rename(div_recom_GC_by_categ_summary,c('median_diversity_EB'=paste0("median_",DIVERSITY_MEASURE_CONSIDERED,"_EB",sep="")) )
+ 
+
+write.table(div_recom_GC_by_categ_summary, paste0(wd_output,paste0("stats_diversity_comparison_",POP1, "_", POP2,"_genomic_variables_",DIVERSITY_MEASURE_CONSIDERED,".csv") ), quote = F, row.names=F )
+
+return(div_recom_GC_by_categ_summary)
+
+}
+  
+# Creo las tablas
+# Pi
+c_ll_ki_n013_diversity_c_ll_no_n008_diver_recomb_GC_evol_category_pairwise <- divergence_recomb_and_GC_by_evol_category(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise) 
+c_ll_ki_n013_diversity_c_ll_po_n008_diver_recomb_GC_evol_category_pairwise <- divergence_recomb_and_GC_by_evol_category(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise) 
+c_lp_sm_n019_diversity_c_lp_do_n012_diver_recomb_GC_evol_category_pairwise <- divergence_recomb_and_GC_by_evol_category(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise) 
+
+# Watterson
+c_ll_ki_n013_diversity_c_ll_no_n008_diver_recomb_GC_evol_category_watterson <- divergence_recomb_and_GC_by_evol_category(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson) 
+c_ll_ki_n013_diversity_c_ll_po_n008_diver_recomb_GC_evol_category_watterson <- divergence_recomb_and_GC_by_evol_category(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson) 
+c_lp_sm_n019_diversity_c_lp_do_n012_diver_recomb_GC_evol_category_watterson <- divergence_recomb_and_GC_by_evol_category(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson) 
+
+
+```
+
+
+###### Recombinación divergencia y GC content para cada categoría evolutiva y para cada feature 
+
+```{r}
+
+divergence_recomb_and_GC_by_evol_category_by_feature <- function(DATAFRAME)
+{
+  
+  POP1=DATAFRAME %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=DATAFRAME %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+  DIVERSITY_MEASURE_CONSIDERED=DATAFRAME %>% 
+    dplyr::select(evolution_category) %>% 
+    dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
+    head(.,1) %>% 
+    dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
+                              ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
+    select(diversity) %>% 
+    .[1,1]
+    
+  div_recom_GC_by_categ_summary_feature <- 
+             DATAFRAME %>% dplyr::filter (type_chr=="autosomes") %>% 
+             dplyr::group_by(feature, diversity_category, evolution_category) %>%
+             dplyr::summarise(
+                       total_count=n(), 
+                       
+                       mean_diversity_MB=ifelse(DIVERSITY_MEASURE_CONSIDERED=="pairwise", mean(pairwise_ave.x, na.rm = T), 
+                                         ifelse(DIVERSITY_MEASURE_CONSIDERED=="watterson", mean(watterson_ave.x, na.rm = T), NA)),
+                       
+                       mean_diversity_EB=ifelse(DIVERSITY_MEASURE_CONSIDERED=="pairwise", mean(pairwise_ave.y, na.rm = T), 
+                                         ifelse(DIVERSITY_MEASURE_CONSIDERED=="watterson", mean(watterson_ave.y, na.rm = T), NA)),
+                      
+                       median_diversity_MB=ifelse(DIVERSITY_MEASURE_CONSIDERED=="pairwise", median(pairwise_ave.x, na.rm = T), 
+                                         ifelse(DIVERSITY_MEASURE_CONSIDERED=="watterson", median(watterson_ave.x, na.rm = T), NA)),
+                       
+                       median_diversity_EB=ifelse(DIVERSITY_MEASURE_CONSIDERED=="pairwise", median(pairwise_ave.y, na.rm = T), 
+                                         ifelse(DIVERSITY_MEASURE_CONSIDERED=="watterson", median(watterson_ave.y, na.rm = T), NA)),
+                    
+                       
+                       # Distribución sin corregir
+                       
+                       mean_divergence=mean(divergence, na.rm = T),
+                       stdev_divergence=sqrt(var(divergence, na.rm = T)),
+                       
+                       median_divergence=median(divergence, na.rm = T),
+
+                       mean_recombination_rate=mean(recombination_rate,  na.rm = T),
+                       stdev_recombination_rate=sqrt(var(recombination_rate, na.rm = T)),
+                       
+                       median_recombination_rate=median(recombination_rate,  na.rm = T),
+
+                       mean_GC_content=mean(GC_content,  na.rm = T),
+                       stdev_GC_content=sqrt(var(GC_content, na.rm = T)),
+                       
+                       median_GC_content=median(GC_content,  na.rm = T))
+  
+ plyr::rename(div_recom_GC_by_categ_summary_feature,c('mean_diversity_MB'=paste0("mean_",DIVERSITY_MEASURE_CONSIDERED,"_MB",sep="")) )
+ plyr::rename(div_recom_GC_by_categ_summary_feature,c('mean_diversity_EB'=paste0("mean_",DIVERSITY_MEASURE_CONSIDERED,"_EB",sep="")) )
+ plyr::rename(div_recom_GC_by_categ_summary_feature,c('median_diversity_MB'=paste0("median_",DIVERSITY_MEASURE_CONSIDERED,"_MB",sep="")) )
+ plyr::rename(div_recom_GC_by_categ_summary_feature,c('median_diversity_EB'=paste0("median_",DIVERSITY_MEASURE_CONSIDERED,"_EB",sep="")) )
+
+
+write.table(div_recom_GC_by_categ_summary_feature, paste0(wd_output,paste0("stats_diversity_comparison_",POP1, "_", POP2,"_genomic_variables_",DIVERSITY_MEASURE_CONSIDERED,".csv") ), quote = F, row.names=F )
+
+diversity_comparison_stats_df <- div_recom_GC_by_categ_summary_feature %>% ungroup () %>% dplyr::select (evolution_category, feature, total_count) %>% spread(.,evolution_category, total_count )
+  
+assign(paste0("stats_data_diversity_",POP1, "_diversity_", POP2,"_diversity_categories_",DIVERSITY_MEASURE_CONSIDERED), diversity_comparison_stats_df)
+  
+write.table(diversity_comparison_stats_df, paste0(wd_output,paste0("stats_diversity_comparison_",POP1, "_", POP2,"_number_per_feature_",DIVERSITY_MEASURE_CONSIDERED,".csv") ), quote = F, row.names=F )
+
+return(div_recom_GC_by_categ_summary_feature)
+rm(POP1, POP2)
+}
+
+
+# Creo las tablas
+
+# Pi
+c_ll_ki_n013_diversity_c_ll_no_n008_diver_recomb_GC_evol_caterogy_by_feature_pairwise <- divergence_recomb_and_GC_by_evol_category_by_feature(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise) 
+c_ll_ki_n013_diversity_c_ll_po_n008_diver_recomb_GC_evol_caterogy_by_feature_pairwise <- divergence_recomb_and_GC_by_evol_category_by_feature(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise) 
+c_lp_sm_n019_diversity_c_lp_do_n012_diver_recomb_GC_evol_caterogy_by_feature_pairwise <- divergence_recomb_and_GC_by_evol_category_by_feature(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise) 
+
+# Watterson
+c_ll_ki_n013_diversity_c_ll_no_n008_diver_recomb_GC_evol_caterogy_by_feature_watterson <- divergence_recomb_and_GC_by_evol_category_by_feature(data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson) 
+c_ll_ki_n013_diversity_c_ll_po_n008_diver_recomb_GC_evol_caterogy_by_feature_watterson <- divergence_recomb_and_GC_by_evol_category_by_feature(data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson) 
+c_lp_sm_n019_diversity_c_lp_do_n012_diver_recomb_GC_evol_caterogy_by_feature_watterson <- divergence_recomb_and_GC_by_evol_category_by_feature(data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson) 
+
+```
+
+## Test divesrity in MB test for differences 
+
+We now know the diversity mean and median of the MB populations, first we have to know its distribution to see whether we must do a parametric or non parametric test
+
+```{r}
+
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson")
+
+for (DATAFRAME in DATAFRAMES) {
+  
+  POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+  DIVERSITY_MEASURE_CONSIDERED = get(DATAFRAME) %>% 
+    dplyr::select(evolution_category) %>% 
+    dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
+    head(.,1) %>% 
+    dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
+                              ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
+    select(diversity) %>% 
+    .[1,1]
+
+  DATAFRAME_filtered <- get(DATAFRAME) %>% filter(., diversity_category==paste0("HD_",DIVERSITY_MEASURE_CONSIDERED))
+  
+  ggplot(DATAFRAME_filtered, aes_string(x=paste0(DIVERSITY_MEASURE_CONSIDERED,"_ave.x", sep="" ))) + 
+  geom_density() +
+  ggsave(paste0(wd_output,paste0("diversity_test_HD_pop_MB/",POP1,"_",POP2,"_",DIVERSITY_MEASURE_CONSIDERED,"_HD_density.pdf")))
+  
+  if (DIVERSITY_MEASURE_CONSIDERED=="pairwise") {
+results_pairwise <- shapiro.test(DATAFRAME_filtered$pairwise_ave.x[0:5000])
+a <- results_pairwise$p.value
+write.csv(a,paste0(wd_output, "diversity_test_HD_pop_MB/",POP1,"_",POP2,"_",DIVERSITY_MEASURE_CONSIDERED,"_HD_normality_p_value.csv"))
+  }
+  
+  if (DIVERSITY_MEASURE_CONSIDERED=="watterson") {
+results_watteson <- shapiro.test(DATAFRAME_filtered$watterson_ave.x[0:5000])
+b <- results_watteson$p.value
+write.csv(b,paste0(wd_output, "diversity_test_HD_pop_MB/",POP1,"_",POP2,"_",DIVERSITY_MEASURE_CONSIDERED,"_HD_normality_p_value.csv"))
+  }
+
+  # Añadimos una categoría que sería, evaluación de perdida de watterson, pero basandonos en los cuadrantes de pi
+  
+  if (DIVERSITY_MEASURE_CONSIDERED=="watterson") {
+results_watteson2 <- shapiro.test(DATAFRAME_filtered$pairwise_ave.x[0:5000])
+b <- results_watteson2$p.value
+write.csv(b,paste0(wd_output, "diversity_test_HD_pop_MB/",POP1,"_",POP2,"_",DIVERSITY_MEASURE_CONSIDERED,"_pairwise_evaluated_HD_normality_p_value.csv"))
+  }
+  
+    
+}
+
+
+```
+
+
+## U-MW test
+
+```{r}
+
+library(broom)
+ruta_UMW_test_diversity <- "diversity_test_HD_pop_MB/"
+
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson")
+
+# Factor order: D_ND_pairwise D_D_pairwise ND_ND_pairwise ND_D_pairwise
+# HD --> D_ND_pairwise D_D_pairwise
+# LD --> ND_ND_pairwise ND_D_pairwise
+
+for (DATAFRAME in DATAFRAMES) 
+  {
+
+  
+  POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+  DIVERSITY_MEASURE_CONSIDERED = get(DATAFRAME) %>% 
+    dplyr::select(evolution_category) %>% 
+    dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
+    head(.,1) %>% 
+    dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
+                              ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
+    select(diversity) %>% 
+    .[1,1]
+
+DATAFRAME_filtered <- get(DATAFRAME) %>% filter(., diversity_category==paste0("HD_",DIVERSITY_MEASURE_CONSIDERED))
+
+# Diversity:
+  if (DIVERSITY_MEASURE_CONSIDERED=="pairwise") 
+        {
+    
+diversity.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(pairwise_ave.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)  
+
+diversity.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(pairwise_ave.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+}
+
+
+  if (DIVERSITY_MEASURE_CONSIDERED=="watterson") 
+        {
+diversity.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(watterson_ave.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)  
+
+diversity.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(watterson_ave.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+# Definimos cuadrantes para watterson pero los evaluamos en función de pi. Es decir, iro si los cuadrantes que han perdido o ganado diversidad para watterson, están influidos por la pi inicial. 
+
+diversity.greater.PI <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(pairwise_ave.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)  
+
+diversity.less.PI <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(pairwise_ave.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+lista_results_diversity_melted.PI <- melt(list(diversity.greater.PI , diversity.less.PI)) %>% mutate(genomic_variable="pairwise_evaluation_watterson_quadrants") %>% spread(., variable, value)
+
+write.table(format(lista_results_diversity_melted.PI, digits=8, scientific=T), paste(wd_output,ruta_UMW_test_diversity,POP1,"_",POP2,"_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt",sep=""), row.names = F)
+
+}
+
+lista_results_diversity_melted <- melt(list(diversity.greater , diversity.less)) %>% mutate(genomic_variable=DIVERSITY_MEASURE_CONSIDERED) %>% spread(., variable, value)
+
+write.table(format(lista_results_diversity_melted, digits=8, scientific=T), paste(wd_output,ruta_UMW_test_diversity,POP1,"_",POP2,"_features_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,"_HD.txt",sep=""), row.names = F)
+
+rm(diversity.greater, diversity.less, lista_results_diversity_melted)
+
+}
+}
+```
+
+
+
+
+
+# --------------
+
+## U-MW test & box plot category vs genomic variables
+
+NUNCA USAR  stat_compare_means
+
+Empleo el wilcox.test (por defecto tiene paired=F). Es un test para medidas no parametricas para comparación de rank. 
+
+Explicacion: https://en.wikipedia.org/wiki/Mann–Whitney_U_test
+https://data.library.virginia.edu/the-wilcoxon-rank-sum-test/
+Check also: https://stats.stackexchange.com/questions/250468/wilcoxon-mann-whitney-test-giving-surprising-results
+
+In statistics, the Mann–Whitney U test (also called the Mann–Whitney–Wilcoxon (MWW), Wilcoxon rank-sum test, or Wilcoxon–Mann–Whitney test) is a nonparametric test of the null hypothesis that it is equally likely that a randomly selected value from one sample will be less than or greater than a randomly selected value from a second sample.
+
+Unlike the t-test it does not require the assumption of normal distributions. It is nearly as efficient as the t-test on normal distributions.
+
+This test can be used to determine whether two independent samples were selected from populations having the same distribution; a similar nonparametric test used on dependent samples is the Wilcoxon signed-rank test.
+
+-->  “true location shift is not equal to 0”. That’s another way of saying “the distribution of one population is shifted to the left or right of the other,” which implies different medians.
+--> The Wilcoxon statistic is returned as W. This is NOT an estimate of the difference in medians.
+
+--> wilcox.test function provides this information when we set conf.int = TRUE.
+
+wilcox.test(weight ~ company, data = dat, conf.int = TRUE)
+
+	Wilcoxon rank sum test
+
+data:  weight by company
+W = 13, p-value = 0.04988
+alternative hypothesis: true location shift is not equal to 0
+95 percent confidence interval:
+ -8.5 -0.1
+sample estimates:
+difference in location 
+                 -4.65 
+
+This returns a “difference in location” measure of -4.65. The documentation for the wilcox.test function states this “does not estimate the difference in medians (a common misconception) but rather the median of the difference between a sample from x and a sample from y.”
+
+Nota: https://stackoverflow.com/questions/54842012/different-p-value-in-ggplot2-stat-compare-means-and-wilcox-test
+According to help(wilcox.test), if the samples contain less than 50 values (as in your case), the exact p-value is computed (unless you specify otherwise).
+
+stat_compare_means has a method.args argument but it doesn't seem to pass the exact = TRUE specification correctly. Instead you can compute the p-value exactly how you want it first and then add it to the plot
+Por tanto, los p-values son una aproximacion normal (In one case the p-value is exact and in the other it is a normal approximation.)
+
+
+### U-MW test diversity category vs genomic variables
+
+```{r}
+
+ruta_UMW_test <- "genomic_variable_diversity_category_UMT_boxplot_mean/"
+
+library(broom)
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson")
+
+# Divergence
+#Con este código lo que hacemos es que por cada feature (by) corremos el wilcox test. El resultado se guarda en una tabla que despues se va a limpiar usando la función tidy, y luego haciendo list juntamos todos los resultados, hasta que finalmente escribimos una tabla usando melt. 
+
+for (DATAFRAME in DATAFRAMES) {
+  
+  POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+  DIVERSITY_MEASURE_CONSIDERED = get(DATAFRAME) %>% 
+    dplyr::select(evolution_category) %>% 
+    dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
+    head(.,1) %>% 
+    dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
+                              ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
+    select(diversity) %>% 
+    .[1,1]
+
+# Divergence:
+divergence.greater <- with(get(DATAFRAME),
+       by(get(DATAFRAME), feature,
+          function(x) wilcox.test(divergence ~ diversity_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+divergence.less <- with(get(DATAFRAME),
+       by(get(DATAFRAME), feature,
+          function(x) wilcox.test(divergence ~ diversity_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+# Recombination
+recombination.greater <- with(get(DATAFRAME),
+       by(get(DATAFRAME), feature,
+          function(x) wilcox.test(recombination_rate ~ diversity_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+recombination.less <- with(get(DATAFRAME),
+       by(get(DATAFRAME), feature,
+          function(x) wilcox.test(recombination_rate ~ diversity_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+# GC content
+GC_content.greater <- with(get(DATAFRAME),
+       by(get(DATAFRAME), feature,
+          function(x) wilcox.test(GC_content ~ diversity_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+GC_content.less <- with(get(DATAFRAME),
+       by(get(DATAFRAME), feature,
+          function(x) wilcox.test(GC_content ~ diversity_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+lista_results_divergence_melted <- melt(list(divergence.greater , divergence.less)) %>% mutate(genomic_variable="divergence") %>% spread(., variable, value)
+lista_results_recombination_melted <- melt(list(recombination.greater, recombination.less)) %>% mutate(genomic_variable="recombination") %>% spread(., variable, value)
+lista_results_GC_content_melted <- melt(list(GC_content.greater, GC_content.less)) %>% mutate(genomic_variable="GC_content") %>% spread(., variable, value)
+
+resultados_U_Man_Whitney <- rbind(lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted)
+
+write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_features_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,".txt",sep=""), row.names = F)
+
+rm(divergence.greater, divergence.less, recombination.greater, recombination.less , GC_content.greater, GC_content.less, lista_results_divergence_melted,  lista_results_recombination_melted,  lista_results_GC_content_melted, resultados_U_Man_Whitney)
+
+}
+
+
+for (DATAFRAME in DATAFRAMES) 
+  {
+
+  POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+  DIVERSITY_MEASURE_CONSIDERED = get(DATAFRAME) %>% 
+    dplyr::select(evolution_category) %>% 
+    dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
+    head(.,1) %>% 
+    dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
+                              ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
+    select(diversity) %>% 
+    .[1,1]
+
+# Divergence
+divergence.greater <- wilcox.test(divergence ~ diversity_category, data = get(DATAFRAME), conf.int = TRUE, alternative = "greater") %>% tidy(.) 
+divergence.less <- wilcox.test(divergence ~ diversity_category, data = get(DATAFRAME), conf.int = TRUE, alternative = "less") %>%  tidy(.) 
+lista_divergence <- melt(list(divergence.greater, divergence.less)) %>% mutate(genomic_variable="divergence") %>% spread(., variable, value)
+
+# Recombination
+recombination.greater <- wilcox.test(recombination_rate ~ diversity_category, data = get(DATAFRAME), conf.int = TRUE, alternative = "greater") %>%  tidy(.)
+recombination.less <- wilcox.test(recombination_rate ~ diversity_category, data = get(DATAFRAME), conf.int = TRUE, alternative = "less") %>%  tidy(.)
+lista_recombination <- melt(list(recombination.greater, recombination.less)) %>% mutate(genomic_variable="recombination") %>% spread(., variable, value)
+
+# GC content
+GC_content.greater <- wilcox.test(GC_content ~ diversity_category, data = get(DATAFRAME), conf.int = TRUE, alternative = "greater") %>%  tidy(.)
+GC_content.less <- wilcox.test(GC_content ~ diversity_category, data = get(DATAFRAME), conf.int = TRUE, alternative = "less") %>%  tidy(.)
+lista_GC_content <- melt(list(GC_content.greater, GC_content.less)) %>% mutate(genomic_variable="GC_content") %>% spread(., variable, value)
+
+resultados_U_Man_Whitney <- rbind(lista_divergence, lista_recombination, lista_GC_content)
+
+write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,".txt",sep=""), row.names = F)
+
+rm(divergence.greater, divergence.less, recombination.greater, recombination.less , GC_content.greater, GC_content.less, lista_divergence,  lista_recombination,  lista_GC_content, resultados_U_Man_Whitney)
+
+}
+
+
+```
+
+### U-MW test evolutionary category vs genomic variables
+
+
+```{r}
+ruta_UMW_test <- "genomic_variable_diversity_category_UMT_boxplot_mean/"
+
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson")
+
+DIVERSITY_CATEGORIES=c("HD","LD")
+# Factor order: D_ND_pairwise D_D_pairwise ND_ND_pairwise ND_D_pairwise
+# HD --> D_ND_pairwise D_D_pairwise
+# LD --> ND_ND_pairwise ND_D_pairwise
+
+for (DATAFRAME in DATAFRAMES) 
+  {
+  for (DIVERSITY_CATEGORY in DIVERSITY_CATEGORIES)
+  {
+  
+  POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+  DIVERSITY_MEASURE_CONSIDERED = get(DATAFRAME) %>% 
+    dplyr::select(evolution_category) %>% 
+    dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
+    head(.,1) %>% 
+    dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
+                              ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
+    select(diversity) %>% 
+    .[1,1]
+
+DATAFRAME_filtered=get(DATAFRAME) %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))
+
+# Divergence:
+divergence.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(divergence ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+divergence.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(divergence ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+# Recombination
+recombination.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(recombination_rate ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+recombination.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(recombination_rate ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+# GC content
+GC_content.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(GC_content ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+GC_content.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(GC_content ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+lista_results_divergence_melted <- melt(list(divergence.greater , divergence.less)) %>% mutate(genomic_variable="divergence") %>% spread(., variable, value)
+lista_results_recombination_melted <- melt(list(recombination.greater, recombination.less)) %>% mutate(genomic_variable="recombination") %>% spread(., variable, value)
+lista_results_GC_content_melted <- melt(list(GC_content.greater, GC_content.less)) %>% mutate(genomic_variable="GC_content") %>% spread(., variable, value)
+
+resultados_U_Man_Whitney <- rbind(lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted)
+
+write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_features_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,"_",DIVERSITY_CATEGORY, ".txt",sep=""), row.names = F)
+
+rm(divergence.greater, divergence.less, recombination.greater, recombination.less , GC_content.greater, GC_content.less, lista_results_divergence_melted,  lista_results_recombination_melted,  lista_results_GC_content_melted, resultados_U_Man_Whitney)
+
+}
+}
+
+```
+
+
+#### Boxplot categories vs. divergence
+
+```{r}
+
+library("ggsignif")
+library("ggpubr")
+library("cowplot")
+library(ggplot2); theme_set(theme_minimal())
+
+ruta_UMW_test <- "genomic_variable_diversity_category_UMT_boxplot_mean/"
+
+DATAFRAMES=c("data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "data_diversity_c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson" )
+
+DIVERSITY_CATEGORIES=c("HD","LD")
+# Factor order: D_ND_pairwise D_D_pairwise ND_ND_pairwise ND_D_pairwise
+# HD --> D_ND_pairwise D_D_pairwise
+# LD --> ND_ND_pairwise ND_D_pairwise
+
+GENOMIC_VARIABLES=c("divergence", "recombination_rate", "GC_content")
+TEST_TYPES=c("less", "greater")
+#fun_mean <- function(x){return(round(data.frame(y=mean(x),label=mean(x,na.rm=T)),digit=5))}
+
+for (DATAFRAME in DATAFRAMES) 
+{
+  for (DIVERSITY_CATEGORY in DIVERSITY_CATEGORIES)
+  {
+    for (GENOMIC_VARIABLE in GENOMIC_VARIABLES)
+    {
+      for (TEST_TYPE in TEST_TYPES)
+      {
+        POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+        POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+        
+        DIVERSITY_MEASURE_CONSIDERED = get(DATAFRAME) %>% 
+          dplyr::select(evolution_category) %>% 
+          dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
+          head(.,1) %>% 
+          dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
+                                            ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
+          select(diversity) %>% 
+          .[1,1]
+        
+        # Filtro mi DF para las categorías con las que estamos trabajando
+        DATAFRAME_filtered=get(DATAFRAME) %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))
+        
+        # Selecciono cuales van a ser mis comparaciones (eg. ND-ND vs ND-D)
+        my_comparisons <- unique(DATAFRAME_filtered$evolution_category) %>% as.vector() %>% list()
+        
+        # Selecciono los límites del plot
+        if (GENOMIC_VARIABLE=="divergence") 
+        {
+          sts <- boxplot.stats((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep="")))$divergence)$stats  # Compute lower and upper whisker limits
+        }
+        
+        if (GENOMIC_VARIABLE=="recombination_rate") 
+        {
+          sts <- boxplot.stats((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep="")))$recombination_rate)$stats  # Compute lower and upper whisker limits
+        }
+        
+        if (GENOMIC_VARIABLE=="GC_content") 
+        {
+          sts <- boxplot.stats((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep="")))$GC_content)$stats  # Compute lower and upper whisker limits
+        }
+        
+               
+        # Mean general ##
+
+        #   ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
+        #   coord_cartesian(ylim = c(0,sts[5])) +
+        #   stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+        #   scale_colour_viridis_d(option="cividis") +
+        #   geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=sts[4], tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE)) + 
+        #   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
+        #   ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_mean_se_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
+        # 
+        # ## Mean feature ##
+        # 
+        #   ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
+        #   coord_cartesian(ylim = c(0,sts[5])) +
+        #   facet_grid(col = vars(feature) ) +
+        #   stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+        #   scale_colour_viridis_d(option="cividis") +
+        #   geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=sts[4], tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE)) + 
+        #   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
+        #   ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_mean_se_features_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
+        
+        ## Boxplot general ##
+        
+        ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
+          geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
+          scale_colour_viridis_d(option="cividis") +
+          coord_cartesian(ylim = c(0,max(sts)*2.3)) +
+          geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts)*2.1, tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE), map_signif_level=TRUE)  + 
+          theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
+          ggplot2::ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_boxplot_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
+        
+        
+        ## Boxplot por feature ##
+        
+        ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
+          facet_grid(col = vars(feature) ) +
+          geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
+          scale_colour_viridis_d(option="cividis") +
+          coord_cartesian(ylim = c(0,max(sts)*2.3)) +
+          geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts)*2.1, tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE), map_signif_level=TRUE)  + 
+          theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
+          ggplot2::ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_boxplot_features_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
+        
+      }
+    }
+  }
+}
+
+```
+
+
+
+#----------------------------------------
+# Global
+
+Ahora hago el ratio de las medias.
+
+```{r}
+
+# Saco las tablas para cada población y añado una columna en la que corrijo por la media de pairwise. 
+
+POPS=c("c_ll_ki_n013","c_ll_no_n008","c_ll_po_n008", "c_lp_do_n012", "c_lp_sm_n019")
+
+# Feature
+for (POP in POPS)
+  {print (POP)
+    data.frame <-  stats_df_pop_feature  %>%  filter (pop==as.character(POP))
+    assign(paste(POP,"_stats_feature", sep=""), data.frame)
+  rm (data.frame)}
+
+# Chr
+for (POP in POPS)
+{print (POP)
+    data.frame <-  stats_df_pop_chr  %>%  filter (pop==as.character(POP))
+    assign(paste(POP,"_stats_chr", sep=""), data.frame)
+  rm (data.frame)}
+
+# Region
+for (POP in POPS)
+{print (POP)
+    data.frame <-  stats_df_pop_region  %>%  filter (pop==as.character(POP))
+    assign(paste(POP,"_stats_region", sep=""), data.frame)
+  rm (data.frame)}
+
+
+## INTERACCION
+# Feature - chr
+for (POP in POPS)
+{print (POP)
+    data.frame <-  stats_df_pop_feature_chr  %>%  filter (pop==as.character(POP))
+    assign(paste(POP,"_stats_feature_chr", sep=""), data.frame)
+  rm (data.frame)}
+
+# Feature - region
+for (POP in POPS)
+{ print (POP)
+    data.frame <-  stats_df_pop_feature_region  %>%  filter (pop==as.character(POP))
+    assign(paste(POP,"_stats_feature_region", sep=""), data.frame)
+  rm (data.frame)}
+
+# Region - chr
+for (POP in POPS)
+{print (POP)
+    data.frame <-  stats_df_pop_region_chr  %>%  filter (pop==as.character(POP))
+    assign(paste(POP,"_stats_region_chr", sep=""), data.frame)
+  rm (data.frame)}
+
+
+```
+
+Sobre la de stats de cada población. ¡¡Es el ratio de las medias!!!
+
+#### One factor: Ratio and pairwise table
+
+##### Feature
+
+```{r}
+
+# Calculo el ratio para la mediana, y también reporto las wmean para poder plotearla:
+
+bootleneck_vs_non_bootleneck_interaction_stats_feature <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+  
+  # Nombre de las poblaciones
+  
+  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+   
+  complete_pop_name1=as.character(as.data.frame(dataframe_POP1) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+  complete_pop_name2=as.character(as.data.frame(dataframe_POP2) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+
+# AUTOSOMES
+  
+  # All values
+  autosomes_pairwise_average_intergenic_per_unit_pop1_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_intergenic)) 
+  autosomes_watterson_average_intergenic_per_unit_pop1_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_intergenic))  
+  
+  autosomes_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
+  autosomes_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic))  
+  
+  
+  # Replacing low values -> 0
+  autosomes_pairwise_average_intergenic_per_unit_pop1_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_zero_intergenic)) 
+  autosomes_watterson_average_intergenic_per_unit_pop1_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_zero_intergenic))  
+  
+  autosomes_pairwise_average_intergenic_per_unit_pop2_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_zero_intergenic)) 
+  autosomes_watterson_average_intergenic_per_unit_pop2_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_zero_intergenic))  
+  
+
+# CHRX.
+
+  # All values
+  chrX_pairwise_average_intergenic_per_unit_pop1_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_intergenic)) 
+  chrX_watterson_average_intergenic_per_unit_pop1_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_intergenic))  
+  
+  chrX_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
+  chrX_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic))  
+  
+  # Replacing low values -> 0
+  chrX_pairwise_average_intergenic_per_unit_pop1_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_zero_intergenic)) 
+  chrX_watterson_average_intergenic_per_unit_pop1_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_zero_intergenic))  
+  
+  chrX_pairwise_average_intergenic_per_unit_pop2_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_zero_intergenic)) 
+  chrX_watterson_average_intergenic_per_unit_pop2_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_zero_intergenic))  
+  
+  
+  # Calculo de los ratios globales.
+  
+  ratio_averages_POP1_POP2 <- full_join ( dataframe_POP1, dataframe_POP2, by=c("feature", "type_chr", "Species")) %>% mutate (comparison=paste(complete_pop_name1,"-", complete_pop_name2, sep="")) %>% 
+    
+      
+  # All values
+
+    mutate (ratio_median_pairwise = median_pairwise_ave.y/median_pairwise_ave.x) %>% 
+    mutate (ratio_median_watterson = median_watterson_ave.y/median_watterson_ave.x) %>% 
+
+    
+  # Replacing low values -> 0
+
+    mutate (ratio_median_pairwise_zero = median_pairwise_zero.y/median_pairwise_zero.x) %>% 
+    mutate (ratio_median_watterson_zero = median_watterson_zero.y/median_watterson_zero.x) %>% 
+  
+
+  # All values corrected by intergenic
+    
+    mutate (ratio_median_pairwise_corrected = ifelse(type_chr=="autosomes",                  (median_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median), 
+ # else
+(median_pairwise_ave.y/chrX_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/chrX_pairwise_average_intergenic_per_unit_pop1_median))) %>% 
+  
+    mutate (ratio_median_watterson_corrected = ifelse(type_chr=="autosomes",                  (median_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_median), 
+# else
+(median_watterson_ave.y/chrX_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/chrX_watterson_average_intergenic_per_unit_pop1_median))) %>% 
+    
+  # Replacing low values -> 0 corrected by intergenic
+  
+    mutate (ratio_median_pairwise_corrected_zero = ifelse(type_chr=="autosomes",                  (median_pairwise_zero.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median_zero)/(median_pairwise_zero.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median_zero), 
+ # else
+(median_pairwise_zero.y/chrX_pairwise_average_intergenic_per_unit_pop2_median_zero)/(median_pairwise_zero.x/chrX_pairwise_average_intergenic_per_unit_pop1_median_zero))) %>% 
+  
+    # WATTERSON
+    mutate (ratio_median_watterson_corrected_zero = ifelse(type_chr=="autosomes",                  (median_watterson_zero.y/autosomes_watterson_average_intergenic_per_unit_pop2_median_zero)/(median_watterson_zero.x/autosomes_watterson_average_intergenic_per_unit_pop1_median_zero), 
+# else
+(median_watterson_zero.y/chrX_watterson_average_intergenic_per_unit_pop2_median_zero)/(median_watterson_zero.x/chrX_watterson_average_intergenic_per_unit_pop1_median_zero)))
+
+  
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
+  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
+}
+
+```
+
+Creo las data frame
+
+```{r}
+
+# Create data frame
+
+# Dataframe Kirov-Norway
+bootleneck_vs_non_bootleneck_interaction_stats_feature(c_ll_ki_n013_stats_feature,c_ll_no_n008_stats_feature, deparse(substitute(c_ll_ki_n013_stats_feature)),deparse(substitute(c_ll_no_n008_stats_feature)))
+
+# Dataframe Kirov-Poland
+bootleneck_vs_non_bootleneck_interaction_stats_feature(c_ll_ki_n013_stats_feature,c_ll_po_n008_stats_feature, deparse(substitute(c_ll_ki_n013_stats_feature)),deparse(substitute(c_ll_po_n008_stats_feature)))
+
+# Dataframe Sierra_Morena-Doñana
+bootleneck_vs_non_bootleneck_interaction_stats_feature(c_lp_sm_n019_stats_feature, c_lp_do_n012_stats_feature, deparse(substitute(c_lp_sm_n019_stats_feature)),deparse(substitute(c_lp_do_n012_stats_feature)))
+
+
+interaction_stats_all_pops_feature <- rbind (interaction_stats_c_ll_ki_n013_stats_feature_c_ll_no_n008_stats_feature, interaction_stats_c_ll_ki_n013_stats_feature_c_ll_po_n008_stats_feature, interaction_stats_c_lp_sm_n019_stats_feature_c_lp_do_n012_stats_feature)
+
+write.table(interaction_stats_all_pops_feature, paste(wd_output,"interaction_stats_autosomes_feature_all_pops.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
+```
+
+##### Region
+
+```{r}
+
+
+# Calculo el ratio para la mediana:
+
+bootleneck_vs_non_bootleneck_interaction_stats_region <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+  
+  # Nombre de las poblaciones
+  
+  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+   
+  complete_pop_name1=as.character(as.data.frame(dataframe_POP1) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+  complete_pop_name2=as.character(as.data.frame(dataframe_POP2) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+
+# AUTOSOMES
+  
+  # All values
+  autosomes_pairwise_average_intergenic_per_unit_pop1_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_intergenic)) 
+  autosomes_watterson_average_intergenic_per_unit_pop1_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_intergenic))  
+  
+  autosomes_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
+  autosomes_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic))  
+  
+  # Replacing low values -> 0
+  autosomes_pairwise_average_intergenic_per_unit_pop1_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_zero_intergenic)) 
+  autosomes_watterson_average_intergenic_per_unit_pop1_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_zero_intergenic))  
+  
+  autosomes_pairwise_average_intergenic_per_unit_pop2_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_zero_intergenic)) 
+  autosomes_watterson_average_intergenic_per_unit_pop2_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_zero_intergenic))  
+  
+
+# CHRX.
+
+  # All values
+  chrX_pairwise_average_intergenic_per_unit_pop1_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_intergenic)) 
+  chrX_watterson_average_intergenic_per_unit_pop1_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_intergenic))  
+  
+  chrX_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
+  chrX_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic))  
+  
+  # Replacing low values -> 0
+  chrX_pairwise_average_intergenic_per_unit_pop1_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_zero_intergenic)) 
+  chrX_watterson_average_intergenic_per_unit_pop1_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_zero_intergenic))  
+  
+  chrX_pairwise_average_intergenic_per_unit_pop2_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_zero_intergenic)) 
+  chrX_watterson_average_intergenic_per_unit_pop2_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_zero_intergenic))  
+  
+  # Calculo de los ratios globales.
+  
+  ratio_averages_POP1_POP2 <- full_join (dataframe_POP1, dataframe_POP2, by=c("region", "type_chr", "Species")) %>% mutate (comparison=paste(complete_pop_name1,"-", complete_pop_name2, sep="")) %>% 
+  
+  # All values
+
+    mutate (ratio_median_pairwise = median_pairwise_ave.y/median_pairwise_ave.x) %>% 
+    mutate (ratio_median_watterson = median_watterson_ave.y/median_watterson_ave.x) %>% 
+
+  # Replacing low values -> 0
+
+    mutate (ratio_median_pairwise_zero = median_pairwise_zero.y/median_pairwise_zero.x) %>% 
+    mutate (ratio_median_watterson_zero = median_watterson_zero.y/median_watterson_zero.x) %>% 
+ 
+  # All values corrected intergenic
+    
+    mutate (ratio_median_pairwise_corrected = ifelse(type_chr=="autosomes",                  (median_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median), 
+ # else
+(median_pairwise_ave.y/chrX_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/chrX_pairwise_average_intergenic_per_unit_pop1_median))) %>% 
+   mutate (ratio_median_watterson_corrected = ifelse(type_chr=="autosomes",                  (median_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_median), 
+# else
+(median_watterson_ave.y/chrX_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/chrX_watterson_average_intergenic_per_unit_pop1_median))) %>% 
+    
+  # Replacing low values -> 0 corrected intergenic
+  
+
+    mutate (ratio_median_pairwise_corrected_zero = ifelse(type_chr=="autosomes",                  (median_pairwise_zero.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median_zero)/(median_pairwise_zero.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median_zero), 
+ # else
+(median_pairwise_zero.y/chrX_pairwise_average_intergenic_per_unit_pop2_median_zero)/(median_pairwise_zero.x/chrX_pairwise_average_intergenic_per_unit_pop1_median_zero))) %>% 
+  
+    mutate (ratio_median_watterson_corrected_zero = ifelse(type_chr=="autosomes",                  (median_watterson_zero.y/autosomes_watterson_average_intergenic_per_unit_pop2_median_zero)/(median_watterson_zero.x/autosomes_watterson_average_intergenic_per_unit_pop1_median_zero), 
+# else
+(median_watterson_zero.y/chrX_watterson_average_intergenic_per_unit_pop2_median_zero)/(median_watterson_zero.x/chrX_watterson_average_intergenic_per_unit_pop1_median_zero)))
+
+  
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
+  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
+}
+
+
+```
+
+Create data frames
+
+```{r}
+
+# Create data frame
+
+# Dataframe Kirov-Norway
+bootleneck_vs_non_bootleneck_interaction_stats_region(c_ll_ki_n013_stats_region,c_ll_no_n008_stats_region, deparse(substitute(c_ll_ki_n013_stats_region)),deparse(substitute(c_ll_no_n008_stats_region)))
+
+# Dataframe Kirov-Poland
+bootleneck_vs_non_bootleneck_interaction_stats_region(c_ll_ki_n013_stats_region,c_ll_po_n008_stats_region, deparse(substitute(c_ll_ki_n013_stats_region)),deparse(substitute(c_ll_po_n008_stats_region)))
+
+# Dataframe Sierra_Morena-Doñana
+bootleneck_vs_non_bootleneck_interaction_stats_region(c_lp_sm_n019_stats_region, c_lp_do_n012_stats_region, deparse(substitute(c_lp_sm_n019_stats_region)),deparse(substitute(c_lp_do_n012_stats_region)))
+
+
+interaction_stats_all_pops_region <- rbind (interaction_stats_c_ll_ki_n013_stats_region_c_ll_no_n008_stats_region, interaction_stats_c_ll_ki_n013_stats_region_c_ll_po_n008_stats_region, interaction_stats_c_lp_sm_n019_stats_region_c_lp_do_n012_stats_region)
+
+write.table(interaction_stats_all_pops_region, paste(wd_output,"interaction_stats_autosomes_region_all_pops.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+
+
+```
+
+##### Chr
+
+```{r}
+
+# Calculo el ratio para la media:
+
+bootleneck_vs_non_bootleneck_interaction_stats_chr <- function (dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+  
+  # Nombre de las poblaciones
+  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+   
+  complete_pop_name1=as.character(as.data.frame(dataframe_POP1) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+  complete_pop_name2=as.character(as.data.frame(dataframe_POP2) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+
+# AUTOSOMES
+  
+  # All values
+  autosomes_pairwise_average_intergenic_per_unit_pop1_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_intergenic)) 
+  autosomes_watterson_average_intergenic_per_unit_pop1_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_intergenic))  
+  
+  autosomes_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
+  autosomes_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic))  
+  
+  # Replacing low values -> 0
+  autosomes_pairwise_average_intergenic_per_unit_pop1_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_zero_intergenic)) 
+  autosomes_watterson_average_intergenic_per_unit_pop1_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_zero_intergenic))  
+  
+  autosomes_pairwise_average_intergenic_per_unit_pop2_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_zero_intergenic)) 
+  autosomes_watterson_average_intergenic_per_unit_pop2_median_zero <- as.numeric(autosomes_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_zero_intergenic))  
+  
+# CHRX.
+
+  # All values
+  chrX_pairwise_average_intergenic_per_unit_pop1_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_intergenic)) 
+  chrX_watterson_average_intergenic_per_unit_pop1_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_intergenic))  
+  
+  chrX_pairwise_average_intergenic_per_unit_pop2_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_intergenic)) 
+  chrX_watterson_average_intergenic_per_unit_pop2_median <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_intergenic))  
+  
+  # Replacing low values -> 0
+  chrX_pairwise_average_intergenic_per_unit_pop1_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_pairwise_ave_zero_intergenic)) 
+  chrX_watterson_average_intergenic_per_unit_pop1_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP1)) %>% select (median_watterson_ave_zero_intergenic))  
+  
+  chrX_pairwise_average_intergenic_per_unit_pop2_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_pairwise_ave_zero_intergenic)) 
+  chrX_watterson_average_intergenic_per_unit_pop2_median_zero <- as.numeric(chrX_intergenic_average_values %>% filter (pop==as.character(POP2)) %>% select (median_watterson_ave_zero_intergenic))  
+  
+  # Calculo de los ratios globales.
+  
+  ratio_averages_POP1_POP2 <- full_join (dataframe_POP1, dataframe_POP2, by=c("chr", "Species")) %>% mutate (comparison=paste(complete_pop_name1,"-", complete_pop_name2, sep="")) %>% 
+    
+    # Adding_chr_notation
+  
+    mutate(type_chr=ifelse(chr!="chrX", "autosome", "chrX")) %>% 
+      
+  # All values
+
+    mutate (ratio_median_pairwise = median_pairwise_ave.y/median_pairwise_ave.x) %>% 
+    mutate (ratio_median_watterson = median_watterson_ave.y/median_watterson_ave.x) %>% 
+
+    # Replacing low values -> 0
+
+    mutate (ratio_median_pairwise_zero = median_pairwise_zero.y/median_pairwise_zero.x) %>% 
+    mutate (ratio_median_watterson_zero = median_watterson_zero.y/median_watterson_zero.x) %>% 
+  
+    # All values corrected intergenic
+    
+   mutate (ratio_median_pairwise_corrected = ifelse(chr!="chrX",                  (median_pairwise_ave.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median), 
+ # else
+(median_pairwise_ave.y/chrX_pairwise_average_intergenic_per_unit_pop2_median)/(median_pairwise_ave.x/chrX_pairwise_average_intergenic_per_unit_pop1_median))) %>% 
+  
+   mutate (ratio_median_watterson_corrected = ifelse(chr!="chrX",                  (median_watterson_ave.y/autosomes_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/autosomes_watterson_average_intergenic_per_unit_pop1_median), 
+# else
+(median_watterson_ave.y/chrX_watterson_average_intergenic_per_unit_pop2_median)/(median_watterson_ave.x/chrX_watterson_average_intergenic_per_unit_pop1_median))) %>% 
+    
+  # Replacing low values -> 0  corrected intergenic
+  
+    mutate (ratio_median_pairwise_corrected_zero = ifelse(chr!="chrX",                  (median_pairwise_zero.y/autosomes_pairwise_average_intergenic_per_unit_pop2_median_zero)/(median_pairwise_zero.x/autosomes_pairwise_average_intergenic_per_unit_pop1_median_zero), 
+ # else
+(median_pairwise_zero.y/chrX_pairwise_average_intergenic_per_unit_pop2_median_zero)/(median_pairwise_zero.x/chrX_pairwise_average_intergenic_per_unit_pop1_median_zero))) %>% 
+  
+    mutate (ratio_median_watterson_corrected_zero = ifelse(chr!="chrX",                  (median_watterson_zero.y/autosomes_watterson_average_intergenic_per_unit_pop2_median_zero)/(median_watterson_zero.x/autosomes_watterson_average_intergenic_per_unit_pop1_median_zero), 
+# else
+(median_watterson_zero.y/chrX_watterson_average_intergenic_per_unit_pop2_median_zero)/(median_watterson_zero.x/chrX_watterson_average_intergenic_per_unit_pop1_median_zero)))
+
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
+  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
+}
+
+```
+
+Create data frame
+```{r}
+
+# Dataframe Kirov-Norway
+bootleneck_vs_non_bootleneck_interaction_stats_chr(c_ll_ki_n013_stats_chr,c_ll_no_n008_stats_chr, deparse(substitute(c_ll_ki_n013_stats_chr)),deparse(substitute(c_ll_no_n008_stats_chr)))
+
+# Dataframe Kirov-Poland
+bootleneck_vs_non_bootleneck_interaction_stats_chr(c_ll_ki_n013_stats_chr,c_ll_po_n008_stats_chr, deparse(substitute(c_ll_ki_n013_stats_chr)),deparse(substitute(c_ll_po_n008_stats_chr)))
+
+# Dataframe Sierra_Morena-Doñana
+bootleneck_vs_non_bootleneck_interaction_stats_chr(c_lp_sm_n019_stats_chr, c_lp_do_n012_stats_chr, deparse(substitute(c_lp_sm_n019_stats_chr)),deparse(substitute(c_lp_do_n012_stats_chr)))
+
+
+interaction_stats_all_pops_chr <- rbind (interaction_stats_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr, interaction_stats_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr, interaction_stats_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr)
+
+write.table(interaction_stats_all_pops_chr, paste(wd_output,"interaction_stats_autosomes_region_all_pops.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+
+```
+
+# --------------------
+
+#### Two factors: Interaction table
+
+##### Feature-Chr
+```{r}
+
+# Calculo el ratio para la mediana:
+
+bootleneck_vs_non_bootleneck_interaction_stats_feature_chr <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+  
+  # Nombre de las poblaciones
+  
+  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+   
+  complete_pop_name1=as.character(as.data.frame(dataframe_POP1) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+  complete_pop_name2=as.character(as.data.frame(dataframe_POP2) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+
+  # Create interaction table:
+  ratio_averages_POP1_POP2 <- full_join ( dataframe_POP1, dataframe_POP2, by=c("chr", "feature", "Species")) %>% mutate (comparison=paste(complete_pop_name1,"-", complete_pop_name2, sep=""))
+  
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
+  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
+  
+}
+
+# Create data frame
+
+# Dataframe Kirov-Norway
+bootleneck_vs_non_bootleneck_interaction_stats_feature_chr(c_ll_ki_n013_stats_feature_chr,c_ll_no_n008_stats_feature_chr, deparse(substitute(c_ll_ki_n013_stats_feature_chr)),deparse(substitute(c_ll_no_n008_stats_feature_chr)))
+
+# Dataframe Kirov-Poland
+bootleneck_vs_non_bootleneck_interaction_stats_feature_chr(c_ll_ki_n013_stats_feature_chr,c_ll_po_n008_stats_feature_chr, deparse(substitute(c_ll_ki_n013_stats_feature_chr)),deparse(substitute(c_ll_po_n008_stats_feature_chr)))
+
+# Dataframe Sierra_Morena-Doñana
+bootleneck_vs_non_bootleneck_interaction_stats_feature_chr(c_lp_sm_n019_stats_feature_chr, c_lp_do_n012_stats_feature_chr, deparse(substitute(c_lp_sm_n019_stats_feature_chr)),deparse(substitute(c_lp_do_n012_stats_feature_chr)))
+
+```
+
+##### Feature-Region
+
+```{r}
+
+# Calculo el ratio para la media:
+
+bootleneck_vs_non_bootleneck_interaction_stats_feature_region <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+  
+  # Nombre de las poblaciones
+  
+  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+  
+  complete_pop_name1=as.character(as.data.frame(dataframe_POP1) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+  complete_pop_name2=as.character(as.data.frame(dataframe_POP2) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+
+  # Create interaction table:
+  ratio_averages_POP1_POP2 <- full_join ( dataframe_POP1, dataframe_POP2, by=c("region", "feature", "Species"))  %>% mutate (comparison=paste(complete_pop_name1,"-", complete_pop_name2, sep=""))
+  
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
+  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
+}
+
+# Create data frame
+
+# Dataframe Kirov-Norway
+bootleneck_vs_non_bootleneck_interaction_stats_feature_region(c_ll_ki_n013_stats_feature_region,c_ll_no_n008_stats_feature_region, deparse(substitute(c_ll_ki_n013_stats_feature_region)),deparse(substitute(c_ll_no_n008_stats_feature_region)))
+
+# Dataframe Kirov-Poland
+bootleneck_vs_non_bootleneck_interaction_stats_feature_region(c_ll_ki_n013_stats_feature_region,c_ll_po_n008_stats_feature_region, deparse(substitute(c_ll_ki_n013_stats_feature_region)),deparse(substitute(c_ll_po_n008_stats_feature_region)))
+
+# Dataframe Sierra_Morena-Doñana
+bootleneck_vs_non_bootleneck_interaction_stats_feature_region(c_lp_sm_n019_stats_feature_region,c_lp_do_n012_stats_feature_region, deparse(substitute(c_lp_sm_n019_stats_feature_region)),deparse(substitute(c_lp_do_n012_stats_feature_region)))
+
+```
+
+
+##### Region-Chr 
+
+```{r}
+
+# Calculo el ratio para la mediana:
+
+bootleneck_vs_non_bootleneck_interaction_stats_region_chr <- function(dataframe_POP1, dataframe_POP2, name_POP1, name_POP2){
+  
+  # Nombre de las poblaciones
+
+  POP1=as.character(as.data.frame(dataframe_POP1) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+  POP2=as.character(as.data.frame(dataframe_POP2) %>% select (pop) %>% mutate(pop=as.character(pop)) %>% .[1,1]) 
+  
+  complete_pop_name1=as.character(as.data.frame(dataframe_POP1) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+  complete_pop_name2=as.character(as.data.frame(dataframe_POP2) %>% select (Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1]) 
+
+  # Create interaction table:
+  ratio_averages_POP1_POP2 <- full_join ( dataframe_POP1, dataframe_POP2, by=c("region", "chr", "Species"))  %>% mutate (comparison=paste(complete_pop_name1,"-", complete_pop_name2, sep=""))
+  
+  dataframename <- paste ("interaction_stats", name_POP1, name_POP2,  sep="_")
+  assign (dataframename, ratio_averages_POP1_POP2,.GlobalEnv)
+}
+
+# Create data frame
+
+# Dataframe Kirov-Norway
+bootleneck_vs_non_bootleneck_interaction_stats_region_chr(c_ll_ki_n013_stats_region_chr,c_ll_no_n008_stats_region_chr, deparse(substitute(c_ll_ki_n013_stats_region_chr)),deparse(substitute(c_ll_no_n008_stats_region_chr)))
+
+# Dataframe Kirov-Poland
+bootleneck_vs_non_bootleneck_interaction_stats_region_chr(c_ll_ki_n013_stats_region_chr,c_ll_po_n008_stats_region_chr, deparse(substitute(c_ll_ki_n013_stats_region_chr)),deparse(substitute(c_ll_po_n008_stats_region_chr)))
+
+# Dataframe Sierra_Morena-Doñana
+bootleneck_vs_non_bootleneck_interaction_stats_region_chr(c_lp_sm_n019_stats_region_chr, c_lp_do_n012_stats_region_chr, deparse(substitute(c_lp_sm_n019_stats_region_chr)),deparse(substitute(c_lp_do_n012_stats_region_chr)))
+
+# Fusiono las tablas y con la info de gato
+
+interaction_stats_all_pops_region_chr_cat_info <-  rbind (interaction_stats_c_ll_ki_n013_stats_region_chr_c_ll_po_n008_stats_region_chr ,interaction_stats_c_ll_ki_n013_stats_region_chr_c_ll_no_n008_stats_region_chr, interaction_stats_c_lp_sm_n019_stats_region_chr_c_lp_do_n012_stats_region_chr) %>% dplyr::full_join(., cat_chr_info_divergence, by="chr") 
+
+
+
+```
+# ------------------------------
+
+
+
+##### Plot panel comparison MB & EB
+
+```{r}
+
+library (ggpubr)
+library(ggrepel)
+library(ggpmisc)
+library("gridExtra")
+
+formula <- y ~ x
+
+interaction_stats_all_pops_region_chr_cat_info$comparison <- factor (interaction_stats_all_pops_region_chr_cat_info$comparison, levels=c("Kirov-NE_Poland", "Kirov-Norway", "Andujar-Donana"))
+interaction_stats_all_pops_feature$comparison <- factor (interaction_stats_all_pops_feature$comparison, levels=c("Kirov-NE_Poland", "Kirov-Norway", "Andujar-Donana"))
+
+DIVERSITY_MEASURES=c( "wmean_pairwise_ave", "wmean_watterson_ave")
+
+  for (DIVERSITY_MEASURE in DIVERSITY_MEASURES)
+{
+    
+# Region and chr 
+    
+    ## Lynx lynx
+    
+region_chr_colour_recomb <- ggplot(data=interaction_stats_all_pops_region_chr_cat_info %>% filter(chr!="chrX") , mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""), paste(DIVERSITY_MEASURE,".x",sep="")))+
+  facet_grid (region~comparison) +
+  scale_fill_viridis(option="magma") +
+  scale_colour_viridis(option="magma") +
+  geom_abline(colour="grey", linetype = "dashed") +
+  geom_point (colour="grey80", fill="grey80") +
+  geom_smooth (method = "lm", colour="grey30", fill="grey60", size=0.5) +
+  theme(axis.title.x = element_blank(), legend.position = "none") +
+  coord_equal(ratio=1) +
+  stat_poly_eq(aes(label =  paste("atop(",stat(adj.rr.label),",",stat(eq.label), ")", sep = "")), 
+               formula = formula, parse = TRUE,size = 2.5, label.x.npc = "right",
+                  label.y.npc = "bottom")
+
+# # Prueba en la que coloreamos por porcentage de genes. 
+# region_chr_colour_recomb2 <- ggplot(data=interaction_stats_all_pops_region_chr_cat_info %>% filter(chr!="chrX") , mapping = aes_string(paste(DIVERSITY_MEASURE,".y",sep=""),                                                                                                                        paste(DIVERSITY_MEASURE,".x",sep=""), fill="percentage_genes", colour="percentage_genes"))+
+#   facet_grid (region~comparison) +
+#   scale_fill_viridis(option="magma") +
+#   scale_colour_viridis(option="magma") +
+#   geom_abline(colour="grey", linetype = "dashed") +
+#   geom_point () + #colour="grey80", fill="grey80"
+#   geom_smooth (method = "lm", colour="grey30", fill="grey60", size=0.5) +
+#   theme(axis.title.x = element_blank() ) + # legend.position = "none"
+#   coord_equal(ratio=1) +
+#   stat_poly_eq(aes(label =  paste("atop(",stat(adj.rr.label),",",stat(eq.label), ")", sep = "")),
+#                formula = formula, parse = TRUE,size = 2.5, label.x.npc = "right",
+#                   label.y.npc = "bottom")
+# Esta guardado como: comparisons_region_vs_chr_wmean_pairwise_ave_colour_gene_percentage
+
+# Plot Feature MB vs EB
+
+feature_colour_feature <- ggplot (interaction_stats_all_pops_feature %>% filter(type_chr!="chrX"), 
+          mapping=aes_string(paste(DIVERSITY_MEASURE, ".y", sep=""), paste(DIVERSITY_MEASURE, ".x", sep=""))) +
+    facet_wrap (~comparison) +
+    scale_fill_viridis_d() +
+    scale_colour_viridis_d() +
+    geom_abline (colour="grey", linetype = "dashed") +
+    geom_smooth (method = "lm", colour="grey80", fill="grey80", size=0.5) +
+    geom_point (aes(fill=feature, colour=feature)) +
+    coord_equal(ratio=1) +
+    theme(legend.position = "none") +
+    geom_text_repel(aes(label = feature),
+                  box.padding   = 1, 
+                  point.padding = 0.1,
+                  size          = 2.5,
+                  force         = 80,
+                  segment.size  = 0.2,
+                  segment.color = 'grey50') 
+  
+
+  
+  
+
+ figure <- ggarrange(region_chr_colour_recomb, feature_colour_feature, 
+          labels = c("A", "B"),
+          ncol = 1, nrow = 2,   heights = c(2, 1))
+ggsave(paste(wd_output, "panel_regions_feature_", DIVERSITY_MEASURE,".pdf", sep=""), figure, width = 20, height = 30, units = "cm")
+
+}
+
+```
+
+##### Plot chr solo 
+No lo corro
+```{r}
+
+  ggplot (interaction_stats_all_pops_chr %>% filter(type_chr=="autosome"), mapping=aes_string(paste(DIVERSITY_MEASURE, ".y", sep=""), paste(DIVERSITY_MEASURE, ".x", sep=""), fill="type_chr", colour="type_chr")) +
+  geom_point(interaction_stats_all_pops_chr %>% filter(type_chr=="autosome"), mapping=aes_string(paste(DIVERSITY_MEASURE, ".y", sep=""), paste(DIVERSITY_MEASURE, ".x", sep=""), fill="type_chr", colour="type_chr")) +
+  geom_smooth (method = "lm", colour="grey80", fill="grey80", size=0.5) +
+  geom_abline(colour="grey", linetype = "dashed") +
+  facet_wrap (~comparison) +
+  stat_poly_eq(formula = my.formula,coef.digits=2 ,
+                aes(label = paste(..eq.label..)), 
+                parse = TRUE, label.y = 1.05 * min(interaction_stats_all_pops_chr$wmean_watterson_ave.x)) +  
+  stat_poly_eq(formula = my.formula, 
+                aes(label = paste(..rr.label..)), 
+                parse = TRUE, label.y = min(interaction_stats_all_pops_chr$wmean_watterson_ave.x)) +
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) 
+```
+
+
+
+##### Plot for ratio
+
+No lo corro.
+```{r}
+
+DATAFRAMES=c(
+"ratio_median_c_ll_ki_n013_stats_feature_c_ll_no_n008_stats_feature", "ratio_median_c_ll_ki_n013_stats_feature_c_ll_po_n008_stats_feature", "ratio_median_c_lp_sm_n019_stats_feature_c_lp_do_n012_stats_feature")
+
+INDEXES=c("ratio_median_watterson_corrected", "ratio_median_pairwise_corrected", "ratio_median_watterson_corrected", "ratio_median_pairwise_corrected", "ratio_median_watterson_corrected_zero", "ratio_median_pairwise_corrected_zero")
+
+for (DATAFRAME in DATAFRAMES)
+{
+for (INDEX in INDEXES)
+  {
+
+ggplot (get(DATAFRAME) %>% filter (type_chr!="chrX"), aes_string("feature", INDEX, fill="type_chr", colour="type_chr")) +
+  geom_point() +
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+  theme(text=element_text(family = 'Times', size = 12, color = 'black'), axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  ggsave(paste(wd_output, DATAFRAME,"_", INDEX,".pdf", sep=""))
+}
+
+
+
+```
+
+
+
+# -------------------------
+
+# -------------------------------------------------
+
+#### 3D Plot divergence and recombination vs ratio
+
+```{r}
+library(plotly)
+
+# data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity
+
+plot_ly(x=filter(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity,feature=="UCNE")$divergence,
+        y=filter(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity,feature=="UCNE")$recombination_rate,
+        z=filter(data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity,feature=="UCNE")$ratio_watterson_average)
+
+
+plot_ly(x=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$divergence,
+        y=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$recombination_rate,
+        z=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$ratio_watterson_average, 
+        color = ~data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity$feature, 
+        mode = "markers",marker=list(opacity=0.5))
+```
+
+####  Plot boot data for each group
+
+No lo hago
+
+```{r}
+
+library(rlang)
+
+DATAFRAMES=c("ratio_boot_c_ll_ki_n013_c_ll_no_n008_feature", "ratio_boot_c_ll_ki_n013_c_ll_po_n008_feature", "ratio_boot_c_lp_sm_n019_c_lp_do_n012_feature") 
+
+# "ratio_boot_c_ll_ki_n013_c_ll_no_n008_chr", "ratio_boot_c_ll_ki_n013_c_ll_po_n008_chr", "ratio_boot_c_lp_sm_n019_c_lp_do_n012_chr",  "ratio_boot_c_ll_ki_n013_c_ll_no_n008_region", "ratio_boot_c_ll_ki_n013_c_ll_po_n008_region", "ratio_boot_c_lp_sm_n019_c_lp_do_n012_region") 
+
+INDICES=c("ratio_watterson_boot", "ratio_pairwise_boot")
+
+
+
+
+myplot3 <- function(data,title){
+  for (INDEX in INDICES)
+  {
+    print (INDEX)
+  pdf(paste(wd_output,title,"_",INDEX,".pdf", sep=""))
+  plot <- ggplot(data=data, aes_string(x=colnames(data)[1],y=paste("mean_",INDEX,sep=""), fill="chr_type", colour="chr_type")) +
+        geom_point() +
+        geom_errorbar(aes_string(ymin=paste("mean_",INDEX,"-sd_",INDEX,sep=""), ymax=paste("mean_",INDEX,"+sd_",INDEX,sep=""))) +
+        #scale_y_continuous(trans = 'log10') +
+        theme_minimal() +  #theme selection for background and lines
+        theme(
+              axis.text.x = element_text(angle = 60, vjust = 0.8, hjust = 1))
+  # labs(title = paste (title, "scale_y_transformed", sep=""))
+  print (plot)
+  dev.off() 
+    
+  }
+}
+
+
+for(i in DATAFRAMES){
+  print(myplot3(get(i), i))
+}
+
+
+```
+# -------------------------
+# -------------------------
+
+# OLD CODE
+
+##### Heatmap for two groups
+
+```{r}
+library( gplots)
+
+# ls(pattern="ratio_median")  y selecciono los que tienen comparación a pares
+DATAFRAMES=c(
+"ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_no_n008_stats_feature_chr", "ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_po_n008_stats_feature_chr", "ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr")
+
+
+
+
+INDICE=c("ratio_median_pairwise_corrected", "ratio_median_watterson_corrected")
+#########################################################
+### A) Installing and loading required packages
+#########################################################
+
+if (!require("gplots")) {
+   install.packages("gplots", dependencies = TRUE)
+   library(gplots)}
+
+if (!require("RColorBrewer")) {
+   install.packages("RColorBrewer", dependencies = TRUE)
+   library(RColorBrewer)
+   }
+
+  
+  library(eply)
+
+#########################################################
+### B) Reading in data and transform it into matrix format
+#########################################################
+for (DATA in DATAFRAMES)
+{  
+  for (INDEX in INDICE)
+  {
+
+    DATAFRAME=as.data.frame(get(DATA))
+    DATAFRAME$chr <- factor (DATAFRAME$chr, levels=c( "chrD4","chrE1","chrE3","chrF1","chrF2","chrB4","chrD2","chrE2","chrA3","chrB3","chrC1","chrD1","chrD3","chrA2","chrB2","chrA1","chrC2","chrB1","chrX"))
+    
+    DATAFRAME$feature <- factor (DATAFRAME$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+
+    POP1=as.character(DATAFRAME$pop.x[1])
+    POP2=as.character(DATAFRAME$pop.y[1])
+    
+    temp.data.frame.diversity <- reshape2::acast(DATAFRAME , list(names(DATAFRAME)[1], names(DATAFRAME)[3]), value.var=INDEX)
+    
+    temp.data.frame.counts <- reshape2::acast(DATAFRAME, list(names(DATAFRAME)[1], names(DATAFRAME)[3]), value.var="total_count.x")
+
+   
+   
+#########################################################
+### C) Customizing and plotting the heat map
+#########################################################
+
+# creates a 5 x 5 inch image
+png(paste(wd_output,"heatmap_",names(DATAFRAME)[1],"_",names(DATAFRAME)[3],"_",INDEX,"_",POP1,"_",POP2,".png", sep=""),    # create PNG for the heat map        
+  width = 5*500,        # 5 x 300 pixels
+  height = 5*500,
+  res = 300,            # 300 pixels per inch
+  pointsize = 8)        # smaller font size
+
+
+# my_palette <- colorRampPalette(c("yellow", "orange", "red"))(n = 1000)
+# colors = c(seq(-3,-2,length=100),seq(-2,0.5,length=100),seq(0.5,6,length=100))
+
+    
+heatmap.2(temp.data.frame.diversity,
+  cellnote = temp.data.frame.counts,  
+  col=viridis_pal(), 
+  #breaks=colors,
+  main = paste(INDEX,POP1,POP2, sep=" "), # heat map title
+  notecol="black",      # change font color of cell labels to black
+  # density.info="none",  # turns off density plot inside color legend
+  trace="none",         # turns off trace lines inside the heat map
+  margins =c(20,10),     # widens margins around plot
+  # col=my_palette,       # use on color palette defined earlier
+  # breaks=col_breaks,    # enable color transition at specified limits
+  dendrogram="none", 
+  Rowv=FALSE,
+  Colv=FALSE
+  )           # turn off column clustering
+  
+dev.off()               # close the PNG device
+
+  }
+}  
+  
+
+
+```
+ 
+No lo corro!
+# ------
+
+#### Cat info join
+
+Solo puedo unir la que sea solo agrupadas por cromosoma.
+
+
+```{r}
+
+# Creo tablas con la información de gato. Como son tablas resumen, solo las puedo unir cuando tenga información de cromosoma. 
+
+ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate, mean_divergence_rate), by="chr") 
+
+ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate, mean_divergence_rate), by="chr") 
+
+ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr_cat_info <- left_join(ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_lp_sm_n019") %>% select(chr,mean_recombination_rate, mean_divergence_rate), by="chr") 
+
+# En realidad da igual la población que escoja, todos tienen la misma tasa de recombinación
+
+# Creo las tablas de interacción teniendo en cuenta la feature y el cromosoma.
+
+ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_po_n008_stats_feature_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_po_n008_stats_feature_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate, mean_divergence_rate), by="chr")
+
+ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_no_n008_stats_feature_chr_cat_info <- left_join(ratio_median_c_ll_ki_n013_stats_feature_chr_c_ll_no_n008_stats_feature_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_ll_ki_n013") %>% select(chr,mean_recombination_rate, mean_divergence_rate), by="chr")
+
+ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr_cat_info <- left_join(ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr, cat_chr_info, by="chr") %>% right_join(., filter(as.data.frame(stats_df_pop_chr), pop=="c_lp_sm_n019") %>% select(chr,mean_recombination_rate, mean_divergence_rate), by="chr")
+
+
+```
+
+##### General ratio vs recombination
+
+```{r}
+library("lme4")
+
+
+ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr_cat_info_vs_recombination <- lmList(ratio_median_pairwise_corrected ~ cM.Mb | feature, ratio_median_c_lp_sm_n019_stats_feature_chr_c_lp_do_n012_stats_feature_chr_cat_info)
+
+sink(paste (wd_output,"lm_ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_per_feature_c_ll_ki_n013_c_ll_po_n008.txt"))
+print(summary(ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_po_n008_diversity))
+sink()
+
+ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_no_n008_diversity <- lmList(log(ratio_pairwise_average_corrected) ~ recombination_rate.x | feature, data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity)
+
+sink(paste (wd_output,"lm_ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_per_feature_c_ll_ki_n013_c_ll_no_n008.txt"))
+print(summary(ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_ll_ki_n013_c_ll_no_n008_diversity))
+sink()
+
+ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_lp_sm_n019_c_lp_do_n012_diversity  <- lmList(log(ratio_pairwise_average_corrected) ~ recombination_rate.x | feature, data_diversity_c_lp_sm_n019_diversity_c_lp_do_n012_diversity)
+
+sink(paste (wd_output,"lm_ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_per_feature_c_lp_sm_n019_c_lp_do_n012.txt"))
+print(summary(ratio_pairwise_average_corrected_vs_recombination_rate_per_unit_c_lp_sm_n019_c_lp_do_n012_diversity))
+sink()
+```
+
+##### Plot join with ratio info 
+
+
+```{r}
+
+DATAFRAMES=c("ratio_median_c_ll_ki_n013_stats_chr_c_ll_no_n008_stats_chr_cat_info","ratio_median_c_ll_ki_n013_stats_chr_c_ll_po_n008_stats_chr_cat_info","ratio_median_c_lp_sm_n019_stats_chr_c_lp_do_n012_stats_chr_cat_info")
+INDEXES=c("ratio_median_pairwise_corrected", "ratio_median_watterson_corrected") 
+
+# Ratio vs tamaño
+
+for (DATAFRAME in DATAFRAMES)
+{
+  
+POP1=as.character(as.data.frame(get(DATAFRAME)) %>% select(pop.x) %>% .[1,1])
+POP2=as.character(as.data.frame(get(DATAFRAME)) %>% select(pop.y) %>% .[1,1])
+
+for (INDEX in INDEXES)
+  {
+ggplot (as.data.frame(get(DATAFRAME) %>% filter (chr!="chrX")), aes_string("SizeMb_v8", INDEX)) +
+  geom_point(aes_string(fill="chr" , colour="chr")) +
+  geom_smooth(method = "lm") +
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+  ggsave(paste(wd_output, "cat_size_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""))
+
+}
+    
+# Ratio vs tamaño
+
+
+for (INDEX in INDEXES)
+  {
+ggplot (as.data.frame(get(DATAFRAME) %>% filter (chr!="chrX")), aes_string("percentage_genes", INDEX)) +
+  geom_point(aes_string(fill="chr" , colour="chr")) +
+  geom_smooth(method = "lm") +
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+  ggsave(paste(wd_output, "cat_gene-content_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""))
+
+}
+    
+# Ratio vs chr recombination
+
+for (INDEX in INDEXES)
+  {
+ggplot (as.data.frame(get(DATAFRAME) %>% filter (chr!="chrX")), aes_string("cM.Mb", INDEX)) +
+  geom_point(aes_string(fill="chr" , colour="chr")) +
+  geom_smooth(method = "lm") +
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+  ggsave(paste(wd_output, "cat_chr-recomb_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""))
+
+}
+
+# Ratio vs calculated recombination
+
+for (INDEX in INDEXES)
+  {
+ggplot (as.data.frame(get(DATAFRAME) %>% filter (chr!="chrX")), aes_string("mean_recombination_rate", INDEX)) +
+  geom_point(aes_string(fill="chr" , colour="chr")) +
+  geom_smooth(method = "lm") +
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+  ggsave(paste(wd_output, "cat_calculated-recomb_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""))
+}
+
+  # Ratio vs calculated divergence
+
+for (INDEX in INDEXES)
+  {
+ggplot (as.data.frame(get(DATAFRAME) %>% filter (chr!="chrX")), aes_string("mean_divergence_rate", INDEX)) +
+  geom_point(aes_string(fill="chr" , colour="chr")) +
+  geom_smooth(method = "lm") +
+    scale_color_viridis(discrete=TRUE) +
+    scale_fill_viridis(discrete=TRUE) +
+  ggsave(paste(wd_output, "divergence_vs_",INDEX,"_",POP1,"_",POP2,".pdf", sep=""))
+
+
+}
+}
+
+
+
+
+```
+
+
+
+# ------------------
+
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
+## Otros
+
+### GAM
+
+
+```{r}
+data_set_yedra <- data_diversity_c_ll_ki_n013_diversity_c_ll_no_n008_diversity %>% filter (!is.na(delta_pairwise_average_normalized_zero)) %>% .[sample(1:nrow(.), 2500, replace=FALSE),] %>% select ("scaffold", "start_cero_based", "end", "recombination_rate", "divergence", "GC_content","feature", "delta_pairwise_average_normalized_zero") %>% arrange(., scaffold, start_cero_based) 
+
+write.csv(data_set_yedra, "/Users/marialucenaperez/Desktop/DATAFRAME_test_Maria.csv",row.names = F, quote = F)
+
+```
+
+https://noamross.github.io/gams-in-r-course/chapter1
+
+```{r}
+require(gam)
+require(ISLR)
+attach(Wage)
+require("mgcv")
+
+
+data_set_yedra <- read.table("/Users/marialucenaperez/Desktop/DATAFRAME_test_Maria.csv", header=T, sep=",")
+gam1<-gam(wage~s(age,df=6)+s(year,df=6)+education ,data = Wage)
+#in the above function s() is the shorthand for fitting smoothing splines 
+#in gam() function
+summary(gam1)
+
+#Plotting the Model
+par(mfrow=c(1,3)) #to partition the Plotting Window
+plot(gam1,se = TRUE) 
+#se stands for standard error Bands
+
+gam1<-gam(delta_pairwise_average_normalized_zero~+s(recombination_rate),data = data_set_yedra)
+# When fitting a GAM, use the syntax y ~ s(x) in the model formula to indicate that y should be a smooth, non-linear function of x.
+#in the above function s() is the shorthand for fitting smoothing splines 
+#in gam() function
+
+summary(gam1)
+
+par(mfrow=c(3,3)) #to partition the Plotting Window
+gam.check(gam1)
+# Extract the model coefficients
+coef(gam1)
+
+#Plotting the Model
+par(mfrow=c(1,3)) #to partition the Plotting Window
+plot(gam1,se = TRUE,residuals = TRUE, pch = 1) 
+#se stands for standard error Bands
+
+gam2<-gam(delta_pairwise_average_normalized_zero~+s(recombination_rate, k = 3) ,data = data_set_yedra)
+plot(gam2,se = TRUE,residuals = TRUE, pch = 1) 
+
+gam3<-gam(delta_pairwise_average_normalized_zero~+s(recombination_rate, k = 20) ,data = data_set_yedra)
+plot(gam3,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam4<-gam(delta_pairwise_average_normalized_zero~+s(recombination_rate) ,data = data_set_yedra, sp = 0.1)
+plot(gam4,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam5<-gam(delta_pairwise_average_normalized_zero~+s(recombination_rate) ,data = data_set_yedra, sp = 0.0001)
+plot(gam5,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam6<-gam(delta_pairwise_average_normalized_zero~+s(recombination_rate, k=) ,data = data_set_yedra, sp = 0.1)
+plot(gam6,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+```
+#### Divergencia
+
+```{r}
+gam1<-gam(delta_pairwise_average_normalized_zero~+s(divergence),data = data_set_yedra)
+# When fitting a GAM, use the syntax y ~ s(x) in the model formula to indicate that y should be a smooth, non-linear function of x.
+#in the above function s() is the shorthand for fitting smoothing splines 
+#in gam() function
+
+summary(gam1)
+
+
+# Extract the model coefficients
+coef(gam1)
+
+#Plotting the Model
+par(mfrow=c(1,3)) #to partition the Plotting Window
+plot(gam1,se = TRUE,residuals = TRUE, pch = 1) 
+#se stands for standard error Bands
+
+gam2<-gam(delta_pairwise_average_normalized_zero~+s(divergence, k = 3) ,data = data_set_yedra)
+plot(gam2,se = TRUE,residuals = TRUE, pch = 1) 
+
+gam3<-gam(delta_pairwise_average_normalized_zero~+s(divergence, k = 20) ,data = data_set_yedra)
+plot(gam3,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam4<-gam(delta_pairwise_average_normalized_zero~+s(divergence) ,data = data_set_yedra, sp = 0.1)
+plot(gam4,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam5<-gam(delta_pairwise_average_normalized_zero~+s(divergence) ,data = data_set_yedra, sp = 0.0001)
+plot(gam5,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam6<-gam(delta_pairwise_average_normalized_zero~+s(divergence, k=) ,data = data_set_yedra, sp = 0.1)
+plot(gam6,se = TRUE,residuals = TRUE, pch = 1) 
+
+```
+#### GC_content
+
+```{r}
+gam1<-gam(delta_pairwise_average_normalized_zero~+s(GC_content),data = data_set_yedra)
+# When fitting a GAM, use the syntax y ~ s(x) in the model formula to indicate that y should be a smooth, non-linear function of x.
+#in the above function s() is the shorthand for fitting smoothing splines 
+#in gam() function
+
+summary(gam1)
+
+
+# Extract the model coefficients
+coef(gam1)
+
+#Plotting the Model
+par(mfrow=c(1,3)) #to partition the Plotting Window
+plot(gam1,se = TRUE,residuals = TRUE, pch = 1) 
+#se stands for standard error Bands
+
+gam2<-gam(delta_pairwise_average_normalized_zero~+s(GC_content, k = 3) ,data = data_set_yedra)
+plot(gam2,se = TRUE,residuals = TRUE, pch = 1) 
+
+gam3<-gam(delta_pairwise_average_normalized_zero~+s(GC_content, k = 20) ,data = data_set_yedra)
+plot(gam3,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam4<-gam(delta_pairwise_average_normalized_zero~+s(GC_content) ,data = data_set_yedra, sp = 0.1)
+plot(gam4,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam5<-gam(delta_pairwise_average_normalized_zero~+s(GC_content) ,data = data_set_yedra, sp = 0.0001)
+plot(gam5,se = TRUE,residuals = TRUE, pch = 1) 
+
+
+gam6<-gam(delta_pairwise_average_normalized_zero~+s(GC_content, k=) ,data = data_set_yedra, sp = 0.1)
+plot(gam6,se = TRUE,residuals = TRUE, pch = 1) 
+
+```
+
+#### Multivariate
+
+```{r}
+
+gam1<-gam(delta_pairwise_average_normalized_zero ~ s(recombination_rate) +s (divergence) +s (GC_content) ,data = (data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity %>% filter(delta_pairwise_average_normalized_zero!=-1 & delta_pairwise_average_normalized_zero!=1)), method = "REML")
+# When fitting a GAM, use the syntax y ~ s(x) in the model formula to indicate that y should be a smooth, non-linear function of x.
+#in the above function s() is the shorthand for fitting smoothing splines 
+#in gam() function
+
+gam1<-gam(delta_pairwise_average_normalized_zero ~ s(recombination_rate) +s (divergence) +s (GC_content) ,data = data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_no_n008_autosomes_diversity , method = "REML")
+
+
+summary(gam1)
+
+
+# Extract the model coefficients
+coef(gam1)
+cols <- sample(c("red","green","pink"),100,TRUE)
+
+
+#Plotting the Model
+par(mfrow=c(3,1)) #to partition the Plotting Window
+plot(gam1,se = TRUE,residuals = F, pch=19, cex=0.75, scheme=1, shade=T,shade.col='gray90')
+
+
+
+
+```
+
+
+# Conclusión GAM
+
+No se ve un patrón claro, y no se nos ocurren trasnformaciones que solucionen este tema. Así que dejamos lo de los modelos agotado por el momento. 
+
+
+## Modelo mixto generalizado
+
+
+```{r}
+library(lme4)
+library(MuMIn)
+library(gvlma)
+
+data=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity
+
+
+ki.po.model_iteraction <- lmer (ratio_corrected_by_watterson_average_intergenic_per_unit ~ feature * recombination_rate.y * chr + ( 1 | unique_id ), data=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity, REML=FALSE)
+
+r.squaredGLMM(ki.po.model_iteraction)
+
+summary (ki.po.model_iteraction)
+
+# Of course you should do model simplification or model averaging in an attempt to get a parsimonious model before you do any of this, but I just wanted to flag this up.
+anova_model1 <- anova(ki.po.model_iteraction)
+
+
+mod <- lm(ratio_corrected_by_watterson_average_intergenic_per_unit ~ feature * recombination_rate.y * chr,data=data_diversity_c_ll_ki_n013_autosomes_diversity_c_ll_po_n008_autosomes_diversity)
+
+# Do I understand correctly it is fine the outcome variable  does not need to be normally distributed itself ?
+# Just like general linear models, your outcome variable does not need to be normally distributed as a univariate variable. However, LME models assume that the residuals of the model are normally distributed. So a transformation or adding weights to the model would be a way of taking care of this (and checking with diagnostic plots, of course).
+par(mfrow = c(2, 2))
+plot(mod)
+# problema de convergencia!
+
+gvlma::gvlma(mod)
+
+anova(ki.po.model_nointeraction,ki.po.model_iteraction)
+
+mean(ki.po.model_iteraction$residuals)
+# https://www.ncbi.nlm.nih.gov/pubmed/21077903
+
+
+# Super util para iterpretar los plots: https://stats.stackexchange.com/questions/58141/interpreting-plot-lm/65864#65864
+mod.stdres = rstandard(mod)
+plot(c_ll_ki_n013_diversity_c_ll_po_n008_diversity_for_model$Populations, mod.stdres, 
+  ylab="Standardized Residuals") 
+
+ggplot (data=c_ll_ki_n013_diversity, aes(watterson_ave)) +
+  geom_histogram()
+
+kk <- c_ll_ki_n013_diversity %>% filter(feature=="CDS")
+
+shapiro.test(randomssubset$watterson_ave)
+
+a <- seq(1, 700000, by = 150) # option 2
+randomssubset <- kk[a,]
+
+
+
+
+
+```
+
+
+https://stats.stackexchange.com/questions/101274/how-to-interpret-a-qq-plot
+https://www.google.com/search?client=safari&rls=en&q=how+to+correct+for+right+skewness+residuals&ie=UTF-8&oe=UTF-8
+https://stats.stackexchange.com/questions/135008/how-to-deal-with-non-normally-distributed-residuals
+https://stats.stackexchange.com/questions/58141/interpreting-plot-lm/65864#65864
+https://stats.stackexchange.com/questions/76226/interpreting-the-residuals-vs-fitted-values-plot-for-verifying-the-assumptions
+https://brownmath.com/stat/shape.htm
+https://www.researchgate.net/post/how_to_reduce_skewness_and_kurtosis
+https://www.researchgate.net/post/how_to_deal_with_skewness
+
+
+### Assumptions of the model
+
+Assumption 1
+The regression model is linear in parameters
+
+```{r}
+
+```
+
+Assumption 2
+The mean of residuals is zero
+
+
+
+
+
+Again, let’s work through this: First, the output reminds you of the model that you
+fit. Then, there’s some general summary statistics such as Akaike’s Information
+Criterion, the log-Likelihood etc. We won’t go into the meaning of these different
+values in this tutorial because these are conceptually a little bit more involved.
+Let’s focus on the output for the random effects first:
+
+
+You’re being reminded of the formula of the two models that you’re comparing.
+Then, you find a Chi-Square value, the associated degrees of freedom and the pvalue2.
+You would report this result the following way:
+“… politeness affected pitch (χ2(1)=11.62, 
+
