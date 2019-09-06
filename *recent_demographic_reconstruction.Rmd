@@ -1136,3 +1136,23 @@ for pop in ${POPS[@]}
 
 ```
 
+###Ejemplos:
+```{bash}
+
+#Example 1 (using their data):
+cd /Users/dani/Downloads/raw_data/simulation/main/1000_expansion_5/
+
+perl /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/LinkNe-master/LinkNe.pl -i genepop.99.txt -m genepop.99.txt.mat -o testing.linkne #works. Fills outputs after it's done processing everything.
+
+
+#Example 2 (using their data):
+cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
+N=10000
+CUT=$((N+3))
+head -n $N c_lp_do_intergenic_filtered_more_than_2000_SNPs.genepop > c_lp_do_intergenic_filtered_more_than_2000_SNPs.genepop.test
+sed -n '/Pop/,$p' c_lp_do_intergenic_filtered_more_than_2000_SNPs.genepop | cut -d' ' -f -$CUT >> c_lp_do_intergenic_filtered_more_than_2000_SNPs.genepop.test
+head -n $N lp_perspecies.trimmed_filtered1.ann.c_lp_do_intergenic_filtered_more_than_2000_SNPS.map > lp_perspecies.trimmed_filtered1.ann.c_lp_do_intergenic_filtered_more_than_2000_SNPS.map.test 
+
+perl LinkNe-master/LinkNe.pl -i c_lp_do_intergenic_filtered_more_than_2000_SNPs.genepop.test -map lp_perspecies.trimmed_filtered1.ann.c_lp_do_intergenic_filtered_more_than_2000_SNPS.map.test -o c_lp_do_intergenic_filtered_more_than_2000_SNPs.out.test #works but it's too slow and there's some strange warning about uninitialized genotype values...
+
+```
