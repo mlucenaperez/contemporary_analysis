@@ -393,7 +393,6 @@ data_diversity_filtered <- read.table(paste(wd, "global.per.unit.averages.chr.al
 # En esta tabla hay valores de watterson que son 0 a pesar de ser valores que teníamos anteriormente, y que tengamos valores para pi. Esto es por la transformación de watterson para chr, y que hemos realizado. Para los autosomas, hemos dejado el valor como está y para los chr X hemos aplicado una corrección. Como en algunos casoa unque tnga valores de diversidad no tngo valores de chr, al aplicar la corrección se queda en cero. Lo que tngo que hacer ahora es filtrar para los valores que no tengan info de chr. Y eso lo hago aquí, al principio. 
 ```
 
-
 ## Modifying dataframe
 ## 1.  Recombination categories
 ```{r}
@@ -444,7 +443,6 @@ assign(paste0(POP,"_density_min_value_watterson"), c(POP,minX_value))
 density_min_values_watterson <- as.data.frame(rbind (c_lp_sm_n019_density_min_value_watterson, c_lp_do_n012_density_min_value_watterson, c_ll_ki_n013_density_min_value_watterson, c_ll_po_n008_density_min_value_watterson, c_ll_no_n008_density_min_value_watterson)) 
 names(density_min_values_watterson) <- c("pop", "min_density_value_watterson")
 density_min_values_watterson$min_density_value_watterson <- as.numeric(as.character(density_min_values_watterson$min_density_value_watterson))
-
 rm (c_lp_sm_n019_density_min_value_watterson)
 rm (c_lp_do_n012_density_min_value_watterson)
 rm (c_ll_ki_n013_density_min_value_watterson)
@@ -654,6 +652,9 @@ write.table(c_ll_po_n008_diversity, paste(wd,"c_ll_po_n008_diversity.csv",sep=""
 write.table(c_lp_sm_n019_diversity, paste(wd,"c_lp_sm_n019_diversity.csv",sep=""), quote = F,  row.names = F, sep =";", dec="." )
 write.table(c_lp_do_n012_diversity, paste(wd,"c_lp_do_n012_diversity.csv",sep=""), quote = F,  row.names = F, sep =";", dec="." )
 write.table(data_diversity_filtered_ave_corrected, paste(wd,"data_diversity_filtered_ave_corrected.csv",sep=""), quote = F,  row.names = F, sep =";", dec="." )
+write.table(density_min_values_watterson, paste(wd,"density_min_values_watterson.csv",sep=""), quote = F,  row.names = F, sep =";", dec="." )
+write.table(density_min_values_pairwise, paste(wd,"density_min_values_pairwise.csv",sep=""), quote = F,  row.names = F, sep =";", dec="." )
+
 ```
 
 # -----------------------------------------------------------------
@@ -672,6 +673,8 @@ library(arules)
 library(boot)
 library(broom)
 library(Hmisc)
+library(GGally)
+library(ggpmisc)
 
 wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
 wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/per_pop/"
@@ -793,7 +796,7 @@ chr?
 
 
 # ----------
-## Population metrics
+## Stats
 Esto no tengo que correlo. Puedo cargar las tablas. 
 
 Primero creo una formula para poder calcular la stdev basada en bootstrapping.
@@ -812,7 +815,7 @@ diversity_stats_pop <- function(DATAFRAME)
     # Esto zero - zero lo calculo para luego poder sacar el 95% de la distribución par los GO term de interes. 
              mutate(watterson_zero_zero=ifelse(watterson_zero==0, NA,watterson_zero)) %>% 
              mutate(pairwise_zero_zero=ifelse(pairwise_zero==0, NA,pairwise_zero)) %>% 
-             dplyr::group_by(Populations) %>%
+             dplyr::group_by(Populations, pop) %>%
              dplyr::summarise(
                        total_count=n(), 
                        # Distribución sin corregir
@@ -865,7 +868,7 @@ write.table(stats_df_pop, paste(wd_output,"stats_diversity_per_pop.tsv",sep=""),
 diversity_stats_grouped <- function(DATAFRAME ,GROUP)
 { diversity_stats_df_grouped <- 
              DATAFRAME %>% 
-             dplyr::group_by_("Populations",GROUP) %>%
+             dplyr::group_by_("Populations","pop", GROUP) %>%
              dplyr::mutate(watterson_zero_zero=ifelse(watterson_zero==0, NA,watterson_zero)) %>% 
              dplyr::mutate(pairwise_zero_zero=ifelse(pairwise_zero==0, NA,pairwise_zero)) %>% 
              dplyr::summarise(
@@ -952,7 +955,7 @@ write.table(stats_df_pop_recomb, paste(wd_output,"stats_diversity_per_pop_per_re
 diversity_stats_doble_grouped <- function(DATAFRAME, GROUP1, GROUP2)
 { diversity_stats_df_doble_grouped <- 
              DATAFRAME %>% 
-             dplyr::group_by_("Populations",GROUP1, GROUP2) %>%
+             dplyr::group_by_("Populations","pop", GROUP1, GROUP2) %>%
              dplyr::summarise(
                        total_count=n(), 
                        wmean_watterson_ave=weighted.mean(watterson_ave,w=informative_sites),
@@ -1042,17 +1045,17 @@ write.table(stats_df_pop_region_recomb, paste(wd_output,"stats_diversity_per_pop
 # Load summarize data
 
 ```{r}
-stats_df_pop <- read.table(paste(wd_output,"stats_diversity_per_pop.tsv",sep=""), row.names = NULL, sep =";", dec="," )
-stats_df_pop_feature <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature.tsv",sep=""), row.names = NULL, sep =";", dec="," )
-stats_df_pop_region <- read.table(paste(wd_output,"stats_diversity_per_pop_per_region.tsv",sep=""), row.names = NULL, sep =";", dec="," )
-stats_df_pop_chr <- read.table(paste(wd_output,"stats_diversity_per_pop_per_chr.tsv",sep=""), row.names = NULL, sep =";", dec="," )
-stats_df_pop_recomb <- read.table(paste(wd_output,"stats_diversity_per_pop_per_recomb.tsv",sep=""), row.names = NULL, sep =";", dec="," )
-stats_df_pop_feature_chr <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature_chr.tsv",sep=""), row.names = NULL, sep =";", dec="," )
-stats_df_pop_region_chr <- read.table(paste(wd_output,"stats_diversity_per_pop_per_region_chr.tsv",sep=""), row.names = NULL, sep =";", dec="," )
-stats_df_pop_recomb_chr <- read.table(paste(wd_output,"stats_diversity_per_pop_per_recomb_chr.tsv",sep=""), row.names = NULL, sep =";", dec="," )
-stats_df_pop_feature_region <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature_region.tsv",sep=""), row.names = NULL, sep =";", dec="," )
-stats_df_pop_feature_recomb <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature_recomb.tsv",sep=""),row.names = NULL, sep =";", dec="," )
-stats_df_pop_region_recomb <- read.table(paste(wd_output,"stats_diversity_per_pop_per_region_recomb.tsv",sep=""), row.names = NULL, sep =";", dec="," )
+stats_df_pop <- read.table(paste(wd_output,"stats_diversity_per_pop.tsv",sep=""), row.names = NULL, sep =";", dec=",", header=T)
+stats_df_pop_feature <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature.tsv",sep=""), row.names = NULL, sep =";", dec=",", header=T )
+stats_df_pop_region <- read.table(paste(wd_output,"stats_diversity_per_pop_per_region.tsv",sep=""), row.names = NULL, sep =";", dec=",", header=T )
+stats_df_pop_chr <- read.table(paste(wd_output,"stats_diversity_per_pop_per_chr.tsv",sep=""), row.names = NULL, sep =";", dec=",", header=T )
+stats_df_pop_recomb <- read.table(paste(wd_output,"stats_diversity_per_pop_per_recomb.tsv",sep=""), row.names = NULL, sep =";", dec=",", header=T )
+stats_df_pop_feature_chr <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature_chr.tsv",sep=""), row.names = NULL, sep =";", dec=",", header=T )
+stats_df_pop_region_chr <- read.table(paste(wd_output,"stats_diversity_per_pop_per_region_chr.tsv",sep=""), row.names = NULL, sep =";", dec=",", header=T )
+stats_df_pop_recomb_chr <- read.table(paste(wd_output,"stats_diversity_per_pop_per_recomb_chr.tsv",sep=""), row.names = NULL, sep =";", dec="," , header=T)
+stats_df_pop_feature_region <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature_region.tsv",sep=""), row.names = NULL, sep =";", dec="," , header=T)
+stats_df_pop_feature_recomb <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature_recomb.tsv",sep=""),row.names = NULL, sep =";", dec="," , header=T)
+stats_df_pop_region_recomb <- read.table(paste(wd_output,"stats_diversity_per_pop_per_region_recomb.tsv",sep=""), row.names = NULL, sep =";", dec="," , header=T)
 
 ```
 
@@ -1075,9 +1078,9 @@ cols <- c("NE_Poland"=viridis_pal()(5)[3],
 
 ```{r}
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_recomb, !is.na(discrete_recomb)), 
+  geom_point (data=subset(stats_df_pop_recomb %>% filter (type_chr=="autosomes"), !is.na(discrete_recomb)), 
               aes(x=discrete_recomb, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_recomb, !is.na(discrete_recomb)), 
+  geom_segment (data=subset(stats_df_pop_recomb %>% filter (type_chr=="autosomes"), !is.na(discrete_recomb)), 
                 aes(x = discrete_recomb, xend=discrete_recomb, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1085,11 +1088,10 @@ ggplot() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
   ggsave(paste(wd_output,"recombination_categories_vs_watterson_autosomes.pdf",sep=""))
 
-
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_recomb, !is.na(discrete_recomb)), 
+  geom_point (data=subset(stats_df_pop_recomb %>% filter (type_chr=="autosomes"), !is.na(discrete_recomb)), 
               aes(x=discrete_recomb, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_recomb, !is.na(discrete_recomb)), 
+  geom_segment (data=subset(stats_df_pop_recomb %>% filter (type_chr=="autosomes"), !is.na(discrete_recomb)), 
                 aes(x = discrete_recomb, xend=discrete_recomb, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1099,9 +1101,9 @@ ggplot() +
   
   
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_chrX_recomb, !is.na(discrete_recomb)), 
+  geom_point (data=subset(stats_df_pop_recomb %>% filter (type_chr=="chrX"), !is.na(discrete_recomb)), 
               aes(x=discrete_recomb, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_chrX_recomb, !is.na(discrete_recomb)), 
+  geom_segment (data=subset(stats_df_pop_recomb %>% filter (type_chr=="chrX"), !is.na(discrete_recomb)), 
                 aes(x = discrete_recomb, xend=discrete_recomb, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1111,9 +1113,9 @@ ggplot() +
 
 
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_chrX_recomb, !is.na(discrete_recomb)), 
+  geom_point (data=subset(stats_df_pop_recomb %>% filter (type_chr=="chrX"), !is.na(discrete_recomb)), 
               aes(x=discrete_recomb, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_chrX_recomb, !is.na(discrete_recomb)), 
+  geom_segment (data=subset(stats_df_pop_recomb %>% filter (type_chr=="chrX"), !is.na(discrete_recomb)), 
                 aes(x = discrete_recomb, xend=discrete_recomb, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1130,9 +1132,9 @@ ggplot() +
 ```{r}
 
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_region_recomb, !is.na(discrete_recomb)), 
+  geom_point (data=subset(stats_df_pop_region_recomb %>% filter (type_chr=="autosomes"), !is.na(discrete_recomb)), 
               aes(x=discrete_recomb, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_region_recomb, !is.na(discrete_recomb)), 
+  geom_segment (data=subset(stats_df_pop_region_recomb %>% filter (type_chr=="autosomes"), !is.na(discrete_recomb)), 
                 aes(x = discrete_recomb, xend=discrete_recomb, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1142,9 +1144,9 @@ ggplot() +
   
   
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_region_recomb, !is.na(discrete_recomb)), 
+  geom_point (data=subset(stats_df_pop_region_recomb %>% filter (type_chr=="autosomes"), !is.na(discrete_recomb)), 
               aes(x=discrete_recomb, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_region_recomb, !is.na(discrete_recomb)), 
+  geom_segment (data=subset(stats_df_pop_region_recomb %>% filter (type_chr=="autosomes"), !is.na(discrete_recomb)), 
                 aes(x = discrete_recomb, xend=discrete_recomb, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1160,9 +1162,9 @@ ggplot() +
 ## *Recombination and features
 ```{r}
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_feature_recomb , !is.na(discrete_recomb)), 
+  geom_point (data=subset(stats_df_pop_feature_recomb %>% filter(type_chr=="autosomes") , !is.na(discrete_recomb)), 
               aes(x=discrete_recomb, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_feature_recomb, !is.na(discrete_recomb)), 
+  geom_segment (data=subset(stats_df_pop_feature_recomb %>% filter(type_chr=="autosomes"), !is.na(discrete_recomb)), 
                 aes(x = discrete_recomb, xend=discrete_recomb, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1172,9 +1174,9 @@ ggplot() +
   
   
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_feature_recomb , !is.na(discrete_recomb)), 
+  geom_point (data=subset(stats_df_pop_feature_recomb %>% filter(type_chr=="autosomes") , !is.na(discrete_recomb)), 
               aes(x=discrete_recomb, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_feature_recomb, !is.na(discrete_recomb)), 
+  geom_segment (data=subset(stats_df_pop_feature_recomb %>% filter(type_chr=="autosomes"), !is.na(discrete_recomb)), 
                 aes(x = discrete_recomb, xend=discrete_recomb, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1184,9 +1186,9 @@ ggplot() +
   
   
   ggplot() + 
-  geom_point (data=subset(stats_df_pop_chrX_feature_recomb , !is.na(discrete_recomb)), 
+  geom_point (data=subset(stats_df_pop_feature_recomb %>% filter(type_chr=="chrX") , !is.na(discrete_recomb)), 
               aes(x=discrete_recomb, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_chrX_feature_recomb, !is.na(discrete_recomb)), 
+  geom_segment (data=subset(stats_df_pop_feature_recomb %>% filter(type_chr=="chrX") , !is.na(discrete_recomb)), 
                 aes(x = discrete_recomb, xend=discrete_recomb, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1196,9 +1198,9 @@ ggplot() +
   
   
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_chrX_feature_recomb , !is.na(discrete_recomb)), 
+  geom_point (data=subset(stats_df_pop_feature_recomb %>% filter(type_chr=="chrX")  , !is.na(discrete_recomb)), 
               aes(x=discrete_recomb, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_chrX_feature_recomb, !is.na(discrete_recomb)), 
+  geom_segment (data=subset(stats_df_pop_feature_recomb %>% filter(type_chr=="chrX") , !is.na(discrete_recomb)), 
                 aes(x = discrete_recomb, xend=discrete_recomb, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1214,9 +1216,9 @@ ggplot() +
 
 ```{r}
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+  geom_point (data=subset(stats_df_pop_feature %>% filter(type_chr=="autosomes"), !is.na(feature)), 
               aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+  geom_segment (data=subset(stats_df_pop_feature %>% filter(type_chr=="autosomes"), !is.na(feature)), 
                 aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1226,9 +1228,9 @@ ggplot() +
 
 
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+  geom_point (data=subset(stats_df_pop_feature %>% filter(type_chr=="autosomes"), !is.na(feature)), 
               aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_feature, !is.na(feature)), 
+  geom_segment (data=subset(stats_df_pop_feature %>% filter(type_chr=="autosomes"), !is.na(feature)), 
                 aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1238,9 +1240,9 @@ ggplot() +
   
   
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_chrX_feature, !is.na(feature)), 
+  geom_point (data=subset(stats_df_pop_feature %>% filter(type_chr=="chrX"), !is.na(feature)), 
               aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_chrX_feature, !is.na(feature)), 
+  geom_segment (data=subset(stats_df_pop_feature %>% filter(type_chr=="chrX"), !is.na(feature)), 
                 aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1250,9 +1252,9 @@ ggplot() +
 
 
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_chrX_feature, !is.na(feature)), 
+  geom_point (data=subset(stats_df_pop_feature %>% filter(type_chr=="chrX"), !is.na(feature)), 
               aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_chrX_feature, !is.na(feature)), 
+  geom_segment (data=subset(stats_df_pop_feature %>% filter(type_chr=="chrX"), !is.na(feature)), 
                 aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1267,9 +1269,9 @@ ggplot() +
 ```{r}
 
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_feature_region, !is.na(feature)), 
+  geom_point (data=subset(stats_df_pop_feature_region %>% filter(type_chr=="autosomes"), !is.na(feature)), 
               aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_feature_region, !is.na(feature)), 
+  geom_segment (data=subset(stats_df_pop_feature_region %>% filter(type_chr=="autosomes"), !is.na(feature)), 
                 aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1279,29 +1281,56 @@ ggplot() +
   
   
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_feature_region, !is.na(feature)), 
+  geom_point (data=subset(stats_df_pop_feature_region %>% filter(type_chr=="autosomes"), !is.na(feature)), 
               aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_feature_region, !is.na(feature)), 
+  geom_segment (data=subset(stats_df_pop_feature_region %>% filter(type_chr=="autosomes"), !is.na(feature)), 
                 aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(region~Populations, ncol=3, scales="free_y") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
   ggsave(paste(wd_output,"feature_categories_vs_pairwise_per_region.pdf",sep=""))
-  
-  
+```
 
+## *Features and chr
+
+```{r}
+
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_feature_chr , !is.na(feature)), 
+              aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_feature_chr , !is.na(feature)), 
+                aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~chr,  scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"feature_categories_vs_watterson_per_chr.pdf",sep=""))
+  
+  
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_feature_chr , !is.na(feature)), 
+              aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_feature_chr, !is.na(feature)), 
+                aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~chr, ncol=3, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"feature_categories_vs_pairwise_per_chr.pdf",sep=""))
 
 ```
+
+
 
 ## *Region and diversity
 
 
 ```{r}
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_region, !is.na(region)), 
+  geom_point (data=subset(stats_df_pop_region %>% filter(type_chr=="autosomes"), !is.na(region)), 
               aes(x=region, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_region, !is.na(region)), 
+  geom_segment (data=subset(stats_df_pop_region %>% filter(type_chr=="autosomes"), !is.na(region)), 
                 aes(x = region, xend=region, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1311,9 +1340,9 @@ ggplot() +
 
 
 ggplot() + 
-  geom_point (data=subset(stats_df_pop_autosomes_region, !is.na(region)), 
+  geom_point (data=subset(stats_df_pop_region %>% filter(type_chr=="autosomes"), !is.na(region)), 
               aes(x=region, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_autosomes_region, !is.na(region)), 
+  geom_segment (data=subset(stats_df_pop_region %>% filter(type_chr=="autosomes"), !is.na(region)), 
                 aes(x = region, xend=region, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
@@ -1321,6 +1350,33 @@ ggplot() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
   ggsave(paste(wd_output,"region_categories_vs_pairwise_autosomes.pdf",sep=""))
 
+```
+
+## *Chr and diversity
+
+```{r}
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_chr , !is.na(chr)), 
+              aes(x=chr, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_chr, !is.na(chr)), 
+                aes(x = chr, xend=chr, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"chr_vs_watterson.pdf",sep=""))
+
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_chr , !is.na(chr)), 
+              aes(x=chr, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop_chr, !is.na(chr)), 
+                aes(x = chr, xend=chr, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  facet_wrap(~Species, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggsave(paste(wd_output,"chr_vs_pairwise.pdf",sep=""))
+  
 ```
 
 
@@ -1331,15 +1387,12 @@ ggplot() +
 A nivel de chr podemos sacar muchas cosillas. Vamos a hacer un join de las tablas de información con las de diversidad y vamos a plotear algunas cosillas básicas.
 
 ```{r}
-
 # Cargo la tabla con la información de gato.
 cat_chr_info <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/cat_chr_gene_content_recombination_all_information.txt", header=T, na.strings = c("NA", "na"), dec=",")
-
 
 # Creo tablas con la información de diversidad y de cromosomas. 
 stas_df_pop_chr_plus_cat_info <- right_join(x = cat_chr_info, y = stats_df_pop_chr, by="chr") 
 stas_df_pop_chr_plus_cat_info$pop <- factor (stas_df_pop_chr_plus_cat_info$Populations, levels=c("Kirov","NE_Poland","Norway", "Andujar", "Donana"))
-
 ```
 
 #### Chromosome divergence
@@ -1347,54 +1400,35 @@ stas_df_pop_chr_plus_cat_info$pop <- factor (stas_df_pop_chr_plus_cat_info$Popul
 Voy a sacar la divergencia por cromosoma porque no la tengo
 
 ```{r}
-
 average_divergence_per_pop <- data_diversity_filtered_ave_corrected %>% 
-             dplyr::group_by_("Species","chr") %>%
+             dplyr::group_by(Species,chr) %>%
              dplyr::summarise(mean_divergence=mean(divergence,na.rm=TRUE)) 
 
-
-  
   if("chr" %in% colnames(average_divergence_per_pop)){average_divergence_per_pop$chr <- factor(average_divergence_per_pop$chr, levels = c("chrA1","chrC1","chrB1","chrA2","chrB2","chrC2","chrA3","chrB3","chrB4","chrD1","chrD2","chrD3","chrD4","chrE1","chrE2","chrF1","chrF2","chrX"))}
 
-
-# ggplot (average_divergence_per_pop, aes(chr, mean_divergence, fill=Species, color=Species)) +
-#   geom_point()
-
 # Hacemos la tablas
-
 average_divergence_per_pop_spread <- average_divergence_per_pop %>% tidyr::spread(., Species, mean_divergence ) %>% as.data.frame(.) %>% dplyr::rename(., "L.lynx_divergence"="L.lynx") %>% dplyr::rename(.,"L.pardinus_divergence"="L.pardinus")
 
 # Lo uno a los datos de gato
-
 cat_chr_info_divergence <- right_join(x = cat_chr_info, y = average_divergence_per_pop_spread, by="chr") 
 
 # Lo uno también con los datos de diversidad
 stas_df_pop_chr_plus_extra_info <- right_join(stas_df_pop_chr_plus_cat_info, average_divergence_per_pop, by=c("chr", "Species") )
-
 ```
 
 
 ### General plots cat info
 
 ```{r}
-
-library(GGally)
-
 # La filtro para hacer plots
-
 cat_chr_info_filtered <- cat_chr_info_divergence %>% filter(., chr!="chrX") %>% select (SizeMb_v8, GC_content, percentage_genes, cM.Mb, L.lynx_divergence, L.pardinus_divergence)
 
-
 # Hago una matriz de correlación entre las variables
-
 res <- cor(cat_chr_info_filtered )
 round(res, 2)
 cor(cat_chr_info_filtered, use = "complete.obs")
 
 # http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
-# library("PerformanceAnalytics")
-# chart.Correlation(cat_chr_info_filtered, histogram=TRUE, pch=19)
-
 lowerFn <- function(data, mapping, method = "lm", ...) {
   p <- ggplot(data = data, mapping = mapping) +
     geom_point(colour = "black") +
@@ -1402,53 +1436,17 @@ lowerFn <- function(data, mapping, method = "lm", ...) {
   p
 }
 
-
 pdf(paste(wd_output, "correlation_matrix_1.pdf", sep="")) 
 ggpairs(cat_chr_info_filtered,  lower = list(continuous = wrap(lowerFn, method = "lm")))
 dev.off()
-
-# https://stackoverflow.com/questions/30858337/how-to-customize-lines-in-ggpairs-ggally
-#  diag = list(continuous = wrap("barDiag", colour = "blue")),
-#  upper = list(continuous = wrap("cor", size = 10))
-
-
-# Primero unas cuantas cosillas básicas respecto a los chr.
-
-# Cat chr version size comparison
-# ggplot(data=(cat_chr_info %>% filter(chr!="chrX")), aes(x=SizeMb_v5 ,y=SizeMb_v8)) +
-#   geom_point(data=(cat_chr_info %>% filter(chr!="chrX")), aes(x=SizeMb_v5 ,y=SizeMb_v8, fill=chr, colour=chr))+
-#   geom_smooth() +
-# ggtitle("Cat chr version size comparison")
-# ggsave(paste(wd_output, "cat_chr_size_comparison.pdf", sep=""), device = pdf)
-# 
-# 
-# ggplot(data=(cat_chr_info %>% filter(chr!="chrX")), aes(x=SizeMb_v8 ,y=cM.Mb)) +
-#   geom_point(data=(cat_chr_info %>% filter(chr!="chrX")), aes(x=SizeMb_v8 ,y=cM.Mb, fill=chr, colour=chr)) +
-#   geom_smooth()+
-# ggtitle("Recombination_rate cat genome v8")
-# ggsave(paste(wd_output, "cat_recombination_size_comparison.pdf", sep=""), device = pdf)
-# 
-# 
-# ggplot(data=(cat_chr_info %>% filter(chr!="chrX")), aes(x=SizeMb_v8, y=percentage_genes )) +
-#   geom_point(data=(cat_chr_info %>% filter(chr!="chrX")), aes(x=SizeMb_v8 ,y=percentage_genes , fill=chr, colour=chr)) +
-#   geom_smooth()+
-# ggtitle("Gene content vs size cat genome v8")
-# ggsave(paste(wd_output, "cat_size_vs_gene_content_comparison.pdf", sep=""), device = pdf)
-
 ```
 
 ### Plot join with diversity data
 
 ```{r}
-
-library(ggpmisc)
-
 # Para todo esto quitamos el cromosoma X porque es un outlier!!!
-
 #### SANITY CHECKS #### 
-
 # Comprobamos que la tasa de recombinación que nosotros tenemos para cada cromosoma cuando hacemos la media es parecida a la de los cromosomas. 
-
 # ggplot (stas_df_pop_chr_plus_extra_info, aes(cM.Mb, mean_recombination_rate))+
 #   geom_point()+
 #   coord_equal(xlim=c(0,6),ylim=c(0,6))
@@ -1462,21 +1460,16 @@ library(ggpmisc)
 # ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes(mean_recombination_rate, SizeMb_v8))+
 #   geom_point() +
 #     geom_smooth()
-
 # Coincide regulín. 
-
 ######################## 
 
 my.formula <- y ~ x
 INDEXES=c("mean_watterson_ave", "mean_pairwise_ave") 
-
 max((stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"))$mean_watterson_ave)
                                                                     
 # Diversidad vs tamaño
-
 for (INDEX in INDEXES)
   {
-  
 ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("SizeMb_v8", INDEX, fill="Populations" , colour="Populations")) +
   geom_point() +
   geom_smooth(method = "lm") +
@@ -1491,15 +1484,12 @@ ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("Siz
                 parse = TRUE,label.y = 0.00003) +
 #theme selection for background and lines
   ggsave(paste(wd_output, "cat_size_vs_",INDEX,".pdf", sep=""))
-
 }
     
 # Diversidad vs gene content
 
-
 for (INDEX in INDEXES)
   {
-  
 ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("percentage_genes", INDEX, fill="Populations" , colour="Populations")) +
   geom_point() +
   geom_smooth(method = "lm") +
@@ -1512,15 +1502,11 @@ ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("per
   stat_poly_eq(formula = my.formula, 
                 aes(label = paste(..rr.label..)), 
                 parse = TRUE,label.y = 0.00003) +
-
-
 #theme selection for background and lines
   ggsave(paste(wd_output, "cat_gene-content_vs_",INDEX,".pdf", sep=""))
-
 }
     
 # Diversidad vs chr recombination
-
 for (INDEX in INDEXES)
   {
 ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("cM.Mb", INDEX, fill="Populations" , colour="Populations")) +
@@ -1577,7 +1563,6 @@ ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("mea
                 aes(label = paste(..rr.label..)), 
                 parse = TRUE,label.y = 0.00003) +
   ggsave(paste(wd_output, "divergence_vs_",INDEX,".pdf", sep=""))
-
 }
 
 ```
