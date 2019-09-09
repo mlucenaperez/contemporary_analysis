@@ -1095,11 +1095,12 @@ for file in ${GENEPOP_LIST[@]}
 ```
 
 ##Ejecución del programa:
+###En modo local:
 ```{bash}
 
 cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
 
-POPS=$(ls *.bed | cut -d'.' -f 4 | cut -d'_' -f-3)
+POPS=$(ls *.map | cut -d'.' -f 4 | cut -d'_' -f-3)
 for pop in ${POPS[@]}
   do
   echo ${pop}
@@ -1109,3 +1110,49 @@ for pop in ${POPS[@]}
 
 ```
 
+###Copio todo lo necesario al servidor para ver si desde allí funciona.
+```{bash}
+
+scp /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/*.genepop dkleinman@10.50.0.65:/home/dkleinman/LinkNe/input/
+scp /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/*.map dkleinman@10.50.0.65:/home/dkleinman/LinkNe/input/
+scp -r /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/LinkNe-master dkleinman@10.50.0.65:/home/dkleinman/LinkNe/input/
+
+```
+
+###En el servidor:
+```{bash}
+
+cd /home/dkleinman/LinkNe/input
+
+POPS=$(ls *.map | cut -d'.' -f 4 | cut -d'_' -f-3)
+for pop in ${POPS[@]}
+  do
+  echo ${pop}
+  SPECIES=$(echo ${pop} | cut -d'_' -f 2)
+  echo "computing"
+  perl LinkNe-master/LinkNe.pl -i ${pop}_intergenic_filtered_more_than_2000_SNPs.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic_filtered_more_than_2000_SNPS.map -o ../output/${pop}_intergenic_filtered_more_than_2000_SNPs.linkne
+  echo "done"
+  done
+
+```
+
+###Ejemplos:
+```{bash}
+
+#Example 1 (using their data):
+cd /Users/dani/Downloads/raw_data/simulation/main/1000_expansion_5/
+
+perl /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/LinkNe-master/LinkNe.pl -i genepop.99.txt -m genepop.99.txt.mat -o testing.linkne #works. Fills outputs after it's done processing everything.
+
+
+#Example 2 (using their data):
+cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
+N=10000
+CUT=$((N+3))
+head -n $N c_lp_do_intergenic_filtered_more_than_2000_SNPs.genepop > c_lp_do_intergenic_filtered_more_than_2000_SNPs.genepop.test
+sed -n '/Pop/,$p' c_lp_do_intergenic_filtered_more_than_2000_SNPs.genepop | cut -d' ' -f -$CUT >> c_lp_do_intergenic_filtered_more_than_2000_SNPs.genepop.test
+head -n $N lp_perspecies.trimmed_filtered1.ann.c_lp_do_intergenic_filtered_more_than_2000_SNPS.map > lp_perspecies.trimmed_filtered1.ann.c_lp_do_intergenic_filtered_more_than_2000_SNPS.map.test 
+
+perl LinkNe-master/LinkNe.pl -i c_lp_do_intergenic_filtered_more_than_2000_SNPs.genepop.test -map lp_perspecies.trimmed_filtered1.ann.c_lp_do_intergenic_filtered_more_than_2000_SNPS.map.test -o c_lp_do_intergenic_filtered_more_than_2000_SNPs.out.test #works but it's too slow and there's some strange warning about uninitialized genotype values...
+
+```
