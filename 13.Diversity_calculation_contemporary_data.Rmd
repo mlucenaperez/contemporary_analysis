@@ -397,8 +397,8 @@ data_diversity_filtered <- read.table(paste(wd, "global.per.unit.averages.chr.al
 ## 1.  Recombination categories
 ```{r}
 # I used a function that discritize a continious variable, based on values of the variable itself (interval), or on the frequency of units under this variable (frequency)
-discrete_recomb <- discretize(data_diversity_filtered$recombination_rate, method = "frequency", breaks = 20)
-data_diversity_filtered_recomb_cat  <- cbind (data_diversity_filtered, as.data.frame(discrete_recomb))
+recomb <- discretize(data_diversity_filtered$recombination_rate, method = "frequency", breaks = 20)
+data_diversity_filtered_recomb_cat  <- cbind (data_diversity_filtered, as.data.frame(recomb))
 # rm (data_diversity_filtered)
 ```
 
@@ -658,146 +658,9 @@ write.table(density_min_values_pairwise, paste(wd,"density_min_values_pairwise.c
 ```
 
 # -----------------------------------------------------------------
-# -----------------------------------------------------------------
-# START THE ANALYSIS
-# Diversity per pop
-## Load library & wd
-```{r}
-library(viridis)
-library(ggplot2); theme_set(theme_minimal())
-library(tidyr)
-library(plyr)
-library(dplyr)
-library(data.table)
-library(arules)
-library(boot)
-library(broom)
-library(Hmisc)
-library(GGally)
-library(ggpmisc)
+## Create stats dataframes
 
-wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
-wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/per_pop/"
-```
-
-## Load table 
-```{r}
-data_diversity_filtered_ave_corrected <- read.table(paste(wd, "data_diversity_filtered_ave_corrected.csv", sep=""), header=T, na.strings = c("NA", "na"), row.names = NULL, stringsAsFactors = F, sep =";", dec=".") %>% 
-  # No se pq no reconoce estos caracteres, así que los tengo que volver a añadir. 
-  mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
-                      ifelse (Populations == "Kirov", viridis_pal()(5)[1], 
-                      ifelse (Populations == "Norway", viridis_pal()(5)[2], 
-                      ifelse (Populations == "Andujar", "#5DC863FF",
-                      ifelse (Populations == "Doñana", "#FDE725FF", NA))))))
-
-data_diversity_filtered_ave_corrected$Populations <- factor (data_diversity_filtered_ave_corrected$Populations, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
-
-data_diversity_filtered_ave_corrected$feature <- factor (data_diversity_filtered_ave_corrected$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
-```
-
-## --------
-# Plot empirical data
-
-## Set up colours
-
-```{r}
-cols <- c("NE_Poland"=viridis_pal()(5)[3], 
-          "Kirov"=viridis_pal()(5)[1], 
-          "Norway"=viridis_pal()(5)[2], 
-          "Andujar"="#5DC863FF",
-          "Donana"="#FDE725FF")
-```
-## *Unit size
-```{r}
-# Tamaño de las unidades
-ggplot (data = data_diversity_filtered_ave_corrected, aes(length)) +
-  geom_histogram() +
-  scale_fill_viridis() +
-  facet_wrap (~feature, scales = "free")
-ggsave(paste (wd_output, "length_per_unit_all_pops.pdf", sep=""))
-
-for (pop in unique(data_diversity_filtered_ave_corrected$Populations))
-  {
-  print (pop)
-  ggplot (data=dplyr::filter(data_diversity_filtered_ave_corrected,data_diversity_filtered_ave_corrected$Populations==!!pop), aes(length)) +
-  geom_histogram() +
-  scale_fill_viridis() +
-  facet_wrap (~feature, scales = "free") 
-  ggsave(paste (wd_output, "length_per_unit_",pop,".pdf", sep="" ), device="pdf")
-  }
-```
-
-## *Recombination histogram
-
-```{r}
-# Hacemos un plot para ver la distribución de los valores, cogemos por ejemplo la población de kirov.
-ggplot(filter(data_diversity_filtered_ave_corrected, pop=="c_ll_ki_n013"), aes(x=recombination_rate)) + 
-  geom_histogram(binwidth=1, color="black", fill="white") +
-  ggsave(paste (wd_output, "histogram_recombination_rate.pdf", sep=""))
-```
-
-## *Recombination and regions
-```{r}
-
-  
-ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), aes(region,recombination_rate))+
-  geom_boxplot() + #geom_violin
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
- ggsave(paste (wd_output, "boxplot_violin_plot/","recombination_rate_per_region.pdf", sep="" ))
-
-
-ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), aes(region,recombination_rate))+
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
-  stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
- ggsave(paste (wd_output, "boxplot_violin_plot/","recombination_rate_per_region_mean_se.pdf", sep="" ))
-
-```
-
-## *Divergence  histogram
-
-```{r}
-ggplot(filter(data_diversity_filtered_ave_corrected, pop=="c_ll_ki_n013"), aes(x=divergence)) + 
-  geom_histogram(color="black", fill="white") +
-  ggsave(paste (wd_output, "histogram_divergence.pdf", sep=""))
-```
-
-##*Divergence and regions
-
-```{r}
-
-ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"),aes(region,divergence))+
-  geom_boxplot() + #geom_violin
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
- ggsave(paste (wd_output, "boxplot_violin_plot/","divergence_per_region.pdf", sep="" ))
-
-
-ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"),aes(region,divergence))+
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
-  stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
- ggsave(paste (wd_output, "boxplot_violin_plot/","divergence_per_region_mean_se.pdf", sep="" ),height = 7, width = 7)
-
-
-```
-
-# ----------
-# GLM
-De que depende la diversidad?
-Recombinación?
-feature?
-chr?
-```{r}
-
-```
-
-
-
-# ----------
-## Stats
-Esto no tengo que correlo. Puedo cargar las tablas. 
+Genero las tablas de stats
 
 Primero creo una formula para poder calcular la stdev basada en bootstrapping.
 ```{r}
@@ -928,15 +791,17 @@ stats_df_pop_autosomes_feature <- diversity_stats_grouped(data_diversity_filtere
 stats_df_pop_chrX_feature <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "feature") %>%  mutate (type_chr="chrX")
 stats_df_pop_autosomes_region  <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), "region") %>%  mutate (type_chr="autosomes")
 stats_df_pop_chrX_region  <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "region") %>%  mutate (type_chr="chrX")
-stats_df_pop_chr     <- diversity_stats_grouped(data_diversity_filtered_ave_corrected, "chr")
+stats_df_pop_autosomes_chr     <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), "chr") %>%  mutate (type_chr="autosomes")
+stats_df_pop_chrX_chr     <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "chr") %>%  mutate (type_chr="chrx")
 stats_df_pop_autosomes_recomb <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), "discrete_recomb") %>%  mutate (type_chr="autosomes")
 stats_df_pop_chrX_recomb <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "discrete_recomb") %>%  mutate (type_chr="chrX")
 
 # Fusiono y guardo
 stats_df_pop_feature <- rbind (stats_df_pop_autosomes_feature, stats_df_pop_chrX_feature)
 stats_df_pop_region <- rbind (stats_df_pop_autosomes_region, stats_df_pop_chrX_region)
-stats_df_pop_recomb <- rbind (stats_df_pop_autosomes_recomb_category, stats_df_pop_chrX_recomb_category)
-  
+stats_df_pop_recomb <- rbind (stats_df_pop_autosomes_recomb, stats_df_pop_chrX_recomb)
+stats_df_pop_chr <- rbind (stats_df_pop_autosomes_chr, stats_df_pop_chrX_chr)
+
 write.table(stats_df_pop_feature, paste(wd_output,"stats_diversity_per_pop_per_feature.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 write.table(stats_df_pop_region, paste(wd_output,"stats_diversity_per_pop_per_region.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 write.table(stats_df_pop_chr, paste(wd_output,"stats_diversity_per_pop_per_chr.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
@@ -947,7 +812,6 @@ write.table(stats_df_pop_recomb, paste(wd_output,"stats_diversity_per_pop_per_re
 #rm (stats_df_pop_autosomes_region)
 #rm (stats_df_pop_chrX_region)
 ```
-
 
 ###  Summary stats per pop & different group - group (feature-chr, feature-region, chr-region) 
 ```{r}
@@ -1011,19 +875,25 @@ return (diversity_stats_df_doble_grouped)
 }
 
 # Hacemos la tablas
-stats_df_pop_feature_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected, "feature", "chr")
-stats_df_pop_region_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected, "region", "chr")
-stats_df_pop_recomb_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected, "discrete_recomb", "chr")
 
+stats_df_pop_autosomes_feature_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), "feature", "chr") %>%  mutate (type_chr="autosomes")
+stats_df_pop_autosomes_region_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"),  "region", "chr") %>%  mutate (type_chr="autosomes")
+stats_df_pop_autosomes_recomb_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"),  "discrete_recomb", "chr") %>%  mutate (type_chr="autosomes")
 stats_df_pop_autosomes_feature_region <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), "feature", "region") %>%  mutate (type_chr="autosomes")
 stats_df_pop_autosomes_feature_recomb <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), "feature", "discrete_recomb") %>%  mutate (type_chr="autosomes")
 stats_df_pop_autosomes_region_recomb <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), "region", "discrete_recomb") %>%  mutate (type_chr="autosomes")
 
+stats_df_pop_chrX_feature_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "feature", "chr") %>%  mutate (type_chr="chrX")
+stats_df_pop_chrX_region_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"),  "region", "chr") %>%  mutate (type_chr="chrX")
+stats_df_pop_chrX_recomb_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"),  "discrete_recomb", "chr") %>%  mutate (type_chr="chrX")
 stats_df_pop_chrX_feature_region <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "feature", "region") %>%  mutate (type_chr="chrX")
 stats_df_pop_chrX_feature_recomb <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "feature", "discrete_recomb") %>%  mutate (type_chr="chrX")
 stats_df_pop_chrX_region_recomb <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "region", "discrete_recomb") %>%  mutate (type_chr="chrX")
 
 # Fusiono y guardo
+stats_df_pop_feature_chr <- rbind (stats_df_pop_autosomes_feature_chr, stats_df_pop_chrX_feature_chr)
+stats_df_pop_region_chr <- rbind (stats_df_pop_autosomes_region_chr, stats_df_pop_chrX_region_chr)
+stats_df_pop_recomb_chr <- rbind (stats_df_pop_autosomes_recomb_chr, stats_df_pop_chrX_recomb_chr)
 stats_df_pop_feature_region <- rbind (stats_df_pop_autosomes_feature_region, stats_df_pop_chrX_feature_region)
 stats_df_pop_feature_recomb <- rbind (stats_df_pop_autosomes_feature_recomb, stats_df_pop_chrX_feature_recomb)
 stats_df_pop_region_recomb <- rbind (stats_df_pop_autosomes_region_recomb, stats_df_pop_chrX_region_recomb)
@@ -1040,10 +910,50 @@ write.table(stats_df_pop_region_recomb, paste(wd_output,"stats_diversity_per_pop
 
 ```
 
-# -----
+# -----------------------------------------------------------------
+# -----------------------------------------------------------------
+# START THE ANALYSIS
+# -----------------------------------------------------------------
 
-# Load summarize data
+# Diversity per pop
+## Load library & wd
+```{r}
+library(viridis)
+library(ggplot2); theme_set(theme_minimal())
+library(tidyr)
+library(plyr)
+library(dplyr)
+library(data.table)
+library(arules)
+library(boot)
+library(broom)
+library(Hmisc)
+library(GGally)
+library(ggpmisc)
 
+wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
+wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/per_pop/"
+```
+
+## Load data 
+
+¡Depende de lo que vaya a correr no tengo que cargar todos los datos!
+
+## A) Empiracal data
+```{r}
+data_diversity_filtered_ave_corrected <- read.table(paste(wd, "data_diversity_filtered_ave_corrected.csv", sep=""), header=T, na.strings = c("NA", "na"), row.names = NULL, stringsAsFactors = F, sep =";", dec=".") %>% 
+  # No se pq no reconoce estos caracteres, así que los tengo que volver a añadir. 
+  mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
+                      ifelse (Populations == "Kirov", viridis_pal()(5)[1], 
+                      ifelse (Populations == "Norway", viridis_pal()(5)[2], 
+                      ifelse (Populations == "Andujar", "#5DC863FF",
+                      ifelse (Populations == "Doñana", "#FDE725FF", NA))))))
+
+data_diversity_filtered_ave_corrected$Populations <- factor (data_diversity_filtered_ave_corrected$Populations, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
+data_diversity_filtered_ave_corrected$feature <- factor (data_diversity_filtered_ave_corrected$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+```
+
+## B) Summarize data
 ```{r}
 stats_df_pop <- read.table(paste(wd_output,"stats_diversity_per_pop.tsv",sep=""), row.names = NULL, sep =";", dec=",", header=T)
 stats_df_pop_feature <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature.tsv",sep=""), row.names = NULL, sep =";", dec=",", header=T )
@@ -1058,10 +968,107 @@ stats_df_pop_feature_recomb <- read.table(paste(wd_output,"stats_diversity_per_p
 stats_df_pop_region_recomb <- read.table(paste(wd_output,"stats_diversity_per_pop_per_region_recomb.tsv",sep=""), row.names = NULL, sep =";", dec="," , header=T)
 
 ```
+## --------
+# A) Plot empirical data
+
+## Set up colours
+
+```{r}
+cols <- c("NE_Poland"=viridis_pal()(5)[3], 
+          "Kirov"=viridis_pal()(5)[1], 
+          "Norway"=viridis_pal()(5)[2], 
+          "Andujar"="#5DC863FF",
+          "Donana"="#FDE725FF")
+```
+## *Unit size
+```{r}
+# Tamaño de las unidades
+ggplot (data = data_diversity_filtered_ave_corrected, aes(length)) +
+  geom_histogram() +
+  scale_fill_viridis() +
+  facet_wrap (~feature, scales = "free")
+ggsave(paste (wd_output, "length_per_unit_all_pops.pdf", sep=""))
+
+for (pop in unique(data_diversity_filtered_ave_corrected$Populations))
+  {
+  print (pop)
+  ggplot (data=dplyr::filter(data_diversity_filtered_ave_corrected,data_diversity_filtered_ave_corrected$Populations==!!pop), aes(length)) +
+  geom_histogram() +
+  scale_fill_viridis() +
+  facet_wrap (~feature, scales = "free") 
+  ggsave(paste (wd_output, "length_per_unit_",pop,".pdf", sep="" ), device="pdf")
+  }
+```
+
+## *Recombination histogram
+
+```{r}
+# Hacemos un plot para ver la distribución de los valores, cogemos por ejemplo la población de kirov.
+ggplot(filter(data_diversity_filtered_ave_corrected, pop=="c_ll_ki_n013"), aes(x=recombination_rate)) + 
+  geom_histogram(binwidth=1, color="black", fill="white") +
+  ggsave(paste (wd_output, "histogram_recombination_rate.pdf", sep=""))
+```
+
+## *Recombination and regions
+```{r}
+
+  
+ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), aes(region,recombination_rate))+
+  geom_boxplot() + #geom_violin
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+ ggsave(paste (wd_output, "boxplot_violin_plot/","recombination_rate_per_region.pdf", sep="" ))
+
+
+ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), aes(region,recombination_rate))+
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+  stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
+ ggsave(paste (wd_output, "boxplot_violin_plot/","recombination_rate_per_region_mean_se.pdf", sep="" ))
+
+```
+
+## *Divergence  histogram
+
+```{r}
+ggplot(filter(data_diversity_filtered_ave_corrected, pop=="c_ll_ki_n013"), aes(x=divergence)) + 
+  geom_histogram(color="black", fill="white") +
+  ggsave(paste (wd_output, "histogram_divergence.pdf", sep=""))
+```
+
+##*Divergence and regions
+
+```{r}
+
+ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"),aes(region,divergence))+
+  geom_boxplot() + #geom_violin
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+ ggsave(paste (wd_output, "boxplot_violin_plot/","divergence_per_region.pdf", sep="" ))
+
+
+ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"),aes(region,divergence))+
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+  stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
+ ggsave(paste (wd_output, "boxplot_violin_plot/","divergence_per_region_mean_se.pdf", sep="" ),height = 7, width = 7)
+
+
+```
+
+# ----------
+# GLM
+De que depende la diversidad?
+Recombinación?
+feature?
+chr?
+```{r}
+
+```
 
 # ----------
 
-# Plot summarized data
+# B) Plot summarized data
 ## Set up colours
 
 ```{r}
