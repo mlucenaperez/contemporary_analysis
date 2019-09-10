@@ -140,7 +140,7 @@ stats_df_pop_comparison_autosomes <- diversity_stats_delta (all_comparisons_dive
 stats_df_pop_comparison_chrX <- diversity_stats_delta (all_comparisons_diversity_bootleneck_vs_non_bootleneck %>% filter (type_chr=="chrX")) %>%  mutate (type_chr="chrX")
 
 stats_df_pop_comparison <- rbind(stats_df_pop_comparison_autosomes, stats_df_pop_comparison_chrX)
-write.table(stats_df_pop_comparison, paste(wd_output,"stats_diversity_pop_comparison.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
+write.table(stats_df_pop_comparison, paste(wd_output,"stats_df_pop_comparison.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 ```
 
 ### Summary stats per pop & different group (feature, chr, region, recom_category) 
@@ -375,9 +375,9 @@ stats_all_pops_feature <- rbind (stats_df_pop_c_ll_ki_n013_c_ll_no_n008_feature,
 stats_all_pops_region <- rbind (stats_df_pop_c_ll_ki_n013_c_ll_no_n008_region, stats_df_pop_c_ll_ki_n013_c_ll_po_n008_region, stats_df_pop_c_lp_sm_n019_c_lp_do_n012_region) %>% 
   full_join (stats_df_pop_comparison_region, by=c("comparison", "type_chr", "region"))
 stats_all_pops_recomb <- rbind (stats_df_pop_c_ll_ki_n013_c_ll_no_n008_recomb, stats_df_pop_c_ll_ki_n013_c_ll_po_n008_recomb, stats_df_pop_c_lp_sm_n019_c_lp_do_n012_recomb) %>% 
-  full_join (stats_df_pop_comparison_recomb, by=c("comparison", "recomb"))
+  full_join (stats_df_pop_comparison_recomb, by=c("comparison", "type_chr", "recomb"))
 stats_all_pops_chr <- rbind (stats_df_pop_c_ll_ki_n013_c_ll_no_n008_chr, stats_df_pop_c_ll_ki_n013_c_ll_po_n008_chr, stats_df_pop_c_lp_sm_n019_c_lp_do_n012_chr) %>% 
-  full_join (stats_df_pop_comparison_chr, by=c("comparison", "chr"))
+  full_join (stats_df_pop_comparison_chr, by=c("comparison", "type_chr", "chr"))
 
 write.table(stats_all_pops_feature, paste(wd_output,"stats_all_pops_feature.txt",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 write.table(stats_all_pops_region, paste(wd_output,"stats_all_pops_region.txt",sep=""),quote = F,  row.names = F, sep =";", dec="," )
@@ -511,6 +511,10 @@ c_lp_sm_n019_diversity_c_lp_do_n012_diversity <- read.table (paste0 (wd_output, 
 c_ll_ki_n013_diversity_c_ll_no_n008_diversity$feature <- factor (c_ll_ki_n013_diversity_c_ll_no_n008_diversity$feature, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic"))
 c_ll_ki_n013_diversity_c_ll_po_n008_diversity$feature <- factor (c_ll_ki_n013_diversity_c_ll_po_n008_diversity$feature, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic"))
 c_lp_sm_n019_diversity_c_lp_do_n012_diversity$feature <- factor (c_lp_sm_n019_diversity_c_lp_do_n012_diversity$feature, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic"))
+
+density_min_values_pairwise <- read.table(paste(wd, "density_min_values_pairwise.csv", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep=";", dec=".") 
+density_min_values_watterson <- read.table(paste(wd, "density_min_values_watterson.csv", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep=";", dec=".") 
+
 ```
 
 ## B) Summarized data
@@ -1042,6 +1046,51 @@ residuals(mod)
 
 # B) Summarized data
 
+
+```{r}
+ggplot() + 
+  geom_point (data=subset(stats_all_pops_recomb %>% filter (type_chr=="autosomes"), !is.na(recomb)), 
+              aes(x=recomb, y=wmean_delta_watterson_average_normalized_zero, fill=comparison, colour=comparison)) +
+  geom_segment (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="autosomes"), !is.na(recomb)), 
+                aes(x = recomb, xend=recomb, y = wmean_delta_watterson_average_normalized_zero-se_wmean_delta_watterson_average_normalized_zero_boot, yend = wmean_delta_watterson_average_normalized_zero+se_wmean_delta_watterson_average_normalized_zero_boot, colour=comparison)) +
+  facet_wrap(~comparison, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggsave(paste(wd_output,"recombination_categories_vs_delta_watterson_autosomes.pdf",sep=""))
+
+ggplot() + 
+  geom_point (data=subset(stats_all_pops_recomb %>% filter (type_chr=="chrX"), !is.na(recomb)), 
+              aes(x=recomb, y=wmean_delta_watterson_average_normalized_zero, fill=comparison, colour=comparison)) +
+  geom_segment (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="chrX"), !is.na(recomb)), 
+                aes(x = recomb, xend=recomb, y = wmean_delta_watterson_average_normalized_zero-se_wmean_delta_watterson_average_normalized_zero_boot, yend = wmean_delta_watterson_average_normalized_zero+se_wmean_delta_watterson_average_normalized_zero_boot, colour=comparison)) +
+  facet_wrap(~comparison, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggsave(paste(wd_output,"recombination_categories_vs_delta_watterson_chrX.pdf",sep=""))
+
+
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="autosomes"), !is.na(recomb)), 
+              aes(x=recomb, y=wmean_delta_pairwise_average_normalized_zero, fill=comparison, colour=comparison)) +
+  geom_segment (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="autosomes"), !is.na(recomb)), 
+                aes(x = recomb, xend=recomb, y = wmean_delta_pairwise_average_normalized_zero-se_wmean_delta_pairwise_average_normalized_zero_boot, yend = wmean_delta_pairwise_average_normalized_zero+se_wmean_delta_pairwise_average_normalized_zero_boot, colour=comparison)) +
+   facet_wrap(~comparison, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggsave(paste(wd_output,"recombination_categories_vs_delta_pairwise_autosomes.pdf",sep=""))
+
+
+ggplot() + 
+  geom_point (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="chrX"), !is.na(recomb)), 
+              aes(x=recomb, y=wmean_delta_pairwise_average_normalized_zero, fill=comparison, colour=comparison)) +
+  geom_segment (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="chrX"), !is.na(recomb)), 
+                aes(x = recomb, xend=recomb, y = wmean_delta_pairwise_average_normalized_zero-se_wmean_delta_pairwise_average_normalized_zero_boot, yend = wmean_delta_pairwise_average_normalized_zero+se_wmean_delta_pairwise_average_normalized_zero_boot, colour=comparison)) +
+   facet_wrap(~comparison, ncol=1, scales="free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggsave(paste(wd_output,"recombination_categories_vs_delta_pairwise_chrX.pdf",sep=""))
+
+
+```
+
+
+
 ## *Comparison MB & EB
 
 ```{r}
@@ -1121,47 +1170,6 @@ ggsave(paste(wd_output, "panel_regions_feature_", DIVERSITY_MEASURE,".pdf", sep=
 
 ```
 
-```{r}
-ggplot() + 
-  geom_point (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="autosomes"), !is.na(recomb)), 
-              aes(x=recomb, y=wmean_delta_watterson_average_normalized_zero, fill=comparison, colour=comparison)) +
-  geom_segment (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="autosomes"), !is.na(recomb)), 
-                aes(x = recomb, xend=recomb, y = wmean_delta_watterson_average_normalized_zero-se_wmean_delta_watterson_average_normalized_zero_boot, yend = wmean_delta_watterson_average_normalized_zero+se_wmean_delta_watterson_average_normalized_zero_boot, colour=comparison)) +
-  facet_wrap(~comparison, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggsave(paste(wd_output,"recombination_categories_vs_delta_watterson_autosomes.pdf",sep=""))
-
-ggplot() + 
-  geom_point (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="chrX"), !is.na(recomb)), 
-              aes(x=recomb, y=wmean_delta_watterson_average_normalized_zero, fill=comparison, colour=comparison)) +
-  geom_segment (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="chrX"), !is.na(recomb)), 
-                aes(x = recomb, xend=recomb, y = wmean_delta_watterson_average_normalized_zero-se_wmean_delta_watterson_average_normalized_zero_boot, yend = wmean_delta_watterson_average_normalized_zero+se_wmean_delta_watterson_average_normalized_zero_boot, colour=comparison)) +
-  facet_wrap(~comparison, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggsave(paste(wd_output,"recombination_categories_vs_delta_watterson_chrX.pdf",sep=""))
-
-
-ggplot() + 
-  geom_point (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="autosomes"), !is.na(recomb)), 
-              aes(x=recomb, y=wmean_delta_pairwise_average_normalized_zero, fill=comparison, colour=comparison)) +
-  geom_segment (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="autosomes"), !is.na(recomb)), 
-                aes(x = recomb, xend=recomb, y = wmean_delta_pairwise_average_normalized_zero-se_wmean_delta_pairwise_average_normalized_zero_boot, yend = wmean_delta_pairwise_average_normalized_zero+se_wmean_delta_pairwise_average_normalized_zero_boot, colour=comparison)) +
-   facet_wrap(~comparison, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-  ggsave(paste(wd_output,"recombination_categories_vs_delta_pairwise_autosomes.pdf",sep=""))
-
-
-ggplot() + 
-  geom_point (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="chrX"), !is.na(recomb)), 
-              aes(x=recomb, y=wmean_delta_pairwise_average_normalized_zero, fill=comparison, colour=comparison)) +
-  geom_segment (data=subset(stats_df_pop_comparison_recomb %>% filter (type_chr=="chrX"), !is.na(recomb)), 
-                aes(x = recomb, xend=recomb, y = wmean_delta_pairwise_average_normalized_zero-se_wmean_delta_pairwise_average_normalized_zero_boot, yend = wmean_delta_pairwise_average_normalized_zero+se_wmean_delta_pairwise_average_normalized_zero_boot, colour=comparison)) +
-   facet_wrap(~comparison, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-  ggsave(paste(wd_output,"recombination_categories_vs_delta_pairwise_chrX.pdf",sep=""))
-
-
-```
 
 ##---------
 ##---------
