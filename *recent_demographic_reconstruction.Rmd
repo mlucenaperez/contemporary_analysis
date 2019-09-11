@@ -993,18 +993,18 @@ grep lp23.s20850 ll_perspecies.trimmed_filtered1.ann.c_ll_ur_intergenic_filtered
 cd /home/mlucena/recent_demographic_reconstruction/SNeP
 VCF_FILES=($(ls *intergenic_filtered_more_than_2000_SNPS.vcf | uniq))
 mkdir "/home/mlucena/recent_demographic_reconstruction/Ne_Estimator/subsample_few_snps"
-OUTPUT_PATH="/home/mlucena/recent_demographic_reconstruction/Ne_Estimator/few_scaffold"
+OUTPUT_PATH="/home/mlucena/recent_demographic_reconstruction/Ne_Estimator/few_scaffold/1000SNPs"
 
 for VCF_FILE in ${VCF_FILES[@]}
 do
 echo $VCF_FILE
 grep "#" $VCF_FILE > header
-grep -v "#" $VCF_FILE | grep "lp23.s00001" | shuf -n 200 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold1.vcf}
-grep -v "#" $VCF_FILE | grep "lp23.s05213" | shuf -n 200 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold2.vcf}
-grep -v "#" $VCF_FILE | grep "lp23.s10425" | shuf -n 200 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold3.vcf}
-grep -v "#" $VCF_FILE | grep "lp23.s15637" | shuf -n 200 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold4.vcf}
-grep -v "#" $VCF_FILE | grep "lp23.s26064" | shuf -n 200 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold5.vcf}
-grep -v "#" $VCF_FILE | grep "lp23.s20850" | shuf -n 200 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold6.vcf}
+grep -v "#" $VCF_FILE | grep "lp23.s00001" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold1.vcf}
+grep -v "#" $VCF_FILE | grep "lp23.s05213" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold2.vcf}
+grep -v "#" $VCF_FILE | grep "lp23.s10425" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold3.vcf}
+grep -v "#" $VCF_FILE | grep "lp23.s15637" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold4.vcf}
+grep -v "#" $VCF_FILE | grep "lp23.s26064" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold5.vcf}
+grep -v "#" $VCF_FILE | grep "lp23.s20850" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold6.vcf}
 cat header $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold1.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold2.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold3.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold4.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold5.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold6.vcf} > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold.vcf}
 rm header
 done
@@ -1012,7 +1012,7 @@ done
 
 # Copio a local
 
-scp -p mlucena@genomics-b.ebd.csic.es:///home/mlucena/recent_demographic_reconstruction/Ne_Estimator/few_scaffold/*vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/Ne_estimator/few_scaffolds 
+scp -p mlucena@genomics-b.ebd.csic.es:///home/mlucena/recent_demographic_reconstruction/Ne_Estimator/few_scaffold/1000SNPs/*vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/Ne_estimator/few_scaffolds/1000SNPs 
 
 ```
 
