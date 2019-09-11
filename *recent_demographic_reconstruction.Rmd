@@ -1021,7 +1021,7 @@ for row in "${ROWS[@]}"
 #Opción alternativa que calcula tasas de recombinación dentro de cada scaffold y las guarda como tabla. Posteriormente, en R se puede importar la tabla y convertirla a matriz (paquete reshape o muchas otras opciones), automáticamente rellenando con NAs las comparaciones que falten. Reemplazar los NAs por 0.5 sería el último paso. Aunque es mucho más rápido que el anterior método, sigue siendo demasiado lento, tardaría muchos días.
 cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
 rm ../output/${FILE/.bed/.distance}
-FILE=lp_perspecies.trimmed_filtered1.ann.c_lp_sm_intergenic_filtered_more_than_2000_SNPS.bed
+FILE=lp_perspecies.trimmed_filtered1.ann.c_lp_sm_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.bed
 SCAFFOLDS=$(cut -f1 $FILE | uniq)
 for s in ${SCAFFOLDS[@]}
   do
@@ -1037,7 +1037,7 @@ for s in ${SCAFFOLDS[@]}
       POSITION_BIS=$(echo "$row_bis" | cut -f3)
       PHYSICAL_DISTANCE=$((POSITION-POSITION_BIS))
       GENETIC_DISTANCE=$(echo ${PHYSICAL_DISTANCE#-}*0.000000019 | bc) #1.9cM/Mb means 0.019M for 10^6bp, which means 1.9*10^-8M/bp
-      echo -e "$s_$POSITION\t$s_$POSITION_BIS\t$GENETIC_DISTANCE" >> ../output/${FILE/.bed/.distance}
+      echo -e "$s_$POSITION\t$s_$POSITION_BIS\t$GENETIC_DISTANCE" >> ${FILE/.bed/.distance}
       done <<< "$SUBSET"
     done <<< "$SUBSET"
   done
@@ -1048,6 +1048,15 @@ for s in ${SCAFFOLDS[@]}
 ```{bash}
 
 cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
+
+#En primer lugar, pasamos de vcf a bed para que los archivos sean más manejables.
+INPUT_VCFS=$(ls *.vcf)
+for vcf in ${INPUT_VCFS[@]}
+  do
+  POP=$(echo ${vcf} | cut -d'.' -f 4 | cut -d'_' -f-3)
+  echo ${POP}
+  ggrep -v '#' ${vcf} | awk -F"\t" '{printf ("%s\t%s\t%s\n", $1,$2-1,$2)}' > ${vcf/.vcf/.bed}
+  done
 
 INPUT_BEDS=$(ls *.bed)
 for pop in ${INPUT_BEDS[@]}
@@ -1073,22 +1082,22 @@ scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstru
 
 #Como los nombres de los SNPs son diferentes que en los map, modifico los genepop.
 cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
-GENEPOP_LIST=$(ls *intergenic_filtered_more_than_2000_SNPs.txt)
+GENEPOP_LIST=$(ls *.txt)
 for file in ${GENEPOP_LIST[@]}
   do
   #echo ${file}
-  POP=$(echo ${file} | cut -d'_' -f-3)
+  POP=$(echo ${file} | cut -d'.' -f 1)
   echo ${POP}
   SPECIES=$(echo ${file} | cut -d'_' -f 2)
   N_PED=$(sed '/Pop/q' ${file} | ghead -n -1 | wc -l)
-  N_MAP=$(< ${SPECIES}_perspecies.trimmed_filtered1.ann.${file/txt/map} wc -l)
+  N_MAP=$(< ${SPECIES}_perspecies.trimmed_filtered1.ann.${POP}_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.map wc -l)
   if [ $N_PED == $N_MAP ]
     then echo "correct SNP number"
     else echo "wrong SNP number"
   fi
   GENOTYPES=$(sed -n '/Pop/,$p' ${file})
   echo $POP > ${file/txt/genepop}
-  gtail -n +2 ${SPECIES}_perspecies.trimmed_filtered1.ann.${file/txt/map} | cut -f 1 >> ${file/txt/genepop}
+  gtail -n +2 ${SPECIES}_perspecies.trimmed_filtered1.ann.${POP}_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.map | cut -f 1 >> ${file/txt/genepop}
   echo "$GENOTYPES" >> ${file/txt/genepop}
   done
 
@@ -1105,8 +1114,14 @@ for pop in ${POPS[@]}
   do
   echo ${pop}
   SPECIES=$(echo ${pop} | cut -d'_' -f 2)
-  perl LinkNe-master/LinkNe.pl -i ${pop}_intergenic_filtered_more_than_2000_SNPs.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic_filtered_more_than_2000_SNPs.map -o ../output/${pop}_intergenic_filtered_more_than_2000_SNPs.linkne
+  perl LinkNe-master/LinkNe.pl -i ${pop}.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.map -o ../output/${pop}.linkne
   done
+
+
+#####caso sm con matriz:
+PRIMERO Convertir lp_perspecies.trimmed_filtered1.ann.c_lp_sm_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.distance en lp_perspecies.trimmed_filtered1.ann.c_lp_sm_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.matrix
+
+perl LinkNe-master/LinkNe.pl -i c_lp_sm.genepop -m lp_perspecies.trimmed_filtered1.ann.c_lp_sm_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.matrix -o ../output/c_lp_sm.matriz.linkne
 
 ```
 
@@ -1130,7 +1145,7 @@ for pop in ${POPS[@]}
   echo ${pop}
   SPECIES=$(echo ${pop} | cut -d'_' -f 2)
   echo "computing"
-  perl LinkNe-master/LinkNe.pl -i ${pop}_intergenic_filtered_more_than_2000_SNPs.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic_filtered_more_than_2000_SNPS.map -o ../output/${pop}_intergenic_filtered_more_than_2000_SNPs.linkne
+  perl LinkNe-master/LinkNe.pl -i ${pop}.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.map -o ../output/${pop}.linkne
   echo "done"
   done
 
