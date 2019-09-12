@@ -503,9 +503,9 @@ wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sf
 ## A) Empiracal data
 
 ```{r}
-c_ll_ki_n013_diversity_c_ll_no_n008_diversity <- read.table (paste0 (wd_output, "c_ll_ki_n013_diversity_c_ll_no_n008_diversity.txt"), row.names = NULL, sep =";", dec=",", header=T )
-c_ll_ki_n013_diversity_c_ll_po_n008_diversity <- read.table (paste0 (wd_output, "c_ll_ki_n013_diversity_c_ll_po_n008_diversity.txt"), row.names = NULL, sep =";", dec=",", header=T )
-c_lp_sm_n019_diversity_c_lp_do_n012_diversity <- read.table (paste0 (wd_output, "c_lp_sm_n019_diversity_c_lp_do_n012_diversity.txt"), row.names = NULL, sep =";", dec=",", header=T )
+c_ll_ki_n013_diversity_c_ll_no_n008_diversity <- read.table (paste0 (wd_output, "c_ll_ki_n013_diversity_c_ll_no_n008_diversity.txt"), row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="")
+c_ll_ki_n013_diversity_c_ll_po_n008_diversity <- read.table (paste0 (wd_output, "c_ll_ki_n013_diversity_c_ll_po_n008_diversity.txt"), row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="" )
+c_lp_sm_n019_diversity_c_lp_do_n012_diversity <- read.table (paste0 (wd_output, "c_lp_sm_n019_diversity_c_lp_do_n012_diversity.txt"), row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="" )
 
 # Sort factors
 c_ll_ki_n013_diversity_c_ll_no_n008_diversity$feature <- factor (c_ll_ki_n013_diversity_c_ll_no_n008_diversity$feature, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic"))
