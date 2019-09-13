@@ -75,7 +75,7 @@ create_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_
     dplyr::mutate (delta_watterson_per_unit_normalized_zero = ((watterson_zero.x - watterson_zero.y) / (watterson_zero.x + watterson_zero.y))) %>% 
     # Add comparison title  
     dplyr::mutate(comparison=paste(POPULATION1, "-", POPULATION2, sep=""))
-  dataframename <- paste (name_POP1, name_POP2, sep="__")
+  dataframename <- paste (name_POP1, name_POP2, sep="_")
   assign (dataframename, data_diversity_POP1_POP2,.GlobalEnv)
 }
 # Create data frame
@@ -92,6 +92,7 @@ all_comparisons_diversity_bootleneck_vs_non_bootleneck <- rbind (c_ll_ki_n013_di
 write.table (c_ll_ki_n013_diversity_c_ll_no_n008_diversity, paste0 (wd_output, "c_ll_ki_n013_diversity_c_ll_no_n008_diversity.txt"), quote = F,  row.names = F, sep =";", dec="," )
 write.table (c_ll_ki_n013_diversity_c_ll_po_n008_diversity, paste0 (wd_output, "c_ll_ki_n013_diversity_c_ll_po_n008_diversity.txt"), quote = F,  row.names = F, sep =";", dec="," )
 write.table (c_lp_sm_n019_diversity_c_lp_do_n012_diversity, paste0 (wd_output, "c_lp_sm_n019_diversity_c_lp_do_n012_diversity.txt"), quote = F,  row.names = F, sep =";", dec="," )
+write.table(all_comparisons_diversity_bootleneck_vs_non_bootleneck, paste0 (wd_output, "all_comparisons_diversity_bootleneck_vs_non_bootleneck.txt"), quote = F,  row.names = F, sep =";", dec="," )
 ```
 
 ## 2. Create stats dataframes
