@@ -63,29 +63,7 @@ create_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_
     POPULATION1=POP1 %>% select(Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1] 
     POPULATION2=POP2 %>% select(Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1] 
   data_diversity_POP1_POP2 <- dplyr::inner_join (POP1, POP2, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id", "recombination_rate", "recomb", "type_chr", "divergence", "informative_sites_substitutions", "substitutions", "GC_content")) %>%  
-    # Hago cero cuando las dos medidas de diversidad en la poblacion bottleneck y no, tienen cero. 
-    ## Watterson.x
-    dplyr::mutate (watterson_zero.x.ok = (ifelse(watterson_zero.x==0 & watterson_zero.y==0, NA,watterson_zero.x))) %>% 
-    dplyr::select (- watterson_zero.x) %>% 
-    dplyr::rename(watterson_zero.x=watterson_zero.x.ok) %>% 
-    ## Watterson.y
-    dplyr::mutate (watterson_zero.y.ok = (ifelse(watterson_zero.y==0 & watterson_zero.x==0, NA,watterson_zero.y))) %>% 
-    dplyr::select (- watterson_zero.y) %>% 
-    dplyr::rename(watterson_zero.y=watterson_zero.y.ok) %>% 
-    ## pairwise.x
-    dplyr::mutate (pairwise_zero.x.ok = (ifelse(pairwise_zero.x==0 & pairwise_zero.y==0, NA,pairwise_zero.x))) %>% 
-    dplyr::select (- pairwise_zero.x) %>% 
-    dplyr::rename(pairwise_zero.x=pairwise_zero.x.ok) %>% 
-    ## pairwise.y
-    dplyr::mutate (pairwise_zero.y.ok = (ifelse(pairwise_zero.y==0 & pairwise_zero.x==0, NA,pairwise_zero.y))) %>% 
-    dplyr::select (- pairwise_zero.y) %>% 
-    dplyr::rename(pairwise_zero.y=pairwise_zero.y.ok) %>% 
-    # Calculo el ratio
-    #dplyr::mutate (ratio_pairwise_average = pairwise_ave.y/pairwise_ave.x) %>% 
-    #dplyr::mutate (ratio_watterson_average = watterson_ave.y/watterson_ave.x) %>% 
-    #dplyr::mutate (ratio_pairwise_average_zero = pairwise_zero.y/pairwise_zero.x) %>%
-    #dplyr::mutate (ratio_watterson_average_zero = watterson_zero.y/watterson_zero.x) %>%
-    # Calculo el delta 
+      # Calculo el delta 
     dplyr::mutate (delta_pairwise_per_unit = (pairwise_ave.x -pairwise_ave.y)) %>%
     dplyr::mutate (delta_watterson_per_unit = (watterson_ave.x - watterson_ave.y)) %>% 
     dplyr::mutate (delta_pairwise_per_unit_zero = (pairwise_zero.x - pairwise_zero.y)) %>% 
@@ -97,7 +75,7 @@ create_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_
     dplyr::mutate (delta_watterson_per_unit_normalized_zero = ((watterson_zero.x - watterson_zero.y) / (watterson_zero.x + watterson_zero.y))) %>% 
     # Add comparison title  
     dplyr::mutate(comparison=paste(POPULATION1, "-", POPULATION2, sep=""))
-  dataframename <- paste (name_POP1, name_POP2, sep="_")
+  dataframename <- paste (name_POP1, name_POP2, sep="__")
   assign (dataframename, data_diversity_POP1_POP2,.GlobalEnv)
 }
 # Create data frame
@@ -500,8 +478,10 @@ library(GGally)
 library(ggpmisc)
 library(mgcv)
 library(MuMIn)
+library(mgcViz)
+library(gratia)
 
-wd_input_density_values <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/per_pop/"
+wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
 wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/"
 ```
 
@@ -512,6 +492,7 @@ wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sf
 ## A) Empiracal data
 
 ```{r}
+
 c_ll_ki_n013_diversity_c_ll_no_n008_diversity <- read.table (paste0 (wd_output, "c_ll_ki_n013_diversity_c_ll_no_n008_diversity.txt"), row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="")
 c_ll_ki_n013_diversity_c_ll_po_n008_diversity <- read.table (paste0 (wd_output, "c_ll_ki_n013_diversity_c_ll_po_n008_diversity.txt"), row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="" )
 c_lp_sm_n019_diversity_c_lp_do_n012_diversity <- read.table (paste0 (wd_output, "c_lp_sm_n019_diversity_c_lp_do_n012_diversity.txt"), row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="" )
@@ -1044,14 +1025,9 @@ El artículo
 # c. GC content
 # d. Feature
 
-
-
-library(mgcViz)
-library(gratia)
 # https://mfasiolo.github.io/mgcViz/articles/mgcviz.html
-mod_all_var <- gam (delta_watterson_per_unit_normalized_zero ~
-                      s(recombination_rate,by=as.factor(feature), bs="tp")+
-                      s(watterson_ave_corrected.x, bs="tp"),
+mod_all_var <- gam (delta_watterson_per_unit_zero ~
+                      s(recombination_rate,by=as.factor(feature), bs="tp"),
 data=c_ll_ki_n013_diversity_c_ll_no_n008_diversity, method="REML", family="gaussian")
 
                     +
