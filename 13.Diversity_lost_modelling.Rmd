@@ -1,0 +1,95 @@
+---
+title: "13.Diversity_lost_modelling"
+output: html_document
+---
+
+Esto como es muy pesado lo corro en el servidor de la EBD. Para ello me creo una carpeta específica.
+
+```{bash}
+mkdir /home/mlucena/diversity_loss_modeling
+scp -p /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/*diversity.txt  mlucena@genomics-b.ebd.csic.es:/home/mlucena/diversity_loss_modeling
+```
+
+Script de R que puedo correr en local o en el servidor. 
+
+```{r}
+library(viridis)
+library(ggplot2); theme_set(theme_minimal())
+library(tidyr)
+library(plyr)
+library(dplyr)
+library(data.table)
+library(mgcv)
+library(MuMIn) #--> Not available in the server. 
+library(mgcViz) #--> Not available in the server. 
+library(gratia) #--> Not available in the server. 
+
+########################
+### Server ###
+all_comparisons_diversity_bootleneck_vs_non_bootleneck <- read.table ("/home/mlucena/diversity_loss_modeling/all_comparisons_diversity_bootleneck_vs_non_bootleneck.txt", row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="")
+#####################
+### Local ###
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/"
+wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/GAM_models"
+all_comparisons_diversity_bootleneck_vs_non_bootleneck <- read.table (paste0 (wd, "all_comparisons_diversity_bootleneck_vs_non_bootleneck"), row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="")
+##########################
+
+
+# Sort factors
+all_comparisons_diversity_bootleneck_vs_non_bootleneck$feature <- factor (all_comparisons_diversity_bootleneck_vs_non_bootleneck$feature, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic"))
+
+
+# Antes de seleccionar las variables, vamos a hacer algunas comprobaciones
+# 1. ¿Cómo se relacionan los informative sites de ambas poblaciones?
+
+ggplot (c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(informative_sites.x, informative_sites.y)) +
+  geom_point() +
+  ggsave(paste0(wd_output, "informative_sites_lm.pdf"))
+# La relación es completamente lineal, así que podemos corregir solo por uno de ellos. 
+ 
+
+ 
+mod1_c_ll_ki_n013_c_ll_no_n008 <- gam (delta_watterson_per_unit_zero ~
+                    # Covariables #                                
+                    s(watterson_ave_corrected.x,  bs="tp", k=5)+
+                    s(informative_sites.x, bs="tp", k=5)+ 
+                    ti(watterson_ave_corrected.x,informative_sites.x, bs=c("tp", "tp"), k=c(5,5))+
+                    # Variables explicativas # 
+                    feature +
+                    s(recombination_rate,  by=as.factor(feature), bs="tp", k=5)+
+                    s(divergence,  bs="tp", k=5)+
+                    s(GC_content),
+                    # Dataframe
+                    data=all_comparisons_diversity_bootleneck_vs_non_bootleneck %>% dplyr::filter(comparison=="Kirov-Norway"),  method="REML", family="gaussian")
+
+                    
+                      ## Terminos que siempre quiero que vayan porque son covariable de mi variable explicativa ##
+                ti(recombination_rate, bs = "tp"),
+                    ti(watterson_ave_corrected.x, bs="tp"),
+                                    ti(watterson_ave_corrected.x, bs="tp", k=5)+
+                                    ti(informative_sites.x+informative_sites.y, bs="tp", k=5)+
+                                    ti(watterson_ave_corrected.x *(informative_sites.x+informative_sites.y), bs="tp", k=5)+
+                                    feature +
+                                    region +
+                                    chr +
+                                
+                                    data=c_ll_ki_n013_diversity_c_ll_no_n008_diversity, method="REML", family="gaussian")
+
+mod_all_var <- getViz(mod_all_var)     
+print(plot(mod_all_var, allTerms = TRUE), pages = 1)
+gratia::draw(mod_all_var2)
+summary(mod_all_var)
+plot.gam(mod_all_var)
+
+save(mod_all_var, 
+     file="/Users/marialucenaperez/mod_all_var1.RData")
+load("/Users/marialucenaperez/mod_all_var1.RData", .GlobalEnv)
+
+
+pdf(paste0(args[4],"_K",args[3],".pdf"), height=10, width = 30)
+barplot(admix,col=col_vector,space=0,xlab="Individuals",ylab="Admixture")
+text(tapply(1:nrow(pop),pop[,1],mean),-0.1,unique(pop[,1]),xpd=T,srt=60)
+dev.off()
+
+```
+
