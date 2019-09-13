@@ -401,8 +401,10 @@ data_diversity_filtered <- read.table(paste(wd, "global.per.unit.averages.chr.al
 ## 1.  Recombination categories
 ```{r}
 # I used a function that discritize a continious variable, based on values of the variable itself (interval), or on the frequency of units under this variable (frequency)
-recomb <- discretize(data_diversity_filtered$recombination_rate, method = "frequency", breaks = 20)
+recomb_interval <- discretize(data_diversity_filtered$recombination_rate, method = "frequency", breaks = 20)
+recomb <- substring(recomb_interval,2) %>% gsub("\\,.*","",.)
 data_diversity_filtered_recomb_cat  <- cbind (data_diversity_filtered, as.data.frame(recomb))
+
 # rm (data_diversity_filtered)
 ```
 
