@@ -1261,7 +1261,7 @@ for pop in ${POPS[@]}
   echo ${pop}
   SPECIES=$(echo ${pop} | cut -d'_' -f 2)
   echo "computing"
-  perl LinkNe-master/LinkNe.pl -i ${pop}.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.map -o ../output/${pop}.linkne
+  perl LinkNe-master/LinkNe.pl -i ${pop}.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.map -b 0.25 -o ../output/${pop}.linkne
   echo "done"
   done
 
