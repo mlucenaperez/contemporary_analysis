@@ -3,14 +3,19 @@ title: "13.Diversity_lost_modelling"
 output: html_document
 ---
 
-Esto como es muy pesado lo corro en el servidor de la EBD. Para ello me creo una carpeta específica.
+15/09/2019
+We are going to explore different HGAM to try to explain the differences in changes in diversity after a bottleneck.
+Models are pretty complex, so we will start by trying to explain the accumulation of diversity in CDS.
 
+I could also run my model in the server, therefore I create a folder. 
 ```{bash}
 mkdir /home/mlucena/diversity_loss_modeling
 scp -p /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/*diversity.txt  mlucena@genomics-b.ebd.csic.es:/home/mlucena/diversity_loss_modeling
 ```
 
 Script de R que puedo correr en local o en el servidor. 
+
+## Library load
 
 ```{r}
 library(viridis)
@@ -24,45 +29,338 @@ library(MuMIn) #--> Not available in the server.
 library(mgcViz) #--> Not available in the server. 
 library(gratia) #--> Not available in the server. 
 
+```
+
+## Data load 
+
+```{r}
 ########################
 ### Server ###
 all_comparisons_diversity_bootleneck_vs_non_bootleneck <- read.table ("/home/mlucena/diversity_loss_modeling/all_comparisons_diversity_bootleneck_vs_non_bootleneck.txt", row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="")
 #####################
 ### Local ###
 wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/"
-wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/GAM_models"
-all_comparisons_diversity_bootleneck_vs_non_bootleneck <- read.table (paste0 (wd, "all_comparisons_diversity_bootleneck_vs_non_bootleneck"), row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="")
+wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/GAM_models/"
+all_comparisons_diversity_bootleneck_vs_non_bootleneck <- read.table (paste0 (wd, "all_comparisons_diversity_bootleneck_vs_non_bootleneck"), row.names = NULL, sep =";", dec=",", header=T, comment.char="", na.strings = c("NA", "na"))
 ##########################
+```
 
+## Sanity check
 
-# Sort factors
-all_comparisons_diversity_bootleneck_vs_non_bootleneck$feature <- factor (all_comparisons_diversity_bootleneck_vs_non_bootleneck$feature, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic"))
-
-
+```{r}
 # Antes de seleccionar las variables, vamos a hacer algunas comprobaciones
-# 1. ¿Cómo se relacionan los informative sites de ambas poblaciones?
 
-ggplot (c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(informative_sites.x, informative_sites.y)) +
+# 1. ¿Cómo se relacionan los informative sites de ambas poblaciones?
+ggplot (head (all_comparisons_diversity_bootleneck_vs_non_bootleneck, n=5000), aes(informative_sites.x, informative_sites.y)) +
   geom_point() +
   ggsave(paste0(wd_output, "informative_sites_lm.pdf"))
-# La relación es completamente lineal, así que podemos corregir solo por uno de ellos. 
+# La relación es completamente lineal, así que podemos usar como covariables (variable respuesta) los de cualquiera de la poblacion implicada en esa comparación (.x o .y) indistintamente. 
  
+# 2. Should I scale my variables?
+max(all_comparisons_diversity_bootleneck_vs_non_bootleneck$watterson_zero.x)
+# 0.02426801
+max(all_comparisons_diversity_bootleneck_vs_non_bootleneck$informative_sites.x)
+# 544166
+max(all_comparisons_diversity_bootleneck_vs_non_bootleneck$recombination_rate, na.rm=TRUE)
+# 70.90716
+max(all_comparisons_diversity_bootleneck_vs_non_bootleneck$divergence, na.rm=TRUE)
+# 0.5
+max(all_comparisons_diversity_bootleneck_vs_non_bootleneck$GC_content)
+# 0.876033
 
- 
-mod1_c_ll_ki_n013_c_ll_no_n008 <- gam (delta_watterson_per_unit_zero ~
-                    # Covariables #                                
-                    s(watterson_ave_corrected.x,  bs="tp", k=5)+
-                    s(informative_sites.x, bs="tp", k=5)+ 
-                    ti(watterson_ave_corrected.x,informative_sites.x, bs=c("tp", "tp"), k=c(5,5))+
+# Yes! The magnitude is completely different, so it makes sense to scale then to be able to interpret our results; i.e. a change of one unit (whatever a unit is) of this variable, have this effect. 
+```
+
+## Modif my data to fit the model
+
+```{r}
+all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale <- all_comparisons_diversity_bootleneck_vs_non_bootleneck %>% 
+  mutate (watterson_zero.x_scale=scale (watterson_zero.x)) %>% 
+  mutate (pairwise_zero.x_scale=scale (pairwise_zero.x)) %>% 
+  mutate (informative_sites.x_scale=scale (informative_sites.x)) %>% 
+  mutate (recombination_rate_scale=scale (recombination_rate)) %>% 
+  mutate (divergence_scale=scale (divergence)) %>% 
+  mutate (GC_content_scale=scale (GC_content))
+
+# I also have to remove the order of the random factors I will be using. 
+all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$feature <- factor( all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$feature , ordered = FALSE )
+all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$chr <- factor( all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$chr , ordered = FALSE )
+all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$region <- factor( all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$region , ordered = FALSE )
+```
+
+## Subset my data for different models
+## A. Only CDS 
+I will use only CDS to try to explain changes in diversity in this particular category. 
+
+```{r}
+CDS_c_ll_ki_c_ll_no_dataframe <- all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale %>% 
+  dplyr::filter (feature=="CDS") %>% 
+  dplyr::filter(comparison=="Kirov-Norway") %>% 
+  head (n=10000) %>% 
+  select (delta_watterson_per_unit_zero, 
+          delta_pairwise_per_unit_zero, 
+          informative_sites.x_scale,
+          watterson_zero.x_scale, 
+          pairwise_zero.x_scale, 
+          recombination_rate_scale,
+          divergence_scale, 
+          GC_content_scale, 
+          region,
+          chr)
+
+
+# Name is mod I because each one of the variable could have a different function and smother depending on the random factor  (check paper)
+# Remove cases with no data. 
+CDS_c_ll_ki_c_ll_no_dataframe <- CDS_c_ll_ki_c_ll_no_dataframe[complete.cases(CDS_c_ll_ki_c_ll_no_dataframe), ]
+# n=9505
+```
+
+
+### Run the models
+
+
+```{r}
+dataframe=CDS_c_ll_ki_c_ll_no_dataframe
+```
+
+### A.1. Model wo random effect variables
+```{r}
+model_name <- "mod_CDS_c_ll_ki_c_ll_no_watterson_no_re"
+model1  <- gam (delta_watterson_per_unit_zero ~
+                    # Covariables: las metemos como explicativas #  
+                    s(informative_sites.x_scale, bs="tp", k=5) +
+                    s(watterson_zero.x_scale,  bs="tp", k=5) +
+                    ti(watterson_zero.x_scale, informative_sites.x_scale, bs=c("tp", "tp"), k=c(5,5))+
                     # Variables explicativas # 
-                    feature +
-                    s(recombination_rate,  by=as.factor(feature), bs="tp", k=5)+
-                    s(divergence,  bs="tp", k=5)+
-                    s(GC_content),
+                    s(recombination_rate_scale, bs="tp", k=5, m=2)+
+                    s(divergence_scale,  bs="tp", k=5)+
+                    s(GC_content_scale,  bs="tp", k=5),
                     # Dataframe
-                    data=all_comparisons_diversity_bootleneck_vs_non_bootleneck %>% dplyr::filter(comparison=="Kirov-Norway"),  method="REML", family="gaussian")
+                    data=dataframe,  
+                    # Method and family
+                    method="REML", family="gaussian")
 
-                    
+# Save the model
+save(model1, 
+     file=paste0(wd_output,model_name))
+#load(paste0(wd_output,model_name), .GlobalEnv)
+
+# Summary
+summary(model1)
+
+# Plot the model
+#https://www.r-bloggers.com/introducing-gratia/
+pdf(paste0(wd_output, model_name, '.pdf'))
+gratia::draw(model1)
+dev.off()
+
+# Sanity checks
+pdf(paste0(wd_output, model_name, '_diagnosis.pdf'))
+appraise(model1)
+dev.off()
+
+
+rm(model1)
+```
+
+
+
+### A.2. Model G (region & chr)
+
+https://stats.stackexchange.com/questions/331692/random-effect-in-gam-mgcv-package
+```{r}
+model_name <- "modG_CDS_c_ll_ki_c_ll_no_watterson_re"
+model1 <- gam (delta_watterson_per_unit_zero ~
+                    # Covariables: las metemos como explicativas #  
+                    s(informative_sites.x_scale, bs="tp", k=5) +
+                    s(watterson_zero.x_scale,  bs="tp", k=5) +
+                    ti(watterson_zero.x_scale, informative_sites.x_scale, bs=c("tp", "tp"), k=c(5,5))+
+                    # Variables re # 
+                    s(region, chr, bs = "re") +
+                    # Variables exlicativas # 
+                    s(recombination_rate_scale, bs="tp", k=5, m=2)+
+                    s(divergence_scale,  bs="tp", k=5)+
+                    s(GC_content_scale,  bs="tp", k=5),
+                    # Dataframe
+                    data=dataframe,  
+                    # Method and family
+                    method="REML", family="gaussian")
+
+# Save the model
+save(model1, 
+     file=paste0(wd_output,model_name))
+#load(paste0(wd_output,model_name), .GlobalEnv)
+
+# Summary
+summary(model1)
+
+# Plot the model
+#https://www.r-bloggers.com/introducing-gratia/
+pdf(paste0(wd_output, model_name, '.pdf'))
+gratia::draw(model1)
+dev.off()
+
+# Sanity checks
+pdf(paste0(wd_output, model_name, '_diagnosis.pdf'))
+appraise(model1)
+dev.off()
+
+
+rm(model1)
+
+```
+
+### A.3. Model I (region)
+
+```{r}
+model_name <- "modI_CDS_c_ll_ki_c_ll_no_watterson_re_region"
+
+model1 <- gam (delta_watterson_per_unit_zero ~
+                    # Covariables: las metemos como explicativas #  
+                    s(informative_sites.x_scale, bs="tp", k=5) +
+                    s(watterson_zero.x_scale,  bs="tp", k=5) +
+                    ti(watterson_zero.x_scale, informative_sites.x_scale, bs=c("tp", "tp"), k=c(5,5))+
+                    # Variables exlicativas # 
+                    s(recombination_rate_scale, by=region, bs="tp", k=5, m=2)+
+                    s(divergence_scale, by=region, bs="tp", k=5)+
+                    s(GC_content_scale, by=region,  bs="tp", k=5),
+                    # Dataframe
+                    data=dataframe,  
+                    # Method and family
+                    method="REML", family="gaussian")
+
+# Save the model
+save(model1, 
+     file=paste0(wd_output,model_name))
+#load(paste0(wd_output,model_name), .GlobalEnv)
+
+# Summary
+summary(model1)
+
+# Plot the model
+#https://www.r-bloggers.com/introducing-gratia/
+pdf(paste0(wd_output, model_name, '.pdf'))
+gratia::draw(model1)
+dev.off()
+
+# Sanity checks
+pdf(paste0(wd_output, model_name, '_diagnosis.pdf'))
+appraise(model1)
+dev.off()
+
+
+rm(model1)
+```
+
+### A.4. Model I (chr)
+
+
+```{r}
+model_name <- "modI_CDS_c_ll_ki_c_ll_no_watterson_re_chr"
+
+model1 <- bam (delta_watterson_per_unit_zero ~
+                    # Covariables: las metemos como explicativas #  
+                    s(informative_sites.x_scale, bs="tp", k=5) +
+                    s(watterson_zero.x_scale,  bs="tp", k=5) +
+                    ti(watterson_zero.x_scale, informative_sites.x_scale, bs=c("tp", "tp"), k=c(5,5))+
+                    # Variables exlicativas # 
+                    s(recombination_rate_scale, by=chr, bs="tp", k=5, m=2)+
+                    s(divergence_scale, by=chr, bs="tp", k=5)+
+                    s(GC_content_scale, by=chr,  bs="tp", k=5),
+                    # Dataframe
+                    data=dataframe,  
+                    # Method and family
+                    method="REML", family="gaussian")
+
+# Save the model
+save(model1, 
+     file=paste0(wd_output,model_name))
+#load(paste0(wd_output,model_name), .GlobalEnv)
+
+# Summary
+summary(model1)
+
+# Plot the model
+#https://www.r-bloggers.com/introducing-gratia/
+pdf(paste0(wd_output, model_name, '.pdf'))
+gratia::draw(model1)
+dev.off()
+
+# Sanity checks
+pdf(paste0(wd_output, model_name, '_diagnosis.pdf'))
+appraise(model1)
+dev.off()
+
+
+rm(model1)
+```
+
+
+# ----
+
+# Mas codigo
+
+```{r}
+# Check the names of the variables in the model 
+getAllTerms(modG_CDS_c_ll_ki_c_ll_no_watterson_re)
+
+# Dredge manteniendo como fijo que 
+options(na.action = "na.fail") # Require for dredge to run
+rm(modI_CDS_c_ll_ki_c_ll_no_watterson)
+dredge(modI_CDS_c_ll_ki_c_ll_no_watterson)
+
+
+modI_CDS_c_ll_ki_c_ll_no_watterson_dregde <- MuMIn::dredge(global.model=mod1_c_ll_ki_n013_c_ll_no_n008, beta = "none", evaluate = T, rank = AICc, 
+                                            # Fix the weeks and random effects
+                                            fixed = c("s(informative_sites.x, bs = \"tp\", k = 5)",
+                                                      "s(watterson_ave_corrected.x, bs = \"tp\", k = 5)", 
+                                                      "ti(watterson_ave_corrected.x, informative_sites.x, bs = c(\"tp\", \"tp\"), k = c(5, 5))"))
+
+dredge(test, beta = "none", evaluate = T, rank = AICc)
+
+options(na.action = "na.omit") # set back to default
+modI_6_Inc_female_VR_i_Abn_dredge
+
+# save.image("F:/Ruben/Datos_nuevos/06_Descrip_Analyses/00_analyses/GAM/Residuals/Both_6/Both_6_female/Analyses/Inc/env_modI_Inc_female_VR_i_Abn.RData")
+save.image("C:/Users/ruben/Both_6/Both_6_female/Analyses/Inc/env_modI_Inc_female_VR_i_Abn.RData")
+save(modI_6_Inc_female_VR_i_Abn_dredge, 
+     # file="F:/Ruben/Datos_nuevos/06_Descrip_Analyses/00_analyses/GAM/Residuals/Both_6/Both_6_female/Analyses/Inc/dredge_Inc_female_VR_i_Abn.RData")
+     file="C:/Users/ruben/Both_6/Both_6_female/Analyses/Inc/dredge_Inc_female_VR_i_Abn.RData")
+####_####
+
+```
+
+## GAM
+
+El artículo 
+```{r}
+
+#### Modelo más complejo ####
+# Voy a lanzar el modelo más complejo, porque luego podría hacer la función dredge, y me fabrica todos los modelos más simples a partir de este. 
+#variables categóricas, sin más. 
+#s() variables sencillas
+#s(bs="tp") # probablemente el tuyo
+#s(k=) # Cuanto mas mejor. pero para probar empieza con valores bajos (e.g. 5). Por defecto son 10
+#s(m=2 o m=1) # Si no usas random no necesitas esto, lo explica en el paper. 
+#ti() # para las interactions (se podría poner solo te() y el programa te sacaría la interacción, pero si se pone ti es mas limpio, te saca cada una por separado y luego la interacción)
+
+# Características de mi modelo:
+# 1. Voy a incluir como variables explicativas que son covariables a mi variable respuesta y que quiero que siempre estén en el modelo, las siguientes:
+# a. Number of informative sites (suma de los informative sites en ambas poblaciones).
+# b. Diversidad inicial.
+# c. Interacción de ambas.
+# 2. Variables explicatives per se:
+# a. Recombinación
+# b. Divergencia
+# c. GC content
+# d. Feature
+
+# https://mfasiolo.github.io/mgcViz/articles/mgcviz.html
+mod_all_var <- gam (delta_watterson_per_unit_zero ~
+                      s(recombination_rate,by=as.factor(feature), bs="tp"),
+data=c_ll_ki_n013_diversity_c_ll_no_n008_diversity, method="REML", family="gaussian")
+
+                    +
                       ## Terminos que siempre quiero que vayan porque son covariable de mi variable explicativa ##
                 ti(recombination_rate, bs = "tp"),
                     ti(watterson_ave_corrected.x, bs="tp"),
@@ -77,7 +375,7 @@ mod1_c_ll_ki_n013_c_ll_no_n008 <- gam (delta_watterson_per_unit_zero ~
 
 mod_all_var <- getViz(mod_all_var)     
 print(plot(mod_all_var, allTerms = TRUE), pages = 1)
-gratia::draw(mod_all_var2)
+gratia::draw(mod_all_var)
 summary(mod_all_var)
 plot.gam(mod_all_var)
 
@@ -86,10 +384,58 @@ save(mod_all_var,
 load("/Users/marialucenaperez/mod_all_var1.RData", .GlobalEnv)
 
 
-pdf(paste0(args[4],"_K",args[3],".pdf"), height=10, width = 30)
-barplot(admix,col=col_vector,space=0,xlab="Individuals",ylab="Admixture")
-text(tapply(1:nrow(pop),pop[,1],mean),-0.1,unique(pop[,1]),xpd=T,srt=60)
-dev.off()
+saveRDS(mod_all_var, "/Users/marialucenaperez/model.rds")
+my_model <- readRDS("/Users/marialucenaperez/model.rds")
+# Check the names of the variables in the model 
+getAllTerms(my_model)
+
+# Dredge manteniendo como fijo que 
+options(na.action = "na.fail") # Require for dredge to run
+rm(modI_6_Inc_female_VR_i_Abn_dredge)
+modI_6_Inc_female_VR_i_Abn_dredge <- dredge(modI_6_Inc_female_VR_i_Abn, beta = F, evaluate = T, rank = AICc, 
+                                            # Fix the weeks and random effects
+                                            # fixed = c("s(Weeks, by = Pop_uo, bs = \"cc\", k = 8, m = 2)",
+                                            fixed = c("s(Pop_uo, bs = \"re\", k = length(unique(db_analyse_Inc_female$Pop_uo)))",
+                                                      "s(Pop_uo, bs = \"re\", by = Spp_uo)")) 
+options(na.action = "na.omit") # set back to default
+modI_6_Inc_female_VR_i_Abn_dredge
+
+# save.image("F:/Ruben/Datos_nuevos/06_Descrip_Analyses/00_analyses/GAM/Residuals/Both_6/Both_6_female/Analyses/Inc/env_modI_Inc_female_VR_i_Abn.RData")
+save.image("C:/Users/ruben/Both_6/Both_6_female/Analyses/Inc/env_modI_Inc_female_VR_i_Abn.RData")
+save(modI_6_Inc_female_VR_i_Abn_dredge, 
+     # file="F:/Ruben/Datos_nuevos/06_Descrip_Analyses/00_analyses/GAM/Residuals/Both_6/Both_6_female/Analyses/Inc/dredge_Inc_female_VR_i_Abn.RData")
+     file="C:/Users/ruben/Both_6/Both_6_female/Analyses/Inc/dredge_Inc_female_VR_i_Abn.RData")
+####_####
+saveRDS(mod, "mymodel.rds")
+# # get models
+# # https://sites.google.com/site/rforfishandwildlifegrads/home/mumin_usage_examples
+# lowest_AIC <- min(modI_6_Inc_female_VR_i_Abn_dredge$AICc)
+# library(dplyr)
+# dredge_models <- as.data.frame(modI_6_Inc_female_VR_i_Abn_dredge)
+# col_weeks <- which(names(dredge_models) %in% names(dredge_models)[grep("Weeks", names(dredge_models))])
+# if(dredge_models$AICc[1]==lowest_AIC){
+#   ss_dredge_models <- dredge_models %>% 
+#     filter(AICc<=(lowest_AIC+4)) 
+#   ss_dredge_models <- ss_dredge_models %>% 
+#     filter( !(ss_dredge_models[,col_weeks[1]]=="+" & is.na(ss_dredge_models[,col_weeks[2]])) ) %>%   
+#     filter( !(ss_dredge_models[,col_weeks[2]]=="+" & is.na(ss_dredge_models[,col_weeks[1]])) )
+# }
+# ss_dredge_models
+# 
+# colnames(ss_dredge_models) <- c("Abn_lag_6_female",
+#                                 "phiB_6_female",
+#                                 "phiNB_6_female",
+#                                 "psiBNB_6_female",
+#                                 "psiNBB_6_female",
+#                                 "Weeks_1",
+#                                 "Weeks_2",
+#                                 "psiNBB_6_female",
+#                                 "Weeks_1",
+#                                 )
+# 
+# top_model <- get.models(GTmodel_dredge, subset = 1)[[1]]
+# top_model
+
+
 
 ```
-
