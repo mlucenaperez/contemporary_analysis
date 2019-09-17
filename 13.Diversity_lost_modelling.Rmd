@@ -147,6 +147,9 @@ save(model1,
 
 # Summary
 summary(model1)
+sink(paste0(wd_output,model_name, ".txt"))
+print(summary(model1))
+sink()
 
 # Plot the model
 #https://www.r-bloggers.com/introducing-gratia/
@@ -193,6 +196,10 @@ save(model1,
 
 # Summary
 summary(model1)
+sink(paste0(wd_output,model_name, ".txt"))
+print(summary(model1))
+sink()
+
 
 # Plot the model
 #https://www.r-bloggers.com/introducing-gratia/
@@ -236,6 +243,9 @@ save(model1,
 
 # Summary
 summary(model1)
+sink(paste0(wd_output,model_name, ".txt"))
+print(summary(model1))
+sink()
 
 # Plot the model
 #https://www.r-bloggers.com/introducing-gratia/
@@ -258,7 +268,7 @@ rm(model1)
 ```{r}
 model_name <- "modI_CDS_c_ll_ki_c_ll_no_watterson_re_chr"
 
-model1 <- bam (delta_watterson_per_unit_zero ~
+model1 <- gam (delta_watterson_per_unit_zero ~
                     # Covariables: las metemos como explicativas #  
                     s(informative_sites.x_scale, bs="tp", k=5) +
                     s(watterson_zero.x_scale,  bs="tp", k=5) +
@@ -279,6 +289,9 @@ save(model1,
 
 # Summary
 summary(model1)
+sink(paste0(wd_output,model_name, ".txt"))
+print(summary(model1))
+sink()
 
 # Plot the model
 #https://www.r-bloggers.com/introducing-gratia/
@@ -294,6 +307,98 @@ dev.off()
 
 rm(model1)
 ```
+### A.5. Model I (chr, region)
+
+
+```{r}
+model_name <- "modI_CDS_c_ll_ki_c_ll_no_watterson_re_region_chr"
+
+model1 <- gam (delta_watterson_per_unit_zero ~
+                    # Covariables: las metemos como explicativas #  
+                    s(informative_sites.x_scale, bs="tp", k=5) +
+                    s(watterson_zero.x_scale,  bs="tp", k=5) +
+                    ti(watterson_zero.x_scale, informative_sites.x_scale, bs=c("tp", "tp"), k=c(5,5))+
+                    # Variables exlicativas # 
+                    s(recombination_rate_scale, bs="tp", k=5, m=2)+
+                    s(divergence_scale,bs="tp", k=5)+
+                    s(GC_content_scale, bs="tp", k=5)+
+                    s(region, bs="re", by=chr),
+                    # Dataframe
+                    data=dataframe,  
+                    # Method and family
+                    method="REML", family="gaussian")
+
+# Save the model
+save(model1, 
+     file=paste0(wd_output,model_name))
+#load(paste0(wd_output,model_name), .GlobalEnv)
+
+# Summary
+summary(model1)
+sink(paste0(wd_output,model_name, ".txt"))
+print(summary(model1))
+sink()
+
+# Plot the model
+#https://www.r-bloggers.com/introducing-gratia/
+pdf(paste0(wd_output, model_name, '.pdf'))
+gratia::draw(model1)
+dev.off()
+
+# Sanity checks
+pdf(paste0(wd_output, model_name, '_diagnosis.pdf'))
+appraise(model1)
+dev.off()
+
+
+rm(model1)
+```
+
+### A.6. Model I (chr, region)
+
+```{r}
+model_name <- "modI_CDS_c_ll_ki_c_ll_no_watterson_re_region_chr_recomb_by_region"
+
+model1 <- gam (delta_watterson_per_unit_zero ~
+                    # Covariables: las metemos como explicativas #  
+                    s(informative_sites.x_scale, bs="tp", k=5) +
+                    s(watterson_zero.x_scale,  bs="tp", k=5) +
+                    ti(watterson_zero.x_scale, informative_sites.x_scale, bs=c("tp", "tp"), k=c(5,5))+
+                    # Variables exlicativas # 
+                    s(recombination_rate_scale, by=region, bs="tp", k=5, m=2)+
+                    s(divergence_scale,bs="tp", k=5)+
+                    s(GC_content_scale, bs="tp", k=5)+
+                    s(region, bs="re", by=chr),
+                    # Dataframe
+                    data=dataframe,  
+                    # Method and family
+                    method="REML", family="gaussian")
+
+# Save the model
+save(model1, 
+     file=paste0(wd_output,model_name))
+#load(paste0(wd_output,model_name), .GlobalEnv)
+
+# Summary
+summary(model1)
+sink(paste0(wd_output,model_name, ".txt"))
+print(summary(model1))
+sink()
+
+# Plot the model
+#https://www.r-bloggers.com/introducing-gratia/
+pdf(paste0(wd_output, model_name, '.pdf'))
+gratia::draw(model1)
+dev.off()
+
+# Sanity checks
+pdf(paste0(wd_output, model_name, '_diagnosis.pdf'))
+appraise(model1)
+dev.off()
+
+
+rm(model1)
+````
 
 
 # ----
