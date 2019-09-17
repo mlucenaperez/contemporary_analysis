@@ -1259,8 +1259,6 @@ for pop in ${INPUT_BEDS[@]}
 
 ####Genotipos en formato genepop:
 ```{bash}
-
-
 !!! PRIMERO HAY QUE GENERAR LOS .cat.vcf A PARTIR de los .vcf
 
 INPUT_VCFS=$(ls *intergenic_filtered_more_than_2000_SNPS.vcf)
@@ -1268,17 +1266,11 @@ for pop in ${INPUT_VCFS[@]}
   do 
   echo ${pop}
   grep '#' ${pop} > ${pop/.vcf/.cat.vcf} #copy headers
-  bedtools intersect -a ${pop} -b /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed >> ${pop/.vcf/.cat.vcf} #filter in variants for which we have the cat coordinates
-  #awk 'NR==FNR{a[NR]=$0;next} {$4=a[FNR]}1' OFS="\t" test2.txt test1.txt
-  'NR==FNR
-    {
-    scaffold[$1]=$1
-    stop[$1]=$3
-    next
-    } {
-    $1=scaffold[$1]
-    $2=stop[$1]
-    } 1' ${pop/.vcf/.cat.bed} ${pop/.vcf/.cat.vcf} #replace lynx coordinates in the vcf for cat coordinates in the bed, which was generated in the previous section.
+  bedtools intersect  -a <(/GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed) \
+  -b ${pop} \
+  -wa -wb -sorted -g /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated |\
+  awk -v OFS='\t' '{split($4,a1,":"); split(a1[3],a2, "-")} {$1=$2=$3=$4=$5=$6=""; print a1[2], a2[2], $0}' |\
+  sed -r 's:\t+:\t:g' >> ${pop/.vcf/.cat.vcf} 
   done
 
 
