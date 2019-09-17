@@ -1221,68 +1221,57 @@ for file in ${GENEPOP_LIST[@]}
 ```
 
 ###Coordenadas de gato:
-####Mapas genéticos:
+####VCFs:
 ```{bash}
-
-#Este script lo corro desde los servidores de genómica, ya que necesito bedtools, necesito el archivo lynx2cat y luego es mejor correr LinkNe allí en vez de en local.
 
 cd /GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input
 
-#En primer lugar, pasamos de vcf a bed para que los archivos sean más manejables.
+#En primer lugar filtramos los vcf para quedarnos con las posiciones para las que tenemos las coordenadas de gato, y además expresadas con estas coordenadas en lugar de las de lince:
 INPUT_VCFS=$(ls *intergenic_filtered_more_than_2000_SNPS.vcf)
-for vcf in ${INPUT_VCFS[@]}
-  do
-  POP=$(echo ${vcf} | cut -d'.' -f 4 | cut -d'_' -f-3)
-  echo ${POP}
-  grep -v '#' ${vcf} | awk -F"\t" '{printf ("%s\t%s\t%s\n", $1,$2-1,$2)}' > ${vcf/.vcf/.bed}
-  done
-  
-#En segundo lugar, pasamos los bed a coordenadas de gato.
-INPUT_BEDS=$(ls *intergenic_filtered_more_than_2000_SNPS.bed)
-for pop in ${INPUT_BEDS[@]}
+for pop in ${INPUT_VCFS[@]}
   do 
   echo ${pop}
-  bedtools intersect -a /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed -b ${pop} | awk -F":" '{printf ("%s\t%s\n", $2,$3)}' | awk -F"\t|-" '{printf ("%s\t%s\t%s\n", $1,$2,$3)}' > ${pop/.bed/.cat.bed}
+  grep '#' ${pop} > ${pop/.vcf/.cat.vcf} #copy headers
+  bedtools intersect -a /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed \
+  -b ${pop} \
+  -wa -wb -sorted -g /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated |\
+  awk -v OFS='\t' '{split($4,a1,":"); split(a1[3],a2, "-")} {$1=$2=$3=$4=$5=$6=""; print a1[2], a2[2], $0}' |\
+  sed -r 's:\t+:\t:g' >> ${pop/.vcf/.cat.vcf}
   done
 
-INPUT_BEDS=$(ls *.bed)
-for pop in ${INPUT_BEDS[@]}
+#A continuación ordenamos por cromosoma de gato y por posición dentro de cromosoma:
+INPUT_VCFS=$(ls *intergenic_filtered_more_than_2000_SNPS.cat.vcf)
+for pop in ${INPUT_VCFS[@]}
   do 
-  #echo ${pop}
-  echo -e "locus\tchromosome\tposition" > ${pop/.bed/.map}
-  POP=$(echo ${pop} | cut -d'.' -f 4 | cut -d'_' -f-3)
-  echo ${POP}
-  LC_NUMERIC=C awk -F"\t" '{printf ("%s_%s\t%s\t%.9f\n", $1,$3,$1,$3*0.000000019)}' ${pop} | sed 's/lp23\.s//g' >> ${pop/.bed/.map} #LC_NUMERIC=C to force a dot as the decimal separator. Otherwise it will print commas even though I've set my mac to use dots as the default...
+  echo ${pop}
+  grep '^#' ${pop} > ${pop/.cat.vcf/.cat_sorted.vcf} && grep -v '^#' ${pop} | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n >> ${pop/.cat.vcf/.cat_sorted.vcf}
+  done
+  
+#A continuación obtenemos un subset (chrA1, y solo 20k SNPs al azar):
+CHR="chrA1"
+INPUT_VCFS=$(ls *intergenic_filtered_more_than_2000_SNPS.cat_sorted.vcf)
+for pop in ${INPUT_VCFS[@]}
+  do 
+  echo ${pop}
+  grep '^#' ${pop} > ${pop/SNPS.cat_sorted.vcf/SNPS_${CHR}.cat_sorted.vcf} && grep $CHR ${pop} | shuf -n 20000 | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n | sed "s/$CHR/1/g" >> ${pop/SNPS.cat_sorted.vcf/SNPS_${CHR}.cat_sorted.vcf}
   done
 
 ```
 
 ####Genotipos en formato genepop:
 ```{bash}
-!!! PRIMERO HAY QUE GENERAR LOS .cat.vcf A PARTIR de los .vcf
 
-INPUT_VCFS=$(ls *intergenic_filtered_more_than_2000_SNPS.vcf)
-for pop in ${INPUT_VCFS[@]}
-  do 
-  echo ${pop}
-  grep '#' ${pop} > ${pop/.vcf/.cat.vcf} #copy headers
-  bedtools intersect  -a <(/GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed) \
-  -b ${pop} \
-  -wa -wb -sorted -g /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated |\
-  awk -v OFS='\t' '{split($4,a1,":"); split(a1[3],a2, "-")} {$1=$2=$3=$4=$5=$6=""; print a1[2], a2[2], $0}' |\
-  sed -r 's:\t+:\t:g' >> ${pop/.vcf/.cat.vcf} 
-  done
+#Copio los vcf con coordenadas de gato a la carpeta local para pasarlos a formato GENEPOP usando PDGSpider, versión web start (http://www.cmpg.unibe.ch/software/PGDSpider/jnlp/PGDSpider2.jnlp; si no se puede ejecutar, hay que añadir la ubicación a las excepciones de seguridad del panel de java, ubicado en preferencias de sistema de Mac):
+scp -p dkleinman@genomics-a.ebd.csic.es:/GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input/*intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.vcf /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/cat_coordinates/input
 
+#Ahora los transformo a GENEPOP en local.
 
-#Copio los vcf con mas de 2000 SNPs que hemos usado para SNeP en local para transformarlos a GENEPOP usando PDGSpider:
+#Se suben de nuevo al servidor:
 
-scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/ll*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
-scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/lp*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
-
-#Ahora los transformo en local, para que Dani los lance.
+scp -p /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/cat_coordinates/input/*.txt dkleinman@genomics-a.ebd.csic.es:/GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input
 
 #Como los nombres de los SNPs son diferentes que en los map, modifico los genepop.
-cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
+cd /GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input
 GENEPOP_LIST=$(ls *.txt)
 for file in ${GENEPOP_LIST[@]}
   do
@@ -1290,16 +1279,43 @@ for file in ${GENEPOP_LIST[@]}
   POP=$(echo ${file} | cut -d'.' -f 1)
   echo ${POP}
   SPECIES=$(echo ${file} | cut -d'_' -f 2)
-  N_PED=$(sed '/Pop/q' ${file} | ghead -n -1 | wc -l)
-  N_MAP=$(< ${SPECIES}_perspecies.trimmed_filtered1.ann.${POP}_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.map wc -l)
+  N_PED=$(sed '/Pop/q' ${file} | head -n -1 | wc -l)
+  N_MAP=$(< ${SPECIES}_perspecies.trimmed_filtered1.ann.${POP}_intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.map wc -l)
   if [ $N_PED == $N_MAP ]
     then echo "correct SNP number"
     else echo "wrong SNP number"
   fi
   GENOTYPES=$(sed -n '/Pop/,$p' ${file})
   echo $POP > ${file/txt/genepop}
-  gtail -n +2 ${SPECIES}_perspecies.trimmed_filtered1.ann.${POP}_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.map | cut -f 1 >> ${file/txt/genepop}
+  tail -n +2 ${SPECIES}_perspecies.trimmed_filtered1.ann.${POP}_intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.map | cut -f 1 >> ${file/txt/genepop}
   echo "$GENOTYPES" >> ${file/txt/genepop}
+  done
+
+```
+
+####Mapas genéticos:
+```{bash}
+
+cd /GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input
+
+#En primer lugar, pasamos de vcf (previamente transformados a coordenadas de gato) a bed para que los archivos sean más manejables.
+INPUT_VCFS=$(ls *intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.vcf)
+for vcf in ${INPUT_VCFS[@]}
+  do
+  POP=$(echo ${vcf} | cut -d'.' -f 4 | cut -d'_' -f-3)
+  echo ${POP}
+  grep -v '#' ${vcf} | awk -F"\t" '{printf ("%s\t%s\t%s\n", $1,$2-1,$2)}' > ${vcf/.vcf/.bed}
+  done
+
+#A continuación, obtenemos el map a partir del bed.
+INPUT_BEDS=$(ls *intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.bed)
+for pop in ${INPUT_BEDS[@]}
+  do 
+  #echo ${pop}
+  echo -e "locus\tchromosome\tposition" > ${pop/.bed/.map}
+  POP=$(echo ${pop} | cut -d'.' -f 4 | cut -d'_' -f-3)
+  echo ${POP}
+  LC_NUMERIC=C awk -F"\t" '{printf ("%s_%s\t%s\t%.9f\n", $1,$3,$1,$3*0.000000019)}' ${pop} | sed 's/lp23\.s//g' >> ${pop/.bed/.map} #LC_NUMERIC=C to force a dot as the decimal separator. Otherwise it will print commas even though I've set my mac to use dots as the default...
   done
 
 ```
@@ -1338,7 +1354,7 @@ scp -r /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demogr
 ###En el servidor:
 ```{bash}
 
-cd /home/dkleinman/LinkNe/input
+cd /GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input
 
 POPS=$(ls *.map | cut -d'.' -f 4 | cut -d'_' -f-3)
 for pop in ${POPS[@]}
@@ -1346,7 +1362,7 @@ for pop in ${POPS[@]}
   echo ${pop}
   SPECIES=$(echo ${pop} | cut -d'_' -f 2)
   echo "computing"
-  perl LinkNe-master/LinkNe.pl -i ${pop}.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.map -b 0.25 -o ../output/${pop}.linkne
+  perl /home/dkleinman/LinkNe/input/LinkNe-master/LinkNe.pl -i ${pop}.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.map -o /home/dkleinman/LinkNe/output/${pop}.linkne
   echo "done"
   done
 
