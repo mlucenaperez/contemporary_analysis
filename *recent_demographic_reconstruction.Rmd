@@ -1086,8 +1086,9 @@ cpan Statistics::Distributions
 
 ```
 
-##Obtención de los archivos input:
-###Matrices de tasas de recombinación (muy lento, descartado).
+##Obtención de los archivos input 
+###Coordenadas de lince:
+####Matrices de tasas de recombinación (muy lento, descartado).
 ```{bash}
 
 cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
@@ -1160,7 +1161,7 @@ for s in ${SCAFFOLDS[@]}
 
 ```
 
-###Mapas genéticos:
+####Mapas genéticos:
 ```{bash}
 
 cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
@@ -1186,8 +1187,81 @@ for pop in ${INPUT_BEDS[@]}
 
 ```
 
-###Genotipos en formato genepop:
+####Genotipos en formato genepop:
 ```{bash}
+
+#Copio los vcf con mas de 2000 SNPs que hemos usado para SNeP en local para transformarlos a GENEPOP usando PDGSpider:
+
+scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/ll*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
+scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/lp*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
+
+#Ahora los transformo en local, para que Dani los lance.
+
+#Como los nombres de los SNPs son diferentes que en los map, modifico los genepop.
+cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
+GENEPOP_LIST=$(ls *.txt)
+for file in ${GENEPOP_LIST[@]}
+  do
+  #echo ${file}
+  POP=$(echo ${file} | cut -d'.' -f 1)
+  echo ${POP}
+  SPECIES=$(echo ${file} | cut -d'_' -f 2)
+  N_PED=$(sed '/Pop/q' ${file} | ghead -n -1 | wc -l)
+  N_MAP=$(< ${SPECIES}_perspecies.trimmed_filtered1.ann.${POP}_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.map wc -l)
+  if [ $N_PED == $N_MAP ]
+    then echo "correct SNP number"
+    else echo "wrong SNP number"
+  fi
+  GENOTYPES=$(sed -n '/Pop/,$p' ${file})
+  echo $POP > ${file/txt/genepop}
+  gtail -n +2 ${SPECIES}_perspecies.trimmed_filtered1.ann.${POP}_intergenic_filtered_more_than_2000_SNPS_subset_few_scaffold.map | cut -f 1 >> ${file/txt/genepop}
+  echo "$GENOTYPES" >> ${file/txt/genepop}
+  done
+
+```
+
+###Coordenadas de gato:
+####Mapas genéticos:
+```{bash}
+
+#Este script lo corro desde los servidores de genómica, ya que necesito bedtools, necesito el archivo lynx2cat y luego es mejor correr LinkNe allí en vez de en local.
+
+cd /GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input
+
+#En primer lugar, pasamos de vcf a bed para que los archivos sean más manejables.
+INPUT_VCFS=$(ls *intergenic_filtered_more_than_2000_SNPS.vcf)
+for vcf in ${INPUT_VCFS[@]}
+  do
+  POP=$(echo ${vcf} | cut -d'.' -f 4 | cut -d'_' -f-3)
+  echo ${POP}
+  grep -v '#' ${vcf} | awk -F"\t" '{printf ("%s\t%s\t%s\n", $1,$2-1,$2)}' > ${vcf/.vcf/.bed}
+  done
+  
+#En segundo lugar, pasamos los bed a coordenadas de gato.
+INPUT_BEDS=$(ls *intergenic_filtered_more_than_2000_SNPS.bed)
+for pop in ${INPUT_BEDS[@]}
+  do 
+  echo ${pop}
+  bedtools intersect -a ${pop} -b /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed | awk -F"\t|:|-" '{printf ("%s\t%s\t%s\n", $5,$6,$7)}' > ${pop/.bed/.cat.bed}
+  done
+
+INPUT_BEDS=$(ls *.bed)
+for pop in ${INPUT_BEDS[@]}
+  do 
+  #echo ${pop}
+  echo -e "locus\tchromosome\tposition" > ${pop/.bed/.map}
+  POP=$(echo ${pop} | cut -d'.' -f 4 | cut -d'_' -f-3)
+  echo ${POP}
+  LC_NUMERIC=C awk -F"\t" '{printf ("%s_%s\t%s\t%.9f\n", $1,$3,$1,$3*0.000000019)}' ${pop} | sed 's/lp23\.s//g' >> ${pop/.bed/.map} #LC_NUMERIC=C to force a dot as the decimal separator. Otherwise it will print commas even though I've set my mac to use dots as the default...
+  done
+
+```
+
+####Genotipos en formato genepop:
+```{bash}
+
+
+PRIMERO HAY QUE GENERAR LOS .cat.vcf A PARTIR de los .vcf
 
 #Copio los vcf con mas de 2000 SNPs que hemos usado para SNeP en local para transformarlos a GENEPOP usando PDGSpider:
 
