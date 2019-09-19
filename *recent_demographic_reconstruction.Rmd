@@ -671,6 +671,27 @@ for pop in ${INPUT_VCFS[@]}
 
 ```
 
+Now, as the files are huge, we are going to use a subset of those. We will filter and keep chrA1, A2, A3, B1 and B2, they will be named as 1, 2, 3, 4, 5, respectively, as one of the approaches that we are using (LinkNe), do not cope with character name in the chrosomose column. 
+
+```{bash}
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_cat_coordinates
+INPUT_VCFS=$(ls *intergenic.cat.vcf)
+
+for pop in ${INPUT_VCFS[@]}
+  do 
+  echo ${pop}
+  grep '^#' ${pop} > ${pop}.header.borrar 
+  grep "chrA1" ${pop} | shuf -n 2000 | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n | sed "s/chrA1/1/g" > ${pop}.A1.borrar
+  grep "chrA2" ${pop} | shuf -n 2000 | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n | sed "s/chrA2/2/g" > ${pop}.A2.borrar
+  grep "chrA3" ${pop} | shuf -n 2000 | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n | sed "s/chrA3/3/g" > ${pop}.A3.borrar
+  grep "chrB1" ${pop} | shuf -n 2000 | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n | sed "s/chrB1/4/g" > ${pop}.B1.borrar
+  grep "chrB2" ${pop} | shuf -n 2000 | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n | sed "s/chrB2/5/g" > ${pop}.B2.borrar
+  cat ${pop}.header.borrar ${pop}.A1.borrar ${pop}.A2.borrar ${pop}.A3.borrar ${pop}.B1.borrar ${pop}.B2.borrar > ${pop/.cat.vcf/.cat.subset.vcf} 
+  rm *borrar
+  done
+
+```
+
 
 # ----
 
@@ -683,7 +704,7 @@ SneP need to have a ped and a map file.
 ```{bash}
 cd /GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_cat_coordinates
 
-VCFs=$(ls *cat*.vcf)
+VCFs=$(ls *cat.subset.vcf)
 OUTPUT_FOLDER=/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP
 
 for VCF_per_pop in ${VCFs[@]}
@@ -834,169 +855,8 @@ for (i in 1:length(finsNeAll))
 
 ```
 
-# 2.b. SNeP
 
-Ahora voy a lanzar el SNeP usando las coordenadas de gato que se han creado en este script (4.LinkNe). La idea es que un scaffold no tiene la suficiente longitud como para tnere valores de recombinación grandes, y todo lo que sea entre scaffold el programa lo esta entendiendo como que está a mucha distancia. Por eso hemos convertido nuestros snps a coordenadas de gato. 
-
-Los VCF de gatos están en la siguiente carpeta
-```{bash}
-cd /GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input
-```
-
-
-## Generate ped and map file
-En teoria ya tambien tengo el map file para cada uno de esos archivos, pero como este script te corre automáticamente ambos, 
-```{bash}
-cd /GRUPOS/grupolince/recent_demographic_reconstruction
-VCFs=$(ls *.c_l*more_than_2000_SNPS.vcf)
-for VCF_per_pop in ${VCFs[@]}
-do 
-echo $VCF_per_pop
-declare POP=$(echo $VCF_per_pop | cut -d "." -f4 )
-/opt/plink_1.9/plink_1.9 --vcf $VCF_per_pop --maf 0.05 --recode --out "${POP}"_maf005 --const-fid 0 --allow-extra-chr
-done
-```
-
-
-## Copy to UBUNTU local
-
-SNeP sólo corre en Ubunto 14.04 o en windows, por tanto me he tenido que crear una máquina virtual en local que tenga instalado ubuntu. Así que lo primero que tngo que hacer es bajarme los archivos a este ordenador. 
-
-Me meto en mi máquina virtual, y una vez ahí me los bajo.
-
-```{bash}
-
-# En local--> Maquina virtual --> Ubuntu. 
-
-mkdir /home/maria/SneP
-
-scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/*ped /home/maria/SneP
-scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/*map /home/maria/SneP
-
-```
-
-## SNeP
-
-```{bash}
-
-cd /home/maria/SneP
-
-for PED_FILE in *.ped
-do
-declare POP=$(echo $PED_FILE | cut -d "." -f 1)
-#declare SAMPLE_SIZE=$(grep $POP sample_size_file.csv | cut -d"," -f 2)
-SNePv1.1 -ped $PED_FILE -out ./$POP -ld -recrate 1.9e-8  -svedf -samplesize 1 #The sex-averaged recombination rate across the cat genome was 1.9 cM/Mb (see: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4889657/)
-done
-
-# Otras variantes del script están en mi máquina virtual en UBUNTU.
-```
-
-## Copy back to the server & to mac local
-
-```{bash}
-# Copy to server
-
-cd /home/maria/SneP
-
-scp /home/maria/SneP/*Ne* mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/
-
-mkdir /Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/recent_demographic_reconstruction
-
-scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP/*NeAll /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/SNeP/
-
-```
-
-
-## R representation
-
-```{r}
-# Leo la tabla de Ne.
-
-library (data.table)
-library(ggplot2)
-library (dplyr)
-library (magrittr)
-library(plyr)
-library (tidyr)
-library(viridis)
-
-wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/SNeP/"
-
-
-sample_files = list.files(path = wd, pattern="*NeAll$")
-list_Ne<- lapply( sample_files, function (x) 
-     # Aquí leo la tabla
-  fread(paste0(wd,x)))
-#names the list using the basename from `l`
-# this also is the step to manipuly the filesnamaes to whatever you like
-names(list_Ne) <- basename( sample_files )
-#bind the rows from the list togetgher, putting the filenames into the colum "id"
-Ne_reconstruction <- rbindlist( list_Ne, idcol = "pop1" ) %>% 
-  # Corto este string para que sea igual en los dos dataset
-  mutate(pop=substr(.$pop1, 1, 7) ) %>% 
-  # Elimino el valor que no me interesa
-  select (-pop1)%>% 
-  mutate (., Populations =  ifelse (pop == "c_ll_po", "NE-Poland",
-                          ifelse (pop == "c_ll_ur", "Urals",
-                          ifelse (pop == "c_ll_ki", "Kirov",
-                          ifelse (pop == "c_ll_la", "Latvia",
-                          ifelse (pop == "c_ll_no", "Norway",
-                          ifelse (pop == "c_ll_ba" | pop == "h_ll_ba", "Balkans" ,
-                          ifelse (pop == "c_ll_cr","Carpathians",
-                          ifelse (pop == "c_ll_to", "Töv",
-                          ifelse (pop == "c_ll_tu", "Tuva",
-                          ifelse (pop == "c_ll_ka", "Khentii-Aimag",
-                          ifelse (pop == "c_ll_mo", "Mongolia",
-                          ifelse (pop == "c_ll_og", "Ömnögovi", 
-                          ifelse (pop == "c_ll_vl", "Vladivostok", 
-                          ifelse (pop == "c_ll_ya", "Yakutia",
-                          ifelse (pop == "c_lp_sm", "Sierra Morena",
-                          ifelse (pop == "c_lp_do", "Doñana", NA))))))))))))))))) %>% 
-  mutate(YBP=GenAgo*5)
-
-
-cols <- c("NE-Poland"=viridis_pal()(5)[3], 
-          "Urals"="#0F4909", 
-          "Carpathians"=brewer.pal(12,"Paired")[9], 
-          "Kirov"=viridis_pal()(5)[1], 
-          "Latvia"=brewer.pal(12,"Paired")[3], 
-          "Norway"=viridis_pal()(5)[2], 
-          "Mongolia"=brewer.pal(12,"Paired")[12], 
-          "Tuva"=brewer.pal(12,"Paired")[8], 
-          "Vladivostok"=brewer.pal(12,"Paired")[5], 
-          "Yakutia"=brewer.pal(12,"Paired")[6])
-
-
- ggplot (Ne_reconstruction, aes(YBP, Ne, fill=Populations, colour=Populations)) +
-    geom_point(alpha=0.1) +
-    geom_smooth() + 
-    theme_classic() +
-    scale_colour_manual(values = cols)+
-    scale_fill_manual(values = cols) +
-   ggsave(paste(wd,"all_pop.pdf", sep=""), device = "pdf")
-
-
- 
- 
-
-
-
-for (i in 1:length(finsNeAll))
-{
-  datNeAll <- read.csv (paste(wd,finsNeAll [i],sep=""), header = T, sep = '\t')  
-  name_NeAll <- unlist(strsplit(finsNeAll [i], "[.]"))
-  ggplot (datNeAll, aes(GenAgo, Ne)) +
-    geom_point(alpha=0.1) +
-    geom_smooth(color="grey24", fill="grey64") +
-    theme_classic() +
-    ggtitle(paste(name_NeAll[1]))
-  ggsave(paste(wd,name_NeAll[1],"_", name_NeAll[2],".pdf", sep=""), device = "pdf")
-}
- 
-
-```
-
-# 5. LinkNe
+# LinkNe
 
 Daniel Kleinman y María Lucena. Seguimos las indicaciones de https://github.com/chollenbeck/LinkNe
 
@@ -1392,9 +1252,9 @@ for pop in ${POPS[@]}
 ```
 
 
+# NE-Estimator
 
-
-# 4. NE-Estimator
+We did several test but finally we are not using this approach because it lacks power. Anyway the code is here if we decide to use it at any time. 
 
 Primero voy a generar 5 dataset por poblacion con un 1% de los SNPs que tienen en el original para que pueda correr el programa.
 Estos SNPs los voy a seleccionar teniendo en cuenta que esten en distintos scaffold (y asegurandome que esos scaffold corresponden a distintos cromosomas en gato).
@@ -1512,7 +1372,8 @@ Ahora sobre estos archivos genero los GENEPOP usando PGD spider.
 Despues el archivo genepop generado lo corro en Ne-Estimator. 
 
 
-## Previous code --> not used. 
+First approach!!!
+We run the analysis with 40000 SNPs. 
 
 ```{bash}
 # los files con SNPs están en la carpeta: home/mlucena/recent_demographic_reconstruction/SNeP
@@ -1560,11 +1421,11 @@ scp -p mlucena@genomics-b.ebd.csic.es:///GRUPOS/grupolince/recent_demographic_re
 Ahora sobre estos archivos genero los GENEPOP usando PGD spider. 
 Despues el archivo genepop generado lo corro en Ne-Estimator. 
 
-
+#------------
 #------------
 # Effect of drift on the populations
 #------------
-
+#------------
 ```{r}
 
 
