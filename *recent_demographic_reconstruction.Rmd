@@ -3,41 +3,46 @@ title: "recent_demographic_reconstruction"
 output: html_document
 ---
 
+
+#--------
+# # IBD tracks method # 
+#--------
+
 # IBDNe
 
 Quiero obtener la reconstrucción demográfica reciente de las distintas poblaciones. Una forma de hacerlo es con IBDne que usa los tracks IBD. 
 
 ```{bash}
 # Pruebo con ibdne: http://faculty.washington.edu/browning/ibdne.html#download
-mkdir /home/mlucena/recent_demographic_reconstruction
+mkdir /GRUPOS/grupolince/recent_demographic_reconstruction
 
 # Copiamos el archivo IBD de Dani para probar: 
 scp /home/GRUPOS/grupolince/lynx_genomes_5x/IBD_analysis/ngsF-HMM/c_ll_ki-c_ll_no-c_ll_po-c_lp_do-c_lp_sm_n060_ngsF-HMM.ibd recent_demographic_reconstruction/
 
 # Copiamos un archivo VCF de Dani para probar: 
-scp /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/ll_perspecies.trimmed_filtered1.ann.vcf /home/mlucena/recent_demographic_reconstruction
+scp /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/ll_perspecies.trimmed_filtered1.ann.vcf /GRUPOS/grupolince/recent_demographic_reconstruction
 
-cd /home/mlucena/recent_demographic_reconstruction
+cd /GRUPOS/grupolince/recent_demographic_reconstruction
 
 # Obtengo un archivo map en plink 
-/opt/plink_1.9/plink_1.9 --vcf /home/mlucena/recent_demographic_reconstruction/ll_perspecies.trimmed_filtered1.ann.vcf --maf 0.05 --recode --out /home/mlucena/recent_demographic_reconstruction/ll_perspecies.trimmed_filtered1.ann --const-fid 0 --allow-extra-chr
+/opt/plink_1.9/plink_1.9 --vcf /GRUPOS/grupolince/recent_demographic_reconstruction/ll_perspecies.trimmed_filtered1.ann.vcf --maf 0.05 --recode --out /GRUPOS/grupolince/recent_demographic_reconstruction/ll_perspecies.trimmed_filtered1.ann --const-fid 0 --allow-extra-chr
 
 
 # Corro IBDNe:
-cat c_ll_ki-c_ll_no-c_ll_po-c_lp_do-c_lp_sm_n060_ngsF-HMM.ibd | java -jar ibdne.07May18.6a4.jar map=/home/mlucena/recent_demographic_reconstruction/ll_perspecies.trimmed_filtered1.ann.map out=output
+cat c_ll_ki-c_ll_no-c_ll_po-c_lp_do-c_lp_sm_n060_ngsF-HMM.ibd | java -jar ibdne.07May18.6a4.jar map=/GRUPOS/grupolince/recent_demographic_reconstruction/ll_perspecies.trimmed_filtered1.ann.map out=output
 
 # No puedo pq necesita mapa gnetico de verdad.
 # http://methodspopgen.com/methods-to-infer-populations-history/
 # Saco la equivalencia basada en el mapa de ligamiento de gato (LaDeana et al. 2016) de bases a morgan. 
 # Transformo el .map. --> Equivalencia: Si 100Mb son 1.9Morgan; 1 base=1900cM
 
-cd /home/mlucena/recent_demographic_reconstruction
+cd /GRUPOS/grupolince/recent_demographic_reconstruction
 
 awk -v OFS='\t'  '{print $1, $4, $4*0.00000000019, $4}' ll_perspecies.trimmed_filtered1.ann.map > ll_perspecies.trimmed_filtered1.ann.w_genetic_distances.map
 
 # 0.00000000019 son los cM a los que equivale una base. 
 
-cat c_ll_ki-c_ll_no-c_ll_po-c_lp_do-c_lp_sm_n060_ngsF-HMM.ibd | java -jar ibdne.07May18.6a4.jar map=/home/mlucena/recent_demographic_reconstruction/ll_perspecies.trimmed_filtered1.ann.w_genetic_distances.map out=output
+cat c_ll_ki-c_ll_no-c_ll_po-c_lp_do-c_lp_sm_n060_ngsF-HMM.ibd | java -jar ibdne.07May18.6a4.jar map=/GRUPOS/grupolince/recent_demographic_reconstruction/ll_perspecies.trimmed_filtered1.ann.w_genetic_distances.map out=output
 
 # Error tengo que eliminar los que sean valores unicos.
 
@@ -74,617 +79,16 @@ cat ll_perspecies.trimmed_filtered1.ann.IBDseq.ibd | java -jar ibdne.07May18.6a4
 Dead end. Siguiente aproximación.
 (Primero limpio la carpeta porque nada de lo que hay aquí me va a servir).
 
-# 1.a. SNeP
-
-Para esta aproximación necesito un archivo ped y un archivo map. El programa me puede calcular el archivo de ld. 
-Leer manual y artículo de Barbato donde presentan el método. 
-
-Basicamente usan el calculo de LD para inferir Ne. LD se calcula como la r2 entre dos SNPs. Para ello la distancia genética puede ser una funcion de la distancia física y la tasa de recombinación, o se pueden añadir algunas correcciones para distancias muy grandes donde LD aparece saturado. 
-
-Lo primero que tengo que hacer es lograr un VCF por población.
-
-Para ello, uso los VCF de Dani que se supone que están limpios y filtrados. 
-
-La carpeta donde voy a hacer los análisis ya la tengo generada y es: /home/mlucena/recent_demographic_reconstruction
-
-## Split VCF into different pops.
-
-
-```{bash}
-
-cd /home/mlucena/recent_demographic_reconstruction
-
-# VCF que voy a usar están en la carpeta: /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/
-
-# Los dos archivos útiles son:
-
-# ll_perspecies.trimmed_filtered1.ann.vcf
-# lp_perspecies.trimmed_filtered1.ann.vcf
-
-# Los voy a copiar a mi carpeta de reconstrucción demográfica para que no haya ningún problema si los rompo.
-
-scp /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/ll_perspecies.trimmed_filtered1.ann.vcf /home/mlucena/recent_demographic_reconstruction
-scp /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/lp_perspecies.trimmed_filtered1.ann.vcf /home/mlucena/recent_demographic_reconstruction
-
-# Primero tengo que sacar una lista con todos los individuos de cada población que hay. 
-
-bcftools query -l ll_perspecies.trimmed_filtered1.ann.vcf > list_of_samples_c_ll
-bcftools query -l lp_perspecies.trimmed_filtered1.ann.vcf > list_of_samples_c_lp
-
-# Lista de las poblaciones que tenemos. 
-declare POPS=$(bcftools query -l ll_perspecies.trimmed_filtered1.ann.vcf | cut -c1-7 | sort | uniq)
-declare POPS=$(bcftools query -l lp_perspecies.trimmed_filtered1.ann.vcf | cut -c1-7 | sort | uniq)
-
-# Voy a iterar sobre las distintas poblaciones para hacer una lista con los ind de esa poblacion. 
-for POP in ${POPS[@]}
-do
-echo $POP
-grep $POP list_of_samples_c_ll > $POP.list
-done
-
-rm list_of_samples_c_ll
-
-for POP in ${POPS[@]}
-do
-echo $POP
-grep $POP list_of_samples_c_lp > $POP.list
-done
-
-rm list_of_samples_c_lp
-
-
-# Ahora lo modifico un poco a mano. Voy a eliminar las de balcanes que no nos interesan y voy a unir mongolia, que lo vamos a considerar una población. 
-
-# Compruebo que así borro lo que me interesa 
-ls -ltr *ba*
-# Borro
-# rm *ba*
-
-# Borro también pais vasco
-rm h_ll_pv.list
-
-# Hago cat de mongolia
-cat c_ll_og.list c_ll_to.list c_ll_ka.list > c_ll_mo.list
-
-rm c_ll_og.list 
-rm c_ll_to.list 
-rm c_ll_ka.list
-
-
-# Perfecto!
-# Ahora lanzo el script para separa por poblaciones.
-
-screen -S separate_VCF_by_pop_pardinus
-
-GATK=/opt/GATK-3.7/GenomeAnalysisTK.jar #GATK software path
-#VCF=ll_perspecies.trimmed_filtered1.ann.vcf
-VCF=lp_perspecies.trimmed_filtered1.ann.vcf
-REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa #path to reference genome
-
-for POP_list in c_lp*.list
-  do
-  declare POP=$(echo $POP_list | cut -d "." -f1 )
-  echo "${POP}"
-     java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC -XX:+UseStringDeduplication -Xms16g -Xmx32g -jar $GATK \
-    -T SelectVariants \
-    -R $REF \
-    -V $VCF \
-    -o ${VCF/.vcf/.$POP.vcf} \
-    --sample_file $POP_list \
-    --preserveAlleles
-    done
-
-# Sanity check
-# ¿Está quitando lo que me interesa?
-
-bcftools query -l ll_perspecies.trimmed_filtered1.ann.c_ll_ya.vcf 
-
-
-# Ahora nos vamos a quedar solo con los de intergénico.
-
-
-task(){
-   bedtools intersect -a $i -b /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.intergenic.PLUS1000.bed -sorted -g /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/lp23.version.sorted.genome -header > ${i/.vcf/_intergenic.vcf}
-}
-
-
-for i in *c_l*vcf
-do
-echo $i
- task "$i" 
-done
-
-
-# De todas formas hay muchos scaffold que tiene muy pocos SNPs, así que el autor me recomienda que lo filtre. Puedo filtrar primero para los scaffolds que tiene al menos 1000 SNPs y luego los que tienen 2000 SNPs. Y así hacer una pruebecilla para ver si los datos son parecidos, me puedo quedar con el dataset más pequeño. 
-
-for vcf_POP in *c_l*_intergenic.vcf
-do
-echo $vcf_POP
-declare POP=$(echo $vcf_POP | cut -d "." -f4 )
-# Ahora contamos el número de SNPS por scaffold
-
-grep -v -E '^#'  $vcf_POP | cut -f 1 | sort | uniq -c | sort -n | awk '$1>2000{print $2}' | sort | sed -n -e 'H;${x;s/\n/,/g;s/^,//;p;}' > "${POP}"_more_than_2000_SNPS_per_scaffold.list
-grep -v -E '^#'  $vcf_POP | cut -f 1 | sort | uniq -c | sort -n | awk '$1>1000{print $2}' | sort | sed -n -e 'H;${x;s/\n/,/g;s/^,//;p;}' > "${POP}"_more_than_1000_SNPS_per_scaffold.list
-bcftools query -l $vcf_POP 
-bgzip $vcf_POP 
-bcftools index "${vcf_POP}".gz
-bcftools view -r `cat "${POP}"_more_than_2000_SNPS_per_scaffold.list` "${vcf_POP}".gz -Ov -o "${vcf_POP/.vcf/_filtered_more_than_2000_SNPS.vcf}"
-bcftools view -r `cat "${POP}"_more_than_1000_SNPS_per_scaffold.list` "${vcf_POP}".gz -Ov -o "${vcf_POP/.vcf/_filtered_more_than_1000_SNPS.vcf}"
-done
-
-```
-
-
-Ahora que ya tengo los VCF por población para las dos especies lo que tengo que hacer es generar el archivo map y ped de cada población.
-
-## Generate ped and map file
-
-```{bash}
-
-cd /home/mlucena/recent_demographic_reconstruction
-
-
-VCFs=$(ls *.c_l*more_than_2000_SNPS.vcf)
-
-for VCF_per_pop in ${VCFs[@]}
-do 
-echo $VCF_per_pop
-declare POP=$(echo $VCF_per_pop | cut -d "." -f4 )
-/opt/plink_1.9/plink_1.9 --vcf $VCF_per_pop --maf 0.05 --recode --out "${POP}"_maf005 --const-fid 0 --allow-extra-chr
-done
-
-
-
-```
-
-
-## Copy to UBUNTU local
-
-SNeP sólo corre en Ubunto 14.04 o en windows, por tanto me he tenido que crear una máquina virtual en local que tenga instalado ubuntu. Así que lo primero que tngo que hacer es bajarme los archivos a este ordenador. 
-
-Me meto en mi máquina virtual, y una vez ahí me los bajo.
-
-```{bash}
-
-# En local--> Maquina virtual --> Ubuntu. 
-
-mkdir /home/maria/SneP
-
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/*ped /home/maria/SneP
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/*map /home/maria/SneP
-
-```
-
-## SNeP
-
-```{bash}
-
-cd /home/maria/SneP
-
-for PED_FILE in *.ped
-do
-declare POP=$(echo $PED_FILE | cut -d "." -f 1)
-#declare SAMPLE_SIZE=$(grep $POP sample_size_file.csv | cut -d"," -f 2)
-SNePv1.1 -ped $PED_FILE -out ./$POP -ld -recrate 1.9e-8  -svedf -samplesize 1 #The sex-averaged recombination rate across the cat genome was 1.9 cM/Mb (see: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4889657/)
-done
-
-# Otras variantes del script están en mi máquina virtual en UBUNTU.
-```
-
-## Copy back to the server & to mac local
-
-```{bash}
-# Copy to server
-
-cd /home/maria/SneP
-
-scp /home/maria/SneP/*Ne* mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/
-
-mkdir /Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/recent_demographic_reconstruction
-
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/*NeAll /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/SNeP/
-
-```
-
-
-## R representation
-
-```{r}
-# Leo la tabla de Ne.
-
-library (data.table)
-library(ggplot2)
-library (dplyr)
-library (magrittr)
-library(plyr)
-library (tidyr)
-library(viridis)
-
-wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/SNeP/"
-
-
-sample_files = list.files(path = wd, pattern="*NeAll$")
-list_Ne<- lapply( sample_files, function (x) 
-     # Aquí leo la tabla
-  fread(paste0(wd,x)))
-#names the list using the basename from `l`
-# this also is the step to manipuly the filesnamaes to whatever you like
-names(list_Ne) <- basename( sample_files )
-#bind the rows from the list togetgher, putting the filenames into the colum "id"
-Ne_reconstruction <- rbindlist( list_Ne, idcol = "pop1" ) %>% 
-  # Corto este string para que sea igual en los dos dataset
-  mutate(pop=substr(.$pop1, 1, 7) ) %>% 
-  # Elimino el valor que no me interesa
-  select (-pop1)%>% 
-  mutate (., Populations =  ifelse (pop == "c_ll_po", "NE-Poland",
-                          ifelse (pop == "c_ll_ur", "Urals",
-                          ifelse (pop == "c_ll_ki", "Kirov",
-                          ifelse (pop == "c_ll_la", "Latvia",
-                          ifelse (pop == "c_ll_no", "Norway",
-                          ifelse (pop == "c_ll_ba" | pop == "h_ll_ba", "Balkans" ,
-                          ifelse (pop == "c_ll_cr","Carpathians",
-                          ifelse (pop == "c_ll_to", "Töv",
-                          ifelse (pop == "c_ll_tu", "Tuva",
-                          ifelse (pop == "c_ll_ka", "Khentii-Aimag",
-                          ifelse (pop == "c_ll_mo", "Mongolia",
-                          ifelse (pop == "c_ll_og", "Ömnögovi", 
-                          ifelse (pop == "c_ll_vl", "Vladivostok", 
-                          ifelse (pop == "c_ll_ya", "Yakutia",
-                          ifelse (pop == "c_lp_sm", "Sierra Morena",
-                          ifelse (pop == "c_lp_do", "Doñana", NA))))))))))))))))) %>% 
-  mutate(YBP=GenAgo*5)
-
-
-cols <- c("NE-Poland"=viridis_pal()(5)[3], 
-          "Urals"="#0F4909", 
-          "Carpathians"=brewer.pal(12,"Paired")[9], 
-          "Kirov"=viridis_pal()(5)[1], 
-          "Latvia"=brewer.pal(12,"Paired")[3], 
-          "Norway"=viridis_pal()(5)[2], 
-          "Mongolia"=brewer.pal(12,"Paired")[12], 
-          "Tuva"=brewer.pal(12,"Paired")[8], 
-          "Vladivostok"=brewer.pal(12,"Paired")[5], 
-          "Yakutia"=brewer.pal(12,"Paired")[6])
-
-
- ggplot (Ne_reconstruction, aes(YBP, Ne, fill=Populations, colour=Populations)) +
-    geom_point(alpha=0.1) +
-    geom_smooth() + 
-    theme_classic() +
-    scale_colour_manual(values = cols)+
-    scale_fill_manual(values = cols) +
-   ggsave(paste(wd,"all_pop.pdf", sep=""), device = "pdf")
-
-
- 
- 
-
-
-
-for (i in 1:length(finsNeAll))
-{
-  datNeAll <- read.csv (paste(wd,finsNeAll [i],sep=""), header = T, sep = '\t')  
-  name_NeAll <- unlist(strsplit(finsNeAll [i], "[.]"))
-  ggplot (datNeAll, aes(GenAgo, Ne)) +
-    geom_point(alpha=0.1) +
-    geom_smooth(color="grey24", fill="grey64") +
-    theme_classic() +
-    ggtitle(paste(name_NeAll[1]))
-  ggsave(paste(wd,name_NeAll[1],"_", name_NeAll[2],".pdf", sep=""), device = "pdf")
-}
- 
-
-```
-
-# 1.b. SNeP
-
-Para esta aproximación necesito un archivo ped y un archivo map. El programa me puede calcular el archivo de ld. 
-Leer manual y artículo de Barbato donde presentan el método. 
-
-Basicamente usan el calculo de LD para inferir Ne. LD se calcula como la r2 entre dos SNPs. Para ello la distancia genética puede ser una funcion de la distancia física y la tasa de recombinación, o se pueden añadir algunas correcciones para distancias muy grandes donde LD aparece saturado. 
-
-Lo primero que tengo que hacer es lograr un VCF por población.
-
-Para ello, uso los VCF de Dani que se supone que están limpios y filtrados. 
-
-La carpeta donde voy a hacer los análisis ya la tengo generada y es: /home/mlucena/recent_demographic_reconstruction
-
-## Split VCF into different pops.
-
-
-```{bash}
-
-cd /home/mlucena/recent_demographic_reconstruction
-
-# VCF que voy a usar están en la carpeta: /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/
-
-# Los dos archivos útiles son:
-
-# ll_perspecies.trimmed_filtered1.ann.vcf
-# lp_perspecies.trimmed_filtered1.ann.vcf
-
-# Los voy a copiar a mi carpeta de reconstrucción demográfica para que no haya ningún problema si los rompo.
-
-scp /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/ll_perspecies.trimmed_filtered1.ann.vcf /home/mlucena/recent_demographic_reconstruction
-scp /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/lp_perspecies.trimmed_filtered1.ann.vcf /home/mlucena/recent_demographic_reconstruction
-
-# Primero tengo que sacar una lista con todos los individuos de cada población que hay. 
-
-bcftools query -l ll_perspecies.trimmed_filtered1.ann.vcf > list_of_samples_c_ll
-bcftools query -l lp_perspecies.trimmed_filtered1.ann.vcf > list_of_samples_c_lp
-
-# Lista de las poblaciones que tenemos. 
-declare POPS=$(bcftools query -l ll_perspecies.trimmed_filtered1.ann.vcf | cut -c1-7 | sort | uniq)
-declare POPS=$(bcftools query -l lp_perspecies.trimmed_filtered1.ann.vcf | cut -c1-7 | sort | uniq)
-
-# Voy a iterar sobre las distintas poblaciones para hacer una lista con los ind de esa poblacion. 
-for POP in ${POPS[@]}
-do
-echo $POP
-grep $POP list_of_samples_c_ll > $POP.list
-done
-
-rm list_of_samples_c_ll
-
-for POP in ${POPS[@]}
-do
-echo $POP
-grep $POP list_of_samples_c_lp > $POP.list
-done
-
-rm list_of_samples_c_lp
-
-
-# Ahora lo modifico un poco a mano. Voy a eliminar las de balcanes que no nos interesan y voy a unir mongolia, que lo vamos a considerar una población. 
-
-# Compruebo que así borro lo que me interesa 
-ls -ltr *ba*
-# Borro
-# rm *ba*
-
-# Borro también pais vasco
-rm h_ll_pv.list
-
-# Hago cat de mongolia
-cat c_ll_og.list c_ll_to.list c_ll_ka.list > c_ll_mo.list
-
-rm c_ll_og.list 
-rm c_ll_to.list 
-rm c_ll_ka.list
-
-
-# Perfecto!
-# Ahora lanzo el script para separa por poblaciones.
-
-screen -S separate_VCF_by_pop_pardinus
-
-GATK=/opt/GATK-3.7/GenomeAnalysisTK.jar #GATK software path
-#VCF=ll_perspecies.trimmed_filtered1.ann.vcf
-VCF=lp_perspecies.trimmed_filtered1.ann.vcf
-REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa #path to reference genome
-
-for POP_list in c_lp*.list
-  do
-  declare POP=$(echo $POP_list | cut -d "." -f1 )
-  echo "${POP}"
-     java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC -XX:+UseStringDeduplication -Xms16g -Xmx32g -jar $GATK \
-    -T SelectVariants \
-    -R $REF \
-    -V $VCF \
-    -o ${VCF/.vcf/.$POP.vcf} \
-    --sample_file $POP_list \
-    --preserveAlleles
-    done
-
-# Sanity check
-# ¿Está quitando lo que me interesa?
-
-bcftools query -l ll_perspecies.trimmed_filtered1.ann.c_ll_ya.vcf 
-
-
-# Ahora nos vamos a quedar solo con los de intergénico.
-
-
-task(){
-   bedtools intersect -a $i -b /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.intergenic.PLUS1000.bed -sorted -g /home/mlucena/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/lp23.version.sorted.genome -header > ${i/.vcf/_intergenic.vcf}
-}
-
-
-for i in *c_l*vcf
-do
-echo $i
- task "$i" 
-done
-
-
-# De todas formas hay muchos scaffold que tiene muy pocos SNPs, así que el autor me recomienda que lo filtre. Puedo filtrar primero para los scaffolds que tiene al menos 1000 SNPs y luego los que tienen 2000 SNPs. Y así hacer una pruebecilla para ver si los datos son parecidos, me puedo quedar con el dataset más pequeño. 
-
-for vcf_POP in *c_l*_intergenic.vcf
-do
-echo $vcf_POP
-declare POP=$(echo $vcf_POP | cut -d "." -f4 )
-# Ahora contamos el número de SNPS por scaffold
-
-grep -v -E '^#'  $vcf_POP | cut -f 1 | sort | uniq -c | sort -n | awk '$1>2000{print $2}' | sort | sed -n -e 'H;${x;s/\n/,/g;s/^,//;p;}' > "${POP}"_more_than_2000_SNPS_per_scaffold.list
-grep -v -E '^#'  $vcf_POP | cut -f 1 | sort | uniq -c | sort -n | awk '$1>1000{print $2}' | sort | sed -n -e 'H;${x;s/\n/,/g;s/^,//;p;}' > "${POP}"_more_than_1000_SNPS_per_scaffold.list
-bcftools query -l $vcf_POP 
-bgzip $vcf_POP 
-bcftools index "${vcf_POP}".gz
-bcftools view -r `cat "${POP}"_more_than_2000_SNPS_per_scaffold.list` "${vcf_POP}".gz -Ov -o "${vcf_POP/.vcf/_filtered_more_than_2000_SNPS.vcf}"
-bcftools view -r `cat "${POP}"_more_than_1000_SNPS_per_scaffold.list` "${vcf_POP}".gz -Ov -o "${vcf_POP/.vcf/_filtered_more_than_1000_SNPS.vcf}"
-done
-
-```
-
-
-Ahora que ya tengo los VCF por población para las dos especies lo que tengo que hacer es generar el archivo map y ped de cada población.
-
-## Generate ped and map file
-
-```{bash}
-
-cd /home/mlucena/recent_demographic_reconstruction
-
-
-VCFs=$(ls *.c_l*more_than_2000_SNPS.vcf)
-
-for VCF_per_pop in ${VCFs[@]}
-do 
-echo $VCF_per_pop
-declare POP=$(echo $VCF_per_pop | cut -d "." -f4 )
-/opt/plink_1.9/plink_1.9 --vcf $VCF_per_pop --maf 0.05 --recode --out "${POP}"_maf005 --const-fid 0 --allow-extra-chr
-done
-
-
-
-```
-
-
-## Copy to UBUNTU local
-
-SNeP sólo corre en Ubunto 14.04 o en windows, por tanto me he tenido que crear una máquina virtual en local que tenga instalado ubuntu. Así que lo primero que tngo que hacer es bajarme los archivos a este ordenador. 
-
-Me meto en mi máquina virtual, y una vez ahí me los bajo.
-
-```{bash}
-
-# En local--> Maquina virtual --> Ubuntu. 
-
-mkdir /home/maria/SneP
-
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/*ped /home/maria/SneP
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/*map /home/maria/SneP
-
-```
-
-## SNeP
-
-```{bash}
-
-cd /home/maria/SneP
-
-for PED_FILE in *.ped
-do
-declare POP=$(echo $PED_FILE | cut -d "." -f 1)
-#declare SAMPLE_SIZE=$(grep $POP sample_size_file.csv | cut -d"," -f 2)
-SNePv1.1 -ped $PED_FILE -out ./$POP -ld -recrate 1.9e-8  -svedf -samplesize 1 #The sex-averaged recombination rate across the cat genome was 1.9 cM/Mb (see: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4889657/)
-done
-
-# Otras variantes del script están en mi máquina virtual en UBUNTU.
-```
-
-## Copy back to the server & to mac local
-
-```{bash}
-# Copy to server
-
-cd /home/maria/SneP
-
-scp /home/maria/SneP/*Ne* mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/
-
-mkdir /Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/recent_demographic_reconstruction
-
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/*NeAll /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/SNeP/
-
-```
-
-
-## R representation
-
-```{r}
-# Leo la tabla de Ne.
-
-library (data.table)
-library(ggplot2)
-library (dplyr)
-library (magrittr)
-library(plyr)
-library (tidyr)
-library(viridis)
-
-wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/SNeP/"
-
-
-sample_files = list.files(path = wd, pattern="*NeAll$")
-list_Ne<- lapply( sample_files, function (x) 
-     # Aquí leo la tabla
-  fread(paste0(wd,x)))
-#names the list using the basename from `l`
-# this also is the step to manipuly the filesnamaes to whatever you like
-names(list_Ne) <- basename( sample_files )
-#bind the rows from the list togetgher, putting the filenames into the colum "id"
-Ne_reconstruction <- rbindlist( list_Ne, idcol = "pop1" ) %>% 
-  # Corto este string para que sea igual en los dos dataset
-  mutate(pop=substr(.$pop1, 1, 7) ) %>% 
-  # Elimino el valor que no me interesa
-  select (-pop1)%>% 
-  mutate (., Populations =  ifelse (pop == "c_ll_po", "NE-Poland",
-                          ifelse (pop == "c_ll_ur", "Urals",
-                          ifelse (pop == "c_ll_ki", "Kirov",
-                          ifelse (pop == "c_ll_la", "Latvia",
-                          ifelse (pop == "c_ll_no", "Norway",
-                          ifelse (pop == "c_ll_ba" | pop == "h_ll_ba", "Balkans" ,
-                          ifelse (pop == "c_ll_cr","Carpathians",
-                          ifelse (pop == "c_ll_to", "Töv",
-                          ifelse (pop == "c_ll_tu", "Tuva",
-                          ifelse (pop == "c_ll_ka", "Khentii-Aimag",
-                          ifelse (pop == "c_ll_mo", "Mongolia",
-                          ifelse (pop == "c_ll_og", "Ömnögovi", 
-                          ifelse (pop == "c_ll_vl", "Vladivostok", 
-                          ifelse (pop == "c_ll_ya", "Yakutia",
-                          ifelse (pop == "c_lp_sm", "Sierra Morena",
-                          ifelse (pop == "c_lp_do", "Doñana", NA))))))))))))))))) %>% 
-  mutate(YBP=GenAgo*5)
-
-
-cols <- c("NE-Poland"=viridis_pal()(5)[3], 
-          "Urals"="#0F4909", 
-          "Carpathians"=brewer.pal(12,"Paired")[9], 
-          "Kirov"=viridis_pal()(5)[1], 
-          "Latvia"=brewer.pal(12,"Paired")[3], 
-          "Norway"=viridis_pal()(5)[2], 
-          "Mongolia"=brewer.pal(12,"Paired")[12], 
-          "Tuva"=brewer.pal(12,"Paired")[8], 
-          "Vladivostok"=brewer.pal(12,"Paired")[5], 
-          "Yakutia"=brewer.pal(12,"Paired")[6])
-
-
- ggplot (Ne_reconstruction, aes(YBP, Ne, fill=Populations, colour=Populations)) +
-    geom_point(alpha=0.1) +
-    geom_smooth() + 
-    theme_classic() +
-    scale_colour_manual(values = cols)+
-    scale_fill_manual(values = cols) +
-   ggsave(paste(wd,"all_pop.pdf", sep=""), device = "pdf")
-
-
- 
- 
-
-
-
-for (i in 1:length(finsNeAll))
-{
-  datNeAll <- read.csv (paste(wd,finsNeAll [i],sep=""), header = T, sep = '\t')  
-  name_NeAll <- unlist(strsplit(finsNeAll [i], "[.]"))
-  ggplot (datNeAll, aes(GenAgo, Ne)) +
-    geom_point(alpha=0.1) +
-    geom_smooth(color="grey24", fill="grey64") +
-    theme_classic() +
-    ggtitle(paste(name_NeAll[1]))
-  ggsave(paste(wd,name_NeAll[1],"_", name_NeAll[2],".pdf", sep=""), device = "pdf")
-}
- 
-
-```
-
-# 2. Stairway plot
+#--------
+# # SFS method # 
+#--------
+
+# Stairway plot
 
 Vamos a correr un programa que se llama stairway plot que genera un skyline plot demográfico. Este programa corre en java. Como entrada necesita: numero de sitios monomórficos + polimorficos, el sfs, y el número de alelos (numero de individuos * 2). Todos estos datos los tengo en el espectro de frecuencias alélicas, que aunque está expresado en likelihood, el programa lo acepta. 
 
 Para que corra tienes que generar un archivos txt que el programa transforma en sh usando java, y despues este .sh se lanza. 
 Un ejemplo de un archivo de entrada es este (en mi ordenador):
-
 
 ```{bash}
 cat /Users/marialucenaperez/Documents/stair_way_plot/stairway_plot_v2/two-epoch.blueprint 
@@ -774,9 +178,7 @@ xspacing: 2
 yspacing: 2 
 fontsize: 12
 EOF
-
 ```
-
 
 Ahora hago un loop para que rellene los campos que tiene que modificar
 
@@ -804,7 +206,7 @@ Ahora por cada uno de los sfs, debo hacer el loop correspondiente:
 ```{bash}
 
 # El script para que rellene los campos serían este:
-cd /home/mlucena/recent_demographic_reconstruction/stairway_plot
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/stairway_plot
 # RUTA_SFS="/home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs" # para boreal
 # RUTA_SFS="/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs" # para pardinus
 
@@ -834,19 +236,15 @@ java -cp ../stairway_plot_es Stairbuilder $POP.blueprint
 # Voy a lanzar de una en una, porque quiero lanzar varias a la vez. 
 # HOW TO RUN THE ANALYSIS
 echo RUN $POP!
-
 chmod 700 $POP.blueprint.sh
 ./$POP.blueprint.sh
-
 cd ..
 touch $POP.borrar
-
 done
-
 
 ```
 
-# Run the analysis
+## Run the analysis
 
 ```{bash}
 ./two-epoch_c_ll_ya_n008.blueprint.sh 
@@ -857,11 +255,9 @@ java -Xmx1g -cp stairway_plot_es/ Stairpainter c_lp_sm_n012.blueprint
 
 ```
 
-
-# R: Custom drawing
+## R: Custom drawing
 
 Primero tengo que coger los dtos de los que se hace el dibujo. Estan en un archivo que se llama .final.summary, en cada carpeta de cada poblacion. Voy a pintarlos todos juntos, así que creo una super carpeta, que ya separaré si lo necesito en R. Aquí solo añado la info que me interesa. 
-
 
 En el archivo que se llama summary con el que puedo pintar:
 
@@ -881,29 +277,29 @@ Copio la columna 7, 8, 9, 10, 11.
 
 ```{bash}
 
-cd /home/mlucena/recent_demographic_reconstruction/stairway_plot
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/stairway_plot
 # Creo la carpeta donde vamos a guardar nuestro archivo de interes =
-mkdir /home/mlucena/recent_demographic_reconstruction/stairway_plot/custom_output
+mkdir /GRUPOS/grupolince/recent_demographic_reconstruction/stairway_plot/custom_output
 
 # Creo el header para el archivo que voy a generar
-cd /home/mlucena/recent_demographic_reconstruction/stairway_plot/c_ll_cr_n006/c_ll_cr_n006
-head -n1 c_ll_cr_n006.final.summary |  awk -v OFS='\t' '{print $6, $7, $8, $9, $10, $11, "population", "specie"}' > /home/mlucena/recent_demographic_reconstruction/stairway_plot/custom_output/final_summary_custom_output.tsv 
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/stairway_plot/c_ll_cr_n006/c_ll_cr_n006
+head -n1 c_ll_cr_n006.final.summary |  awk -v OFS='\t' '{print $6, $7, $8, $9, $10, $11, "population", "specie"}' > /GRUPOS/grupolince/recent_demographic_reconstruction/stairway_plot/custom_output/final_summary_custom_output.tsv 
 
 # First we summarise the output files, and add a column with info of interest
 populations=(c_ll_cr_n006 c_ll_ki_n013 c_ll_la_n006 c_ll_no_n008 c_ll_po_n008 c_ll_to-c_ll_ka-c_ll_og_n008 c_ll_tu_n006 c_ll_ur_n006 c_ll_vl_n008 c_ll_ya_n008 c_lp_do_n012 c_lp_sm_n019)
 
 
 # Loop para concatenar las distintas poblaciones. 
-cd /home/mlucena/recent_demographic_reconstruction/stairway_plot
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/stairway_plot
 for population in ${populations[@]}
 do
 echo $population
-cd /home/mlucena/recent_demographic_reconstruction/stairway_plot/$population/$population
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/stairway_plot/$population/$population
 sp=`echo $population | cut -d'.' -f 1 | cut -d '_' -f 2`
 if [ -z ${sp} ]; then  sp=NA;  fi
-awk -v OFS='\t' -v pop="$population" -v sp="$sp" '{print $6, $7, $8, $9, $10, $11, pop, sp }' <(tail -n+2 "${population}".final.summary) >> /home/mlucena/recent_demographic_reconstruction/stairway_plot/custom_output/final_summary_custom_output.tsv
+awk -v OFS='\t' -v pop="$population" -v sp="$sp" '{print $6, $7, $8, $9, $10, $11, pop, sp }' <(tail -n+2 "${population}".final.summary) >> /GRUPOS/grupolince/recent_demographic_reconstruction/stairway_plot/custom_output/final_summary_custom_output.tsv
 unset sp
-cd /home/mlucena/recent_demographic_reconstruction/stairway_plot
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/stairway_plot
 
 done
 
@@ -913,7 +309,7 @@ Me lo copio al local
 
 ```{bash}
 
-scp mlucena@genomics-b.ebd.csic.es://home/mlucena/recent_demographic_reconstruction/stairway_plot/custom_output/final_summary_custom_output.tsv /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/stairway_plot/custom_plot_script 
+scp mlucena@genomics-b.ebd.csic.es://GRUPOS/grupolince/recent_demographic_reconstruction/stairway_plot/custom_output/final_summary_custom_output.tsv /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/stairway_plot/custom_plot_script 
 
 ```
 
@@ -1136,242 +532,471 @@ ggsave(paste(wd_output, "stairway_plot_custom_color_region_line_type_region.pdf"
 
 ```
 
-#### Effect of drift on the populations
+#--------
+# # Linkage method # 
+#--------
+
+We are using SNPs to run our programs. This SNPs calling  were done by Dani for treemix.
+We are using 3 different approaches: Ne-estimator, SNeP and LinkNe. 
+
+Ne-estimator is meant to be used on markers that are separated appart (few microsats), therfore we have to do a thining of our VCF. 
+
+SNeP and LinkNe have similar methodology. They used the linkage desequilibrium to calculate Ne in the past. 
+LD is r2 between two different SNPs. Hence, genetic distance could be a function of the real distance (bp) and the recombination rate (correcting for large LD distances where this value is saturated). 
+
+So then, I will first create the VCF I will be using.
+
+# VCF
+
+Actualmente los archivos VCF de lince estan en la siguiente ruta
+```{bash}
+/GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_lynx_coordinates
+```
+
+Split VCF into different pops.
+
+```{bash}
+cd /GRUPOS/grupolince/recent_demographic_reconstruction
+# VCF are in: /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/
+# The two files are:
+# ll_perspecies.trimmed_filtered1.ann.vcf
+# lp_perspecies.trimmed_filtered1.ann.vcf
+
+# I copy then in my folder
+scp /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/ll_perspecies.trimmed_filtered1.ann.vcf /GRUPOS/grupolince/recent_demographic_reconstruction
+scp /home/GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/annotation/lp_perspecies.trimmed_filtered1.ann.vcf /GRUPOS/grupolince/recent_demographic_reconstruction
+
+# Get a list of all individuals 
+bcftools query -l ll_perspecies.trimmed_filtered1.ann.vcf > list_of_samples_c_ll
+bcftools query -l lp_perspecies.trimmed_filtered1.ann.vcf > list_of_samples_c_lp
+
+# List of pops
+declare POPS=$(bcftools query -l ll_perspecies.trimmed_filtered1.ann.vcf | cut -c1-7 | sort | uniq)
+declare POPS=$(bcftools query -l lp_perspecies.trimmed_filtered1.ann.vcf | cut -c1-7 | sort | uniq)
+
+# Iterate over the pops to make a list with the individuals of each pop. 
+for POP in ${POPS[@]}
+do
+echo $POP
+grep $POP list_of_samples_c_ll > $POP.list
+done
+rm list_of_samples_c_ll
+
+for POP in ${POPS[@]}
+do
+echo $POP
+grep $POP list_of_samples_c_lp > $POP.list
+done
+rm list_of_samples_c_lp
+
+# Hand modification. Remove balcans and considering Mongolia one single pop. 
+ls -ltr *ba*
+# Remove
+# rm *ba*
+
+# Also the Vasc individual 
+rm h_ll_pv.list
+
+# Join mongolia
+cat c_ll_og.list c_ll_to.list c_ll_ka.list > c_ll_mo.list
+
+rm c_ll_og.list 
+rm c_ll_to.list 
+rm c_ll_ka.list
+
+# Now I submit the script that separate the VCF file into multiple pop. 
+screen -S separate_VCF_by_pop_pardinus
+GATK=/opt/GATK-3.7/GenomeAnalysisTK.jar #GATK software path
+#VCF=ll_perspecies.trimmed_filtered1.ann.vcf
+VCF=lp_perspecies.trimmed_filtered1.ann.vcf
+REF=/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23.fa #path to reference genome
+
+for POP_list in c_lp*.list
+  do
+  declare POP=$(echo $POP_list | cut -d "." -f1 )
+  echo "${POP}"
+     java -XX:MaxMetaspaceSize=1g -XX:+UseG1GC -XX:+UseStringDeduplication -Xms16g -Xmx32g -jar $GATK \
+    -T SelectVariants \
+    -R $REF \
+    -V $VCF \
+    -o ${VCF/.vcf/.$POP.vcf} \
+    --sample_file $POP_list \
+    --preserveAlleles
+    done
+
+# Sanity check
+# Did I remove properly?
+bcftools query -l ll_perspecies.trimmed_filtered1.ann.c_ll_ya.vcf 
+
+# Now, I get only intergenic part of the genome. 
+
+task(){
+   bedtools intersect -a $i -b /GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.intergenic.PLUS1000.bed -sorted -g /GRUPOS/grupolince/lynx_genomes_5x/BAM_files_final/BAM_intergenic_5x/lp23.version.sorted.genome -header > ${i/.vcf/_intergenic.vcf}
+}
+
+
+for i in *c_l*vcf
+do
+echo $i
+ task "$i" 
+done
+
+```
+
+# VCF to cat
+
+Due to the high contiguity needed for the analysis, we are going to transform our VCF (with lynx coordinates) to cat coordinates. 
+
+We try to address this issue before by doing a subset only with the bigger scaffolds. However, this would not be enought, as the larger scaffold account only for a LD=0.25, while the recent demographic reconstructions based on linkage should use distances up to 0.5. 
+
+
+```{bash}
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_lynx_coordinates
+
+#Now, we are intersecting with cat synteny and sorting by cat coordinates
+INPUT_VCFS=$(ls *intergenic.vcf)
+OUTPUT_FOLDER=/GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_cat_coordinates
+
+for pop in ${INPUT_VCFS[@]}
+  do 
+  echo ${pop}
+  grep '#' ${pop} > $OUTPUT_FOLDER/${pop/.vcf/.cat.vcf} #copy headers
+  bedtools intersect -a /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed \
+  -b ${pop} \
+  -wa -wb -sorted -g /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated |\
+  awk -v OFS='\t' '{split($4,a1,":"); split(a1[3],a2, "-")} {$1=$2=$3=$4=$5=$6=""; print a1[2], a2[2], $0}' |\
+  sed -r 's:\t+:\t:g' |\
+  LC_ALL=C sort -t $'\t' -k1,1 -k2,2n >> $OUTPUT_FOLDER/${pop/.vcf/.cat.vcf}
+  done
+
+```
+
+
+# ----
+
+# SNeP
+
+SneP need to have a ped and a map file.
+
+## Generate ped and map file
+
+```{bash}
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_cat_coordinates
+
+VCFs=$(ls *cat*.vcf)
+OUTPUT_FOLDER=/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP
+
+for VCF_per_pop in ${VCFs[@]}
+do 
+echo $VCF_per_pop
+declare POP=$(echo $VCF_per_pop | cut -d "." -f4 )
+/opt/plink_1.9/plink_1.9 --vcf $VCF_per_pop --maf 0.05 --recode --out $OUTPUT_FOLDER/"${POP}"_maf005 --const-fid 0 --allow-extra-chr
+done
+
+```
+
+
+## Copy to UBUNTU local
+
+SNeP sólo corre en Ubunto 14.04 o en windows, por tanto estoy corriendo los análisis en la máquina virtual que le hicieron a Dani para correr otros analisis. Anteriormente lo hacía en una maquina virtual en mi ordenador mac de la oficina. 
+
+En cualquier caso, me los copio desde la maquina virtual que corresponda.
+
+```{bash}
+ssh -X dkleinman@10.50.0.65
+# PASSWORD --> email dani
+
+mkdir /home/dkleinman/SNeP_Maria
+
+scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP/*ped /home/dkleinman/SNeP_Maria
+scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP/*map /home/dkleinman/SNeP_Maria
+
+```
+
+## SNeP
+
+```{bash}
+
+cd /home/dkleinman/SNeP_Maria
+
+for PED_FILE in *.ped
+do
+declare POP=$(echo $PED_FILE | cut -d "." -f 1)
+#declare SAMPLE_SIZE=$(grep $POP sample_size_file.csv | cut -d"," -f 2)
+./SNeP1.1 -ped $PED_FILE -out ./$POP -ld -recrate 1.9e-8  -svedf -samplesize 1 #The sex-averaged recombination rate across the cat genome was 1.9 cM/Mb (see: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4889657/)
+done
+
+# Otras variantes del script están en mi máquina virtual en UBUNTU.
+```
+
+## Copy back to the server & to mac local
+
+```{bash}
+# Copy to server
+
+cd /home/maria/SneP
+
+scp /home/maria/SneP/*Ne* mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/
+
+mkdir /Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/recent_demographic_reconstruction
+
+scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP/*NeAll /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/SNeP/
+
+```
+
+
+## R representation
+
 ```{r}
+# Leo la tabla de Ne.
+
+library (data.table)
+library(ggplot2)
+library (dplyr)
+library (magrittr)
+library(plyr)
+library (tidyr)
+library(viridis)
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/SNeP/"
 
 
-# Formula of lost of diversity:
+sample_files = list.files(path = wd, pattern="*NeAll$")
+list_Ne<- lapply( sample_files, function (x) 
+     # Aquí leo la tabla
+  fread(paste0(wd,x)))
+#names the list using the basename from `l`
+# this also is the step to manipuly the filesnamaes to whatever you like
+names(list_Ne) <- basename( sample_files )
+#bind the rows from the list togetgher, putting the filenames into the colum "id"
+Ne_reconstruction <- rbindlist( list_Ne, idcol = "pop1" ) %>% 
+  # Corto este string para que sea igual en los dos dataset
+  mutate(pop=substr(.$pop1, 1, 7) ) %>% 
+  # Elimino el valor que no me interesa
+  select (-pop1)%>% 
+  mutate (., Populations =  ifelse (pop == "c_ll_po", "NE-Poland",
+                          ifelse (pop == "c_ll_ur", "Urals",
+                          ifelse (pop == "c_ll_ki", "Kirov",
+                          ifelse (pop == "c_ll_la", "Latvia",
+                          ifelse (pop == "c_ll_no", "Norway",
+                          ifelse (pop == "c_ll_ba" | pop == "h_ll_ba", "Balkans" ,
+                          ifelse (pop == "c_ll_cr","Carpathians",
+                          ifelse (pop == "c_ll_to", "Töv",
+                          ifelse (pop == "c_ll_tu", "Tuva",
+                          ifelse (pop == "c_ll_ka", "Khentii-Aimag",
+                          ifelse (pop == "c_ll_mo", "Mongolia",
+                          ifelse (pop == "c_ll_og", "Ömnögovi", 
+                          ifelse (pop == "c_ll_vl", "Vladivostok", 
+                          ifelse (pop == "c_ll_ya", "Yakutia",
+                          ifelse (pop == "c_lp_sm", "Sierra Morena",
+                          ifelse (pop == "c_lp_do", "Doñana", NA))))))))))))))))) %>% 
+  mutate(YBP=GenAgo*5)
 
-ratio_Hf_Ho_formula <- function(Ne, t) {
-  ratio_Hf_Ho <- (1 - 1/Ne)^t
-  return(ratio_Hf_Ho)}
 
-# Time
-t=5000-200
-
-# 
-harmonic_mean_Ne_ratio_Hf_Ho_by_pop <- demographic_data_ll %>%  filter(year>200) %>%  filter(year<5000) %>% group_by(population) %>% summarise(media_harmonica=harmonic.mean(Ne_median), ratio_Hf_Ho=ratio_Hf_Ho_formula(media_harmonica, t))
-
-# Tengo que ratio Hf/Ho para mis poblaciones segun la formula es uno. 
-# Como asumo que parten de una población inicial que es igual, puedo ver como se relaciona con mi ratio de diversidad empirica.
-
-# Valor para kirov del ratio: 0.102
-# Valor para polonia: 0.00414
-
-# Ratio de ambas Hfhealthy/Hferoded
-
-# kirov-poland
-0.102/0.00414
-#24.63768
-0.153/0.0109
-# Kirov-Norway
-0.102/0.00104
-# 98.07692
+cols <- c("NE-Poland"=viridis_pal()(5)[3], 
+          "Urals"="#0F4909", 
+          "Carpathians"=brewer.pal(12,"Paired")[9], 
+          "Kirov"=viridis_pal()(5)[1], 
+          "Latvia"=brewer.pal(12,"Paired")[3], 
+          "Norway"=viridis_pal()(5)[2], 
+          "Mongolia"=brewer.pal(12,"Paired")[12], 
+          "Tuva"=brewer.pal(12,"Paired")[8], 
+          "Vladivostok"=brewer.pal(12,"Paired")[5], 
+          "Yakutia"=brewer.pal(12,"Paired")[6])
 
 
-# Ratio empírico
-# pop     watterson pi
-# Yakutia	4,50E-04	5,27E-04
-# Ural m.	3,95E-04	4,51E-04
-# Tuva	4,89E-04	5,45E-04
-# Primorsky Krai	4,25E-04	5,01E-04
-# Norway	2,66E-04	3,41E-04
-# NE-Poland	2,86E-04	3,67E-04
-# Mongolia	4,63E-04	5,36E-04
-# Latvia	3,74E-04	4,38E-04
-# Kirov	3,58E-04	4,64E-04
-# Carpathian m.	3,15E-04	3,74E-04
+ ggplot (Ne_reconstruction, aes(YBP, Ne, fill=Populations, colour=Populations)) +
+    geom_point(alpha=0.1) +
+    geom_smooth() + 
+    theme_classic() +
+    scale_colour_manual(values = cols)+
+    scale_fill_manual(values = cols) +
+   ggsave(paste(wd,"all_pop.pdf", sep=""), device = "pdf")
 
-# kirov-poland
 
-# Pi kirov/Poland
-4.64E-04/3.67E-04
-# 1.26
-# Watterson Kirov/Poland
-3.58E-04/2.86E-04
-# 1.251748
-
-# Kirov-Norway
-
-# Pi kirov/Norway
-3.58E-04/2.66E-04
-# 1.345865
-
-# Mi ratio empírico es más pequeño, porque o bien la diversidad de polonia/Norway es mayor que la esperada, o la de kirov, menor. 
+ 
+ 
 
 
 
+for (i in 1:length(finsNeAll))
+{
+  datNeAll <- read.csv (paste(wd,finsNeAll [i],sep=""), header = T, sep = '\t')  
+  name_NeAll <- unlist(strsplit(finsNeAll [i], "[.]"))
+  ggplot (datNeAll, aes(GenAgo, Ne)) +
+    geom_point(alpha=0.1) +
+    geom_smooth(color="grey24", fill="grey64") +
+    theme_classic() +
+    ggtitle(paste(name_NeAll[1]))
+  ggsave(paste(wd,name_NeAll[1],"_", name_NeAll[2],".pdf", sep=""), device = "pdf")
+}
+ 
 
 ```
 
-# 3. NE-Estimator
+# 2.b. SNeP
 
-Primero voy a generar 5 dataset por poblacion con un 1% de los SNPs que tienen en el original para que pueda correr el programa.
-Estos SNPs los voy a seleccionar teniendo en cuenta que esten en distintos scaffold (y asegurandome que esos scaffold corresponden a distintos cromosomas en gato).
+Ahora voy a lanzar el SNeP usando las coordenadas de gato que se han creado en este script (4.LinkNe). La idea es que un scaffold no tiene la suficiente longitud como para tnere valores de recombinación grandes, y todo lo que sea entre scaffold el programa lo esta entendiendo como que está a mucha distancia. Por eso hemos convertido nuestros snps a coordenadas de gato. 
 
-¿Cuales son los scaffold con más de medio mega?
+Los VCF de gatos están en la siguiente carpeta
 ```{bash}
-cd /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome
-
-sort -k2,2n Length_scaffolds_lp23
-
-lp23.s00001	13188378
-lp23.s05213	12220470
-lp23.s10425	8802401
-lp23.s15637	8424978
-lp23.s26064	8029254
-lp23.s20850	8028068
-lp23.s31278	7976960
-lp23.s36488	7826823
-lp23.s36489	7582486
-lp23.s31279	7139792
-lp23.s26065	6924262
-lp23.s20851	6824652
-lp23.s15638	6589436
-lp23.s10426	6347329
-lp23.s05214	6149468
-lp23.s00002	6085556
-lp23.s20852	6074816
-```
-
-¿A qué cromosoma pertenecen?
-Hago los 6 primeros y ya sería suficiente.
-
-```{bash}
-cd /GRUPOS/grupolince/copia_fabascal/MAPPINGS
-
-grep lp23.s00001 lynx2cat_wTiger.sorted.bed | awk '{split($4,a,":"); print $1,a[2]}' | sort -k2,2 | uniq -c 
-#  413 lp23.s00001 chrA2
-# 6184676 lp23.s00001 chrA3 <--
-#    461 lp23.s00001 chrB2
-#      9 lp23.s00001 chrB3
-#      3 lp23.s00001 chrD1
-#   2585 lp23.s00001 chrE2
-grep lp23.s05213 lynx2cat_wTiger.sorted.bed | awk '{split($4,a,":"); print $1,a[2]}' | sort -k2,2 | uniq -c 
-#    240 lp23.s05213 chrA1
-# 6621501 lp23.s05213 chrA2 <--
-#    410 lp23.s05213 chrA3
-#      6 lp23.s05213 chrC2
-#    138 lp23.s05213 chrD1
-#    219 lp23.s05213 chrX
-grep lp23.s10425 lynx2cat_wTiger.sorted.bed | awk '{split($4,a,":"); print $1,a[2]}' | sort -k2,2 | uniq -c 
-# 25 lp23.s10425 chrC1
-#    557 lp23.s10425 chrD3
-# 4593260 lp23.s10425 chrF1 <--
-#    432 lp23.s10425 chrX
-grep lp23.s15637 lynx2cat_wTiger.sorted.bed | awk '{split($4,a,":"); print $1,a[2]}' | sort -k2,2 | uniq -c 
-# 4174920 lp23.s15637 chrB2 <- 
-grep lp23.s26064 lynx2cat_wTiger.sorted.bed | awk '{split($4,a,":"); print $1,a[2]}' | sort -k2,2 | uniq -c
-#      1 lp23.s26064 chrA1
-# 4074998 lp23.s26064 chrB3 <-- 
-#   1811 lp23.s26064 chrF1
-#      1 lp23.s26064 chrX
-grep lp23.s20850 lynx2cat_wTiger.sorted.bed | awk '{split($4,a,":"); print $1,a[2]}' | sort -k2,2 | uniq -c
-# 4228516 lp23.s20850 chrA1 <-- 
-#     46 lp23.s20850 chrC1
-#     17 lp23.s20850 chrF1
-```
-
-¿Cuantos SNPs tiene cada uno de esos scaffold asignados?
-```{bash}
-grep lp23.s00001 ll_perspecies.trimmed_filtered1.ann.c_ll_ur_intergenic_filtered_more_than_2000_SNPS.vcf | wc -l
-11569
-grep lp23.s05213 ll_perspecies.trimmed_filtered1.ann.c_ll_ur_intergenic_filtered_more_than_2000_SNPS.vcf | wc -l
-5271
-grep lp23.s10425 ll_perspecies.trimmed_filtered1.ann.c_ll_ur_intergenic_filtered_more_than_2000_SNPS.vcf | wc -l
-8880
-grep lp23.s15637 ll_perspecies.trimmed_filtered1.ann.c_ll_ur_intergenic_filtered_more_than_2000_SNPS.vcf | wc -l
-6874
-grep lp23.s26064 ll_perspecies.trimmed_filtered1.ann.c_ll_ur_intergenic_filtered_more_than_2000_SNPS.vcf | wc -l
-8798
-grep lp23.s20850 ll_perspecies.trimmed_filtered1.ann.c_ll_ur_intergenic_filtered_more_than_2000_SNPS.vcf | wc -l
-7523
+cd /GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input
 ```
 
 
+## Generate ped and map file
+En teoria ya tambien tengo el map file para cada uno de esos archivos, pero como este script te corre automáticamente ambos, 
 ```{bash}
-# los files con SNPs están en la carpeta: home/mlucena/recent_demographic_reconstruction/SNeP
+cd /GRUPOS/grupolince/recent_demographic_reconstruction
+VCFs=$(ls *.c_l*more_than_2000_SNPS.vcf)
+for VCF_per_pop in ${VCFs[@]}
+do 
+echo $VCF_per_pop
+declare POP=$(echo $VCF_per_pop | cut -d "." -f4 )
+/opt/plink_1.9/plink_1.9 --vcf $VCF_per_pop --maf 0.05 --recode --out "${POP}"_maf005 --const-fid 0 --allow-extra-chr
+done
+```
 
-cd /home/mlucena/recent_demographic_reconstruction/SNeP
-VCF_FILES=($(ls *intergenic_filtered_more_than_2000_SNPS.vcf | uniq))
-mkdir "/home/mlucena/recent_demographic_reconstruction/Ne_Estimator/subsample_few_snps"
-OUTPUT_PATH="/home/mlucena/recent_demographic_reconstruction/Ne_Estimator/few_scaffold/1000SNPs"
 
-for VCF_FILE in ${VCF_FILES[@]}
+## Copy to UBUNTU local
+
+SNeP sólo corre en Ubunto 14.04 o en windows, por tanto me he tenido que crear una máquina virtual en local que tenga instalado ubuntu. Así que lo primero que tngo que hacer es bajarme los archivos a este ordenador. 
+
+Me meto en mi máquina virtual, y una vez ahí me los bajo.
+
+```{bash}
+
+# En local--> Maquina virtual --> Ubuntu. 
+
+mkdir /home/maria/SneP
+
+scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/*ped /home/maria/SneP
+scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/*map /home/maria/SneP
+
+```
+
+## SNeP
+
+```{bash}
+
+cd /home/maria/SneP
+
+for PED_FILE in *.ped
 do
-echo $VCF_FILE
-grep "#" $VCF_FILE > header
-grep -v "#" $VCF_FILE | grep "lp23.s00001" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold1.vcf}
-grep -v "#" $VCF_FILE | grep "lp23.s05213" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold2.vcf}
-grep -v "#" $VCF_FILE | grep "lp23.s10425" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold3.vcf}
-grep -v "#" $VCF_FILE | grep "lp23.s15637" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold4.vcf}
-grep -v "#" $VCF_FILE | grep "lp23.s26064" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold5.vcf}
-grep -v "#" $VCF_FILE | grep "lp23.s20850" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold6.vcf}
-cat header $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold1.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold2.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold3.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold4.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold5.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold6.vcf} > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold.vcf}
-rm header
+declare POP=$(echo $PED_FILE | cut -d "." -f 1)
+#declare SAMPLE_SIZE=$(grep $POP sample_size_file.csv | cut -d"," -f 2)
+SNePv1.1 -ped $PED_FILE -out ./$POP -ld -recrate 1.9e-8  -svedf -samplesize 1 #The sex-averaged recombination rate across the cat genome was 1.9 cM/Mb (see: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4889657/)
 done
 
-
-# Copio a local
-
-scp -p mlucena@genomics-b.ebd.csic.es:///home/mlucena/recent_demographic_reconstruction/Ne_Estimator/few_scaffold/1000SNPs/*vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/Ne_estimator/few_scaffolds/1000SNPs 
-
+# Otras variantes del script están en mi máquina virtual en UBUNTU.
 ```
 
-Ahora sobre estos archivos genero los GENEPOP usando PGD spider. 
-Despues el archivo genepop generado lo corro en Ne-Estimator. 
-
-
-## Previous code --> not used. 
+## Copy back to the server & to mac local
 
 ```{bash}
-# los files con SNPs están en la carpeta: home/mlucena/recent_demographic_reconstruction/SNeP
+# Copy to server
 
-cd /home/mlucena/recent_demographic_reconstruction/SNeP
-VCF_FILES=($(ls *intergenic_filtered_more_than_2000_SNPS.vcf | uniq))
-mkdir /home/mlucena/recent_demographic_reconstruction/Ne_Estimator
-OUTPUT_PATH="/home/mlucena/recent_demographic_reconstruction/Ne_Estimator"
+cd /home/maria/SneP
 
+scp /home/maria/SneP/*Ne* mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/
 
-for VCF_FILE in ${VCF_FILES[@]}
-do
-echo $VCF_FILE
-echo 1
-vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset1.vcf}
-echo 2
-vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset2.vcf}
-echo 3
-vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset3.vcf}
-echo 4
-vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset4.vcf}
-echo 5
-vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset5.vcf}
-done
+mkdir /Users/marialucenaperez/Owncloud/publico/Eurasian_lynx_phylogeography/recent_demographic_reconstruction
 
-
-# ¿Cuantos SNPs me quedan?
-
-cd /home/mlucena/recent_demographic_reconstruction/Ne_Estimator
-VCF_FILES=($(ls *.vcf | uniq))
-for VCF_FILE in ${VCF_FILES[@]}
-do
-echo $VCF_FILE
-grep -v "#" $VCF_FILE | wc -l
-done
-
-
-# Me los copio
-
-scp -p mlucena@genomics-b.ebd.csic.es:///home/mlucena/recent_demographic_reconstruction/Ne_Estimator/*vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/Ne_estimator
+scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP/*NeAll /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/SNeP/
 
 ```
 
 
-Ahora sobre estos archivos genero los GENEPOP usando PGD spider. 
-Despues el archivo genepop generado lo corro en Ne-Estimator. 
+## R representation
+
+```{r}
+# Leo la tabla de Ne.
+
+library (data.table)
+library(ggplot2)
+library (dplyr)
+library (magrittr)
+library(plyr)
+library (tidyr)
+library(viridis)
+
+wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/SNeP/"
 
 
-# 4. LinkNe
+sample_files = list.files(path = wd, pattern="*NeAll$")
+list_Ne<- lapply( sample_files, function (x) 
+     # Aquí leo la tabla
+  fread(paste0(wd,x)))
+#names the list using the basename from `l`
+# this also is the step to manipuly the filesnamaes to whatever you like
+names(list_Ne) <- basename( sample_files )
+#bind the rows from the list togetgher, putting the filenames into the colum "id"
+Ne_reconstruction <- rbindlist( list_Ne, idcol = "pop1" ) %>% 
+  # Corto este string para que sea igual en los dos dataset
+  mutate(pop=substr(.$pop1, 1, 7) ) %>% 
+  # Elimino el valor que no me interesa
+  select (-pop1)%>% 
+  mutate (., Populations =  ifelse (pop == "c_ll_po", "NE-Poland",
+                          ifelse (pop == "c_ll_ur", "Urals",
+                          ifelse (pop == "c_ll_ki", "Kirov",
+                          ifelse (pop == "c_ll_la", "Latvia",
+                          ifelse (pop == "c_ll_no", "Norway",
+                          ifelse (pop == "c_ll_ba" | pop == "h_ll_ba", "Balkans" ,
+                          ifelse (pop == "c_ll_cr","Carpathians",
+                          ifelse (pop == "c_ll_to", "Töv",
+                          ifelse (pop == "c_ll_tu", "Tuva",
+                          ifelse (pop == "c_ll_ka", "Khentii-Aimag",
+                          ifelse (pop == "c_ll_mo", "Mongolia",
+                          ifelse (pop == "c_ll_og", "Ömnögovi", 
+                          ifelse (pop == "c_ll_vl", "Vladivostok", 
+                          ifelse (pop == "c_ll_ya", "Yakutia",
+                          ifelse (pop == "c_lp_sm", "Sierra Morena",
+                          ifelse (pop == "c_lp_do", "Doñana", NA))))))))))))))))) %>% 
+  mutate(YBP=GenAgo*5)
+
+
+cols <- c("NE-Poland"=viridis_pal()(5)[3], 
+          "Urals"="#0F4909", 
+          "Carpathians"=brewer.pal(12,"Paired")[9], 
+          "Kirov"=viridis_pal()(5)[1], 
+          "Latvia"=brewer.pal(12,"Paired")[3], 
+          "Norway"=viridis_pal()(5)[2], 
+          "Mongolia"=brewer.pal(12,"Paired")[12], 
+          "Tuva"=brewer.pal(12,"Paired")[8], 
+          "Vladivostok"=brewer.pal(12,"Paired")[5], 
+          "Yakutia"=brewer.pal(12,"Paired")[6])
+
+
+ ggplot (Ne_reconstruction, aes(YBP, Ne, fill=Populations, colour=Populations)) +
+    geom_point(alpha=0.1) +
+    geom_smooth() + 
+    theme_classic() +
+    scale_colour_manual(values = cols)+
+    scale_fill_manual(values = cols) +
+   ggsave(paste(wd,"all_pop.pdf", sep=""), device = "pdf")
+
+
+ 
+ 
+
+
+
+for (i in 1:length(finsNeAll))
+{
+  datNeAll <- read.csv (paste(wd,finsNeAll [i],sep=""), header = T, sep = '\t')  
+  name_NeAll <- unlist(strsplit(finsNeAll [i], "[.]"))
+  ggplot (datNeAll, aes(GenAgo, Ne)) +
+    geom_point(alpha=0.1) +
+    geom_smooth(color="grey24", fill="grey64") +
+    theme_classic() +
+    ggtitle(paste(name_NeAll[1]))
+  ggsave(paste(wd,name_NeAll[1],"_", name_NeAll[2],".pdf", sep=""), device = "pdf")
+}
+ 
+
+```
+
+# 5. LinkNe
 
 Daniel Kleinman y María Lucena. Seguimos las indicaciones de https://github.com/chollenbeck/LinkNe
 
@@ -1496,8 +1121,8 @@ for pop in ${INPUT_BEDS[@]}
 
 #Copio los vcf con mas de 2000 SNPs que hemos usado para SNeP en local para transformarlos a GENEPOP usando PDGSpider:
 
-scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/ll*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
-scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/recent_demographic_reconstruction/SNeP/lp*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
+scp -p mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP/ll*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
+scp -p mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP/lp*_filtered_more_than_2000_SNPS.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/LinkNe/input
 
 #Ahora los transformo en local, para que Dani los lance.
 
@@ -1763,5 +1388,243 @@ for pop in ${POPS[@]}
   echo "done"
   cd /home/dkleinman/LinkNe/input/
   done
+
+```
+
+
+
+
+# 4. NE-Estimator
+
+Primero voy a generar 5 dataset por poblacion con un 1% de los SNPs que tienen en el original para que pueda correr el programa.
+Estos SNPs los voy a seleccionar teniendo en cuenta que esten en distintos scaffold (y asegurandome que esos scaffold corresponden a distintos cromosomas en gato).
+
+¿Cuales son los scaffold con más de medio mega?
+```{bash}
+cd /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome
+
+sort -k2,2n Length_scaffolds_lp23
+
+lp23.s00001	13188378
+lp23.s05213	12220470
+lp23.s10425	8802401
+lp23.s15637	8424978
+lp23.s26064	8029254
+lp23.s20850	8028068
+lp23.s31278	7976960
+lp23.s36488	7826823
+lp23.s36489	7582486
+lp23.s31279	7139792
+lp23.s26065	6924262
+lp23.s20851	6824652
+lp23.s15638	6589436
+lp23.s10426	6347329
+lp23.s05214	6149468
+lp23.s00002	6085556
+lp23.s20852	6074816
+```
+
+¿A qué cromosoma pertenecen?
+Hago los 6 primeros y ya sería suficiente.
+
+```{bash}
+cd /GRUPOS/grupolince/copia_fabascal/MAPPINGS
+
+grep lp23.s00001 lynx2cat_wTiger.sorted.bed | awk '{split($4,a,":"); print $1,a[2]}' | sort -k2,2 | uniq -c 
+#  413 lp23.s00001 chrA2
+# 6184676 lp23.s00001 chrA3 <--
+#    461 lp23.s00001 chrB2
+#      9 lp23.s00001 chrB3
+#      3 lp23.s00001 chrD1
+#   2585 lp23.s00001 chrE2
+grep lp23.s05213 lynx2cat_wTiger.sorted.bed | awk '{split($4,a,":"); print $1,a[2]}' | sort -k2,2 | uniq -c 
+#    240 lp23.s05213 chrA1
+# 6621501 lp23.s05213 chrA2 <--
+#    410 lp23.s05213 chrA3
+#      6 lp23.s05213 chrC2
+#    138 lp23.s05213 chrD1
+#    219 lp23.s05213 chrX
+grep lp23.s10425 lynx2cat_wTiger.sorted.bed | awk '{split($4,a,":"); print $1,a[2]}' | sort -k2,2 | uniq -c 
+# 25 lp23.s10425 chrC1
+#    557 lp23.s10425 chrD3
+# 4593260 lp23.s10425 chrF1 <--
+#    432 lp23.s10425 chrX
+grep lp23.s15637 lynx2cat_wTiger.sorted.bed | awk '{split($4,a,":"); print $1,a[2]}' | sort -k2,2 | uniq -c 
+# 4174920 lp23.s15637 chrB2 <- 
+grep lp23.s26064 lynx2cat_wTiger.sorted.bed | awk '{split($4,a,":"); print $1,a[2]}' | sort -k2,2 | uniq -c
+#      1 lp23.s26064 chrA1
+# 4074998 lp23.s26064 chrB3 <-- 
+#   1811 lp23.s26064 chrF1
+#      1 lp23.s26064 chrX
+grep lp23.s20850 lynx2cat_wTiger.sorted.bed | awk '{split($4,a,":"); print $1,a[2]}' | sort -k2,2 | uniq -c
+# 4228516 lp23.s20850 chrA1 <-- 
+#     46 lp23.s20850 chrC1
+#     17 lp23.s20850 chrF1
+```
+
+¿Cuantos SNPs tiene cada uno de esos scaffold asignados?
+```{bash}
+grep lp23.s00001 ll_perspecies.trimmed_filtered1.ann.c_ll_ur_intergenic_filtered_more_than_2000_SNPS.vcf | wc -l
+11569
+grep lp23.s05213 ll_perspecies.trimmed_filtered1.ann.c_ll_ur_intergenic_filtered_more_than_2000_SNPS.vcf | wc -l
+5271
+grep lp23.s10425 ll_perspecies.trimmed_filtered1.ann.c_ll_ur_intergenic_filtered_more_than_2000_SNPS.vcf | wc -l
+8880
+grep lp23.s15637 ll_perspecies.trimmed_filtered1.ann.c_ll_ur_intergenic_filtered_more_than_2000_SNPS.vcf | wc -l
+6874
+grep lp23.s26064 ll_perspecies.trimmed_filtered1.ann.c_ll_ur_intergenic_filtered_more_than_2000_SNPS.vcf | wc -l
+8798
+grep lp23.s20850 ll_perspecies.trimmed_filtered1.ann.c_ll_ur_intergenic_filtered_more_than_2000_SNPS.vcf | wc -l
+7523
+```
+
+
+```{bash}
+# los files con SNPs están en la carpeta: home/mlucena/recent_demographic_reconstruction/SNeP
+
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/SNeP
+VCF_FILES=($(ls *intergenic_filtered_more_than_2000_SNPS.vcf | uniq))
+mkdir "/GRUPOS/grupolince/recent_demographic_reconstruction/Ne_Estimator/subsample_few_snps"
+OUTPUT_PATH="/GRUPOS/grupolince/recent_demographic_reconstruction/Ne_Estimator/few_scaffold/1000SNPs"
+
+for VCF_FILE in ${VCF_FILES[@]}
+do
+echo $VCF_FILE
+grep "#" $VCF_FILE > header
+grep -v "#" $VCF_FILE | grep "lp23.s00001" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold1.vcf}
+grep -v "#" $VCF_FILE | grep "lp23.s05213" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold2.vcf}
+grep -v "#" $VCF_FILE | grep "lp23.s10425" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold3.vcf}
+grep -v "#" $VCF_FILE | grep "lp23.s15637" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold4.vcf}
+grep -v "#" $VCF_FILE | grep "lp23.s26064" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold5.vcf}
+grep -v "#" $VCF_FILE | grep "lp23.s20850" | shuf -n 1000 | sort -k1,1 -k2,2n > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold6.vcf}
+cat header $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold1.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold2.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold3.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold4.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold5.vcf} $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold6.vcf} > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset_few_scaffold.vcf}
+rm header
+done
+
+
+# Copio a local
+
+scp -p mlucena@genomics-b.ebd.csic.es:///GRUPOS/grupolince/recent_demographic_reconstruction/Ne_Estimator/few_scaffold/1000SNPs/*vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/Ne_estimator/few_scaffolds/1000SNPs 
+
+```
+
+Ahora sobre estos archivos genero los GENEPOP usando PGD spider. 
+Despues el archivo genepop generado lo corro en Ne-Estimator. 
+
+
+## Previous code --> not used. 
+
+```{bash}
+# los files con SNPs están en la carpeta: home/mlucena/recent_demographic_reconstruction/SNeP
+
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/SNeP
+VCF_FILES=($(ls *intergenic_filtered_more_than_2000_SNPS.vcf | uniq))
+mkdir /GRUPOS/grupolince/recent_demographic_reconstruction/Ne_Estimator
+OUTPUT_PATH="/GRUPOS/grupolince/recent_demographic_reconstruction/Ne_Estimator"
+
+
+for VCF_FILE in ${VCF_FILES[@]}
+do
+echo $VCF_FILE
+echo 1
+vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset1.vcf}
+echo 2
+vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset2.vcf}
+echo 3
+vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset3.vcf}
+echo 4
+vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset4.vcf}
+echo 5
+vcfrandomsample -r 0.04 $VCF_FILE > $OUTPUT_PATH/${VCF_FILE/.vcf/_subset5.vcf}
+done
+
+
+# ¿Cuantos SNPs me quedan?
+
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/Ne_Estimator
+VCF_FILES=($(ls *.vcf | uniq))
+for VCF_FILE in ${VCF_FILES[@]}
+do
+echo $VCF_FILE
+grep -v "#" $VCF_FILE | wc -l
+done
+
+
+# Me los copio
+
+scp -p mlucena@genomics-b.ebd.csic.es:///GRUPOS/grupolince/recent_demographic_reconstruction/Ne_Estimator/*vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/Ne_estimator
+
+```
+
+
+Ahora sobre estos archivos genero los GENEPOP usando PGD spider. 
+Despues el archivo genepop generado lo corro en Ne-Estimator. 
+
+
+#------------
+# Effect of drift on the populations
+#------------
+
+```{r}
+
+
+# Formula of lost of diversity:
+
+ratio_Hf_Ho_formula <- function(Ne, t) {
+  ratio_Hf_Ho <- (1 - 1/Ne)^t
+  return(ratio_Hf_Ho)}
+
+# Time
+t=5000-200
+
+# 
+harmonic_mean_Ne_ratio_Hf_Ho_by_pop <- demographic_data_ll %>%  filter(year>200) %>%  filter(year<5000) %>% group_by(population) %>% summarise(media_harmonica=harmonic.mean(Ne_median), ratio_Hf_Ho=ratio_Hf_Ho_formula(media_harmonica, t))
+
+# Tengo que ratio Hf/Ho para mis poblaciones segun la formula es uno. 
+# Como asumo que parten de una población inicial que es igual, puedo ver como se relaciona con mi ratio de diversidad empirica.
+
+# Valor para kirov del ratio: 0.102
+# Valor para polonia: 0.00414
+
+# Ratio de ambas Hfhealthy/Hferoded
+
+# kirov-poland
+0.102/0.00414
+#24.63768
+0.153/0.0109
+# Kirov-Norway
+0.102/0.00104
+# 98.07692
+
+
+# Ratio empírico
+# pop     watterson pi
+# Yakutia	4,50E-04	5,27E-04
+# Ural m.	3,95E-04	4,51E-04
+# Tuva	4,89E-04	5,45E-04
+# Primorsky Krai	4,25E-04	5,01E-04
+# Norway	2,66E-04	3,41E-04
+# NE-Poland	2,86E-04	3,67E-04
+# Mongolia	4,63E-04	5,36E-04
+# Latvia	3,74E-04	4,38E-04
+# Kirov	3,58E-04	4,64E-04
+# Carpathian m.	3,15E-04	3,74E-04
+
+# kirov-poland
+
+# Pi kirov/Poland
+4.64E-04/3.67E-04
+# 1.26
+# Watterson Kirov/Poland
+3.58E-04/2.86E-04
+# 1.251748
+
+# Kirov-Norway
+
+# Pi kirov/Norway
+3.58E-04/2.66E-04
+# 1.345865
+
+# Mi ratio empírico es más pequeño, porque o bien la diversidad de polonia/Norway es mayor que la esperada, o la de kirov, menor. 
 
 ```
