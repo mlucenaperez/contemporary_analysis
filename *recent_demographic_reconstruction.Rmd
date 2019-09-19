@@ -671,6 +671,8 @@ for pop in ${INPUT_VCFS[@]}
 
 ```
 
+
+### Filtering 10000 SNeP (2000 SNPs in 5 chr)
 Now, as the files are huge, we are going to use a subset of those. We will filter and keep chrA1, A2, A3, B1 and B2, they will be named as 1, 2, 3, 4, 5, respectively, as one of the approaches that we are using (LinkNe), does not cope with character name in the chrosomose column. 
 
 ```{bash}
@@ -723,20 +725,44 @@ for pop in ${INPUT_VCFS[@]}
 
 ```
 
+### Filtering 100000 SNeP (20000 SNPs in 5 chr)
+Now, as the files are huge, we are going to use a subset of those. We will filter and keep chrA1, A2, A3, B1 and B2, they will be named as 1, 2, 3, 4, 5, respectively, as one of the approaches that we are using (LinkNe), does not cope with character name in the chrosomose column. 
+
+```{bash}
+
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_cat_coordinates
+INPUT_VCFS=$(ls *intergenic.cat.vcf)
+
+for pop in ${INPUT_VCFS[@]}
+  do 
+  echo ${pop}
+  grep '^#' ${pop} > ${pop}.header.borrar 
+  grep "chrA1" ${pop} | shuf -n 20000 | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n | sed "s/chrA1/1/g" > ${pop}.A1.borrar
+  grep "chrA2" ${pop} | shuf -n 20000 | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n | sed "s/chrA2/2/g" > ${pop}.A2.borrar
+  grep "chrA3" ${pop} | shuf -n 20000 | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n | sed "s/chrA3/3/g" > ${pop}.A3.borrar
+  grep "chrB1" ${pop} | shuf -n 20000 | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n | sed "s/chrB1/4/g" > ${pop}.B1.borrar
+  grep "chrB2" ${pop} | shuf -n 20000 | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n | sed "s/chrB2/5/g" > ${pop}.B2.borrar
+  cat ${pop}.header.borrar ${pop}.A1.borrar ${pop}.A2.borrar ${pop}.A3.borrar ${pop}.B1.borrar ${pop}.B2.borrar > ${pop/.cat.vcf/.cat.subset2.vcf} 
+  rm *borrar
+  done
+
+```
+
 
 # ----
 
 # SNeP
 
-SneP need to have a ped and a map file.
+To run SneP I will use the subset with 100000 SNPs.
+Previously I have done a test using 10000 SNPs.
 
 ## Generate ped and map file
 
 ```{bash}
 cd /GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_cat_coordinates
 
-VCFs=$(ls *cat.subset.vcf)
-OUTPUT_FOLDER=/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP
+VCFs=$(ls *cat.subset2.vcf)
+OUTPUT_FOLDER=/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP/100000_SNPs_cat_coordinates
 
 for VCF_per_pop in ${VCFs[@]}
 do 
@@ -760,8 +786,8 @@ ssh -X dkleinman@10.50.0.65
 
 mkdir /home/dkleinman/SNeP_Maria
 
-scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP/*ped /home/dkleinman/SNeP_Maria
-scp mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP/*map /home/dkleinman/SNeP_Maria
+scp -p mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP/100000_SNPs_cat_coordinates/*ped /home/dkleinman/SNeP_Maria
+scp -p mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/SNeP/100000_SNPs_cat_coordinates/*map /home/dkleinman/SNeP_Maria
 
 ```
 
