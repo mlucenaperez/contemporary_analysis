@@ -671,9 +671,10 @@ for pop in ${INPUT_VCFS[@]}
 
 ```
 
-Now, as the files are huge, we are going to use a subset of those. We will filter and keep chrA1, A2, A3, B1 and B2, they will be named as 1, 2, 3, 4, 5, respectively, as one of the approaches that we are using (LinkNe), do not cope with character name in the chrosomose column. 
+Now, as the files are huge, we are going to use a subset of those. We will filter and keep chrA1, A2, A3, B1 and B2, they will be named as 1, 2, 3, 4, 5, respectively, as one of the approaches that we are using (LinkNe), does not cope with character name in the chrosomose column. 
 
 ```{bash}
+
 cd /GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_cat_coordinates
 INPUT_VCFS=$(ls *intergenic.cat.vcf)
 
@@ -688,6 +689,36 @@ for pop in ${INPUT_VCFS[@]}
   grep "chrB2" ${pop} | shuf -n 2000 | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n | sed "s/chrB2/5/g" > ${pop}.B2.borrar
   cat ${pop}.header.borrar ${pop}.A1.borrar ${pop}.A2.borrar ${pop}.A3.borrar ${pop}.B1.borrar ${pop}.B2.borrar > ${pop/.cat.vcf/.cat.subset.vcf} 
   rm *borrar
+  done
+
+```
+
+Finally, I'll remove sites that are heterozygous in all individuals from any population, as they too are problematic for LinkNe.
+
+```{bash}
+
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_cat_coordinates
+screen -S filtering_heterozygous_from_intergenic.cat.subset.vcf.log
+script filtering_heterozygous_from_intergenic.cat.subset.vcf.log
+
+INPUT_VCFS=$(ls *intergenic.cat.subset.vcf)
+for pop in ${INPUT_VCFS[@]}
+  do
+  POP=$(echo ${pop} | cut -d'.' -f4 | cut -d'_' -f-3)
+  echo "building genotype table for" ${POP}
+  #A warning will appear here as lynx scaffolds (but not cat chromosomes) are registered in the header, but it can be safely ignored
+  bcftools query -f '%CHROM\t%POS[\t%GT]\n' ${pop} | awk -F "\t" '{printf ("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", $1,$2-1,$2,$3,$4,$5,$6,$7,$8,$9)}' > ${pop/.vcf/.table} #extract coordinates in bed format, and also the genotypes in the extra columns
+  echo "building filtered bed for" ${POP} "(this may take a while)"
+  rm ${pop/.vcf/.bed}
+  while read -r row; do
+    UNIQUE_GENO=$(echo "$row" | cut -f 4- | tr '\t' '\n' | sort | uniq | grep -v "\./\.") #find out existing genotypes at each marker
+    if [ "$UNIQUE_GENO" != "0/1" ]; then #if the only existing genotype for any marker is the heterozygous one, don't include the marker in the final bed
+      echo -e "$row" >> ${pop/.vcf/.bed}
+    fi
+    done < ${pop/.vcf/.table}
+  echo "filtering vcf for" ${POP}
+  bedtools intersect -a ${pop} -b ${pop/.vcf/.bed} -header > ${pop/.subset.vcf/.subset_filtered.vcf} #filter the vcf with the final bed
+  echo ${POP} "done"
   done
 
 ```
@@ -857,7 +888,7 @@ for (i in 1:length(finsNeAll))
 
 Daniel Kleinman y María Lucena. Seguimos las indicaciones de https://github.com/chollenbeck/LinkNe
 
-##Puesta a punto del programa:
+##Install and set up the programme:
 ```{bash}
 
 #Primero descargo el programa de https://github.com/chollenbeck/LinkNe y lo guardo en mi ordenador en /Users/dani/ownCloud/publico/Eurasian lynx phylogeography/recent_demographic_reconstruction/LinkNe/input/LinkNe-master/
@@ -870,10 +901,9 @@ cpan Statistics::Distributions
 
 ```
 
-##Coordenadas de lince:
-
-###Obtención de los archivos input 
-####Matrices de tasas de recombinación (muy lento, descartado).
+##Lynx coordinates (obsolete as scaffolds are too small):
+###Obtaining input files:
+####Recombination rate matrices (extremely slow).
 ```{bash}
 
 cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/
@@ -946,7 +976,7 @@ for s in ${SCAFFOLDS[@]}
 
 ```
 
-####Mapas genéticos:
+####Genetic maps:
 ```{bash}
 
 cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/lynx_coordinates/input/
@@ -973,7 +1003,7 @@ for pop in ${INPUT_BEDS[@]}
 
 ```
 
-####Genotipos en formato genepop:
+####Genotypes in genepop format:
 ```{bash}
 
 #Copio los vcf con mas de 2000 SNPs que hemos usado para SNeP en local para transformarlos a GENEPOP usando PDGSpider:
@@ -1006,8 +1036,8 @@ for file in ${GENEPOP_LIST[@]}
 
 ```
 
-###Ejecución del programa:
-####En modo local:
+###Programme execution:
+####In local:
 ```{bash}
 
 cd /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/lynx_coordinates/input/
@@ -1028,7 +1058,7 @@ perl LinkNe-master/LinkNe.pl -i c_lp_sm.genepop -m lp_perspecies.trimmed_filtere
 
 ```
 
-####Copio todo lo necesario al servidor para ver si desde allí funciona.
+####Copy to the server.
 ```{bash}
 
 scp /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/input/*.genepop dkleinman@10.50.0.65:/home/dkleinman/LinkNe/input/
@@ -1037,7 +1067,7 @@ scp -r /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demogr
 
 ```
 
-####En el servidor:
+####In the server:
 ```{bash}
 
 cd /home/dkleinman/LinkNe/input/
@@ -1054,7 +1084,7 @@ for pop in ${POPS[@]}
 
 ```
 
-####Ejemplos:
+####Example files:
 ```{bash}
 
 #Example 1 (using their data):
@@ -1075,95 +1105,24 @@ perl LinkNe-master/LinkNe.pl -i c_lp_do_intergenic_filtered_more_than_2000_SNPs.
 
 ```
 
-##Coordenadas de gato:
-###Obtención de los archivos input
-####VCFs:
+##Cat coordinates:
+###Obtaining input files:
+####Genetic maps:
 ```{bash}
 
-cd /GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input
-
-#En primer lugar filtramos los vcf para quedarnos con las posiciones para las que tenemos las coordenadas de gato, y además expresadas con estas coordenadas en lugar de las de lince:
-INPUT_VCFS=$(ls *intergenic_filtered_more_than_2000_SNPS.vcf)
-for pop in ${INPUT_VCFS[@]}
-  do 
-  echo ${pop}
-  grep '#' ${pop} > ${pop/.vcf/.cat.vcf} #copy headers
-  bedtools intersect -a /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed \
-  -b ${pop} \
-  -wa -wb -sorted -g /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated |\
-  awk -v OFS='\t' '{split($4,a1,":"); split(a1[3],a2, "-")} {$1=$2=$3=$4=$5=$6=""; print a1[2], a2[2], $0}' |\
-  sed -r 's:\t+:\t:g' >> ${pop/.vcf/.cat.vcf}
-  done
-
-#A continuación ordenamos por cromosoma de gato y por posición dentro de cromosoma:
-INPUT_VCFS=$(ls *intergenic_filtered_more_than_2000_SNPS.cat.vcf)
-for pop in ${INPUT_VCFS[@]}
-  do 
-  echo ${pop}
-  grep '^#' ${pop} > ${pop/.cat.vcf/.cat_sorted.vcf} && grep -v '^#' ${pop} | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n >> ${pop/.cat.vcf/.cat_sorted.vcf}
-  done
-  
-#A continuación obtenemos un subset (chrA1, y solo 20k SNPs al azar):
-CHR="chrA1"
-INPUT_VCFS=$(ls *intergenic_filtered_more_than_2000_SNPS.cat_sorted.vcf)
-for pop in ${INPUT_VCFS[@]}
-  do 
-  echo ${pop}
-  grep '^#' ${pop} > ${pop/SNPS.cat_sorted.vcf/SNPS_${CHR}.cat_sorted.vcf} && grep $CHR ${pop} | shuf -n 2000 | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n | sed "s/$CHR/1/g" >> ${pop/SNPS.cat_sorted.vcf/SNPS_${CHR}.cat_sorted.vcf}
-  done
-
-```
-
-####Genotipos en formato genepop:
-```{bash}
-
-#Copio los vcf con coordenadas de gato a la carpeta local para pasarlos a formato GENEPOP usando PDGSpider, versión web start (http://www.cmpg.unibe.ch/software/PGDSpider/jnlp/PGDSpider2.jnlp; si no se puede ejecutar, hay que añadir la ubicación a las excepciones de seguridad del panel de java, ubicado en preferencias de sistema de Mac):
-scp -p dkleinman@genomics-a.ebd.csic.es:/GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input/*intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.vcf /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/cat_coordinates/input
-
-#Ahora los transformo a GENEPOP en local.
-
-#Se suben de nuevo al servidor:
-scp -p /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/cat_coordinates/input/*.txt dkleinman@genomics-a.ebd.csic.es:/GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input
-
-#Como los nombres de los SNPs son diferentes que en los map, modifico los genepop.
-cd /GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input
-GENEPOP_LIST=$(ls *.txt)
-for file in ${GENEPOP_LIST[@]}
-  do
-  #echo ${file}
-  POP=$(echo ${file} | cut -d'.' -f 1)
-  echo ${POP}
-  SPECIES=$(echo ${file} | cut -d'_' -f 2)
-  N_PED=$(sed '/Pop/q' ${file} | head -n -1 | wc -l)
-  N_MAP=$(< ${SPECIES}_perspecies.trimmed_filtered1.ann.${POP}_intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.map wc -l)
-  if [ $N_PED == $N_MAP ]
-    then echo "correct SNP number"
-    else echo "wrong SNP number"
-  fi
-  GENOTYPES=$(sed -n '/Pop/,$p' ${file})
-  echo $POP > ${file/txt/genepop}
-  tail -n +2 ${SPECIES}_perspecies.trimmed_filtered1.ann.${POP}_intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.map | cut -f 1 >> ${file/txt/genepop}
-  echo "$GENOTYPES" >> ${file/txt/genepop}
-  done
-
-```
-
-####Mapas genéticos:
-```{bash}
-
-cd /GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input
-
-#En primer lugar, pasamos de vcf (previamente transformados a coordenadas de gato) a bed para que los archivos sean más manejables.
-INPUT_VCFS=$(ls *intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.vcf)
+#En primer lugar, pasamos de vcf (previamente transformados a coordenadas de gato, obtenidos más arriba) a bed para que los archivos sean más manejables.
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_cat_coordinates/
+INPUT_VCFS=$(ls *_intergenic.cat.subset_filtered.vcf)
 for vcf in ${INPUT_VCFS[@]}
   do
   POP=$(echo ${vcf} | cut -d'.' -f 4 | cut -d'_' -f-3)
   echo ${POP}
-  grep -v '#' ${vcf} | awk -F"\t" '{printf ("%s\t%s\t%s\n", $1,$2-1,$2)}' > ${vcf/.vcf/.bed}
+  grep -v '#' ${vcf} | awk -F"\t" '{printf ("%s\t%s\t%s\n", $1,$2-1,$2)}' > /GRUPOS/grupolince/recent_demographic_reconstruction/LinkNe/cat_coordinates/${vcf/.vcf/.bed}
   done
 
 #A continuación, obtenemos el map a partir del bed.
-INPUT_BEDS=$(ls *intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.bed)
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/LinkNe/cat_coordinates/
+INPUT_BEDS=$(ls *_intergenic.cat.subset_filtered.bed)
 for pop in ${INPUT_BEDS[@]}
   do 
   #echo ${pop}
@@ -1176,16 +1135,50 @@ for pop in ${INPUT_BEDS[@]}
 
 ```
 
-###Ejecución del programa:
-####En el servidor:
+####Genotypes in genepop format:
+```{bash}
+
+#Copio los vcf con coordenadas de gato a la carpeta local para pasarlos a formato GENEPOP usando PDGSpider, versión web start (http://www.cmpg.unibe.ch/software/PGDSpider/jnlp/PGDSpider2.jnlp; si no se puede ejecutar, hay que añadir la ubicación a las excepciones de seguridad del panel de java, ubicado en preferencias de sistema de Mac):
+scp -p dkleinman@genomics-a.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_cat_coordinates/*intergenic.cat.subset_filtered.vcf /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/cat_coordinates/input/5chr_10kSNPs/
+
+#Ahora los transformo a GENEPOP en local.
+
+#Se suben de nuevo al servidor:
+scp -p /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/cat_coordinates/input/5chr_10kSNPs/*.txt dkleinman@genomics-a.ebd.csic.es:/GRUPOS/grupolince/recent_demographic_reconstruction/LinkNe/cat_coordinates/
+
+#Como los nombres de los SNPs son diferentes que en los map, modifico los genepop.
+cd /GRUPOS/grupolince/recent_demographic_reconstruction/LinkNe/cat_coordinates/
+GENEPOP_LIST=$(ls *.txt)
+for file in ${GENEPOP_LIST[@]}
+  do
+  #echo ${file}
+  POP=$(echo ${file} | cut -d'.' -f 1)
+  echo ${POP}
+  SPECIES=$(echo ${file} | cut -d'_' -f 2)
+  N_PED=$(sed '/Pop/q' ${file} | head -n -1 | wc -l)
+  N_MAP=$(< ${SPECIES}_perspecies.trimmed_filtered1.ann.${POP}_intergenic.cat.subset_filtered.map wc -l)
+  if [ $N_PED == $N_MAP ]
+    then echo "correct SNP number"
+    else echo "wrong SNP number"
+  fi
+  GENOTYPES=$(sed -n '/Pop/,$p' ${file})
+  echo $POP > ${file/txt/genepop}
+  tail -n +2 ${SPECIES}_perspecies.trimmed_filtered1.ann.${POP}_intergenic.cat.subset_filtered.map | cut -f 1 >> ${file/txt/genepop}
+  echo "$GENOTYPES" >> ${file/txt/genepop}
+  done
+
+```
+
+###Programme execution:
+####In the server:
 ```{bash}
 
 #Preparar archivos y carpetas:
-cd /home/dkleinman/LinkNe/input/
+cd /home/dkleinman/LinkNe/input/5chr_10kSNPs
 
-scp -p /GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input/*.txt ./
-scp -p /GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input/*.genepop ./
-scp -p /GRUPOS/grupolince/lynx_genomes_5x/LinkNe/input/*_chrA1.cat_sorted.* ./
+scp -p /GRUPOS/grupolince/recent_demographic_reconstruction/LinkNe/cat_coordinates/*.txt ./
+scp -p /GRUPOS/grupolince/recent_demographic_reconstruction/LinkNe/cat_coordinates/*.genepop ./
+scp -p /GRUPOS/grupolince/recent_demographic_reconstruction/LinkNe/cat_coordinates/*_intergenic.cat.subset_filtered.* ./
 
 POPS=$(ls c_*.txt | cut -d'.' -f 1)
 for pop in ${POPS[@]}
@@ -1195,55 +1188,38 @@ for pop in ${POPS[@]}
   mv *${pop}* ${pop}
   done
 
-#Lanzar las 4 primeras poblaciones:
-cd /home/dkleinman/LinkNe/input/
-screen -S linkne_chrA1_2k_snps_batch1.log
-script linkne_chrA1_2k_snps_batch1.log
+#Lanzar las 6 primeras poblaciones:
+cd /home/dkleinman/LinkNe/input/5chr_10kSNPs
+screen -S 5chr_10kSNPs_linkne_batch1.log
+script 5chr_10kSNPs_linkne_batch1.log
 
-POPS=$(ls -d c_* | head -n4)
+POPS=$(ls -d c_* | head -n6)
 for pop in ${POPS[@]}
   do
   echo ${pop}
   cd ${pop}
   SPECIES=$(echo ${pop} | cut -d'_' -f 2)
   echo "computing"
-  perl ../LinkNe-master/LinkNe.pl -t -i ${pop}.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.map -o ${pop}.linkne
+  perl /home/dkleinman/LinkNe/LinkNe-master/LinkNe.pl -t -i ${pop}.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic.cat.subset_filtered.map -o ${pop}.linkne
   echo "done"
-  cd /home/dkleinman/LinkNe/input/
+  cd /home/dkleinman/LinkNe/input/5chr_10kSNPs
   done
 
-#Lanzar las 4 siguientes poblaciones:
-cd /home/dkleinman/LinkNe/input/
-screen -S linkne_chrA1_2k_snps_batch2.log
-script linkne_chrA1_2k_snps_batch2.log
+#Lanzar las 7 últimas poblaciones:
+cd /home/dkleinman/LinkNe/input/5chr_10kSNPs
+screen -S 5chr_10kSNPs_linkne_batch2.log
+script 5chr_10kSNPs_linkne_batch2.log
 
-POPS=$(ls -d c_* | tail -n +5 | head -n4)
+POPS=$(ls -d c_* | tail -n7)
 for pop in ${POPS[@]}
   do
   echo ${pop}
   cd ${pop}
   SPECIES=$(echo ${pop} | cut -d'_' -f 2)
   echo "computing"
-  perl ../LinkNe-master/LinkNe.pl -t -i ${pop}.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.map -o ${pop}.linkne
+  perl /home/dkleinman/LinkNe/LinkNe-master/LinkNe.pl -t -i ${pop}.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic.cat.subset_filtered.map -o ${pop}.linkne
   echo "done"
-  cd /home/dkleinman/LinkNe/input/
-  done
-
-#Lanzar las 5 últimas poblaciones:
-cd /home/dkleinman/LinkNe/input/
-screen -S linkne_chrA1_2k_snps_batch3.log
-script linkne_chrA1_2k_snps_batch3.log
-
-POPS=$(ls -d c_* | tail -n 5)
-for pop in ${POPS[@]}
-  do
-  echo ${pop}
-  cd ${pop}
-  SPECIES=$(echo ${pop} | cut -d'_' -f 2)
-  echo "computing"
-  perl ../LinkNe-master/LinkNe.pl -t -i ${pop}.genepop -map ${SPECIES}_perspecies.trimmed_filtered1.ann.${pop}_intergenic_filtered_more_than_2000_SNPS_chrA1.cat_sorted.map -o ${pop}.linkne
-  echo "done"
-  cd /home/dkleinman/LinkNe/input/
+  cd /home/dkleinman/LinkNe/input/5chr_10kSNPs
   done
 
 ```
