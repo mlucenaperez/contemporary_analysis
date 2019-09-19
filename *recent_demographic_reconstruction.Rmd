@@ -723,7 +723,7 @@ for PED_FILE in *.ped
 do
 declare POP=$(echo $PED_FILE | cut -d "." -f 1)
 #declare SAMPLE_SIZE=$(grep $POP sample_size_file.csv | cut -d"," -f 2)
-./SNeP1.1 -ped $PED_FILE -out ./$POP -ld -recrate 1.9e-8  -svedf -samplesize 1 #The sex-averaged recombination rate across the cat genome was 1.9 cM/Mb (see: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4889657/)
+./SNeP1.1 -ped $PED_FILE -out ./$POP -ld -recrate 1.9e-8  -svedf -samplesize 1 -t 2 #The sex-averaged recombination rate across the cat genome was 1.9 cM/Mb (see: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4889657/)
 done
 
 # Otras variantes del script están en mi máquina virtual en UBUNTU.
