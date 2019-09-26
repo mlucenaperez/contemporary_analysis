@@ -40,8 +40,8 @@ all_comparisons_diversity_bootleneck_vs_non_bootleneck <- read.table ("/home/mlu
 #####################
 ### Local ###
 wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/"
-wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/GAM_models/"
-all_comparisons_diversity_bootleneck_vs_non_bootleneck <- read.table (paste0 (wd, "all_comparisons_diversity_bootleneck_vs_non_bootleneck"), row.names = NULL, sep =";", dec=",", header=T, comment.char="", na.strings = c("NA", "na"))
+wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/GAM_models/"
+all_comparisons_diversity_bootleneck_vs_non_bootleneck <- read.table (paste0 (wd, "all_comparisons_diversity_bootleneck_vs_non_bootleneck.txt"), row.names = NULL, sep =";", dec=",", header=T, comment.char="", na.strings = c("NA", "na"))
 ##########################
 ```
 
@@ -61,6 +61,8 @@ max(all_comparisons_diversity_bootleneck_vs_non_bootleneck$watterson_zero.x)
 # 0.02426801
 max(all_comparisons_diversity_bootleneck_vs_non_bootleneck$informative_sites.x)
 # 544166
+max(all_comparisons_diversity_bootleneck_vs_non_bootleneck$rvis_score, na.rm=TRUE)
+# 10.78656
 max(all_comparisons_diversity_bootleneck_vs_non_bootleneck$recombination_rate, na.rm=TRUE)
 # 70.90716
 max(all_comparisons_diversity_bootleneck_vs_non_bootleneck$divergence, na.rm=TRUE)
@@ -69,18 +71,40 @@ max(all_comparisons_diversity_bootleneck_vs_non_bootleneck$GC_content)
 # 0.876033
 
 # Yes! The magnitude is completely different, so it makes sense to scale then to be able to interpret our results; i.e. a change of one unit (whatever a unit is) of this variable, have this effect. 
+
+# Now I will check value distribution of the recombination.
+hist(all_comparisons_diversity_bootleneck_vs_non_bootleneck$recombination_rate)
+
 ```
 
 ## Modif my data to fit the model
 
 ```{r}
+# Como veo hay muy pocos valores por encima de 20, y creo que esto puede estar falseando mis datos, ya que:
+# 1. Afecta al escalado agrupando valores de baja recombinación que realmente deberían de estar separados.
+# 2. Esto puede hacer que los efectos de valores bajos de recombinación queden ocultos.
+# 3. Los hotspot de recombinación NO estan conservados entre especies, y por tanto no tendría sentido mantenerlo.
+
+all_comparisons_diversity_bootleneck_vs_non_bootleneck <- all_comparisons_diversity_bootleneck_vs_non_bootleneck %>% 
+  # Filtramos los recombination hotspot.
+  filter (recombination_rate<10) #%>% 
+  # Nos quedamos sólo con los que tienen ganancia de divesidad
+  #filter (delta_watterson_per_unit_zero<0)
+
+nrow(all_comparisons_diversity_bootleneck_vs_non_bootleneck)
+#893582
+
+# Ahora escalamos las variables respuestas
 all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale <- all_comparisons_diversity_bootleneck_vs_non_bootleneck %>% 
   mutate (watterson_zero.x_scale=scale (watterson_zero.x)) %>% 
   mutate (pairwise_zero.x_scale=scale (pairwise_zero.x)) %>% 
   mutate (informative_sites.x_scale=scale (informative_sites.x)) %>% 
   mutate (recombination_rate_scale=scale (recombination_rate)) %>% 
   mutate (divergence_scale=scale (divergence)) %>% 
-  mutate (GC_content_scale=scale (GC_content))
+  mutate (GC_content_scale=scale (GC_content)) %>% 
+  mutate (rvis_score_scale=scale (rvis_score)) %>% 
+  mutate (delta_watterson_per_unit_zero_scale=scale(delta_watterson_per_unit_zero))
+  
 
 # I also have to remove the order of the random factors I will be using. 
 all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$feature <- factor( all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$feature , ordered = FALSE )
@@ -93,26 +117,29 @@ all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$region <- factor( a
 I will use only CDS to try to explain changes in diversity in this particular category. 
 
 ```{r}
-CDS_c_ll_ki_c_ll_no_dataframe <- all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale %>% 
+CDS_c_lp_sm_c_lp_do_dataframe <- all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale %>% 
   dplyr::filter (feature=="CDS") %>% 
-  dplyr::filter(comparison=="Kirov-Norway") %>% 
-  head (n=10000) %>% 
-  select (delta_watterson_per_unit_zero, 
+  dplyr::filter(comparison=="Andujar-Donana") %>% 
+  select (delta_watterson_per_unit_zero_scale,
+          delta_watterson_per_unit_zero, 
           delta_pairwise_per_unit_zero, 
           informative_sites.x_scale,
           watterson_zero.x_scale, 
           pairwise_zero.x_scale, 
           recombination_rate_scale,
           divergence_scale, 
-          GC_content_scale, 
+          GC_content_scale,  
+          rvis_score_scale,
           region,
           chr)
 
-
 # Name is mod I because each one of the variable could have a different function and smother depending on the random factor  (check paper)
 # Remove cases with no data. 
-CDS_c_ll_ki_c_ll_no_dataframe <- CDS_c_ll_ki_c_ll_no_dataframe[complete.cases(CDS_c_ll_ki_c_ll_no_dataframe), ]
-# n=9505
+CDS_c_lp_sm_c_lp_do_dataframe <- CDS_c_lp_sm_c_lp_do_dataframe[complete.cases(CDS_c_lp_sm_c_lp_do_dataframe), ]
+nrow(CDS_c_lp_sm_c_lp_do_dataframe)
+# n=29950 --> Kirov-Norway
+# n=29950 --> Kirov-Ne_Poland
+
 ```
 
 
@@ -120,12 +147,15 @@ CDS_c_ll_ki_c_ll_no_dataframe <- CDS_c_ll_ki_c_ll_no_dataframe[complete.cases(CD
 
 
 ```{r}
-dataframe=CDS_c_ll_ki_c_ll_no_dataframe
+dataframe=CDS_c_ll_ki_c_ll_no_dataframe 
+dataframe=CDS_c_ll_ki_c_ll_po_dataframe
+dataframe=CDS_c_lp_sm_c_lp_do_dataframe
+
 ```
 
 ### A.1. Model wo random effect variables
 ```{r}
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_watterson_no_re"
+model_name <- "mod_CDS_c_lp_sm_c_lp_do_delta_watterson_no_re"
 model1  <- gam (delta_watterson_per_unit_zero ~
                     # Covariables: las metemos como explicativas #  
                     s(informative_sites.x_scale, bs="tp", k=5) +
@@ -134,7 +164,9 @@ model1  <- gam (delta_watterson_per_unit_zero ~
                     # Variables explicativas # 
                     s(recombination_rate_scale, bs="tp", k=5, m=2)+
                     s(divergence_scale,  bs="tp", k=5)+
-                    s(GC_content_scale,  bs="tp", k=5),
+                    s(GC_content_scale,  bs="tp", k=5)+
+                    s(rvis_score_scale,  bs="tp", k=5)+
+                    ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp"), k=c(5,5)),
                     # Dataframe
                     data=dataframe,  
                     # Method and family
@@ -153,7 +185,7 @@ sink()
 
 # Plot the model
 #https://www.r-bloggers.com/introducing-gratia/
-pdf(paste0(wd_output, model_name, '.pdf'))
+pdf(paste0(wd_output, model_name, '.pdf'), 15, 15)
 gratia::draw(model1)
 dev.off()
 
@@ -162,8 +194,67 @@ pdf(paste0(wd_output, model_name, '_diagnosis.pdf'))
 appraise(model1)
 dev.off()
 
+# Check the names of the variables in the model 
+getAllTerms(model1)
+
+# Dredge keeping initial diversity and informative sites as fixed factors.
+options(na.action = "na.fail") # Require for dredge to run
+rm(model1_dredge)
+model1_dredge <- dredge(model1, beta = F, evaluate = T, rank = AICc, 
+                                            # Fix the weeks and random effects
+                                            # fixed = c("s(Weeks, by = Pop_uo, bs = \"cc\", k = 8, m = 2)",
+                                            fixed = c("s(watterson_zero.x_scale, bs = \"tp\", k = 5)")) 
+options(na.action = "na.omit") # set back to default
+
+model1_dredge
+write.table(model1_dredge, file=paste0(wd_output, model_name, "_dedgre.txt"), sep="\t", dec=",", quote=F, row.names = F)
+save(model1_dredge,file=paste0(wd_output, model_name, "_dedgre.RData"))
 
 rm(model1)
+
+# Corro el mejor modelo
+model_name <- "mod_CDS_c_lp_sm_c_lp_do_delta_watterson_no_re_best_model"
+model2  <- gam (delta_watterson_per_unit_zero ~
+                    # Covariables: las metemos como explicativas #  
+                    #s(informative_sites.x_scale, bs="tp", k=5) +
+                    s(watterson_zero.x_scale,  bs="tp", k=5) +
+                    ti(watterson_zero.x_scale, informative_sites.x_scale, bs=c("tp", "tp"), k=c(5,5))+
+                    # Variables explicativas # 
+                    #s(recombination_rate_scale, bs="tp", k=5, m=2)+
+                    s(divergence_scale,  bs="tp", k=5)+
+                    s(GC_content_scale,  bs="tp", k=5),
+                    #s(rvis_score_scale,  bs="tp", k=5)+
+                    #ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp"), k=c(5,5)),
+                    # Dataframe
+                    data=dataframe,  
+                    # Method and family
+                    method="REML", family="gaussian")
+
+
+# Save the model
+save(model2, 
+     file=paste0(wd_output,model_name))
+#load(paste0(wd_output,model_name), .GlobalEnv)
+
+# Summary
+summary(model2)
+sink(paste0(wd_output,model_name, ".txt"))
+print(summary(model2))
+sink()
+
+# Plot the model
+#https://www.r-bloggers.com/introducing-gratia/
+pdf(paste0(wd_output, model_name, '.pdf'), 15, 15)
+gratia::draw(model2)
+dev.off()
+
+# Sanity checks
+pdf(paste0(wd_output, model_name, '_diagnosis.pdf'))
+appraise(model2)
+dev.off()
+
+rm(model2)
+
 ```
 
 
@@ -183,8 +274,8 @@ model1 <- gam (delta_watterson_per_unit_zero ~
                     # Variables exlicativas # 
                     s(recombination_rate_scale, bs="tp", k=5, m=2)+
                     s(divergence_scale,  bs="tp", k=5)+
-                    s(GC_content_scale,  bs="tp", k=5),
-                    # Dataframe
+                    s(GC_content_scale,  bs="tp", k=5)+
+                    s(rvis_score_scale,  bs="tp", k=5),
                     data=dataframe,  
                     # Method and family
                     method="REML", family="gaussian")
@@ -398,9 +489,110 @@ dev.off()
 
 
 rm(model1)
-````
+```
+
+### A.7. Model I (chr, region, & recomb with rvis score)
+
+```{r}
+
+model_name <- "modI_CDS_c_ll_ki_c_ll_no_watterson_re_region_chr_recomb_by_rvisscore_by_region"
+
+model1 <- gam (delta_watterson_per_unit_zero ~
+                    # Covariables: las metemos como explicativas #  
+                    s(informative_sites.x_scale, bs="tp", k=5) +
+                    s(watterson_zero.x_scale,  bs="tp", k=5) +
+                    ti(watterson_zero.x_scale, informative_sites.x_scale, bs=c("tp", "tp"), k=c(5,5))+
+                    # Variables exlicativas # 
+                    s(recombination_rate_scale, bs="tp", k=5)+
+                    s(rvis_score_scale,  bs="tp", k=5)+
+                    ti(recombination_rate_scale, rvis_score_scale,  bs=c("tp", "tp"), k=c(5,5))+
+                    s(divergence_scale,bs="tp", k=5)+
+                    s(GC_content_scale, bs="tp", k=5)+
+                    s(chr, bs="re", by=region),
+                    # Dataframe
+                    data=dataframe,  
+                    # Method and family
+                    method="REML", family="gaussian")
+
+# Save the model
+save(model1, 
+     file=paste0(wd_output,model_name))
+#load(paste0(wd_output,model_name), .GlobalEnv)
+
+# Summary
+summary(model1)
+sink(paste0(wd_output,model_name, ".txt"))
+print(summary(model1))
+sink()
+
+# Plot the model
+#https://www.r-bloggers.com/introducing-gratia/
+pdf(paste0(wd_output, model_name, '.pdf'), width=15, height=15)
+gratia::draw(model1)
+dev.off()
+
+# Sanity checks
+pdf(paste0(wd_output, model_name, '_diagnosis.pdf'))
+appraise(model1)
+dev.off()
 
 
+rm(model1)
+```
+
+### A.7. Model I (chr, region, & recomb with rvis score)
+
+```{r}
+
+model_name <- "modI_CDS_c_lp_sm_c_lp_do_watterson_re_region_chr_recomb_by_rvisscore_by_region_Telomere"
+
+dataframe1 <- dataframe %>% filter (region=="Interst")
+levels(dataframe$region)
+
+model1 <- gam (delta_watterson_per_unit_zero_scale ~
+                    # Covariables: las metemos como explicativas #  
+                    s(informative_sites.x_scale, bs="tp", k=5) +
+                    s(watterson_zero.x_scale,  bs="tp", k=5) +
+                    ti(watterson_zero.x_scale, informative_sites.x_scale, bs=c("tp", "tp"), k=c(5,5))+
+                    # Variables exlicativas # 
+                    s(recombination_rate_scale, bs="tp", k=5)+
+                    s(rvis_score_scale,  bs="tp", k=5)+
+                    ti(recombination_rate_scale, rvis_score_scale,  bs=c("tp", "tp"), k=c(5,5))+
+                    s(divergence_scale,bs="tp", k=5)+
+                    s(chr, bs="re")+
+                    s(GC_content_scale,bs="tp", k=5),
+
+                    # Dataframe
+                    data=dataframe,  
+                    # Method and family
+                    method="REML", family="gaussian")
+
+# Save the model
+save(model1, 
+     file=paste0(wd_output,model_name))
+#load(paste0(wd_output,model_name), .GlobalEnv)
+
+# Summary
+summary(model1)
+sink(paste0(wd_output,model_name, ".txt"))
+print(summary(model1))
+sink()
+
+# Plot the model
+#https://www.r-bloggers.com/introducing-gratia/
+pdf(paste0(wd_output, model_name, '.pdf'), width=15, height=15)
+gratia::draw(model1)
+dev.off()
+
+# Sanity checks
+pdf(paste0(wd_output, model_name, '_diagnosis.pdf'))
+appraise(model1)
+dev.off()
+
+
+
+rm(model1)
+```
 # ----
 
 # Mas codigo
