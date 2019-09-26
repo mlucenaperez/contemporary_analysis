@@ -68,7 +68,7 @@ stats_df_pop_region_recomb <- read.table(paste(wd_input_stats,"stats_diversity_p
 create_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_POP1, name_POP2){
     POPULATION1=POP1 %>% select(Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1] 
     POPULATION2=POP2 %>% select(Populations) %>% mutate(Populations=as.character(Populations)) %>% .[1,1] 
-  data_diversity_POP1_POP2 <- dplyr::inner_join (POP1, POP2, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id", "recombination_rate", "recomb", "type_chr", "divergence", "informative_sites_substitutions", "substitutions", "GC_content")) %>%  
+  data_diversity_POP1_POP2 <- dplyr::inner_join (POP1, POP2, by = c("scaffold", "start_cero_based", "end", "length", "feature", "strandness", "frame", "id_gene", "id", "region", "chr", "unique_id", "recombination_rate", "recomb", "type_chr", "divergence", "informative_sites_substitutions", "substitutions", "GC_content", "rvis_score")) %>%  
       # Calculo el delta 
     dplyr::mutate (delta_pairwise_per_unit = (pairwise_ave.x -pairwise_ave.y)) %>%
     dplyr::mutate (delta_watterson_per_unit = (watterson_ave.x - watterson_ave.y)) %>% 
