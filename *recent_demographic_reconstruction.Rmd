@@ -1287,7 +1287,7 @@ for pop in ${POPS[@]}
 
 # C) NE-Estimator
 
-Finally to run NE-Estimator I am using the dataset with 100k SNPs developed for SNeP. I converted it to GENEPOP using PGDSpider, and then run it in local selecting comparison only ACROOSS CHROMOSOMES!!!!!
+Finally to run NE-Estimator I am using the dataset with 100k SNPs developed for SNeP. I converted it to GENEPOP using PGDSpider, and then run it in local selecting comparison only ACROSS CHROMOSOMES!!!!!
 
 ```{bash}
 scp -p mlucena@genomics-b.ebd.csic.es://GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_cat_coordinates/*2.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/Ne_estimator/cat_chr_100ksnps 
