@@ -69,9 +69,8 @@ FILTER2=" -minMapQ 30 -minQ 20 -doCounts 1 "
 N_IND=$(echo ${POP: -3} )
 MIN_IND=$(expr $N_IND / 2) 
 N_ALLELES=$(expr $N_IND \* 2)
-SNP_pval_filter=$(echo "1/(2*$N_IND)" | bc -l | awk '{printf "%.10f\n", $0}')
-# SNP_pval = #ind*(2allelos/ind) = x alelos ; 1/x = y  # esto sería un filtro aceptable. En mi caso el dataset más pequeño (h_lypa_all) es de 55 indivíduos (1/(2*55)=9e-3) y el más grande (x_lyxx_all) de 189 (1/(2*189)=2.6e-3)
-
+SNP_PVAL="1e-4"
+# 2019/10/10 --> Acabo de descubrir que tenía una concepción erronea de SNP_pval y lo usaba como si fuese filtro de MAF (i.e. 1/(n_ind*2)). Sin embargo, he comprobado que lo usé bien para PCA y ADMIXTURE del paper de filogeografía. El único PCA que tiene un p-value más bajo es el de 77 individuos (excluye balcanes). Este PCA no se va a reportar en el paper de filogeografía, así que en principio, no pasa nada. 
 
 # Sanity checks:
 
@@ -106,8 +105,7 @@ $FILTER1 $FILTER2 \
 # Only works with the -minInd filter. Change the minimum depth the individuals must have in order to keep the site. Default is 1.
 
 
-# SNP_pval = #ind*(2allelos/ind) = x alelos ; 1/x = y  # esto sería un filtro aceptable. En mi caso el dataset más pequeño (h_lypa_all) es de 77 indivíduos (1/(2*77)=9e-3) y el más grande (x_lyxx_all) de 189 (1/(2*189)=2.6e-3)
-# Para el PCA vamos a usar 1e-3 porque es un filtro suuuper light.
+# 1e-3 porque es un filtro suuuper light, usamos 1e-4.
 
 ### OJO! NO ES TAN SUPER LIGHT!!!
 
