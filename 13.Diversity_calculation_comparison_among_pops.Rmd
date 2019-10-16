@@ -26,7 +26,7 @@ library(mgcv)
 library(MuMIn)
 
 wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
-wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/"
+wd_output <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/comparison_among_pops/"
 wd_input_stats <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/per_pop/"
   
 ```
