@@ -751,7 +751,7 @@ for pop in ${INPUT_VCFS[@]}
 
 # ----
 
-# SNeP
+# A) SNeP
 
 To run SneP I will use the subset with 100000 SNPs.
 Previously I have done a test using 10000 SNPs.
@@ -919,7 +919,7 @@ for (i in 1:length(finsNeAll))
 ```
 
 
-# LinkNe
+# B) LinkNe
 
 Daniel Kleinman y María Lucena. Seguimos las indicaciones de https://github.com/chollenbeck/LinkNe
 
@@ -1294,7 +1294,32 @@ for pop in ${POPS[@]}
 ```
 
 
-# NE-Estimator
+# C) NE-Estimator
+
+Finally to run NE-Estimator I am using the dataset with 100k SNPs developed for SNeP. I converted it to GENEPOP using PGDSpider, and then run it in local selecting comparison only ACROSS CHROMOSOMES!!!!!
+
+```{bash}
+scp -p mlucena@genomics-b.ebd.csic.es://GRUPOS/grupolince/recent_demographic_reconstruction/VCF/VCF_cat_coordinates/*2.vcf /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/Ne_estimator/cat_chr_100ksnps 
+```
+
+Necesito crear un archivo con la información de los cromosomas. Para eso voy a fusionarmi archivo GENEPOP recien generado con los cromosomas que están en el VCF. 
+
+```{bash}
+cd /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/Ne_estimator/cat_chr_100ksnps/
+
+## Ojo! ten cuidadito que solo haya un txt por población o que las poblaciones estén bien definidas haciendo esto. 
+
+POP_LIST=$(ls *.txt | cut -d"." -f1)
+
+for POP in ${POP_LIST[@]}
+do
+echo $POP
+paste <(grep -v "#" /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/Ne_estimator/cat_chr_100ksnps/ll_perspecies.trimmed_filtered1.ann."${POP}"_intergenic.cat.subset2.vcf | cut -f 1)  <(grep "SNP" /Users/marialucenaperez/Owncloud/publico/PhD/Eurasian_lynx_phylogeography/recent_demographic_reconstruction/Ne_estimator/cat_chr_100ksnps/"${POP}".txt ) > "${POP}".chr_info
+done
+```
+
+
+## Old code --> Not used
 
 We did several test but finally we are not using this approach because it lacks power. Anyway the code is here if we decide to use it at any time. 
 
