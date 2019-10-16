@@ -39,7 +39,7 @@ library(gratia) #--> Not available in the server.
 all_comparisons_diversity_bootleneck_vs_non_bootleneck <- read.table ("/home/mlucena/diversity_loss_modeling/all_comparisons_diversity_bootleneck_vs_non_bootleneck.txt", row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="")
 #####################
 ### Local ###
-wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/"
+wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/comparison_among_pops/"
 wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/GAM_models/"
 all_comparisons_diversity_bootleneck_vs_non_bootleneck <- read.table (paste0 (wd, "all_comparisons_diversity_bootleneck_vs_non_bootleneck.txt"), row.names = NULL, sep =";", dec=",", header=T, comment.char="", na.strings = c("NA", "na"))
 ##########################
@@ -139,6 +139,7 @@ CDS_c_lp_sm_c_lp_do_dataframe <- CDS_c_lp_sm_c_lp_do_dataframe[complete.cases(CD
 nrow(CDS_c_lp_sm_c_lp_do_dataframe)
 # n=29950 --> Kirov-Norway
 # n=29950 --> Kirov-Ne_Poland
+# n=20355 --> Anujdar-Doñana
 
 ```
 
@@ -155,18 +156,18 @@ dataframe=CDS_c_lp_sm_c_lp_do_dataframe
 
 ### A.1. Model wo random effect variables
 ```{r}
-model_name <- "mod_CDS_c_lp_sm_c_lp_do_delta_watterson_no_re"
+model_name <- "mod_CDS_c_lp_sm_c_lp_do_delta_watterson_no_re_k10"
 model1  <- gam (delta_watterson_per_unit_zero ~
                     # Covariables: las metemos como explicativas #  
-                    s(informative_sites.x_scale, bs="tp", k=5) +
-                    s(watterson_zero.x_scale,  bs="tp", k=5) +
-                    ti(watterson_zero.x_scale, informative_sites.x_scale, bs=c("tp", "tp"), k=c(5,5))+
+                    s(informative_sites.x_scale, bs="tp", k=10) +
+                    s(watterson_zero.x_scale,  bs="tp", k=10) +
+                    ti(watterson_zero.x_scale, informative_sites.x_scale, bs=c("tp", "tp"), k=c(10,10))+
                     # Variables explicativas # 
-                    s(recombination_rate_scale, bs="tp", k=5, m=2)+
-                    s(divergence_scale,  bs="tp", k=5)+
-                    s(GC_content_scale,  bs="tp", k=5)+
-                    s(rvis_score_scale,  bs="tp", k=5)+
-                    ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp"), k=c(5,5)),
+                    s(recombination_rate_scale, bs="tp", k=10, m=2)+
+                    s(divergence_scale,  bs="tp", k=10)+
+                    s(GC_content_scale,  bs="tp", k=10)+
+                    s(rvis_score_scale,  bs="tp", k=10)+
+                    ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp"), k=c(10,10)),
                     # Dataframe
                     data=dataframe,  
                     # Method and family
@@ -213,6 +214,8 @@ save(model1_dredge,file=paste0(wd_output, model_name, "_dedgre.RData"))
 rm(model1)
 
 # Corro el mejor modelo
+### Tengo que modificarlo para cada caso!!
+
 model_name <- "mod_CDS_c_lp_sm_c_lp_do_delta_watterson_no_re_best_model"
 model2  <- gam (delta_watterson_per_unit_zero ~
                     # Covariables: las metemos como explicativas #  
