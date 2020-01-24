@@ -1284,6 +1284,26 @@ for pop in ${POPS[@]}
 
 ```
 
+###Analyse results:
+####Build summary table:
+```{bash}
+
+cd /home/dkleinman/LinkNe/input/5chr_10kSNPs
+rm linkne_5chr_10kSNPs_summary.txt
+touch linkne_5chr_10kSNPs_summary.txt
+POPS=$(ls -d c_*)
+for pop in ${POPS[@]}
+  do
+  echo ${pop}
+  echo ${pop} >> linkne_5chr_10kSNPs_summary.txt
+  tail -n4 ${pop}/${pop}.linkne | awk -F'\\.|\t' '{printf ("%s\t%s\t%s\n", $5,$7,$9)}' >> linkne_5chr_10kSNPs_summary.txt
+  done
+
+#From outside of the server:
+scp dkleinman@10.50.0.65:/home/dkleinman/LinkNe/input/5chr_10kSNPs/linkne_5chr_10kSNPs_summary.txt /Users/dani/ownCloud/publico/Eurasian\ lynx\ phylogeography/recent_demographic_reconstruction/LinkNe/cat_coordinates/output/5chr_10kSNPs
+
+```
+
 
 # NE-Estimator
 
