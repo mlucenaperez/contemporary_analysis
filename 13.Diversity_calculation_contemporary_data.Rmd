@@ -271,7 +271,6 @@ data_diversity_filtered$pairwise_ave <- as.numeric(data_diversity_filtered$pairw
 data_diversity_filtered$pairwise_sd <- as.numeric(data_diversity_filtered$pairwise_sd)
 data_diversity_filtered$tajimaD <- as.numeric(data_diversity_filtered$tajimaD)
 
-write.table (data_diversity_filtered, paste(wd_out, "global.per.unit.averages.chr.all.regions.filtered.watterson.modif.chrX.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 
 # 5/6/2018
 # Hemos decidido filtrar el 20% de sitios informativos/length.
@@ -345,6 +344,33 @@ write.table (data_diversity_filtered, paste(wd_out, "global.per.unit.averages.ch
 # En su momento:
 # He sacado graficas para tel2m y telomero de 0 a 10m y hemos decidido quedarnos con tel2m.
 
+
+
+```
+## 5. Adding deleteriousness scores
+
+Primero me lo bajo a mi escritorio. Esto lo he cogido del script de Dani (rvis_database) en su repositorio llamado annotation. 
+Esto ya está hecho así que no tengo que hacerlo ahora. 
+```{bash}
+scp -p mlucena@genomics-b.ebd.csic.es://GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/nmVCFs/c_lp_sm_c_lp_do_c_ll_ki_c_ll_no_c_ll_po_nm2nm3_origcov/annotation/rvis/lypa_rvis_database_uniprot_joined.txt /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/rvis 
+```
+
+
+```{r}
+# Load dataframe with rvis scores
+rvis_score_df <- read.table ("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/rvis/lypa_rvis_database_uniprot_joined.txt", header=F, dec=".") %>% dplyr::rename(lynx_gene=V2, rvis_score=V5) %>% dplyr::select (lynx_gene, rvis_score)
+
+# Los header que ha puesto dani en esta tabla son:
+# CCDSr20	%geneCov	RVIS[pop_maf_0.05%(any)]	%RVIS[pop_maf_0.05%(any)]	Edge_case_RVIS[pop_maf_0.05%(any)]	OE-ratio_[ExAC v2]	%OE-ratio_[ExAC v2]	alternative-RVIS[maf_0.0025%]	alternative-%RVIS[maf_0.0025%]
+
+# We have found that some gnes might have more than one values of deleteriousness, we are keeping the highest one. 
+rvis_score_df_filtered <- aggregate(rvis_score~lynx_gene,rvis_score_df,function(x) x[which.max(abs(x))])
+
+data_diversity_filtered_scored <- dplyr::left_join (data_diversity_filtered, rvis_score_df_filtered, by=c("id_gene"="lynx_gene"))
+
+write.table (data_diversity_filtered_scored, paste(wd_out, "global.per.unit.averages.chr.all.regions.filtered.watterson.modif.chrX.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+
+
 # Borro las que no necesito luego
 
 rm (data_diversity_pre_sm)
@@ -363,8 +389,8 @@ rm (c_ll_no_n008)
 rm (c_ll_po_n008)
 rm (c_lp_do_n012)
 rm (c_lp_sm_n019)
-
 ```
+
 
 # -------------------------------------------------
 
@@ -407,6 +433,7 @@ data_diversity_filtered_recomb_cat  <- cbind (data_diversity_filtered, as.data.f
 
 # rm (data_diversity_filtered)
 ```
+
 
 ## 2. Density plot watterson
 Now we are plotting a density plot of the diversity (watterson and pi) of the populations. Those are bimodal. Therefore I will get the lowest value of this density plot in order to stablish a threshold for "no diverse" vs "diverse" units. 
