@@ -998,6 +998,21 @@ stats_df_pop_feature_region <- read.table(paste(wd_output,"stats_diversity_per_p
 stats_df_pop_feature_recomb <- read.table(paste(wd_output,"stats_diversity_per_pop_per_feature_recomb.tsv",sep=""),row.names = NULL, sep =";", dec="," , header=T)
 stats_df_pop_region_recomb <- read.table(paste(wd_output,"stats_diversity_per_pop_per_region_recomb.tsv",sep=""), row.names = NULL, sep =";", dec="," , header=T)
 
+# Sort factors. 
+
+stats_df_pop_feature
+stats_df_pop_feature_chr
+stats_df_pop_feature_region
+stats_df_pop_feature_recomb
+
+
+# tienes q cambiar el nombre de la dataframe cada vez
+
+stats_df_pop_feature$Populations <- factor (stats_df_pop_feature$Populations, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
+
+stats_df_pop_feature$feature <- factor (stats_df_pop_feature$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+
+
 ```
 ## --------
 # A) Empirical data
@@ -1010,6 +1025,13 @@ cols <- c("NE_Poland"=viridis_pal()(5)[3],
           "Norway"=viridis_pal()(5)[2], 
           "Andujar"="#5DC863FF",
           "Donana"="#FDE725FF")
+
+
+cols <- c("NE_Poland"=viridis_pal()(5)[3], 
+          "Kirov"=viridis_pal()(5)[1], 
+          "Norway"=viridis_pal()(5)[2], 
+          "Andujar"="#5DC863FF",
+          "Donana"="#CC6600")
 ```
 ## *Unit size
 ```{r}
@@ -1108,9 +1130,14 @@ cols <- c("NE_Poland"=viridis_pal()(5)[3],
           "Norway"=viridis_pal()(5)[2], 
           "Andujar"="#5DC863FF",
           "Donana"="#FDE725FF")
+
+
+cols <- c("NE_Poland"=viridis_pal()(5)[3], 
+          "Kirov"=viridis_pal()(5)[1], 
+          "Norway"=viridis_pal()(5)[2], 
+          "Andujar"="#5DC863FF",
+          "Donana"="#CC6600")
 ```
-
-
 
 ## *Recombination and diversity
 
@@ -1261,8 +1288,8 @@ ggplot() +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~Species, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  ggsave(paste(wd_output,"feature_categories_vs_watterson_autosomes.pdf",sep=""))
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),  legend.position="top", legend.title = element_blank())
+  ggsave(paste(wd_output,"feature_categories_vs_watterson_autosomes.pdf",sep=""), width = 80, height = 100, units = "mm")
 
 
 ggplot() + 
@@ -1273,9 +1300,9 @@ ggplot() +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~Species, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  ggsave(paste(wd_output,"feature_categories_vs_pairwise_autosomes.pdf",sep=""))
-  
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),  legend.position="top", legend.title = element_blank())
+  ggsave(paste(wd_output,"feature_categories_vs_pairwise_autosomes.pdf",sep=""), width = 80, height = 100, units = "mm")
+
   
 ggplot() + 
   geom_point (data=subset(stats_df_pop_feature %>% filter(type_chr=="chrX"), !is.na(feature)), 
@@ -1285,8 +1312,8 @@ ggplot() +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~Species, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  ggsave(paste(wd_output,"feature_categories_vs_watterson_chrX.pdf",sep=""))
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) + theme(axis.text.x = element_text(angle = 90, hjust = 1),  legend.position="top", legend.title = element_blank())
+  ggsave(paste(wd_output,"feature_categories_vs_watterson_chrX.pdf",sep=""), width = 80, height = 100, units = "mm")
 
 
 ggplot() + 
@@ -1296,9 +1323,10 @@ ggplot() +
                 aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
   facet_wrap(~Species, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  ggsave(paste(wd_output,"feature_categories_vs_pairwise_chrX.pdf",sep=""))
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),  legend.position="top", legend.title = element_blank())
+  ggsave(paste(wd_output,"feature_categories_vs_pairwise_chrX.pdf",sep=""), width = 80, height = 100, units = "mm")
 
 ```
 
@@ -1313,7 +1341,7 @@ ggplot() +
                 aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
-  facet_wrap(region~Populations, ncol=3, scales="free_y") +
+  facet_wrap(region~Species, ncol=2, scales="free_y") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
   ggsave(paste(wd_output,"feature_categories_vs_watterson_per_region.pdf",sep=""))
   
@@ -1325,7 +1353,7 @@ ggplot() +
                 aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
-  facet_wrap(region~Populations, ncol=3, scales="free_y") +
+  facet_wrap(region~Species, ncol=2, scales="free_y") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
   ggsave(paste(wd_output,"feature_categories_vs_pairwise_per_region.pdf",sep=""))
 ```
@@ -1401,8 +1429,8 @@ ggplot() +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~Species, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  ggsave(paste(wd_output,"chr_vs_watterson.pdf",sep=""))
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),  legend.position="top", legend.title = element_blank())
+  ggsave(paste(wd_output,"chr_vs_watterson.pdf",sep=""), width = 80, height = 100, units = "mm")
 
 ggplot() + 
   geom_point (data=subset(stats_df_pop_chr , !is.na(chr)), 
@@ -1412,8 +1440,8 @@ ggplot() +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~Species, ncol=1, scales="free_y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  ggsave(paste(wd_output,"chr_vs_pairwise.pdf",sep=""))
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),  legend.position="top", legend.title = element_blank())
+  ggsave(paste(wd_output,"chr_vs_pairwise.pdf",sep=""), width = 80, height = 100, units = "mm")
   
 ```
 
@@ -1501,6 +1529,14 @@ dev.off()
 # Coincide regulín. 
 ######################## 
 
+
+cols <- c("NE_Poland"=viridis_pal()(5)[3], 
+          "Kirov"=viridis_pal()(5)[1], 
+          "Norway"=viridis_pal()(5)[2], 
+          "Andujar"="#5DC863FF",
+          "Donana"="#CC6600")
+#FDE725FF
+
 my.formula <- y ~ x
 INDEXES=c("mean_watterson_ave", "mean_pairwise_ave") 
 max((stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"))$mean_watterson_ave)
@@ -1508,58 +1544,64 @@ max((stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"))$mean_watterson_ave
 # Diversidad vs tamaño
 for (INDEX in INDEXES)
   {
-ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("SizeMb_v8", INDEX, fill="Populations" , colour="Populations")) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  facet_wrap(pop~.) +
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
+ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("SizeMb_v8", INDEX)) +
+  geom_point(aes(fill=Populations , colour=Populations)) +
+  geom_smooth(method = "lm", aes(fill=Populations , colour=Populations)) +
+  facet_wrap(~pop) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
   stat_poly_eq(formula = my.formula,coef.digits=2 ,
                 aes(label = paste(..eq.label..)), 
                 parse = TRUE,label.y = 0) +  
   stat_poly_eq(formula = my.formula, 
                 aes(label = paste(..rr.label..)), 
-                parse = TRUE,label.y = 0.00003) +
+                parse = TRUE, label.y = 0.1) +
+  theme(legend.position = c(1, 0),
+       legend.justification = c(1, 0))
 #theme selection for background and lines
-  ggsave(paste(wd_output, "cat_size_vs_",INDEX,".pdf", sep=""))
+  ggsave(paste(wd_output, "cat_size_vs_",INDEX,".pdf", sep=""), width = 180, height = 180, units = "mm")
 }
     
 # Diversidad vs gene content
 
 for (INDEX in INDEXES)
   {
-ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("percentage_genes", INDEX, fill="Populations" , colour="Populations")) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
+ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("percentage_genes", INDEX)) +
+  geom_point(aes(fill=Populations , colour=Populations)) +
+  geom_smooth(method = "lm",aes(fill=Populations , colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
   facet_wrap(pop~.) +
   stat_poly_eq(formula = my.formula,coef.digits=2 ,
                 aes(label = paste(..eq.label..)), 
                 parse = TRUE,label.y = 0) +  
   stat_poly_eq(formula = my.formula, 
                 aes(label = paste(..rr.label..)), 
-                parse = TRUE,label.y = 0.00003) +
+                parse = TRUE,label.y = 0.1) +
+  theme(legend.position = c(1, 0),
+        legend.justification = c(1, 0))
 #theme selection for background and lines
-  ggsave(paste(wd_output, "cat_gene-content_vs_",INDEX,".pdf", sep=""))
+  ggsave(paste(wd_output, "cat_gene-content_vs_",INDEX,".pdf", sep=""), width = 180, height = 180, units = "mm")
 }
     
 # Diversidad vs chr recombination
 for (INDEX in INDEXES)
   {
-ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("cM.Mb", INDEX, fill="Populations" , colour="Populations")) +
-  geom_point() +
-  geom_smooth(method = "lm") +
+ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("cM.Mb", INDEX)) +
+  geom_point(aes(fill=Populations , colour=Populations)) +
+  geom_smooth(method = "lm", aes(fill=Populations , colour=Populations)) +
   facet_wrap(pop~.) +
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
   stat_poly_eq(formula = my.formula,coef.digits=2 ,
                 aes(label = paste(..eq.label..)), 
                 parse = TRUE,label.y = 0) +  
   stat_poly_eq(formula = my.formula, 
                 aes(label = paste(..rr.label..)), 
-                parse = TRUE,label.y = 0.00003) +
-  ggsave(paste(wd_output, "cat_chr-recomb_vs_",INDEX,".pdf", sep=""))
+                parse = TRUE,label.y = 0.1) +
+      theme(legend.position = c(1, 0),
+        legend.justification = c(1, 0))
+  ggsave(paste(wd_output, "cat_chr-recomb_vs_",INDEX,".pdf", sep=""), width = 180, height = 180, units = "mm")
 
 }
 
@@ -1567,19 +1609,21 @@ ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("cM.
 
 for (INDEX in INDEXES)
   {
-ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("GC_content", INDEX, fill="Populations" , colour="Populations")) +
-  geom_point() +
-  geom_smooth(method = "lm") +
+ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("GC_content", INDEX)) +
+  geom_point(aes(fill=Populations , colour=Populations)) +
+  geom_smooth(method = "lm", aes(fill=Populations , colour=Populations)) +
   facet_wrap(pop~.) +
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
   stat_poly_eq(formula = my.formula,coef.digits=2 ,
                 aes(label = paste(..eq.label..)), 
                 parse = TRUE,label.y = 0) +  
   stat_poly_eq(formula = my.formula, 
                 aes(label = paste(..rr.label..)), 
-                parse = TRUE,label.y = 0.00003) +
-  ggsave(paste(wd_output, "cat_GC_content_vs_",INDEX,".pdf", sep=""))
+                parse = TRUE,label.y = 0.1) +
+  theme(legend.position = c(1, 0),
+  legend.justification = c(1, 0))
+  ggsave(paste(wd_output, "cat_GC_content_vs_",INDEX,".pdf", sep=""), width = 180, height = 180, units = "mm")
 
 }
 
@@ -1587,20 +1631,20 @@ ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("GC_
 
 for (INDEX in INDEXES)
   {
-ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("mean_divergence", INDEX, fill="Populations" , colour="Populations")) +
-  geom_point() +
-  geom_smooth(method = "lm") +
+ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("mean_divergence", INDEX)) +
+  geom_point(aes(fill=Populations , colour=Populations)) +
+  geom_smooth(method = "lm", aes(fill=Populations , colour=Populations)) +
   facet_wrap(pop~.) +
-  scale_color_viridis(discrete=TRUE) +
-  scale_fill_viridis(discrete=TRUE) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
   theme(axis.text.x = element_text(angle = 90))+
   stat_poly_eq(formula = my.formula,coef.digits=2 ,
                 aes(label = paste(..eq.label..)), 
                 parse = TRUE,label.y = 0) +  
   stat_poly_eq(formula = my.formula, 
                 aes(label = paste(..rr.label..)), 
-                parse = TRUE,label.y = 0.00003) +
-  ggsave(paste(wd_output, "divergence_vs_",INDEX,".pdf", sep=""))
+                parse = TRUE,label.y = 0.1) +
+  ggsave(paste(wd_output, "divergence_vs_",INDEX,".pdf", sep=""), width = 180, height = 180, units = "mm")
 }
 
 ```
