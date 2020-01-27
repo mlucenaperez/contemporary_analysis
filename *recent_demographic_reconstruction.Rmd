@@ -863,7 +863,7 @@ Ne_reconstruction <- rbindlist( list_Ne, idcol = "pop1" ) %>%
                           ifelse (pop == "c_ll_ya", "Yakutia",
                           ifelse (pop == "c_lp_sm", "Sierra Morena",
                           ifelse (pop == "c_lp_do", "Doñana", NA))))))))))))))))) %>% 
-  mutate(YBP=GenAgo*5) %>% filter (pop!=  "c_lp_do" & pop!="c_lp_sm")
+  mutate(YBP=GenAgo*5) #%>% filter (pop!=  "c_lp_do" & pop!="c_lp_sm")
 
 
 cols <- c("NE-Poland"=viridis_pal()(5)[3], 
@@ -880,16 +880,18 @@ cols <- c("NE-Poland"=viridis_pal()(5)[3],
           "Sierra Morena"="grey")
 
 
- ggplot (Ne_reconstruction, aes(YBP, Ne, fill=Populations, colour=Populations)) +
+ ggplot (Ne_reconstruction %>% filter (pop=="c_ll_ki" | pop=="c_ll_no" | pop=="c_ll_po" | pop=="c_lp_sm" | pop=="c_lp_do"), aes(YBP, Ne, fill=Populations, colour=Populations)) +
     geom_point(alpha=0.1) +
     geom_smooth(se = F) + 
     theme_classic() +
     scale_colour_manual(values = cols)+
     scale_fill_manual(values = cols) +
-   ggsave(paste(wd,"all_pop_chr.pdf", sep=""), device = "pdf")
+     scale_x_reverse()
+
+   ggsave(paste(wd,"all_pop_chr_chapter2.pdf", sep=""), device = "pdf")
 
 
-  ggplot (Ne_reconstruction, aes(YBP, Ne, fill=Populations, colour=Populations)) +
+  ggplot (Ne_reconstruction %>% filter (pop=="c_ll_ki" | pop=="c_ll_no" | pop=="c_ll_po" | pop=="c_lp_sm" | pop=="c_lp_do"), aes(YBP, Ne, fill=Populations, colour=Populations)) +
     geom_point(alpha=0.5) +
     geom_smooth(se = F) + 
     theme_classic() +
@@ -899,8 +901,9 @@ cols <- c("NE-Poland"=viridis_pal()(5)[3],
    breaks = scales::trans_breaks("log10", function(x) 10^x),
    labels = scales::trans_format("log10", scales::math_format(10^.x))) +
     annotation_logticks()+
-    theme(legend.position = "none")
-   ggsave(paste(wd,"all_pop_chr2.pdf", sep=""), device = "pdf")
+    #theme(legend.position = "none") +
+    scale_x_reverse()
+   ggsave(paste(wd,"all_pop_chr2_chapter2_pops.pdf", sep=""), device = "pdf")
 
 
 for (i in 1:length(finsNeAll))
