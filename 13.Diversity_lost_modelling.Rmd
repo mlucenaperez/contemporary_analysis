@@ -130,6 +130,8 @@ CDS_c_ll_ki_c_ll_no_dataframe <- all_comparisons_diversity_bootleneck_vs_non_boo
   dplyr::filter (chr!="chrX") %>% 
   dplyr::filter (comparison=="Kirov-Norway") %>% 
   select (comparison,
+          scaffold,
+          start_cero_based,
           delta_watterson_per_unit_zero_scale,
           delta_watterson_per_unit_zero, 
           #delta_pairwise_per_unit_zero,
@@ -161,13 +163,22 @@ nrow(CDS_c_ll_ki_c_ll_no_dataframe)
 # n=29950 --> Kirov-Ne_Poland
 # n=28941 --> Andujar-Doñana
 
+## Submuestreo de las celdas con 0
 
-dataframe=CDS_c_ll_ki_c_ll_no_dataframe
+CDS_c_ll_ki_c_ll_no_dataframe_only0 <- filter(CDS_c_ll_ki_c_ll_no_dataframe, delta_watterson_per_unit_zero==0) %>% sample_n(., 500, replace=F)
 
-CDS_c_ll_ki_c_ll_no_dataframe1 <- CDS_c_ll_ki_c_ll_no_dataframe%>% filter(delta_watterson_per_unit_zero!=0) 
+
+CDS_c_ll_ki_c_ll_no_dataframe_no0 <- filter(CDS_c_ll_ki_c_ll_no_dataframe, delta_watterson_per_unit_zero!=0)
+
+CDS_c_ll_ki_c_ll_no_dataframe2 <- rbind(CDS_c_ll_ki_c_ll_no_dataframe_only0, CDS_c_ll_ki_c_ll_no_dataframe_no0)
+
+dataframe=CDS_c_ll_ki_c_ll_no_dataframe2
+ 
 
 hist(CDS_c_ll_ki_c_ll_no_dataframe$delta_watterson_per_unit_zero)
 hist(CDS_c_ll_ki_c_ll_no_dataframe1$delta_watterson_per_unit_zero)
+hist(CDS_c_ll_ki_c_ll_no_dataframe2$delta_watterson_per_unit_zero)
+
 ```
 
 ### Andujar-Doñana
@@ -446,17 +457,25 @@ model_name <- "mod_CDS_c_lp_sm_c_lp_do_delta_watterson_watterson_zero_informativ
 
 model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_watterson_watterson_zero_informative_sites_recombination_rvis_GC_divergence_interaction_rvis_recomb_k10_offset_informative_sites"
 
+model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_watterson_watterson_zero_informative_sites_recombination_rvis_GC_divergence_interaction_rvis_recomb_k10_offset_informative_sites_zero_truncated"
+
+model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_watterson_watterson_zero_informative_sites_recombination_rvis_GC_divergence_offset_informative_sites_zero_truncated"
+
+model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_watterson_watterson_zero_informative_sites_recombination_rvis_GC_divergence_offset_informative_sites_zero_based_scaffold_start_cero_based"
+
 model2  <- gam (delta_watterson_per_unit_zero ~
  # Covariables: las metemos como explicativas #  
                     #s(informative_sites.x_scale, bs="tp", k=10) +
-                    s(watterson_zero.x_scale,  bs="tp", k=10) +
+                    s(watterson_zero.x_scale, bs="tp", k=10) +
                     # Variables explicativas # 
-                    s(recombination_rate_scale, bs="tp", k=10, m=2)+
-                    s(divergence_scale,  bs="tp", k=10)+
-                    s(GC_content_scale,  bs="tp", k=10)+
-                    s(rvis_score_scale,  bs="tp", k=10)+
-                    ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp"), k=c(10,10)),
-                    offset = informative_sites.x_scale,                    
+                    s(recombination_rate_scale, bs="tp",  k=10)+
+                    s(divergence_scale, bs="tp", k=10)+
+                    s(GC_content_scale, bs="tp", k=10)+
+                    s(rvis_score_scale, bs="tp", k=10)+
+                    s(start_cero_based, by=scaffold, k=5, bs="tp", m=2)+
+                    s(scaffold, bs="re", k=6),
+                    #ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp"), k=c(10,10)),
+                    offset = informative_sites.x_scale,             
                     # Dataframe
                    data=dataframe,  
                     # Method and family
