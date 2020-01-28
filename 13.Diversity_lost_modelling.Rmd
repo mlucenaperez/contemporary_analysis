@@ -37,6 +37,7 @@ library (Hmisc)
 ########################
 ### Server ###
 # all_comparisons_diversity_bootleneck_vs_non_bootleneck <- read.table ("/home/mlucena/diversity_loss_modeling/all_comparisons_diversity_bootleneck_vs_non_bootleneck", row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="")
+# wd_output <- ""
 #####################
 ### Local ###
 wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/comparison_among_pops/"
@@ -116,6 +117,7 @@ all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale <- all_comparisons_
 all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$feature <- factor( all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$feature , ordered = FALSE )
 all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$chr <- factor( all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$chr , ordered = FALSE )
 all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$region <- factor( all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$region , ordered = FALSE )
+all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$scaffold <- as.factor(all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale$scaffold)
 
 ```
 
@@ -424,7 +426,10 @@ model1  <- gam (delta_watterson_per_unit_zero ~
 save(model1, 
      file=paste0(wd_output,model_name))
 #load(paste0(wd_output,model_name), .GlobalEnv)
+# SERVER
+#save(model1, file=paste0(model_name))
 
+wd_output<- ""
 # Summary
 summary(model1)
 sink(paste0(wd_output,model_name, ".txt"))
@@ -472,8 +477,9 @@ model2  <- gam (delta_watterson_per_unit_zero ~
                     s(divergence_scale, bs="tp", k=10)+
                     s(GC_content_scale, bs="tp", k=10)+
                     s(rvis_score_scale, bs="tp", k=10)+
-                    s(start_cero_based, by=scaffold, k=5, bs="tp", m=2)+
-                    s(scaffold, bs="re", k=6),
+                    s(start_cero_based, by=scaffold)+
+                    scaffold, 
+   
                     #ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp"), k=c(10,10)),
                     offset = informative_sites.x_scale,             
                     # Dataframe
@@ -481,7 +487,7 @@ model2  <- gam (delta_watterson_per_unit_zero ~
                     # Method and family
                     method="REML", family="gaussian")
 
-gam.check(model2)
+#gam.check(model2)
 # Save the model
 save(model2, 
      file=paste0(wd_output,model_name))
