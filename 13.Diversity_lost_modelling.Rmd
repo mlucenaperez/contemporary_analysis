@@ -25,9 +25,9 @@ library(plyr)
 library(dplyr)
 library(data.table)
 library(mgcv)
-library(MuMIn) #--> Not available in the server. 
-library(mgcViz) #--> Not available in the server. 
-library(gratia) #--> Not available in the server. 
+library(MuMIn) 
+library(mgcViz) #--> Need X11
+library(gratia) 
 library (Hmisc)
 ```
 
@@ -36,7 +36,7 @@ library (Hmisc)
 ```{r}
 ########################
 ### Server ###
-# all_comparisons_diversity_bootleneck_vs_non_bootleneck <- read.table ("/home/mlucena/diversity_loss_modeling/all_comparisons_diversity_bootleneck_vs_non_bootleneck.txt", row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="")
+# all_comparisons_diversity_bootleneck_vs_non_bootleneck <- read.table ("/home/mlucena/diversity_loss_modeling/all_comparisons_diversity_bootleneck_vs_non_bootleneck", row.names = NULL, sep =";", dec=",", header=T, stringsAsFactors = F, comment.char="")
 #####################
 ### Local ###
 wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/comparison_among_pops/"
