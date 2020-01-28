@@ -964,14 +964,26 @@ Como no queremos pasar por ahí ni guardar tanto, vamos a intentar usar awk dire
 screen -S chromosome_annotation
 
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
-echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch\tchr" > header.chr.annotation
+echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch\tchr\tcat_position_start\tcat_position_end" > header.chr.annotation
 
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
 for FILE in *.per.unit.averages.tsv
 do
 echo $FILE
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
-intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$FILE) -b /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed | awk -v OFS='\t' '{split ($23, a, ":"); split(a[3],b, "-"); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,a[2],b[1],b[2] }' | bedtools groupby -i - -g 1-20 -c 21,22 -o min,max | cat header.chr.annotation - > ${FILE/.per.unit.averages.tsv/.per.unit.averages.chr.tsv}
+intersectBed -sorted -wo -a <(tail -n +2 /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/$FILE) -b /GRUPOS/grupolince/copia_fabascal/MAPPINGS/lynx2cat_wTiger.sorted.bed | awk -v OFS='\t' '{split ($23, a, ":"); split(a[3],b, "-"); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,a[2],b[1],b[2] }' > intermediate
+
+mv intermediate intermediate_folder
+cd intermediate_folder
+awk '{print>$1}' intermediate 
+
+for SCAFFOLD_FILE in lp23* 
+do
+echo $SCAFFOLD_FILE
+bedtools groupby -i - -g 1-20 -c 21,22 -o min,max >> intermediate2
+done
+cat ../header.chr.annotation intermediate2 > ../${FILE/.per.unit.averages.tsv/.per.unit.averages.chr.tsv}
+#rm intermediate_folder/*
 done
 
 ```
