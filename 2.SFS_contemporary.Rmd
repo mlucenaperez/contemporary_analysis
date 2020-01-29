@@ -966,7 +966,7 @@ screen -S chromosome_annotation
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
 echo -e "scaffold\tstart_cero_based\tend\tlength\tNAs\tinformative_sites\tfeature\tstrandness\tframe\tid_gene\tid\twatterson_ave\twatterson_sd\tpairwise_ave\tpairwise_sd\ttajimaD\tpop\tspecie\tepoch\tchr\tcat_position_start\tcat_position_end" > header.chr.annotation
 
-cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_per_unit/interesting_folder/
 for FILE in *.per.unit.averages.tsv
 do
 echo $FILE
@@ -980,7 +980,7 @@ awk '{print>$1}' intermediate
 for SCAFFOLD_FILE in lp23* 
 do
 echo $SCAFFOLD_FILE
-bedtools groupby -i - -g 1-20 -c 21,22 -o min,max >> intermediate2
+bedtools groupby -i $SCAFFOLD_FILE -g 1-19 -c 20,21,22 -o distinct,min,max >> intermediate2
 done
 cat ../header.chr.annotation intermediate2 > ../${FILE/.per.unit.averages.tsv/.per.unit.averages.chr.tsv}
 #rm intermediate_folder/*
