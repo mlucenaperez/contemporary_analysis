@@ -1024,49 +1024,21 @@ grep "," c_ll_po_n008.per.unit.averages.chr.tsv  | awk -v OFS='\t' '{print $1,$2
 grep "," c_lp_sm_n019.per.unit.averages.chr.tsv  | awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_sm
 grep "," c_lp_do_n012.per.unit.averages.chr.tsv  | awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_do
 
+#  wc -l list*
+#  1479 list_of_repeated_features_do
+#  1484 list_of_repeated_features_ki
+#  1488 list_of_repeated_features_no
+#  1488 list_of_repeated_features_po
+#  1481 list_of_repeated_features_sm
 
-## HASTA AQUI 
 cat list_of_repeated_features* | sort -k5,5 | uniq > list_of_repeated_features_all_pops
 
+#  wc -l  list_of_repeated_features_all_pops
+#  1490 list_of_repeated_features_all_pops
 
 awk -v OFS='\t' '{print $2"_"$3"_"$4"_"$5"_"$6}' list_of_repeated_features_all_pops > list_of_repeated_features_all_pops_merged
 
-wc -l *per.unit.averages.chr.tsv 
-#   431096 c_ll_ki_n008.per.unit.averages.chr.tsv
-#   431034 c_ll_ki_n013.per.unit.averages.chr.tsv
-#   431217 c_ll_no_n008.per.unit.averages.chr.tsv
-#   430907 c_ll_po_n008.per.unit.averages.chr.tsv
-#   430255 c_lp_do_n012.per.unit.averages.chr.tsv
-#   430829 c_lp_sm_n012.per.unit.averages.chr.tsv
-#   430853 c_lp_sm_n019.per.unit.averages.chr.tsv
-
-awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$7"_"$11, $0}' c_lp_sm_n019.per.unit.averages.chr.tsv | grep -f list_of_repeated_features_all_pops_merged - | awk '{print $1}' | sort | uniq -c | sort | sed -e 's/^[ \t]*//' | awk '{print $1"_"$2}' > lista_de_unidades_repetidas_que_encuentra
-
-head lista_de_unidades_repetidas_que_encuentra
-
-wc -l lista_de_unidades_repetidas_que_encuentra
-1478 lista_de_unidades_repetidas_que_encuentra
-
-awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$4"_"$5"_"$6}' list_of_repeated_features_sm > lista_de_unidades_repetidas_que_hay
-
-head lista_de_unidades_repetidas_que_hay
-
- wc -l lista_de_unidades_repetidas_que_hay
-1478 lista_de_unidades_repetidas_que_hay
-
-grep -f -v lista_de_unidades_repetidas_que_encuentra lista_de_unidades_repetidas_que_hay
-# Nada! genial!
-
-awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$7"_"$11, $0}' c_lp_sm_n019.per.unit.averages.chr.tsv | 
-grep -f list_of_repeated_features_all_pops_merged - | wc -l 
-# 3102
-
-awk '{sum+=$1}END{print sum}' list_of_repeated_features_sm
-# 3102
-# Perfecto!
-
 ```
-
 
 
 ###### Sanity checks (old)
