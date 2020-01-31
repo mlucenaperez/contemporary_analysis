@@ -988,9 +988,90 @@ done
 
 ```
 
-
 ##### Sanity checks
 
+Las unidades que están anotadas a más de una cromosoma, aparecen separadas por coma.
+Así que lo que voy a hacer es buscar esas lineas y ver si coinciden con la que salían anotadas dobles anteriormente.
+
+
+Una vez tenga las unidades tengo que filtrarlas en todos los archivos para que se pueda hacer un full join. 
+Lista antigua:
+
+cat list_of_repeated_features* | sort -k5,5 | uniq | wc -l  
+1490
+wc -l list_of_repeated_features_ki 
+1484 list_of_repeated_features_ki
+wc -l list_of_repeated_features_sm
+1481 list_of_repeated_features_sm
+wc -l list_of_repeated_features_do
+1479 list_of_repeated_features_do
+wc -l list_of_repeated_features_po
+1488 list_of_repeated_features_po
+wc -l list_of_repeated_features_no
+1488 list_of_repeated_features_no
+
+```{bash}
+wc -l c_ll_ki_n013.per.unit.averages.chr.tsv
+# 429404 c_ll_ki_n013.per.unit.averages.chr.tsv
+grep "," c_ll_ki_n013.per.unit.averages.chr.tsv | wc -l # --> Unidades asignadas a mas de un chr. 
+# 1484
+
+# Hago la lista de unidades en más de un chr (se hace de un modo ligeramente distinto a como se hacía antes)
+grep "," c_ll_ki_n013.per.unit.averages.chr.tsv  | awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_ki
+grep "," c_ll_no_n008.per.unit.averages.chr.tsv  | awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_no
+grep "," c_ll_po_n008.per.unit.averages.chr.tsv  | awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_po
+grep "," c_lp_sm_n019.per.unit.averages.chr.tsv  | awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_sm
+grep "," c_lp_do_n012.per.unit.averages.chr.tsv  | awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' | sort | sed -e 's/^[ \t]*//' > list_of_repeated_features_do
+
+
+## HASTA AQUI 
+cat list_of_repeated_features* | sort -k5,5 | uniq > list_of_repeated_features_all_pops
+
+
+awk -v OFS='\t' '{print $2"_"$3"_"$4"_"$5"_"$6}' list_of_repeated_features_all_pops > list_of_repeated_features_all_pops_merged
+
+wc -l *per.unit.averages.chr.tsv 
+#   431096 c_ll_ki_n008.per.unit.averages.chr.tsv
+#   431034 c_ll_ki_n013.per.unit.averages.chr.tsv
+#   431217 c_ll_no_n008.per.unit.averages.chr.tsv
+#   430907 c_ll_po_n008.per.unit.averages.chr.tsv
+#   430255 c_lp_do_n012.per.unit.averages.chr.tsv
+#   430829 c_lp_sm_n012.per.unit.averages.chr.tsv
+#   430853 c_lp_sm_n019.per.unit.averages.chr.tsv
+
+awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$7"_"$11, $0}' c_lp_sm_n019.per.unit.averages.chr.tsv | grep -f list_of_repeated_features_all_pops_merged - | awk '{print $1}' | sort | uniq -c | sort | sed -e 's/^[ \t]*//' | awk '{print $1"_"$2}' > lista_de_unidades_repetidas_que_encuentra
+
+head lista_de_unidades_repetidas_que_encuentra
+
+wc -l lista_de_unidades_repetidas_que_encuentra
+1478 lista_de_unidades_repetidas_que_encuentra
+
+awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$4"_"$5"_"$6}' list_of_repeated_features_sm > lista_de_unidades_repetidas_que_hay
+
+head lista_de_unidades_repetidas_que_hay
+
+ wc -l lista_de_unidades_repetidas_que_hay
+1478 lista_de_unidades_repetidas_que_hay
+
+grep -f -v lista_de_unidades_repetidas_que_encuentra lista_de_unidades_repetidas_que_hay
+# Nada! genial!
+
+awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$7"_"$11, $0}' c_lp_sm_n019.per.unit.averages.chr.tsv | 
+grep -f list_of_repeated_features_all_pops_merged - | wc -l 
+# 3102
+
+awk '{sum+=$1}END{print sum}' list_of_repeated_features_sm
+# 3102
+# Perfecto!
+
+```
+
+
+
+###### Sanity checks (old)
+
+DESDE AQUI hasta cuando ponga --> FIN <-- solo lo corria cuando la anotación de chromosomas era distinta. 
+Ahora con la nueva notación el sanity check es mas facil, y ya está hecho antes, y se podría pasar al siguiente paso directamente. 
 ```{bash}
 
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
