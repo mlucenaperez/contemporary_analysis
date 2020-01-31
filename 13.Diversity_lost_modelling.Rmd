@@ -139,6 +139,7 @@ CDS_c_ll_ki_c_ll_no_dataframe <- all_comparisons_diversity_bootleneck_vs_non_boo
           #delta_pairwise_per_unit_zero,
           informative_sites.x_scale,
           watterson_zero.x_scale, 
+          watterson_zero.y, 
           #pairwise_zero.x_scale, 
           recombination_rate_scale,
           divergence_scale, 
@@ -147,6 +148,7 @@ CDS_c_ll_ki_c_ll_no_dataframe <- all_comparisons_diversity_bootleneck_vs_non_boo
           region,
           chr, 
           informative_sites.x,
+          informative_sites.y,
           watterson_zero.x, 
           pairwise_zero.x,
           recombination_rate,
@@ -176,6 +178,16 @@ CDS_c_ll_ki_c_ll_no_dataframe2 <- rbind(CDS_c_ll_ki_c_ll_no_dataframe_only0, CDS
 
 dataframe=CDS_c_ll_ki_c_ll_no_dataframe2
  
+
+
+test <- CDS_c_ll_ki_c_ll_no_dataframe2 %>% 
+  mutate (k.x=watterson_zero.x*informative_sites.x) %>% 
+  mutate (k.y=watterson_zero.y*informative_sites.y) %>% 
+  select (k.x, watterson_zero.x, informative_sites.x, k.y, watterson_zero.y, informative_sites.y)
+
+hist(test$k.x)
+hist(test$k.y)
+
 
 hist(CDS_c_ll_ki_c_ll_no_dataframe$delta_watterson_per_unit_zero)
 hist(CDS_c_ll_ki_c_ll_no_dataframe1$delta_watterson_per_unit_zero)
@@ -470,26 +482,25 @@ model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_watterson_watterson_zero_informativ
 
 model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_watterson_watterson_zero_informative_sites_recombination_rvis_GC_divergence_offset_informative_sites_zero_truncated_chr_size"
 
+model_name <- "mod_CDS_c_ll_ki_c_ll_no_watterson_Bpop_watterson_zero_informative_sites_recombination_rvis_GC_divergence_offset_log_informative_sites_not_scaled_zero_truncated"
 
-# Cargo la tabla con la información de gato.
-cat_chr_info <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/cat_chr_gene_content_recombination_all_information.txt", header=T, na.strings = c("NA", "na"), dec=",")
-
-dataframe_chr_size <- dataframe %>% dplyr::full_join(., cat_chr_info, by="chr") 
+model_name <- "mod_CDS_c_ll_ki_c_ll_no_watterson_Bpop_watterson_zero_k5"
 
   
-model2  <- gam (delta_watterson_per_unit_zero ~
+model2  <- gam (watterson_zero.y ~
  # Covariables: las metemos como explicativas #  
                     #s(informative_sites.x_scale, bs="tp", k=10) +
-                    s(watterson_zero.x_scale, SizeMb_v8) +
+                    s(watterson_zero.x, k=5), #+
                     # Variables explicativas # 
-                    s(recombination_rate_scale, SizeMb_v8)+
-                    s(divergence_scale, SizeMb_v8)+
-                    s(GC_content_scale, SizeMb_v8)+
-                    s(rvis_score_scale, SizeMb_v8),
+                    # s(recombination_rate_scale)+
+                    # s(divergence_scale)+
+                    # s(GC_content_scale)+
+                    # s(informative_sites.x_scale)+
+                    # s(rvis_score_scale),
                     #ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp"), k=c(10,10)),
-                    offset = informative_sites.x_scale,             
+                    # offset = (log(informative_sites.x)),             
                     # Dataframe
-                   data=dataframe_chr_size,  
+                   data=dataframe,  
                     # Method and family
                     method="REML", family="gaussian")
 
