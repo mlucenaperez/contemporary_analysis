@@ -121,7 +121,8 @@ data_diversity <- read.table(paste(wd_out, "global.per.unit.averages.chr.all.reg
   #dplyr::rename(id_gene = new_id) %>% 
   # Creo un identificador único para luego poder filtrar por este cuando tenga que sacar los comunes a todas las poblaciones. 
   dplyr::mutate (., chr = ifelse (chr.x == chr.y, as.character(chr.x), "PROBLEMA")) %>% 
-  dplyr::select (-c(chr.x, chr.y)) %>% 
+  dplyr::mutate (., cat_position_start = ifelse (cat_position_start.x ==cat_position_start.y, as.numeric (cat_position_start.x), "PROBLEMA")) %>%   dplyr::mutate (., cat_position_end = ifelse (cat_position_end.x ==cat_position_end.y, as.numeric (cat_position_end.x), "PROBLEMA")) %>% 
+  dplyr::select (-c(chr.x, chr.y, cat_position_start.x, cat_position_start.y, cat_position_end.x, cat_position_end.y)) %>% 
   mutate (., unique_id = paste (id,feature, sep="_")) %>% 
   #Haciendo este mutate lo que hago es modificar el valor de watterson para tener en ucenta el tamaño poblacional verdadero de la población (chr) cuando consideramos la diferencia entre machos y hembras. En el xls modif_a_watterson_chrX viene explicado. 
   mutate (., watterson_modif = ifelse (chr=="chrX" & pop == "c_ll_ki_n013", watterson_ave * 1.09, 
@@ -133,7 +134,7 @@ data_diversity <- read.table(paste(wd_out, "global.per.unit.averages.chr.all.reg
   dplyr::rename(watterson_ave = watterson_modif) %>% 
   dplyr::rowwise() %>%
  # los promotores de los lncRNA siguen llamandose igual, y ojo que están sacados de la notación de los propios lncrNA pero sin tener en cuenta los distintos transcritos.
-  dplyr::mutate(new_id = ifelse ( feature=="lncRNA" | feature =="intron_lncRNA",substr(as.character(id_gene), start = 1, stop = 13),as.character(id_gene))) %>% 
+  dplyr::mutate(new_id = ifelse ( feature=="lncRNA" | feature =="intron_lncRNA",substr(as.character(id_gene), start = 1, stop = 13), as.character(id_gene))) %>% 
   dplyr::select (.,-id_gene) %>% 
   dplyr::rename(id_gene = new_id)
                                      
@@ -187,8 +188,6 @@ data_diversity_pre <- data_diversity %>% ungroup(.) %>%
 # Sanity check de que nada con las mismas coordenadas y con las misma longitud y strandness y frame se va a contar doble, pq no debería. 
 # kk1 <- data_diversity_pre %>% mutate (position=paste(scaffold,start_cero_based,end, length, feature, strandness, frame, id_gene)) 
 # kk2 <- as.data.frame(table (kk3$position)) %>% filter(Freq>5)
-
-
 
 # Saco la lista de elementos comunes a todas las unidades para cada especie. 
 
@@ -251,7 +250,6 @@ data_diversity_filtered_lynxpardinus_divergence_GC <- data_diversity_filtered_ly
 ## 4. Adding recombination rate
 
 ```{r}
-
 # Ahora adjunto los datos de recombinación. 
 
 recombination_per_unit <- read.table(paste(wd_recom, "/recombination_rate_per_unit_all_info_sorted_filtered_uniq.bed", sep=""), header=F, na.strings = c("NA", "na"))
@@ -389,6 +387,7 @@ rm (c_ll_no_n008)
 rm (c_ll_po_n008)
 rm (c_lp_do_n012)
 rm (c_lp_sm_n019)
+
 ```
 
 
