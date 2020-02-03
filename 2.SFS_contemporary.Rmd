@@ -1038,6 +1038,42 @@ cat list_of_repeated_features* | sort -k5,5 | uniq > list_of_repeated_features_a
 
 awk -v OFS='\t' '{print $2"_"$3"_"$4"_"$5"_"$6}' list_of_repeated_features_all_pops > list_of_repeated_features_all_pops_merged
 
+
+###
+
+for FILE in *per.unit.averages.chr.tsv 
+do
+echo $FILE
+awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$7"_"$11, $0}' $FILE | 
+grep -f list_of_repeated_features_all_pops_merged - | awk -v OFS='\t' '{$21="na"; print}' > ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_repeated_feature.tsv.borrar}
+awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$7"_"$11, $0}' $FILE | 
+grep -v -f list_of_repeated_features_all_pops_merged - > ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_NOT_repeated_feature.tsv.borrar}
+cat <(tail -n +2 ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_NOT_repeated_feature.tsv.borrar}) <( cat ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_repeated_feature.tsv.borrar}) | cut -f2-  | sort -k1,1 -k2,2n -k3,3n | cat header.chr.annotation - | awk '!a[$0]++' > ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_filtered.tsv}
+done
+
+
+# Sanity check!
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_ki_n013.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_ki_n008.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_po_n008.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_ll_no_n008.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_lp_do_n012.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_lp_sm_n019.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
+
+awk -v OFS='\t' '{print $1,$2,$3,$7,$11}' c_lp_sm_n012.per.unit.averages.chr_filtered.tsv | sort | uniq -c | grep -v "1 " | sort | sed -e 's/^[ \t]*//' | cut -d' ' -f2  | awk '{print $4}' | sort  | uniq -c
+
+# No hay nada! perfecto!
+
+# Para comprobar que las unidades que estoy incluyendo no han cambiado al incluir las posiciones y eliminar las unidades repetidas (no veo por qué deberían pero quiero asegurarme), me voy a la carpeta donde tengo las anotaciones antiguas y compruebo que no hay diferencias con las nuevas corriendo este script. 
+
+diff <( awk '{print $1, $2, $3}' c_lp_sm_n019.per.unit.averages.chr_filtered.tsv) <( awk '{print $1, $2, $3}' ../c_lp_sm_n019.per.unit.averages.chr_filtered.tsv) | head
+
 ```
 
 
@@ -1375,17 +1411,6 @@ Modifico mis archivos para eliminar la información de cromosoma cuando la unida
 
 
 ```{bash}
-
-cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
-
-# Como lo hice antes. YA NO porque esto elimina las filas repetidas, no elimina exclusivamente la info de cromosoma que es lo que nos interesa. 
-<!-- for FILE in *per.unit.averages.chr.tsv  -->
-<!-- do -->
-<!-- echo $FILE -->
-<!-- awk -v OFS='\t' '{print $1"_"$2"_"$3"_"$7"_"$11, $0}' $FILE |  -->
-<!-- grep -v -f list_of_repeated_features_all_pops_merged - | cut -f2- > ${FILE/.per.unit.averages.chr.tsv/.per.unit.averages.chr_filtered.tsv} -->
-<!-- done -->
-
 
 ###
 
