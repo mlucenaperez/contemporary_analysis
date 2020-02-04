@@ -265,15 +265,11 @@ nrow(CDS_c_ll_ki_c_ll_no_dataframe)
 # n=28941 --> Andujar-Doñana
 
 ## Submuestreo de las celdas con 0
-
 CDS_c_ll_ki_c_ll_no_dataframe_only0 <- filter(CDS_c_ll_ki_c_ll_no_dataframe, delta_watterson_per_unit_zero==0) %>% sample_n(., 500, replace=F)
-
-
 CDS_c_ll_ki_c_ll_no_dataframe_no0 <- filter(CDS_c_ll_ki_c_ll_no_dataframe, delta_watterson_per_unit_zero!=0)
-
 CDS_c_ll_ki_c_ll_no_dataframe2 <- rbind(CDS_c_ll_ki_c_ll_no_dataframe_only0, CDS_c_ll_ki_c_ll_no_dataframe_no0)
 
-dataframe=CDS_c_ll_ki_c_ll_no_dataframe
+dataframe=CDS_c_ll_ki_c_ll_no_dataframe2
  
 
 
@@ -587,44 +583,27 @@ install.packages("dsm")
 
 ```{r}
 
-model_name <- "mod_CDS_c_lp_sm_c_lp_do_delta_watterson_watterson_zero_informative_sites_recombination_rvis_GC_divergence_interaction_rvis_recomb_k10_offset_informative_sites"
+model_name <- "mod_CDS_c_ll_ki_c_ll_no_residuals_lm(watersonfinal-watersoninitial)_informative_sites_cat_position_recombination_rvis_GC_divergence_smoth_chr_interaction_rvis_recomb_zero_truncated"
 
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_watterson_watterson_zero_informative_sites_recombination_rvis_GC_divergence_interaction_rvis_recomb_k10_offset_informative_sites"
 
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_watterson_watterson_zero_informative_sites_recombination_rvis_GC_divergence_interaction_rvis_recomb_k10_offset_informative_sites_zero_truncated"
 
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_watterson_watterson_zero_informative_sites_recombination_rvis_GC_divergence_offset_informative_sites_zero_truncated"
+ model2  <- bam (resid ~
+# Covariables: las metemos como explicativas #  
+  s(informative_sites.x, bs="tp") +
+  s(middle_position_cat, by=chr) + 
+ # s(watterson_zero.x_scale, chr, bs = "fs") +
+# Explicativas  
+  s(recombination_rate_scale, chr, bs = "fs")+
+  s(divergence_scale, chr, bs = "fs")+
+  s(GC_content_scale, chr, bs = "fs")+
+  s(rvis_score_scale, chr, bs = "fs")+
+  ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp")),
+  #offset = (log(informative_sites.x)),
+  # Dataframe
+  data=TEST_data_frame,
+  # Method and family
+  method="fREML", family=gaussian)
 
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_watterson_watterson_zero_informative_sites_recombination_rvis_GC_divergence_offset_informative_sites_zero_based_scaffold_start_cero_based"
-
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_watterson_watterson_zero_informative_sites_recombination_rvis_GC_divergence_offset_informative_sites_zero_truncated_chr_size"
-
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_watterson_Bpop_watterson_zero_informative_sites_recombination_rvis_GC_divergence_offset_log_informative_sites_not_scaled_zero_truncated"
-
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_watterson_Bpop_watterson_zero_k5"
-
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_K_Bpop_K.x_recombination_rvis_GC_divergence_not_scaled_GAMMA_identity_family"
-
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_watterson_watterson_zero_informative_sites_recombination_rvis_GC_divergence_factor_smooth_chr_cat_possition"
-
-model_name <- "mod_residuals_initial_diversity_vs_final_diversity_informative_sites_recombination_divergence_GC_rvis_recomb_rvis_itera_smooth_factor_chr"
-
-model2  <- bam (resid ~
- # Covariables: las metemos como explicativas #  
-                    s(informative_sites.x, bs="tp") +
-                    #s(middle_position_cat, by=chr) + 
-                    #s(watterson_zero.x_scale) +
-                    # Variables explicativas # 
-                    s(recombination_rate_scale, chr, bs="fs")+
-                    s(divergence_scale, chr, bs="fs")+
-                    s(GC_content_scale, chr, bs="fs")+
-                    s(rvis_score_scale, chr, bs="fs")+
-                    ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp"), k=c(10,10)),
-                    #offset = (log(informative_sites.x)),
-                    # Dataframe
-                   data=TEST_data_frame,  
-                    # Method and family
-                    method="REML", family=gaussian)
 
 #gam.check(model2)
 # Save the model
