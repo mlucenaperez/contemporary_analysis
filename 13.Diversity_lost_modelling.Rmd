@@ -196,8 +196,8 @@ all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale <- all_comparisons_
   mutate (GC_content_scale=scale (GC_content)) %>% 
   mutate (rvis_score_scale=scale (rvis_score)) %>% 
   mutate (delta_watterson_per_unit_zero_scale=scale(delta_watterson_per_unit_zero)) %>% 
-  mutate (k.x=watterson_zero.x*informative_sites.x) %>% 
-  mutate (k.y=watterson_zero.y*informative_sites.y)
+  mutate (k.x=watterson_ave_corrected.x*informative_sites.x) %>% 
+  mutate (k.y=watterson_ave_corrected.y*informative_sites.y)
 
 # Otra manera de escalar sería la siguiente
 # rescale <- function (x) { (x - mean (x)) / sd (x) }
@@ -269,7 +269,7 @@ CDS_c_ll_ki_c_ll_no_dataframe_only0 <- filter(CDS_c_ll_ki_c_ll_no_dataframe, del
 CDS_c_ll_ki_c_ll_no_dataframe_no0 <- filter(CDS_c_ll_ki_c_ll_no_dataframe, delta_watterson_per_unit_zero!=0)
 CDS_c_ll_ki_c_ll_no_dataframe2 <- rbind(CDS_c_ll_ki_c_ll_no_dataframe_only0, CDS_c_ll_ki_c_ll_no_dataframe_no0)
 
-dataframe=CDS_c_ll_ki_c_ll_no_dataframe2
+dataframe=CDS_c_ll_ki_c_ll_no_dataframe
  
 
 
@@ -583,26 +583,26 @@ install.packages("dsm")
 
 ```{r}
 
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_residuals_lm(watersonfinal-watersoninitial)_informative_sites_cat_position_recombination_rvis_GC_divergence_smoth_chr_interaction_rvis_recomb_zero_truncated"
+model_name <- "mod_CDS_c_ll_ki_c_ll_no_k.y_cat_position_recombination_rvis_GC_divergence_smoth_chr_interaction_rvis_recomb_offset_log_informative_sites"
 
+hist(dataframe$k.y)
 
-
- model2  <- bam (resid ~
+ model2  <- gam (k.y ~
 # Covariables: las metemos como explicativas #  
-  s(informative_sites.x, bs="tp") +
+  #s(informative_sites.x, bs="tp") +
   s(middle_position_cat, by=chr) + 
- # s(watterson_zero.x_scale, chr, bs = "fs") +
+  s(k.x, chr, bs = "fs") +
 # Explicativas  
   s(recombination_rate_scale, chr, bs = "fs")+
   s(divergence_scale, chr, bs = "fs")+
   s(GC_content_scale, chr, bs = "fs")+
   s(rvis_score_scale, chr, bs = "fs")+
   ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp")),
-  #offset = (log(informative_sites.x)),
+  offset = (log(informative_sites.x)),
   # Dataframe
-  data=TEST_data_frame,
+  data=dataframe,
   # Method and family
-  method="fREML", family=gaussian)
+  method="REML", family=Gamma(link="log"))
 
 
 #gam.check(model2)
