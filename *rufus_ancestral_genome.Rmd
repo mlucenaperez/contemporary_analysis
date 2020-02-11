@@ -25,7 +25,7 @@ done < $SCAFFOLDS
 
 
 ## He quitado samtools mpileup -s -q30 -Q30 porque el parámetro -Q parece que no funciona correctamente en samtools mpileup. 
-
+# OJO!! puedo añadir a samtools mpileup para la proxima el parámetro -a para que escupa todas las bases, ceros incluidos, aunque en principio no es necesario para pu2fa. 
 
 
 

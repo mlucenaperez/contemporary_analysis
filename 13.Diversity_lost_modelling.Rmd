@@ -196,8 +196,8 @@ all_comparisons_diversity_bootleneck_vs_non_bootleneck_scale <- all_comparisons_
   mutate (GC_content_scale=scale (GC_content)) %>% 
   mutate (rvis_score_scale=scale (rvis_score)) %>% 
   mutate (delta_watterson_per_unit_zero_scale=scale(delta_watterson_per_unit_zero)) %>% 
-  mutate (k.x=watterson_zero.x*informative_sites.x) %>% 
-  mutate (k.y=watterson_zero.y*informative_sites.y)
+  mutate (k.x=watterson_ave_corrected.x*informative_sites.x) %>% 
+  mutate (k.y=watterson_ave_corrected.y*informative_sites.y)
 
 # Otra manera de escalar sería la siguiente
 # rescale <- function (x) { (x - mean (x)) / sd (x) }
@@ -583,17 +583,30 @@ install.packages("dsm")
 
 ```{r}
 
+<<<<<<< HEAD
 model_name <- "mod_CDS_c_ll_ki_c_ll_no_k.y_k.x_recombination_rvis_GC_divergence_interaction_rvis_recomb_offset_informative_sites"
 
 dataframe_test <- dataframe %>% mutate (delta_k = k.y-k.x)
 hist(dataframe_test$delta_k)
+=======
+model_name <- "mod_CDS_c_ll_ki_c_ll_no_k.y_cat_position_recombination_rvis_GC_divergence_smoth_chr_interaction_rvis_recomb_offset_log_informative_sites"
+>>>>>>> c42fc1a19c1a0ab6431403f5d69a9106aeb13c95
 
+hist(dataframe$k.y)
 
+<<<<<<< HEAD
 model2  <- gam (delta_k ~
 # Covariables: las metemos como explicativas #  
   #s(informative_sites.x, bs="tp") +
   #s(middle_position_cat, by=chr) + 
   s(k.x) +
+=======
+ model2  <- gam (k.y ~
+# Covariables: las metemos como explicativas #  
+  #s(informative_sites.x, bs="tp") +
+  s(middle_position_cat, by=chr) + 
+  s(k.x, chr, bs = "fs") +
+>>>>>>> c42fc1a19c1a0ab6431403f5d69a9106aeb13c95
 # Explicativas  
   s(recombination_rate_scale)+
   s(divergence_scale)+
@@ -602,9 +615,15 @@ model2  <- gam (delta_k ~
   ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp")),
   offset = (log(informative_sites.x)),
   # Dataframe
+<<<<<<< HEAD
   data=dataframe_test,
   # Method and family
   method="REML", family=gaussian)
+=======
+  data=dataframe,
+  # Method and family
+  method="REML", family=Gamma(link="log"))
+>>>>>>> c42fc1a19c1a0ab6431403f5d69a9106aeb13c95
 
 
 #gam.check(model2)
