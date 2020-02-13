@@ -271,15 +271,9 @@ CDS_c_ll_ki_c_ll_no_dataframe2 <- rbind(CDS_c_ll_ki_c_ll_no_dataframe_only0, CDS
 
 dataframe=CDS_c_ll_ki_c_ll_no_dataframe
  
+test <- dataframe %>% filter(watterson_zero.x==0) %>% mutate (delta_round=round(delta_watterson_per_unit_zero, digits=4)*-10000)
 
 
-hist(CDS_c_ll_ki_c_ll_no_dataframe$k.x)
-hist(CDS_c_ll_ki_c_ll_no_dataframe$k.y)
-
-
-hist(CDS_c_ll_ki_c_ll_no_dataframe$delta_watterson_per_unit_zero)
-hist(CDS_c_ll_ki_c_ll_no_dataframe1$delta_watterson_per_unit_zero)
-hist(CDS_c_ll_ki_c_ll_no_dataframe2$delta_watterson_per_unit_zero)
 
 ```
 
@@ -583,26 +577,30 @@ install.packages("dsm")
 
 ```{r}
 
+<<<<<<< HEAD
 model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_round_informative_cat_position_recomb_diver_GC_rvis_recomb_rvis_interaction_ziP"
+=======
+model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_round_*1000_recombination_rvis_GC_divergence_ziP"
 
-hist(dataframe$k.y)
+>>>>>>> 1cb898cbf3c9a568b8750cbd19cba5d16a82ca87
 
- model2  <- gam (k.y ~
+
+ model2  <- gam (test$delta_round ~
 # Covariables: las metemos como explicativas #  
   #s(informative_sites.x, bs="tp") +
-  s(middle_position_cat, by=chr) + 
-  s(k.x, chr, bs = "fs") +
 # Explicativas  
-  s(recombination_rate_scale, chr, bs = "fs")+
-  s(divergence_scale, chr, bs = "fs")+
-  s(GC_content_scale, chr, bs = "fs")+
-  s(rvis_score_scale, chr, bs = "fs")+
-  ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp")),
-  offset = (log(informative_sites.x)),
+  s(test$recombination_rate_scale)+
+  s(test$divergence_scale)+
+  s(test$GC_content_scale)+
+  s(test$rvis_score_scale)+
+  ti(test$recombination_rate_scale, test$rvis_score_scale, bs=c("tp", "tp")),
+# Explicativas  
+  # offset = (log(informative_sites.x)),
   # Dataframe
-  data=dataframe,
+  #data=test,
   # Method and family
-  method="REML", family=Gamma(link="log"))
+  #method="REML",
+   family=ziP())
 
 
 #gam.check(model2)
@@ -627,6 +625,10 @@ dev.off()
 pdf(paste0(wd_output, model_name, '_diagnosis.pdf'))
 appraise(model2)
 dev.off()
+
+
+plot (predict(model2,type="response"), residuals(model2))
+plot (predict(model2,type="response"), model2$y);abline(0,1,col=2)
 
 ```
 Lo que comprobamos es que los residuos parecen tener problemas de tendencia y de dispersión. 
