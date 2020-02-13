@@ -637,7 +637,14 @@ Lo primero que voy a hacer es probar a quitar los ceros. Los ceros son unidades 
 ### LOAD MODELS FROM THE SERVER
 
 ```{r}
-#load(paste0(wd_output,model_name), .GlobalEnv)
+
+model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_round_informative_cat_position_recomb_diver_GC_rvis_recomb_rvis_interaction_ziP_filtered"
+load(paste0(wd_output,model_name), .GlobalEnv)
+
+
+plot (predict(model2,type="response"), residuals(model2))
+plot (predict(model2,type="response"), model2$y);abline(0,1,col=2)
+
 
 ```
 
