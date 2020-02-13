@@ -583,7 +583,7 @@ install.packages("dsm")
 
 ```{r}
 
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_k.y_cat_position_recombination_rvis_GC_divergence_smoth_chr_interaction_rvis_recomb_offset_log_informative_sites"
+model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_round_informative_cat_position_recomb_diver_GC_rvis_recomb_rvis_interaction_ziP"
 
 hist(dataframe$k.y)
 
