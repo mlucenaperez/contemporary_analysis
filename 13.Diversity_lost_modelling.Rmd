@@ -577,12 +577,8 @@ install.packages("dsm")
 
 ```{r}
 
-<<<<<<< HEAD
 model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_round_informative_cat_position_recomb_diver_GC_rvis_recomb_rvis_interaction_ziP"
-=======
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_round_*1000_recombination_rvis_GC_divergence_ziP"
 
->>>>>>> 1cb898cbf3c9a568b8750cbd19cba5d16a82ca87
 
 
  model2  <- gam (test$delta_round ~
@@ -637,6 +633,19 @@ Por tanto voy a probar a transformar mi variable respuesta a ver si mejora.
 Las transformaciones que se me ocurren probar son varias:
 
 Lo primero que voy a hacer es probar a quitar los ceros. Los ceros son unidades que ni ganan ni pierden diversidad y por tanto no aportan tanto. 
+
+### LOAD MODELS FROM THE SERVER
+
+```{r}
+#load(paste0(wd_output,model_name), .GlobalEnv)
+
+```
+
+
+
+
+
+
 ##### Remove 0 from response variable. 
 
 Lo que he hecho ha sido añadir como variables delta_watterson_per_unit_normalized_zero, y como esta variable coge valor NA cuando la otra es cero, así ya la elimino. 
