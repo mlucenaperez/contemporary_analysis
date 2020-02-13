@@ -271,15 +271,9 @@ CDS_c_ll_ki_c_ll_no_dataframe2 <- rbind(CDS_c_ll_ki_c_ll_no_dataframe_only0, CDS
 
 dataframe=CDS_c_ll_ki_c_ll_no_dataframe
  
+test <- dataframe %>% filter(watterson_zero.x==0) %>% mutate (delta_round=round(delta_watterson_per_unit_zero, digits=4)*-10000)
 
 
-hist(CDS_c_ll_ki_c_ll_no_dataframe$k.x)
-hist(CDS_c_ll_ki_c_ll_no_dataframe$k.y)
-
-
-hist(CDS_c_ll_ki_c_ll_no_dataframe$delta_watterson_per_unit_zero)
-hist(CDS_c_ll_ki_c_ll_no_dataframe1$delta_watterson_per_unit_zero)
-hist(CDS_c_ll_ki_c_ll_no_dataframe2$delta_watterson_per_unit_zero)
 
 ```
 
@@ -583,47 +577,26 @@ install.packages("dsm")
 
 ```{r}
 
-<<<<<<< HEAD
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_k.y_k.x_recombination_rvis_GC_divergence_interaction_rvis_recomb_offset_informative_sites"
+model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_round_*1000_recombination_rvis_GC_divergence_ziP"
 
-dataframe_test <- dataframe %>% mutate (delta_k = k.y-k.x)
-hist(dataframe_test$delta_k)
-=======
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_k.y_cat_position_recombination_rvis_GC_divergence_smoth_chr_interaction_rvis_recomb_offset_log_informative_sites"
->>>>>>> c42fc1a19c1a0ab6431403f5d69a9106aeb13c95
 
-hist(dataframe$k.y)
 
-<<<<<<< HEAD
-model2  <- gam (delta_k ~
+ model2  <- gam (test$delta_round ~
 # Covariables: las metemos como explicativas #  
   #s(informative_sites.x, bs="tp") +
-  #s(middle_position_cat, by=chr) + 
-  s(k.x) +
-=======
- model2  <- gam (k.y ~
-# Covariables: las metemos como explicativas #  
-  #s(informative_sites.x, bs="tp") +
-  s(middle_position_cat, by=chr) + 
-  s(k.x, chr, bs = "fs") +
->>>>>>> c42fc1a19c1a0ab6431403f5d69a9106aeb13c95
 # Explicativas  
-  s(recombination_rate_scale)+
-  s(divergence_scale)+
-  s(GC_content_scale)+
-  s(rvis_score_scale)+
-  ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp")),
-  offset = (log(informative_sites.x)),
+  s(test$recombination_rate_scale)+
+  s(test$divergence_scale)+
+  s(test$GC_content_scale)+
+  s(test$rvis_score_scale)+
+  ti(test$recombination_rate_scale, test$rvis_score_scale, bs=c("tp", "tp")),
+# Explicativas  
+  # offset = (log(informative_sites.x)),
   # Dataframe
-<<<<<<< HEAD
-  data=dataframe_test,
+  #data=test,
   # Method and family
-  method="REML", family=gaussian)
-=======
-  data=dataframe,
-  # Method and family
-  method="REML", family=Gamma(link="log"))
->>>>>>> c42fc1a19c1a0ab6431403f5d69a9106aeb13c95
+  #method="REML",
+   family=ziP())
 
 
 #gam.check(model2)
@@ -648,6 +621,10 @@ dev.off()
 pdf(paste0(wd_output, model_name, '_diagnosis.pdf'))
 appraise(model2)
 dev.off()
+
+
+plot (predict(model2,type="response"), residuals(model2))
+plot (predict(model2,type="response"), model2$y);abline(0,1,col=2)
 
 ```
 Lo que comprobamos es que los residuos parecen tener problemas de tendencia y de dispersión. 
