@@ -586,11 +586,11 @@ install.packages("dsm")
 
 ```{r}
 
-model_name <- "mod_CDS_c_lp_sm_c_lp_do_delta_round_informative_cat_position_recomb_diver_GC_rvis_recomb_rvis_interaction_ziP"
+model_name <- "mod_CDS_c_lp_sm_c_lp_do_delta_round_informative_cat_position_recomb_diver_GC_rvis_recomb_rvis_interaction_ziplss"
 
 
 
- model2  <- gam (delta_round ~
+model2  <- gam (list(delta_round ~
 # Covariables: las metemos como explicativas #  
   s(informative_sites.x, bs="tp") +
 # Explicativas
@@ -600,13 +600,22 @@ model_name <- "mod_CDS_c_lp_sm_c_lp_do_delta_round_informative_cat_position_reco
   s(GC_content_scale, by=chr)+
   s(rvis_score_scale, by=chr)+
   ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp")),
+  ~  s(informative_sites.x, bs="tp") +
+# Explicativas
+  s(middle_position_cat, by=chr) +
+  s(recombination_rate_scale, by=chr)+
+  s(divergence_scale, by=chr)+
+  s(GC_content_scale, by=chr)+
+  s(rvis_score_scale, by=chr)+
+  ti(recombination_rate_scale, rvis_score_scale, bs=c("tp", "tp"))),
 # Explicativas  
   # offset = (log(informative_sites.x)),
   # Dataframe
    data=smo_don_LD,
   # Method and family
   #method="REML",
-   family=ziP())
+   family=ziplss())
+
 
 #gam.check(model2)
 # Save the model
@@ -645,8 +654,12 @@ Lo primero que voy a hacer es probar a quitar los ceros. Los ceros son unidades 
 
 ### LOAD MODELS FROM THE SERVER
 
+```{bash}
+scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/diversity_loss_modeling/mod_CDS_c_lp_sm_c_lp_do_delta_round_informative_cat_position_recomb_diver_GC_rvis_recomb_rvis_interaction_ziP* /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/GAM_models/
+```
+  
+    
 ```{r}
-
 model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_round_informative_cat_position_recomb_diver_GC_rvis_recomb_rvis_interaction_ziP_filtered"
 load(paste0(wd_output,model_name), .GlobalEnv)
 
