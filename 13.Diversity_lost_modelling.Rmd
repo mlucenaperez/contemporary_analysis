@@ -283,7 +283,11 @@ CDS_c_lp_sm_c_lp_do_dataframe <- all_comparisons_diversity_bootleneck_vs_non_boo
   dplyr::filter (feature=="CDS") %>% 
   dplyr::filter (chr!="chrX") %>% 
   dplyr::filter (comparison=="Andujar-Donana") %>% 
+<<<<<<< HEAD
+dplyr::mutate (middle_position_cat=cat_position_start+(cat_length/2)) %>% 
+=======
    dplyr::mutate (middle_position_cat=cat_position_start+(cat_length/2)) %>% 
+>>>>>>> 72c2b2f9ee84306c475c6cf11c26c693cfffd9c3
   select (comparison,
           scaffold,
           start_cero_based,
@@ -314,6 +318,11 @@ CDS_c_lp_sm_c_lp_do_dataframe <- all_comparisons_diversity_bootleneck_vs_non_boo
           divergence, 
           GC_content,  
           rvis_score)
+<<<<<<< HEAD
+
+
+=======
+>>>>>>> 72c2b2f9ee84306c475c6cf11c26c693cfffd9c3
 # Name is mod I because each one of the variable could have a different function and smother depending on the random factor  (check paper)
 # Remove cases with no data. 
 CDS_c_lp_sm_c_lp_do_dataframe <- CDS_c_lp_sm_c_lp_do_dataframe[complete.cases(CDS_c_lp_sm_c_lp_do_dataframe), ]

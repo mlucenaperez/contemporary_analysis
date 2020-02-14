@@ -503,9 +503,10 @@ library(ggpmisc)
 library(mgcv)
 library(MuMIn)
 library(mgcViz)
-library(gratia)
 library(ggrepel)
-
+library(ggsignif)
+library(ggpubr)
+library(cowplot)
 
 wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
 wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/"
@@ -975,12 +976,6 @@ rm(divergence.greater, divergence.less, recombination.greater, recombination.les
 #### Boxplot categories vs. divergence
 
 ```{r}
-
-library("ggsignif")
-library("ggpubr")
-library("cowplot")
-library(ggplot2); theme_set(theme_minimal())
-
 ruta_UMW_test <- "genomic_variable_diversity_category_UMT_boxplot_mean/"
 
 DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson" )
