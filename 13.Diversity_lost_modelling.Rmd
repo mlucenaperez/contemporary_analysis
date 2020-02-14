@@ -669,9 +669,11 @@ scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/diversity_loss_modeling/mod_
   
     
 ```{r}
-model_name <- "mod_CDS_c_ll_ki_c_ll_no_delta_round_informative_cat_position_recomb_diver_GC_rvis_recomb_rvis_interaction_ziP_filtered"
+model_name <- "mod_CDS_c_lp_sm_c_lp_do_delta_round_informative_cat_position_recomb_diver_GC_rvis_recomb_rvis_interaction_ziP"
 load(paste0(wd_output,model_name), .GlobalEnv)
 
+
+kk <- predict(model2,type="response")
 
 plot (predict(model2,type="response"), residuals(model2))
 plot (predict(model2,type="response"), model2$y);abline(0,1,col=2)
@@ -679,6 +681,8 @@ plot (predict(model2,type="response"), model2$y);abline(0,1,col=2)
 qqplot(model2)
 ```
 
+No esta tan mal
+repetir filtrando los outliers!
 
 
 
