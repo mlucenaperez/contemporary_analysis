@@ -1,0 +1,31 @@
+---
+title: "4.Windows_per_feature"
+output: html_document
+---
+
+Test to see whether we could concatenate all the features and run a window approach over it.
+
+
+```{bash}
+
+RUTA=/home/mlucena/ANGSD_analysis/depth_calculus
+ANGSD="/opt/angsd/angsd"
+NGSTOOLS="/opt/angsd/angsd/misc"
+REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
+# Here I have my .idx files
+# For instance: c_ll_ki_n008.unfolded-lr.postprob.thetas.idx
+# I will create a fake region file an run windows over it to see how it behaves. 
+nano kk.rf
+lp23.s00001:1000-20000
+lp23.s00001:30000-70000
+```
+
+Now I run thetas per windows
+
+```{bash}
+$NGSTOOLS/thetaStat do_stat c_ll_ki_n008.unfolded-lr.postprob.thetas.idx -win 50000 -step 10000 -rf  kk.rf -outnames kk.windows
+```
+
