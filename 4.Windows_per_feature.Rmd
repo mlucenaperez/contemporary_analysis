@@ -6,26 +6,156 @@ output: html_document
 Test to see whether we could concatenate all the features and run a window approach over it.
 
 
+# 1. Get position for every feature:
+
 ```{bash}
 
-RUTA=/home/mlucena/ANGSD_analysis/depth_calculus
-ANGSD="/opt/angsd/angsd"
-NGSTOOLS="/opt/angsd/angsd/misc"
-REF="/home/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/lp23_without_repetitive_transposable_low_complexity.fa"
+mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature
 
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
+
+POP=c_ll_ki_n008 # <--- Change pop here!
+screen -S "$POP"_get_feature_coordinates
+POP=c_ll_ki_n008 # <--- Change pop here!
+script log_screen_"$POP"_get_feature_coordinates.log
+POP=c_ll_ki_n008 # <--- Change pop here!
 
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
-# Here I have my .idx files
-# For instance: c_ll_ki_n008.unfolded-lr.postprob.thetas.idx
-# I will create a fake region file an run windows over it to see how it behaves. 
-nano kk.rf
-lp23.s00001:1000-20000
-lp23.s00001:30000-70000
+
+## Variables
+SCAFFOLDS_FOLDER=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3.PerScaffold/
+FEATURE_POSITIONS_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature/
+SFS_FOLDER=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
+FEATURE="CDS"
+OUTPUT_DIR=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature
+REF="/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated"
+
+FEATURES=(UCNE intergenic 3UTR 5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
+
+echo "---------------------------------------------------$POP---------------------------------------------------"
+
+for FEATURE in "${FEATURES[@]}"
+do
+echo $FEATURE
+for iteration in {1..10}
+do
+rm "${OUTPUT_DIR}"/"${POP}".transformedThetas_scaffold"$SCAFFOLD"."${FEATURE}"
+SCAFFOLD_START=$( echo '1 + 4170 * ('$iteration' - 1)' | bc)
+SCAFFOLD_END=$( echo '4170 * '$iteration | bc )
+for SCAFFOLD_NUMBER in $(seq -s " " -f %05g $SCAFFOLD_START $SCAFFOLD_END) # esta manera de hacer seq te va a sacar siempre 5 cifras.
+do
+SCAFFOLD=$(echo "lp23.s"$SCAFFOLD_NUMBER)
+cd "$SFS_FOLDER""$POP"_separated_by_scaffold
+cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <( cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3_"$SCAFFOLD" | grep $FEATURE) -sorted -g $REF >> "${OUTPUT_DIR}"/"${POP}".transformedThetas_iteration"$iteration"."${FEATURE}"
+done &
+done 
+done
+
 ```
 
-Now I run thetas per windows
+# 2. Get common positions among pops
+
+We are using the intermediate interaction files to avoid large files.
 
 ```{bash}
-$NGSTOOLS/thetaStat do_stat c_ll_ki_n008.unfolded-lr.postprob.thetas.idx -win 50000 -step 10000 -rf  kk.rf -outnames kk.windows
+
+OUTPUT_DIR=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature
+cd $OUTPUT_DIR
+
+FEATURES=(UCNE intergenic 3UTR 5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
+
+for FEATURE in "${FEATURES[@]}"
+do
+echo $FEATURE
+for iteration in {1..10}
+do
+
+## LYNX PARDINUS ## ## ## ## 
+# I am doing a inner join:
+# I am doing it in 3 different steps althougth I would need it, because, when I get to ll I will need to do it like that, or it will be more complex.
+# 1. Get coordinates in common for the three pop.
+grep -F -f  <( cat "${OUTPUT_DIR}"/c_lp_do_n012.transformedThetas_iteration"$iteration"."${FEATURE}" | awk  -v OFS='\t' '{print $1, $2, $3}') <(cat "${OUTPUT_DIR}"/c_lp_sm_n012.transformedThetas_iteration"$iteration"."${FEATURE}" | awk  -v OFS='\t' '{print $1, $2, $3}') > c_lp_iteration"$iteration"."${FEATURE}".innercoordinates
+# Filter do for the coordinates in common.
+grep -F -f <(cat c_lp_iteration"$iteration"."${FEATURE}".innercoordinates) <(cat "${OUTPUT_DIR}"/c_lp_do_n012.transformedThetas_iteration"$iteration"."${FEATURE}") > "${OUTPUT_DIR}"/c_lp_do_n012.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+# Filter sm for the coordinates in common.
+grep -F -f <(cat c_lp_iteration"$iteration"."${FEATURE}".innercoordinates) <(cat "${OUTPUT_DIR}"/c_lp_sm_n012.transformedThetas_iteration"$iteration"."${FEATURE}") > "${OUTPUT_DIR}"/c_lp_sm_n012.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+
+## LYNX LYNX ## ## ## ## ## 
+# I am doing a inner join:
+# I am doing it in 3 different steps althougth I would need it, because, when I get to ll I will need to do it like that, or it will be more complex.
+# 1. Get coordinates in common for the three pop.
+grep -F -f  <( cat "${OUTPUT_DIR}"/c_ll_ki_n008.transformedThetas_iteration"$iteration"."${FEATURE}" | awk  -v OFS='\t' '{print $1, $2, $3}') <(cat "${OUTPUT_DIR}"/c_ll_no_n008.transformedThetas_iteration"$iteration"."${FEATURE}" | awk  -v OFS='\t' '{print $1, $2, $3}') | grep -F -f  - <(cat "${OUTPUT_DIR}"/c_ll_po_n008.transformedThetas_iteration"$iteration"."${FEATURE}" | awk  -v OFS='\t' '{print $1, $2, $3}') > c_ll_iteration"$iteration"."${FEATURE}".innercoordinates
+
+# Filter ki for the coordinates in common.
+grep -F -f <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) <(cat "${OUTPUT_DIR}"/c_ll_ki_n008.transformedThetas_iteration"$iteration"."${FEATURE}") > "${OUTPUT_DIR}"/c_ll_ki_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+
+# Filter no for the coordinates in common.
+grep -F -f <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) <(cat "${OUTPUT_DIR}"/c_ll_no_n008.transformedThetas_iteration"$iteration"."${FEATURE}") > "${OUTPUT_DIR}"/c_ll_no_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+
+grep -F -f <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) <(cat "${OUTPUT_DIR}"/c_ll_po_n008.transformedThetas_iteration"$iteration"."${FEATURE}") > "${OUTPUT_DIR}"/c_ll_po_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+
+rm c_ll_ki_n008.transformedThetas_iteration{1..10}."${FEATURE}"
+rm c_ll_po_n008.transformedThetas_iteration{1..10}."${FEATURE}"
+rm c_ll_no_n008.transformedThetas_iteration{1..10}."${FEATURE}"
+rm c_lp_sm_n012.transformedThetas_iteration{1..10}."${FEATURE}"
+rm c_lp_do_n012.transformedThetas_iteration{1..10}."${FEATURE}"
+
+
+done
+done
+
+wc -l c_lp*iteration*
+wc -l c_ll*iteration*
+
+# Para pardinus tiene buena pinta!
+rm c_lp_iteration*.innercoordinates
+
 ```
+
+# Join all filtered iteractions and assign consecutive coordinates to a file
+
+```{bash}
+POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
+FEATURES=(UCNE intergenic 3UTR 5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
+
+for FEATURE in "${FEATURES[@]}"
+do
+echo $FEATURE
+for POP in "${POPS[@]}"
+do
+echo $POP
+# join all files
+cat "$POP".transformedThetas_iteration{1..10}.filtered."${FEATURE}" >> "$POP".transformedThetas.filtered."${FEATURE}"
+rm "$POP".transformedThetas_iteration{1..10}.filtered."${FEATURE}"
+# assign consecutive coordinates
+awk -v OFS='\t' '{print "CONCATENATION", NR, NR+1, $4, $5, $6, $7, $8, $9}' "$POP".transformedThetas.filtered."${FEATURE}" > "$POP".transformedThetas.filtered.CONCATENATION."${FEATURE}" 
+done
+done
+```
+
+
+
+
+
+# Calculate diversity per windows.
+# CORREGIR!!
+```{bash}
+
+
+WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.iteration"$iteration".borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.iteration"$iteration".borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+
+PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5 "$POP".iter.transformedThetas.iteration"$iteration".borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$POP".iter.transformedThetas.iteration"$iteration".borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP".iter.transformedThetas.iteration"$iteration".borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_AVERAGE_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
+
+INFORMATIVESITES=$(wc -l "$POP".iter.transformedThetas.iteration"$iteration".borrar | cut -d" " -f1)
+
+NAs=($(echo $LENGTH - $INFORMATIVESITES | bc)) 
+```
+
+
 
