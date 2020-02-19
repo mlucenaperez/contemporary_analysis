@@ -39,7 +39,7 @@ do
 echo $FEATURE
 for iteration in {1..10}
 do
-rm "${OUTPUT_DIR}"/"${POP}".transformedThetas_scaffold"$SCAFFOLD"."${FEATURE}"
+rm "${OUTPUT_DIR}"/"${POP}".transformedThetas_iteration"$iteration"."${FEATURE}"
 SCAFFOLD_START=$( echo '1 + 4170 * ('$iteration' - 1)' | bc)
 SCAFFOLD_END=$( echo '4170 * '$iteration | bc )
 for SCAFFOLD_NUMBER in $(seq -s " " -f %05g $SCAFFOLD_START $SCAFFOLD_END) # esta manera de hacer seq te va a sacar siempre 5 cifras.
@@ -136,7 +136,7 @@ done
 
 
 
-
+# --- hasta aqui! ---
 # Calculate diversity per windows.
 # CORREGIR!!
 ```{bash}
