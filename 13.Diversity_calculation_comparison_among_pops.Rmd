@@ -907,7 +907,7 @@ Aquí sí hago el test de U-MW por categoría y feature.
 ```{r}
 ruta_UMW_test <- "genomic_variable_diversity_category_UMT_boxplot_mean/"
 
-DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson")
+DATAFRAMES=c( "c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson")
 
 DIVERSITY_CATEGORIES=c("HD","LD")
 # Factor order: D_ND_pairwise D_D_pairwise ND_ND_pairwise ND_D_pairwise
@@ -931,7 +931,7 @@ for (DATAFRAME in DATAFRAMES)
     select(diversity) %>% 
     .[1,1]
 
-DATAFRAME_filtered=get(DATAFRAME) %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))
+DATAFRAME_filtered=get(DATAFRAME) %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep="")) %>% filter (type_chr=="autosomes") 
 
 # Divergence:
 divergence.greater <- with(DATAFRAME_filtered,
@@ -957,11 +957,22 @@ GC_content.less <- with(DATAFRAME_filtered,
        by(DATAFRAME_filtered, feature,
           function(x) wilcox.test(GC_content ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
 
+# Size
+informative_sites.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(informative_sites.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+informative_sites.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(informative_sites.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+
 lista_results_divergence_melted <- melt(list(divergence.greater , divergence.less)) %>% mutate(genomic_variable="divergence") %>% spread(., variable, value)
 lista_results_recombination_melted <- melt(list(recombination.greater, recombination.less)) %>% mutate(genomic_variable="recombination") %>% spread(., variable, value)
 lista_results_GC_content_melted <- melt(list(GC_content.greater, GC_content.less)) %>% mutate(genomic_variable="GC_content") %>% spread(., variable, value)
-
-resultados_U_Man_Whitney <- rbind(lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted)
+lista_results_size <- melt (list (informative_sites.greater, informative_sites.less)) %>% mutate(genomic_variable="informative_sites") %>% spread(., variable, value)
+  
+  
+resultados_U_Man_Whitney <- rbind(lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_size)
 
 write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_features_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,"_",DIVERSITY_CATEGORY, ".txt",sep=""), row.names = F)
 
@@ -973,19 +984,19 @@ rm(divergence.greater, divergence.less, recombination.greater, recombination.les
 ```
 
 
-#### Boxplot categories vs. divergence
+#### Boxplot categories vs. genomic category
 
 ```{r}
 ruta_UMW_test <- "genomic_variable_diversity_category_UMT_boxplot_mean/"
 
-DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson" )
+DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson" )
 
 DIVERSITY_CATEGORIES=c("HD","LD")
 # Factor order: D_ND_pairwise D_D_pairwise ND_ND_pairwise ND_D_pairwise
 # HD --> D_ND_pairwise D_D_pairwise
 # LD --> ND_ND_pairwise ND_D_pairwise
-
-GENOMIC_VARIABLES=c("divergence", "recombination_rate", "GC_content")
+  
+GENOMIC_VARIABLES=c("divergence", "recombination_rate", "GC_content", "informative_sites.x")
 TEST_TYPES=c("less", "greater")
 #fun_mean <- function(x){return(round(data.frame(y=mean(x),label=mean(x,na.rm=T)),digit=5))}
 
@@ -1031,27 +1042,32 @@ for (DATAFRAME in DATAFRAMES)
           sts <- boxplot.stats((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep="")))$GC_content)$stats  # Compute lower and upper whisker limits
         }
         
-               
+          if (GENOMIC_VARIABLE=="informative_sites.x") 
+        {
+          sts <- boxplot.stats((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep="")))$informative_sites.x)$stats  # Compute lower and upper whisker limits
+        }
+           
+           
         # Mean general ##
 
-        #   ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
-        #   coord_cartesian(ylim = c(0,sts[5])) +
-        #   stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
-        #   scale_colour_viridis_d(option="cividis") +
-        #   geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=sts[4], tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE)) + 
-        #   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
-        #   ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_mean_se_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
+           ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
+           coord_cartesian(ylim = c(0,sts[5])) +
+           stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+           scale_colour_viridis_d(option="cividis") +
+           geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=sts[4], tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE)) + 
+           theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
+           ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_mean_se_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
         # 
         # ## Mean feature ##
         # 
-        #   ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
-        #   coord_cartesian(ylim = c(0,sts[5])) +
-        #   facet_grid(col = vars(feature) ) +
-        #   stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
-        #   scale_colour_viridis_d(option="cividis") +
-        #   geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=sts[4], tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE)) + 
-        #   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
-        #   ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_mean_se_features_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
+           ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
+           coord_cartesian(ylim = c(0,sts[5])) +
+           facet_grid(col = vars(feature) ) +
+           stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
+           scale_colour_viridis_d(option="cividis") +
+           geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=sts[4], tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE)) + 
+           theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
+           ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_mean_se_features_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
         
         ## Boxplot general ##
         
@@ -1079,6 +1095,7 @@ for (DATAFRAME in DATAFRAMES)
     }
   }
 }
+
 
 ```
 ### --> HASTA AQUI
