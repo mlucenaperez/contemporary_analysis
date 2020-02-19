@@ -14,11 +14,11 @@ mkdir /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_fe
 
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/
 
-POP=c_ll_ki_n008 # <--- Change pop here!
+POP=c_lp_do_n012 # <--- Change pop here!
 screen -S "$POP"_get_feature_coordinates
-POP=c_ll_ki_n008 # <--- Change pop here!
+POP=c_lp_do_n012 # <--- Change pop here!
 script log_screen_"$POP"_get_feature_coordinates.log
-POP=c_ll_ki_n008 # <--- Change pop here!
+POP=c_lp_do_n012 # <--- Change pop here!
 
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs
 
@@ -94,11 +94,11 @@ grep -F -f <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) <(cat
 
 grep -F -f <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) <(cat "${OUTPUT_DIR}"/c_ll_po_n008.transformedThetas_iteration"$iteration"."${FEATURE}") > "${OUTPUT_DIR}"/c_ll_po_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
 
-rm c_ll_ki_n008.transformedThetas_iteration{1..10}."${FEATURE}"
-rm c_ll_po_n008.transformedThetas_iteration{1..10}."${FEATURE}"
-rm c_ll_no_n008.transformedThetas_iteration{1..10}."${FEATURE}"
-rm c_lp_sm_n012.transformedThetas_iteration{1..10}."${FEATURE}"
-rm c_lp_do_n012.transformedThetas_iteration{1..10}."${FEATURE}"
+#rm c_ll_ki_n008.transformedThetas_iteration{1..10}."${FEATURE}"
+#rm c_ll_po_n008.transformedThetas_iteration{1..10}."${FEATURE}"
+#rm c_ll_no_n008.transformedThetas_iteration{1..10}."${FEATURE}"
+#rm c_lp_sm_n012.transformedThetas_iteration{1..10}."${FEATURE}"
+#rm c_lp_do_n012.transformedThetas_iteration{1..10}."${FEATURE}"
 
 
 done
