@@ -62,7 +62,9 @@ We are using the intermediate interaction files to avoid large files.
 OUTPUT_DIR=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature
 cd $OUTPUT_DIR
 
-FEATURES=(UCNE intergenic 3UTR 5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
+FEATURES=(3UTR 5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
+
+# UCNE intergenic 
 
 for FEATURE in "${FEATURES[@]}"
 do
@@ -116,7 +118,9 @@ rm c_lp_iteration*.innercoordinates
 
 ```{bash}
 POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
-FEATURES=(UCNE intergenic 3UTR 5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
+FEATURES=(3UTR 5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
+
+# UCNE intergenic 
 
 for FEATURE in "${FEATURES[@]}"
 do
@@ -134,27 +138,28 @@ done
 ```
 
 
-
-
-# --- hasta aqui! ---
 # Calculate diversity per windows.
-# CORREGIR!!
+
+Over the files I will performe window summary using this awk script I found online (and tested that it worked). 
+window=50000
+slide=10000
+
 ```{bash}
 
+POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
+FEATURES=(UCNE intergenic 3UTR 5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
 
-WATTERSON_AVERAGE_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.iteration"$iteration".borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g')
-WATTERSON_SD_PER_UNIT=$(cut -f 4 "$POP".iter.transformedThetas.iteration"$iteration".borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g')
+for FEATURE in "${FEATURES[@]}"
+do
+echo $FEATURE
+for POP in "${POPS[@]}"
+do 
+echo $POP
+awk -v OFS="\t" 'BEGIN{window=50000;slide=50000} { if(NR==1) print "coord_end","ave_watterson","ave_pairwise"} {mod=NR%window; if(NR<=window){count++}else{sum-=array[mod];sum2-=array2[mod]}sum+=$4;sum2+=$5;array[mod]=$4;array2[mod]=$5;} (NR%slide)==0{print NR,sum/count,sum2/count}' <(cat c_ll_ki_n008.transformedThetas.filtered.CONCATENATION.CDS)
+done
+done
 
-PAIRWISE_AVERAGE_PER_UNIT=$(cut -f 5 "$POP".iter.transformedThetas.iteration"$iteration".borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i }} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sum[i]/NR )}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-PAIRWISE_SD_PER_UNIT=$(cut -f 5  "$POP".iter.transformedThetas.iteration"$iteration".borrar | awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
 
-DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP".iter.transformedThetas.iteration"$iteration".borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-
-TAJIMAS_D_PER_UNIT=$(echo "(($PAIRWISE_AVERAGE_PER_UNIT) - ($WATTERSON_AVERAGE_PER_UNIT))/($DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT)" | bc -l | awk '{printf ("%.10e\n",$1)}' |  sed 's/[eE]+\{0,1\}/*10^/g' )
-
-INFORMATIVESITES=$(wc -l "$POP".iter.transformedThetas.iteration"$iteration".borrar | cut -d" " -f1)
-
-NAs=($(echo $LENGTH - $INFORMATIVESITES | bc)) 
 ```
 
 
