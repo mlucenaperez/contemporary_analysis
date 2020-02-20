@@ -96,14 +96,7 @@ grep -F -f <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) <(cat
 
 grep -F -f <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) <(cat "${OUTPUT_DIR}"/c_ll_po_n008.transformedThetas_iteration"$iteration"."${FEATURE}") > "${OUTPUT_DIR}"/c_ll_po_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
 
-#rm c_ll_ki_n008.transformedThetas_iteration{1..10}."${FEATURE}"
-#rm c_ll_po_n008.transformedThetas_iteration{1..10}."${FEATURE}"
-#rm c_ll_no_n008.transformedThetas_iteration{1..10}."${FEATURE}"
-#rm c_lp_sm_n012.transformedThetas_iteration{1..10}."${FEATURE}"
-#rm c_lp_do_n012.transformedThetas_iteration{1..10}."${FEATURE}"
-
-
-done
+done 
 done
 
 wc -l c_lp*iteration*
@@ -112,7 +105,59 @@ wc -l c_ll*iteration*
 # Para pardinus tiene buena pinta!
 rm c_lp_iteration*.innercoordinates
 
+#rm c_ll_ki_n008.transformedThetas_iteration{1..10}."${FEATURE}"
+#rm c_ll_po_n008.transformedThetas_iteration{1..10}."${FEATURE}"
+#rm c_ll_no_n008.transformedThetas_iteration{1..10}."${FEATURE}"
+#rm c_lp_sm_n012.transformedThetas_iteration{1..10}."${FEATURE}"
+#rm c_lp_do_n012.transformedThetas_iteration{1..10}."${FEATURE}"
+
+
 ```
+
+## Bedtools approach
+
+```{bash}
+nano fakeref.intergenic
+
+REF="/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated"
+OUTPUT_DIR=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature
+FEATURES=(3UTR 5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
+
+for FEATURE in "${FEATURES[@]}"
+do
+echo $FEATURE
+for iteration in {1..10}
+do
+bedtools intersect -a <(cat c_lp_sm_n012.transformedThetas_iteration"$iteration"."${FEATURE}" |  awk -v OFS='\t' '{print $1, $2, $3}') -b <(cat c_lp_do_n012.transformedThetas_iteration"$iteration"."${FEATURE}" |  awk -v OFS='\t' '{print $1, $2, $3}') -sorted -g $REF > c_lp_iteration"$iteration"."${FEATURE}".innercoordinates
+
+# Filter do for the coordinates in common.
+bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_lp_do_n012.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_lp_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF > "${OUTPUT_DIR}"/c_lp_do_n012.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+
+# Filter sm for the coordinates in common.
+bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_lp_do_n012.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_lp_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF> "${OUTPUT_DIR}"/c_lp_sm_n012.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+
+## LYNX LYNX ## ## ## ## ## 
+# I am doing a inner join:
+# I am doing it in 3 different steps althougth I would need it, because, when I get to ll I will need to do it like that, or it will be more complex.
+# 1. Get coordinates in common for the three pop.
+bedtools intersect -a <(cat c_ll_ki_n008.transformedThetas_iteration"$iteration"."${FEATURE}" |  awk -v OFS='\t' '{print $1, $2, $3}') -b <(cat c_ll_po_n008.transformedThetas_iteration"$iteration"."${FEATURE}" |  awk -v OFS='\t' '{print $1, $2, $3}') -sorted -g $REF | bedtools intersect -a - -b <(cat c_ll_no_n008.transformedThetas_iteration"$iteration"."${FEATURE}" |  awk -v OFS='\t' '{print $1, $2, $3}') -sorted -g $REF> c_ll_iteration"$iteration"."${FEATURE}".innercoordinates
+
+# Filter ki for the coordinates in common.
+bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_ll_ki_n008.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF > "${OUTPUT_DIR}"/c_ll_ki_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+
+# Filter no for the coordinates in common.
+bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_ll_no_n008.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF > "${OUTPUT_DIR}"/c_ll_no_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+
+# Filter po for the coordinates in common.
+bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_ll_po_n008.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF > "${OUTPUT_DIR}"/c_ll_po_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+done
+
+
+
+
+```
+
+
 
 # Join all filtered iteractions and assign consecutive coordinates to a file
 
