@@ -285,10 +285,10 @@ for POP in "${POPS[@]}"
 do 
 
 echo $POP $FEATURE "autosome"
-awk -v OFS="\t" 'BEGIN{window=10000;slide=5000} { if(NR==1) print "coord_end","ave_watterson","ave_pairwise"} {mod=NR%window; if(NR<=window){count++}else{sum-=array[mod];sum2-=array2[mod]}sum+=$4;sum2+=$5;array[mod]=$4;array2[mod]=$5;} (NR%slide)==0{print NR,sum/count,sum2/count}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Auto.$FEATURE) > $POP.transformedThetas.filtered.windows.Auto.$FEATURE
+awk -v OFS="\t" 'BEGIN{window=10000;slide=5000} { if(NR==1) print "coord_end","ave_watterson","ave_pairwise"} {mod=NR%window; if(NR<=window){count++}else{sum-=array[mod];sum2-=array2[mod]}sum+=$4;sum2+=$5;array[mod]=$4;array2[mod]=$5;} (NR%slide)==0{print NR,sum/count,sum2/count}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Auto.$FEATURE) > $POP.transformedThetas.filtered.windows.AUTO.$FEATURE
 
 echo $POP $FEATURE  "Xchr"
-awk -v OFS="\t" 'BEGIN{window=10000;slide=5000} { if(NR==1) print "coord_end","ave_watterson","ave_pairwise"} {mod=NR%window; if(NR<=window){count++}else{sum-=array[mod];sum2-=array2[mod]}sum+=$4;sum2+=$5;array[mod]=$4;array2[mod]=$5;} (NR%slide)==0{print NR,sum/count,sum2/count}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Xchr.$FEATURE) > $POP.transformedThetas.filtered.windows.Xchr.$FEATURE
+awk -v OFS="\t" 'BEGIN{window=10000;slide=5000} { if(NR==1) print "coord_end","ave_watterson","ave_pairwise"} {mod=NR%window; if(NR<=window){count++}else{sum-=array[mod];sum2-=array2[mod]}sum+=$4;sum2+=$5;array[mod]=$4;array2[mod]=$5;} (NR%slide)==0{print NR,sum/count,sum2/count}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Xchr.$FEATURE) > $POP.transformedThetas.filtered.windows.XCHR.$FEATURE
 
 done &
 done
@@ -303,12 +303,16 @@ POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
 
 for POP in "${POPS[@]}"
 do 
-rm $POP.transformedThetas.filtered.windows
+rm $POP.transformedThetas.filtered.windows.AUTO
+rm $POP.transformedThetas.filtered.windows.XCHR
+
 echo $POP
 for FEATURE in "${FEATURES[@]}"
 do
 echo $FEATURE
-awk -v OFS="\t" -v FEATURE="$FEATURE" -v POP="$POP" ' { if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "feature", "pop"} {print $0, FEATURE, POP}' <(tail -n+2 $POP.transformedThetas.filtered.windows.$FEATURE) >> $POP.transformedThetas.filtered.windows
+awk -v OFS="\t" -v FEATURE="$FEATURE" -v POP="$POP" ' { if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "feature", "pop"} {print $0, FEATURE, POP}' <(tail -n+2 $POP.transformedThetas.filtered.windows.Auto.$FEATURE) >> $POP.transformedThetas.filtered.windows.AUTO
+awk -v OFS="\t" -v FEATURE="$FEATURE" -v POP="$POP" ' { if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "feature", "pop"} {print $0, FEATURE, POP}' <(tail -n+2 $POP.transformedThetas.filtered.windows.XCHR.$FEATURE) >> $POP.transformedThetas.filtered.windows.XCHR
+
 done
 done
 ```
