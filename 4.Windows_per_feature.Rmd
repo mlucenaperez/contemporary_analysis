@@ -60,7 +60,8 @@ We are using the intermediate interaction files to avoid large files.
 ## Bedtools approach
 
 ```{bash}
-nano fakeref.intergenic
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature
 
 REF="/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated"
 OUTPUT_DIR=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature
@@ -108,43 +109,164 @@ wc -l c_ll*iteration*
 # Para pardinus tiene buena pinta!
 rm c_lp_iteration*.innercoordinates
 
-#rm c_ll_ki_n008.transformedThetas_iteration{1..10}."${FEATURE}"
-#rm c_ll_po_n008.transformedThetas_iteration{1..10}."${FEATURE}"
-#rm c_ll_no_n008.transformedThetas_iteration{1..10}."${FEATURE}"
-#rm c_lp_sm_n012.transformedThetas_iteration{1..10}."${FEATURE}"
-#rm c_lp_do_n012.transformedThetas_iteration{1..10}."${FEATURE}"
-
-```
 
 
-
-# Join all filtered iteractions and assign consecutive coordinates to a file
-
-```{bash}
-POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
-
-FEATURES=(intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
-FEATURES=(intergenic)
-
-FEATURES=(3UTR UCNE 5UTR)
+FEATURES=(UCNE 3UTR intergenic 5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
 
 for FEATURE in "${FEATURES[@]}"
 do
 echo $FEATURE
+rm c_ll_ki_n008.transformedThetas_iteration{1..10}."${FEATURE}"
+rm c_ll_po_n008.transformedThetas_iteration{1..10}."${FEATURE}"
+rm c_ll_no_n008.transformedThetas_iteration{1..10}."${FEATURE}"
+rm c_lp_sm_n012.transformedThetas_iteration{1..10}."${FEATURE}"
+rm c_lp_do_n012.transformedThetas_iteration{1..10}."${FEATURE}"
+done
+
+
+```
+
+## X and autosomes file
+
+I have to create a filter to filter for with the scaffolds associated to X chr and the scaffold associated with autosomes. 
+```{bash}
+cd /GRUPOS/grupolince/copia_fabascal/MAPPINGS/
+
+awk '{print $1}' lynx2cat_wTiger_Xchr.sorted.merged.bed | sort | uniq > scaffold_Xchr_putatively
+wc -l scaffold_Xchr_putatively
+#1891 scaffold_X
+# Those would be the scaffolds associated to Xchr, however! some of those are also present in autosomes, so I should filter them. 
+grep -f scaffold_Xchr_putatively lynx2cat_wTiger_AUTOSOMALchr.sorted.merged.corrected.bed | awk '{print $1}' | sort | uniq > scaffold_X_Autosomes
+wc -l scaffold_X_Autosomes
+#250 scaffold_X_Autosomes
+
+grep -v -f scaffold_X_Autosomes scaffold_Xchr > scaffold_Xchr_exclusively
+wc -l scaffold_Xchr_exclusively
+#1641 scaffold_Xchr_exclusively
+
+# He guardado un README con esta info en la capeta. 
+
+rm scaffold_X_Autosomes
+# Vamos a usar el scaffold_Xchr_putatively para quitarnos todo lo que pudiera ser X del analisis de autosomico y scaffold_Xchr_exclusively para hacer el análisis de los X. 
+
+# As I will use them with bedtools intersect, I need to add some coordinates. To do so I will grep those scaffold in lp23.lenght file and add the complete chr.
+
+grep -f /GRUPOS/grupolince/copia_fabascal/MAPPINGS/scaffold_Xchr_exclusively /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated > /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated_Xchr
+
+
+grep -v -f /GRUPOS/grupolince/copia_fabascal/MAPPINGS/scaffold_Xchr_putatively /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated > /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated_autosomes
+
+
+```
+
+As I thought about this filter after doing already some features, I have to different approaches right now. 
+
+1. Filter the scaffolds before cat (intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000 3UTR UCNE 5UTR intergenic CDS).
+2. Filter the scaffolds already in the transformed filtered file (3UTR UCNE 5UTR intergenic CDS intron).
+
+What I am doing is:
+
+Using the scaffold only assing to X chr to get X coordinates. However! I will use scaffold assinged to X OR X&Autosomes to filter all the scaffold. 
+i.e.
+
+X= scaffolds Assing only to X 
+Autosomes= All scaffolds - (scaffold assigned to x OR to x & autosomes).
+
+Los archivos son:
+
+/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated_Xchr
+/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated_autosomes
+
+# Join all filtered iteractions and assign consecutive coordinates to a file
+
+```{bash}
+
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature
+
+POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
+
+FEATURES=(intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000 )
+REF=/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated
+
+
+for FEATURE in "${FEATURES[@]}"
+do
 for POP in "${POPS[@]}"
 do
-echo $POP
 # join all files
-cat "$POP".transformedThetas_iteration{1..10}.filtered."${FEATURE}" >> "$POP".transformedThetas.filtered."${FEATURE}"
+for iteration in {1..10}
+do
+
+echo "Doing "$FEATURE $POP $iteration 
+
+bedtools intersect -a "$POP".transformedThetas_iteration$iteration.filtered."${FEATURE}" -b <(awk -v OFS="\t" '{print $1, "1", $2}' /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated_Xchr) -sorted -g $REF > "$POP".transformedThetas_iteration$iteration.filtered.Xchr."${FEATURE}"
+
+bedtools intersect -a "$POP".transformedThetas_iteration$iteration.filtered."${FEATURE}" -b <(awk -v OFS="\t" '{print $1, "1", $2}' /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated_autosomes) -sorted -g $REF > "$POP".transformedThetas_iteration$iteration.filtered.Auto."${FEATURE}"
+
+done
+echo "finish filtering, ready to cat"
 rm "$POP".transformedThetas_iteration{1..10}.filtered."${FEATURE}"
+
+cat "$POP".transformedThetas_iteration{1..10}.filtered.Xchr."${FEATURE}" >> "$POP".transformedThetas.filtered.Xchr."${FEATURE}"
+cat "$POP".transformedThetas_iteration{1..10}.filtered.Auto."${FEATURE}" >> "$POP".transformedThetas.filtered.Auto."${FEATURE}"
+
+rm "$POP".transformedThetas_iteration{1..10}.filtered.Xchr."${FEATURE}"
+rm "$POP".transformedThetas_iteration{1..10}.filtered.Auto."${FEATURE}"
+
+echo "finish cat, ready to CONCAT"
+
 # assign consecutive coordinates
-awk -v OFS='\t' '{print "CONCATENATION", NR, NR+1, $4, $5, $6, $7, $8, $9}' "$POP".transformedThetas.filtered."${FEATURE}" > "$POP".transformedThetas.filtered.CONCATENATION."${FEATURE}" 
+awk -v OFS='\t' '{print "CONCATENATION", NR, NR+1, $4, $5, $6, $7, $8, $9}' "$POP".transformedThetas.filtered.Xchr."${FEATURE}" > "$POP".transformedThetas.filtered.CONCATENATION.Xchr."${FEATURE}" 
+
+awk -v OFS='\t' '{print "CONCATENATION", NR, NR+1, $4, $5, $6, $7, $8, $9}' "$POP".transformedThetas.filtered.Auto."${FEATURE}" > "$POP".transformedThetas.filtered.CONCATENATION.Auto."${FEATURE}" 
+
+echo "Done with "$POP" and" $FEATURE"
+
 done
 done
 
 wc -l *CONCATENATION*
 ```
 
+# Filtering the already done FEATURES
+
+
+```{bash}
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature
+
+POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
+
+FEATURES=(3UTR UCNE 5UTR intergenic CDS intron) 
+
+REF=/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated
+
+
+for FEATURE in "${FEATURES[@]}"
+do
+for POP in "${POPS[@]}"
+do
+echo $POP $FEATURE "doing intersect"
+echo "Xchr"
+bedtools intersect -a "$POP".transformedThetas.filtered."${FEATURE}" -b <(awk -v OFS="\t" '{print $1, "1", $2}' /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated_Xchr) -sorted -g $REF > "$POP".transformedThetas.filtered.Xchr."${FEATURE}"
+echo "Autosomes"
+bedtools intersect -a "$POP".transformedThetas.filtered."${FEATURE}" -b <(awk -v OFS="\t" '{print $1, "1", $2}' /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated_autosomes) -sorted -g $REF > "$POP".transformedThetas.filtered.Auto."${FEATURE}"
+
+echo $POP $FEATURE "doing concat"
+echo "Xchr"
+# assign consecutive coordinates
+awk -v OFS='\t' '{print "CONCATENATION", NR, NR+1, $4, $5, $6, $7, $8, $9}' "$POP".transformedThetas.filtered.Xchr."${FEATURE}" > "$POP".transformedThetas.filtered.CONCATENATION.Xchr."${FEATURE}" 
+echo "Autosomes"
+awk -v OFS='\t' '{print "CONCATENATION", NR, NR+1, $4, $5, $6, $7, $8, $9}' "$POP".transformedThetas.filtered.Auto."${FEATURE}" > "$POP".transformedThetas.filtered.CONCATENATION.Auto."${FEATURE}" 
+
+done
+done
+
+# BORRAR!
+rm filtered."${FEATURE}"
+
+```
+
+# HASTA AQUI TENGO LANZADO!
 
 # Calculate diversity per windows.
 
@@ -155,16 +277,19 @@ slide=10000
 ```{bash}
 
 POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
-FEATURES=(UCNE intergenic 3UTR 5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
-FEATURES=(UCNE 3UTR 5UTR)
+FEATURES=(intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000 UCNE 3UTR 5UTR intergenic CDS)
 
 for FEATURE in "${FEATURES[@]}"
 do
-echo $FEATURE
 for POP in "${POPS[@]}"
 do 
-echo $POP
-awk -v OFS="\t" 'BEGIN{window=10000;slide=5000} { if(NR==1) print "coord_end","ave_watterson","ave_pairwise"} {mod=NR%window; if(NR<=window){count++}else{sum-=array[mod];sum2-=array2[mod]}sum+=$4;sum2+=$5;array[mod]=$4;array2[mod]=$5;} (NR%slide)==0{print NR,sum/count,sum2/count}' <(cat $POP.transformedThetas.filtered.CONCATENATION.$FEATURE) > $POP.transformedThetas.filtered.windows.$FEATURE
+
+echo $POP $FEATURE "autosome"
+awk -v OFS="\t" 'BEGIN{window=10000;slide=5000} { if(NR==1) print "coord_end","ave_watterson","ave_pairwise"} {mod=NR%window; if(NR<=window){count++}else{sum-=array[mod];sum2-=array2[mod]}sum+=$4;sum2+=$5;array[mod]=$4;array2[mod]=$5;} (NR%slide)==0{print NR,sum/count,sum2/count}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Auto.$FEATURE) > $POP.transformedThetas.filtered.windows.Auto.$FEATURE
+
+echo $POP $FEATURE  "Xchr"
+awk -v OFS="\t" 'BEGIN{window=10000;slide=5000} { if(NR==1) print "coord_end","ave_watterson","ave_pairwise"} {mod=NR%window; if(NR<=window){count++}else{sum-=array[mod];sum2-=array2[mod]}sum+=$4;sum2+=$5;array[mod]=$4;array2[mod]=$5;} (NR%slide)==0{print NR,sum/count,sum2/count}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Xchr.$FEATURE) > $POP.transformedThetas.filtered.windows.Xchr.$FEATURE
+
 done &
 done
 
@@ -226,18 +351,15 @@ wd_input <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_windows_fea
 
 ```{r}
 
-c_ll_ki_n013_diversity_windows <- read.csv(paste(wd_input, "c_ll_ki_n008.transformedThetas.filtered.windows.UCNE", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep=";", dec=".") %>% mutate (., color =  viridis_pal()(5)[1])
+c_ll_ki_n008_diversity_windows <- read.csv(paste(wd_input, "c_ll_ki_n008.transformedThetas.filtered.windows.UCNE", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  viridis_pal()(5)[1]) %>% mutate (feature="UCNE") %>% mutate (pop="c_ll_ki_n008") %>% mutate (Population="Kirov")
 
-c_ll_no_n008_diversity_windows <- read.csv(paste(wd_input, "c_ll_no_n008.transformedThetas.filtered.windows.UCNE", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep=";", dec=".") %>% mutate (., color = viridis_pal()(5)[2])
+c_ll_no_n008_diversity_windows <- read.csv(paste(wd_input, "c_ll_no_n008.transformedThetas.filtered.windows.UCNE", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color = viridis_pal()(5)[2]) %>% mutate (feature="UCNE") %>% mutate (pop="c_ll_no_n008") %>% mutate (Population="Norway")
 
-c_ll_po_n008_diversity_windows <- read.csv(paste(wd_input, "c_ll_po_n008.transformedThetas.filtered.windows.UCNE", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep=";", dec=".") %>% mutate (., color =  viridis_pal()(5)[3])
+c_ll_po_n008_diversity_windows <- read.csv(paste(wd_input, "c_ll_po_n008.transformedThetas.filtered.windows.UCNE", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  viridis_pal()(5)[3]) %>% mutate (feature="UCNE") %>% mutate (pop="c_ll_po_n008") %>% mutate (Population="Poland")
 
-c_lp_sm_n012_diversity_windows <- read.csv(paste(wd_input, "c_lp_sm_n012.transformedThetas.filtered.windows.UCNE", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep=";", dec=".") %>% mutate (., color =  "#5DC863FF")
+c_lp_sm_n012_diversity_windows <- read.csv(paste(wd_input, "c_lp_sm_n012.transformedThetas.filtered.windows.UCNE", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  "#5DC863FF") %>% mutate (feature="UCNE") %>% mutate (pop="c_lp_sm_n008") %>% mutate (Population="Andujar")
 
-c_lp_do_n012_diversity_windows <- read.csv(paste(wd_input, "c_lp_do_n012.transformedThetas.filtered.windows.UCNE", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep=";", dec=".") %>% mutate (., color =  "#FDE725FF")
-
-## R analysis
-
+c_lp_do_n012_diversity_windows <- read.csv(paste(wd_input, "c_lp_do_n012.transformedThetas.filtered.windows.UCNE", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  "#FDE725FF") %>% mutate (feature="UCNE") %>% mutate (pop="c_lp_do_n008") %>% mutate (Population="Donana")
 
 ```
 
@@ -250,8 +372,10 @@ create_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_
     POPULATION2=POP2 %>% select(pop) %>% mutate(Populations=as.character(pop)) %>% .[1,1] 
   data_diversity_POP1_POP2 <- dplyr::inner_join (POP1, POP2, by = c("coord_end", "feature")) %>%  
       # Calculo el delta 
-    dplyr::mutate (delta_pairwise = (ave_pairwise.x -ave_pairwise.y)) %>%
-    dplyr::mutate (delta_watterson = (ave_watterson.x - ave_watterson.y)) %>% 
+    dplyr::mutate (delta_pairwise = (ave_pairwise.y - ave_pairwise.x)) %>%
+    dplyr::mutate (delta_watterson = (ave_watterson.y - ave_watterson.x)) %>% 
+    dplyr::mutate (delta_pairwise_corrected = (ave_pairwise.y - ave_pairwise.x)/(ave_pairwise.y + ave_pairwise.x) ) %>% 
+    dplyr::mutate (delta_watterson_corrected = ((ave_watterson.y - ave_watterson.x)/(ave_watterson.y + ave_watterson.x))) %>% 
        # Add comparison title  
     dplyr::mutate(comparison=paste(POPULATION1, "-", POPULATION2, sep=""))
   dataframename <- paste (name_POP1, name_POP2, sep="_")
@@ -260,108 +384,145 @@ create_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_
 
 # Create data frame
 # Dataframe Kirov-Norway
-create_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity_windows,c_ll_no_n008_diversity_windows, deparse(substitute(c_ll_ki_n013_diversity_windows)),deparse(substitute(c_ll_no_n008_diversity_windows)))
+create_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n008_diversity_windows,c_ll_no_n008_diversity_windows, deparse(substitute(c_ll_ki_n008_diversity_windows)),deparse(substitute(c_ll_no_n008_diversity_windows)))
 # Dataframe Kirov-Poland
-create_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n013_diversity_windows,c_ll_po_n008_diversity_windows, deparse(substitute(c_ll_ki_n013_diversity_windows)),deparse(substitute(c_ll_po_n008_diversity_windows)))
+create_data_diversity_bootleneck_vs_non_bootleneck(c_ll_ki_n008_diversity_windows,c_ll_po_n008_diversity_windows, deparse(substitute(c_ll_ki_n008_diversity_windows)),deparse(substitute(c_ll_po_n008_diversity_windows)))
 # Dataframe Sierra_Morena-Doñana
 create_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n012_diversity_windows,c_lp_do_n012_diversity_windows, deparse(substitute(c_lp_sm_n012_diversity_windows)),deparse(substitute(c_lp_do_n012_diversity_windows)))
 
 # Combine comparisons
-all_comparisons_diversity_bootleneck_vs_non_bootleneck <- rbind (c_ll_ki_n013_diversity_c_ll_no_n008_diversity, c_ll_ki_n013_diversity_c_ll_po_n008_diversity, c_lp_sm_n019_diversity_c_lp_do_n012_diversity)
+all_comparisons_diversity_bootleneck_vs_non_bootleneck_window <- rbind (c_ll_ki_n008_diversity_windows_c_ll_no_n008_diversity_windows, c_ll_ki_n008_diversity_windows_c_ll_po_n008_diversity_windows, c_lp_sm_n012_diversity_windows_c_lp_do_n012_diversity_windows)
 
 ```
 
 ## *Delta distribution
 ```{r}
-DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+DATAFRAMES=c("c_ll_ki_n008_diversity_windows_c_ll_no_n008_diversity_windows", "c_ll_ki_n008_diversity_windows_c_ll_po_n008_diversity_windows", "c_lp_sm_n019_diversity_windows_c_lp_do_n012_diversity_windows")
+
 for (DATAFRAME in DATAFRAMES) 
 {
   POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
   POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-  POPULATION1=get(DATAFRAME) %>% select(Populations.x) %>% mutate(Populations.x=as.character(Populations.x)) %>% .[1,1] 
-  POPULATION2=get(DATAFRAME) %>% select(Populations.y) %>% mutate(Populations.y=as.character(Populations.y)) %>% .[1,1] 
+  POPULATION1=get(DATAFRAME) %>% select(Population.x) %>% mutate(Population.x=as.character(Population.x)) %>% .[1,1] 
+  POPULATION2=get(DATAFRAME) %>% select(Population.y) %>% mutate(Population.y=as.character(Population.y)) %>% .[1,1] 
+  
  # Watterson
- # Plot de la distribución de delta global
+ # Plot de la distribución de delta
   ggplot(get(DATAFRAME), aes(x=(delta_watterson))) + 
-    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
-    facet_wrap(~subset, scales = "free", nrow=2)  +
+    geom_histogram() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_average_distribution.pdf", sep=""))
+    ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_average_distribution.pdf", sep=""))
   # Plot de la distribución de delta para cada feature
  ggplot() + 
     aes(x = delta_watterson) +
-    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
-    facet_wrap(feature~subset, scales = "free", nrow=4)  +
+    geom_histogram() +
+    facet_wrap(~feature, scales = "free")  +
     theme(axis.text.x = element_text(angle=90, hjust=1)) +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
+    ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
+ 
+  # Plot de la distribución de delta corregida
+  ggplot(get(DATAFRAME), aes(x=(delta_watterson_corrected))) + 
+    geom_histogram() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_corrected_average_distribution.pdf", sep=""))
+  # Plot de la distribución de delta para cada feature
+ ggplot() + 
+    aes(x = delta_watterson_corrected) +
+    geom_histogram() +
+    facet_wrap(~feature, scales = "free")  +
+    theme(axis.text.x = element_text(angle=90, hjust=1)) +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_corrected_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
+
+ 
   # PI
    # Distribution 
   ggplot(get(DATAFRAME), aes(x=(delta_pairwise))) + 
-    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
-    facet_wrap(~subset, scales = "free", nrow=2)  +
+    geom_histogram() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_average_distribution.pdf", sep=""))
-  ggplot() + 
+    ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_average_distribution.pdf", sep=""))
+  # Plot de la distribución de delta para cada feature
+ ggplot() + 
     aes(x = delta_pairwise) +
-    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
-    facet_wrap(feature~subset, scales = "free", nrow=4)  +
+    geom_histogram() +
+    facet_wrap(~feature, scales = "free")  +
     theme(axis.text.x = element_text(angle=90, hjust=1)) +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
+    ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
+ 
+ 
+  # Plot de la distribución de delta corregida
+ ggplot(get(DATAFRAME), aes(x=(delta_pairwise_corrected))) + 
+    geom_histogram() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_corrected_average_distribution.pdf", sep=""))
+  # Plot de la distribución de delta para cada feature
+ ggplot() + 
+    aes(x = delta_pairwise_corrected) +
+    geom_histogram() +
+    facet_wrap(~feature, scales = "free")  +
+    theme(axis.text.x = element_text(angle=90, hjust=1)) +
+    ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_corrected_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
+ 
+
+ 
 }
 ```
 
-## *Delta skewness
+## *Sanity: Delta vs initial diversity
+
 ```{r}
-# Skewness watterson
-# La skewness se calcula del tipo 3, por defecto. He corrido el tipo 1 para ver que no había diferencias, y las diferencias son algo de escala pero nada de colocación, así que dejo este tipo que es el que viene por defecto. Type 3 is b1 = [(n-1)/n]^{3/2} m_3/m_2^{3/2} and b2 = [(n-1)/n]^{3/2} m_4/m_2^2).
-all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_watterson <- all_comparisons_diversity_bootleneck_vs_non_bootleneck %>%  filter(delta_watterson_per_unit_normalized_zero!=-1 & delta_watterson_per_unit_normalized_zero!=1)
-skeweness_watterson_comparison_feature <- aggregate(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_watterson$delta_watterson_per_unit_normalized_zero, list(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_watterson$comparison, all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_watterson$feature), skew)
-skeweness_watterson_comparison_all <- aggregate(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_watterson$delta_watterson_per_unit_normalized_zero, list(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_watterson$comparison), skew) %>% mutate(Group.2="All")
-skeweness_watterson <- rbind(skeweness_watterson_comparison_feature, skeweness_watterson_comparison_all)
-skeweness_watterson$Group.2 <- factor (skeweness_watterson$Group.2, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic","All"))
-skeweness_watterson$Group.1 <- factor (skeweness_watterson$Group.1, levels=c("Kirov-Norway", "Kirov-NE_Poland", "Andujar-Donana"))
-ggplot(skeweness_watterson %>% filter(Group.2!="All"), aes(x=Group.2, y=x, fill=Group.1, color=Group.1, shape=Group.1)) +
-    geom_point() +
-    geom_hline(data=skeweness_watterson %>% filter(Group.2=="All"), aes(yintercept=x, colour = Group.1)) +
-    labs(title=paste("Skewness for the Delta comparing Watterson: no -1 or +1",sep =" "),
-         x ="Feature", y = "Skewness") +    
-    coord_flip()  +
-    scale_fill_viridis_d (option = "plasma") +
-    scale_colour_viridis_d (option = "plasma") +
-    ggsave (paste(wd_output,"delta_zero_watterson_skewness_per_feature.pdf", sep=""))
-# Skewness Pi
-all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_pairwise <- all_comparisons_diversity_bootleneck_vs_non_bootleneck %>%  filter(delta_pairwise_per_unit_normalized_zero!=-1 & delta_pairwise_per_unit_normalized_zero!=1)
-skeweness_pairwise_comparison_feature <- aggregate(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_pairwise$delta_pairwise_per_unit_normalized_zero, list(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_pairwise$comparison, all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_pairwise$feature), skew)
-skeweness_pairwise_comparison_all <- aggregate(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_pairwise$delta_pairwise_per_unit_normalized_zero, list(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_pairwise$comparison), skew) %>% mutate(Group.2="All")
-skeweness_pairwise <- rbind(skeweness_pairwise_comparison_feature, skeweness_pairwise_comparison_all)
- skeweness_pairwise$Group.2 <- factor (skeweness_pairwise$Group.2, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic","All"))
- skeweness_pairwise$Group.1 <- factor (skeweness_pairwise$Group.1, levels=c("Kirov-Norway", "Kirov-NE_Poland", "Andujar-Donana"))
-ggplot(data=skeweness_pairwise %>% filter(Group.2!="All"), aes(x=Group.2, y=x, fill=Group.1, color=Group.1, shape=Group.1)) +
-    geom_point() +
-    geom_hline(data=skeweness_pairwise %>% filter(Group.2=="All"), aes(yintercept=x, colour = Group.1)) +
-    labs(title=paste("Skewness for the Delta comparing Pairwise: no -1 or +1",sep =" "),
-         x ="Feature", y = "Skewness") +    
-    coord_flip() +
-    scale_fill_viridis_d (option = "plasma") +
-    scale_colour_viridis_d (option = "plasma") +
-    ggsave (paste(wd_output,"delta_zero_pairwise_skewness_per_feature.pdf", sep=""))
+ggplot (c_ll_ki_n008_diversity_windows_c_ll_no_n008_diversity_windows, aes(x = log(ave_watterson.x), y = delta_watterson_corrected))+
+  geom_point() +
+  geom_smooth()
+
+ggplot (c_ll_ki_n008_diversity_windows_c_ll_no_n008_diversity_windows, aes(x = log10(ave_pairwise.x), y = delta_pairwise_corrected))+
+  geom_point() +
+  geom_smooth ()
+
 ```
 
 
 
-## *Delta vs initial diversity
+
+## *Delta summary
 
 ```{r}
-ggplot (c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(x = log10(watterson_zero.x), y = delta_watterson_per_unit_normalized_zero))+
-  geom_point()
+DATAFRAMES=c("c_ll_ki_n008_diversity_windows_c_ll_no_n008_diversity_windows", "c_ll_ki_n008_diversity_windows_c_ll_po_n008_diversity_windows", "c_lp_sm_n019_diversity_windows_c_lp_do_n012_diversity_windows")
 
-ggplot (c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(x = log10(pairwise_zero.x), y = delta_pairwise_per_unit_normalized_zero))+
-  geom_point()
+DELTA_MEASURES=c("delta_watterson", "delta_watterson_corrected", "delta_pairwise", "delta_pairwise_corrected")
 
-ggplot (c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(x = log10(watterson_zero.x), y = delta_pairwise_per_unit_normalized_zero))+
-  geom_point()
+
+for (DATAFRAME in DATAFRAMES) 
+{
+  for (DELTA_MEASURE in DELTA_MEASURES)
+  {
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  POPULATION1=get(DATAFRAME) %>% select(Population.x) %>% mutate(Population.x=as.character(Population.x)) %>% .[1,1] 
+  POPULATION2=get(DATAFRAME) %>% select(Population.y) %>% mutate(Population.y=as.character(Population.y)) %>% .[1,1] 
+  
+ggplot(get(DATAFRAME), aes(x=feature, y=delta_watterson_corrected))+
+      stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
+      coord_flip()
+      theme(legend.position="top", axis.title.y=element_blank()) +
+      scale_fill_manual(values=c("#588C7E", "#F2AE72", "#8C4646")) +
+      scale_color_manual(values=c("#588C7E", "#F2AE72", "#8C4646")) +
+  # PONER EL VALOR DEL GENERAL (ralla?)
+#scale_fill_viridis_d(option = "magma")+
+#scale_colour_viridis_d(option = "magma")+
+      scale_x_discrete2(limits = rev)+
+
+ggsave (paste(wd_output,DELTA_MEASURE, ".pdf", sep=""), width = 80, height = 80, units = "mm")
+}
+}
+
 ```
 
 
+## *Sanity: Diversity one pop against other
 
+```{r}
+ggplot (c_ll_ki_n008_diversity_windows_c_ll_no_n008_diversity_windows, aes(x = ave_watterson.x, y = ave_watterson.y))+
+  geom_point() +
+  geom_smooth()
+```
 
