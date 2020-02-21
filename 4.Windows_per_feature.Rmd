@@ -277,7 +277,7 @@ slide=10000
 ```{bash}
 
 POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
-FEATURES=(intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000 UCNE 3UTR 5UTR intergenic CDS)
+FEATURES=(intergenic CDS intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000 UCNE 3UTR 5UTR)
 
 for FEATURE in "${FEATURES[@]}"
 do
