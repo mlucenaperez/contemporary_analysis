@@ -704,10 +704,7 @@ ggplot(data=skeweness_pairwise %>% filter(Group.2!="All"), aes(x=Group.2, y=x, f
     ggsave (paste(wd_output,"delta_zero_pairwise_skewness_per_feature.pdf", sep=""))
 ```
 
-
-
 ## *Delta vs initial diversity
-
 ```{r}
 ggplot (c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(x = log10(watterson_zero.x), y = delta_watterson_per_unit_normalized_zero))+
   geom_point()
@@ -720,7 +717,6 @@ ggplot (c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(x = log10(watterson_z
 ```
 
 ## *Dataset categories prep
-
 ```{r}
 DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
 
@@ -793,8 +789,6 @@ c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson$feature  <- f
 c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson$feature  <- factor (c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
 
 ```
-
-#### --> OJO MODIF
 
 ### U-MW test diversity category vs genomic variables
 
@@ -965,16 +959,25 @@ informative_sites.less <- with(DATAFRAME_filtered,
        by(DATAFRAME_filtered, feature,
           function(x) wilcox.test(informative_sites.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
 
+# rvis_score
+rvis_score.greater <- wilcox.test(rvis_score ~ evolution_category, data = DATAFRAME_filtered %>% filter(feature=="CDS"), conf.int = TRUE, alternative = "greater")  %>% tidy(.)
+
+rvis_score.less <- wilcox.test(rvis_score ~ evolution_category, data = DATAFRAME_filtered %>% filter(feature=="CDS"), conf.int = TRUE, alternative = "less")  %>% tidy(.)
+
+# RVIS (Residual Variation Intolerance Score) is a gene-based score intended to help in the interpretation of human sequence data. The intolerance score in its current form is based upon allele frequency data as represented in whole exome sequence data from the NHLBI-ESP6500 data set. The score is designed to rank genes in terms of whether they have more or less common functional genetic variation relative to the genome wide expectation given the amount of apparently neutral variation the gene has. A gene with a positive score has more common functional variation, and a gene with a negative score has less and is referred to as "intolerant". By convention we rank all genes in order from most intolerant to least. As an example, a gene such as ATP1A3 has a RVIS score of -1.53 and a percentile of 3.37%, meaning it is amongst the 3.37% most intolerant of human genes. Depending on what disease area you are a studying, you may way to consider either intolerant genes (neurodevelomental disease) or tolerant genes (some immunological diseases) as better candidates. Data sourced from: EVS-v.0.0.14, (June 20, 2012)
+
 
 lista_results_divergence_melted <- melt(list(divergence.greater , divergence.less)) %>% mutate(genomic_variable="divergence") %>% spread(., variable, value)
 lista_results_recombination_melted <- melt(list(recombination.greater, recombination.less)) %>% mutate(genomic_variable="recombination") %>% spread(., variable, value)
 lista_results_GC_content_melted <- melt(list(GC_content.greater, GC_content.less)) %>% mutate(genomic_variable="GC_content") %>% spread(., variable, value)
 lista_results_size <- melt (list (informative_sites.greater, informative_sites.less)) %>% mutate(genomic_variable="informative_sites") %>% spread(., variable, value)
-  
-  
-resultados_U_Man_Whitney <- rbind(lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_size)
+lista_results_rvis <- melt (list (rvis_score.greater, rvis_score.less)) %>% mutate(genomic_variable="rvis_score") %>% spread(., variable, value) %>% mutate (L2="CDS")
 
-write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_features_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,"_",DIVERSITY_CATEGORY, ".txt",sep=""), row.names = F)
+
+
+resultados_U_Man_Whitney <- rbind(lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_size, lista_results_rvis) %>% mutate (SIG=ifelse(p.value<0.05, "SIGN", "no")) %>% mutate (comparison=paste0(POP1,"_", POP2)) %>% mutate (method="wilcox.test")
+
+write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_features_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,"_",DIVERSITY_CATEGORY, ".txt",sep=""), row.names = F, quote=F, dec=",")
 
 rm(divergence.greater, divergence.less, recombination.greater, recombination.less , GC_content.greater, GC_content.less, lista_results_divergence_melted,  lista_results_recombination_melted,  lista_results_GC_content_melted, resultados_U_Man_Whitney)
 
@@ -982,6 +985,13 @@ rm(divergence.greater, divergence.less, recombination.greater, recombination.les
 }
 
 ```
+
+En mi local hago lo siguiente:
+
+```{bash}
+cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/c_lp_sm_n019_c_lp_do_n012_features_UMW_test_watterson_LD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/c_ll_ki_n013_c_ll_po_n008_features_UMW_test_watterson_LD.txt ) <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/c_ll_ki_n013_c_ll_no_n008_features_UMW_test_watterson_LD.txt )  > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/all_comparisons_features_UMW_test_watterson_LD.txt 
+```
+
 
 
 #### Boxplot categories vs. genomic category
@@ -996,7 +1006,7 @@ DIVERSITY_CATEGORIES=c("HD","LD")
 # HD --> D_ND_pairwise D_D_pairwise
 # LD --> ND_ND_pairwise ND_D_pairwise
   
-GENOMIC_VARIABLES=c("divergence", "recombination_rate", "GC_content", "informative_sites.x")
+GENOMIC_VARIABLES=c("divergence", "recombination_rate", "GC_content", "informative_sites.x", "rvis_score")
 TEST_TYPES=c("less", "greater")
 #fun_mean <- function(x){return(round(data.frame(y=mean(x),label=mean(x,na.rm=T)),digit=5))}
 
@@ -1046,26 +1056,30 @@ for (DATAFRAME in DATAFRAMES)
         {
           sts <- boxplot.stats((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep="")))$informative_sites.x)$stats  # Compute lower and upper whisker limits
         }
-           
+         
+              if (GENOMIC_VARIABLE=="rvis_score") 
+        {
+          sts <- boxplot.stats((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep="")))$rvis_score)$stats  # Compute lower and upper whisker limits
+        }  
            
         # Mean general ##
 
            ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
-           coord_cartesian(ylim = c(0,sts[5])) +
+           #coord_cartesian(ylim = c(0,sts[5])) +
            stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
            scale_colour_viridis_d(option="cividis") +
-           geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=sts[4], tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE)) + 
+           #geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=sts[4], tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE)) + 
            theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
            ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_mean_se_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
         # 
         # ## Mean feature ##
         # 
            ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
-           coord_cartesian(ylim = c(0,sts[5])) +
+           #coord_cartesian(ylim = c(0,sts[5])) +
            facet_grid(col = vars(feature) ) +
            stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
            scale_colour_viridis_d(option="cividis") +
-           geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=sts[4], tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE)) + 
+           #geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=sts[4], tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE)) + 
            theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
            ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_mean_se_features_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
         
@@ -1098,7 +1112,63 @@ for (DATAFRAME in DATAFRAMES)
 
 
 ```
-### --> HASTA AQUI
+
+## Genomic variables agains informative sites.
+
+```{r}
+DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson" )
+GENOMIC_VARIABLES=c("divergence", "recombination_rate", "GC_content", "rvis_score")
+
+for (GENOMIC_VARIABLE in GENOMIC_VARIABLES)
+{
+for (DATAFRAME in DATAFRAMES)
+{
+  
+     POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+     POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+     
+ggplot (get(DATAFRAME) %>% filter(feature %in% c("Intergenic","CDS")) , aes_string("informative_sites.x", GENOMIC_VARIABLE)) +
+  geom_point(alpha = 1/10) +
+  geom_smooth() +
+  facet_wrap (~feature, scales = "free")
+ggsave (paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_vs_informative_sites.pdf",sep=""))
+
+}
+}
+```
+
+# Amount of low recombination units
+
+Tengo que calcular cuantas unidades relativas al total teng con recombination menos que 0.5 en ND-ND y en ND-D. 
+```{r}
+DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson" )
+
+for (DATAFRAME in DATAFRAMES)
+{
+
+   POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+   POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+  
+ND_ND <- full_join (get(DATAFRAME) %>% filter (evolution_category=="ND_ND_watterson" & recombination_rate <= 0.5)  %>% group_by (feature) %>% summarise (below_0.5=n()), 
+           get(DATAFRAME) %>% filter (evolution_category=="ND_ND_watterson" & recombination_rate > 0.5)  %>% group_by (feature) %>% summarise (above_0.5=n())) %>% 
+  mutate (percentage_0.5_ND_ND=below_0.5/above_0.5) %>% 
+  select (-below_0.5, -above_0.5)
+
+
+ND_D <- full_join (get(DATAFRAME) %>% filter (evolution_category=="ND_D_watterson" & recombination_rate <= 0.5)  %>% group_by (feature) %>% summarise (below_0.5=n()), 
+           get(DATAFRAME) %>% filter (evolution_category=="ND_D_watterson" & recombination_rate > 0.5)  %>% group_by (feature) %>% summarise (above_0.5=n())) %>% 
+  mutate (percentage_0.5_ND_D=below_0.5/above_0.5) %>% 
+  select (-below_0.5, -above_0.5)
+
+ND_ND_ND_D <- full_join(ND_ND, ND_D, by="feature")
+
+write.table(ND_ND_ND_D, paste(wd_output,POP1,"_",POP2,"_low_recombination_regions_in_ND_ND_vs_ND_D_watterson.txt",sep=""), row.names = F, quote=F, dec=",") 
+
+}
+```
+
+
+
 ## Recombination per feature
 
 ```{r}
