@@ -981,6 +981,8 @@ data_diversity_filtered_ave_corrected <- read.table(paste(wd, "data_diversity_fi
 
 data_diversity_filtered_ave_corrected$Populations <- factor (data_diversity_filtered_ave_corrected$Populations, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
 data_diversity_filtered_ave_corrected$feature <- factor (data_diversity_filtered_ave_corrected$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+
+
 ```
 
 ## B) Summarize data
