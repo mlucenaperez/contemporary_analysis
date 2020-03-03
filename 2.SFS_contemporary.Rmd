@@ -581,7 +581,6 @@ tail c_lp_sm_n019.transformedThetas # --> Buena pinta
 tail c_ll_ki_n013.transformedThetas # --> Buena pinta
 tail c_ll_po_n008.transformedThetas # --> Buena pinta
 
- 
 ```
 
 
