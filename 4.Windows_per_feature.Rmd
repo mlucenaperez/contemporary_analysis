@@ -30,7 +30,8 @@ FEATURE="CDS"
 OUTPUT_DIR=/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature
 REF="/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated"
 
-FEATURES=(UCNE intergenic 3UTR 5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
+#FEATURES=(UCNE intergenic 3UTR 5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
+FEATURES=(5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
 
 echo "---------------------------------------------------$POP---------------------------------------------------"
 
@@ -46,7 +47,7 @@ for SCAFFOLD_NUMBER in $(seq -s " " -f %05g $SCAFFOLD_START $SCAFFOLD_END) # est
 do
 SCAFFOLD=$(echo "lp23.s"$SCAFFOLD_NUMBER)
 cd "$SFS_FOLDER""$POP"_separated_by_scaffold
-cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <( cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3_"$SCAFFOLD" | grep $FEATURE) -sorted -g $REF >> "${OUTPUT_DIR}"/"${POP}".transformedThetas_iteration"$iteration"."${FEATURE}"
+cat "$POP".transformedThetas_"$SCAFFOLD" | bedtools intersect -a stdin -b <( cat "$SCAFFOLDS_FOLDER"LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3_"$SCAFFOLD" | grep $FEATURE) -sorted -g $REF | awk -v OFS='\t' '{print $1, $2, $3, $4, $5}' >> "${OUTPUT_DIR}"/"${POP}".transformedThetas_iteration"$iteration"."${FEATURE}"
 done &
 done 
 done
@@ -79,27 +80,27 @@ echo "doing lynx pardinus"
 bedtools intersect -a <(cat c_lp_sm_n012.transformedThetas_iteration"$iteration"."${FEATURE}" |  awk -v OFS='\t' '{print $1, $2, $3}') -b <(cat c_lp_do_n012.transformedThetas_iteration"$iteration"."${FEATURE}" |  awk -v OFS='\t' '{print $1, $2, $3}') -sorted -g $REF > c_lp_iteration"$iteration"."${FEATURE}".innercoordinates
 
 # Filter do for the coordinates in common.
-bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_lp_do_n012.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_lp_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF > "${OUTPUT_DIR}"/c_lp_do_n012.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+#bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_lp_do_n012.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_lp_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF > "${OUTPUT_DIR}"/c_lp_do_n012.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
 
 # Filter sm for the coordinates in common.
-bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_lp_do_n012.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_lp_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF> "${OUTPUT_DIR}"/c_lp_sm_n012.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_lp_sm_n012.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_lp_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF > "${OUTPUT_DIR}"/c_lp_sm_n012.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
 
-echo "doing lynx lynx"
+#echo "doing lynx lynx"
 
 ## LYNX LYNX ## ## ## ## ## 
 # I am doing a inner join:
 # I am doing it in 3 different steps althougth I would need it, because, when I get to ll I will need to do it like that, or it will be more complex.
 # 1. Get coordinates in common for the three pop.
-bedtools intersect -a <(cat c_ll_ki_n008.transformedThetas_iteration"$iteration"."${FEATURE}" |  awk -v OFS='\t' '{print $1, $2, $3}') -b <(cat c_ll_po_n008.transformedThetas_iteration"$iteration"."${FEATURE}" |  awk -v OFS='\t' '{print $1, $2, $3}') -sorted -g $REF | bedtools intersect -a - -b <(cat c_ll_no_n008.transformedThetas_iteration"$iteration"."${FEATURE}" |  awk -v OFS='\t' '{print $1, $2, $3}') -sorted -g $REF> c_ll_iteration"$iteration"."${FEATURE}".innercoordinates
+#bedtools intersect -a <(cat c_ll_ki_n008.transformedThetas_iteration"$iteration"."${FEATURE}" |  awk -v OFS='\t' '{print $1, $2, $3}') -b <(cat c_ll_po_n008.transformedThetas_iteration"$iteration"."${FEATURE}" |  awk -v OFS='\t' '{print $1, $2, $3}') -sorted -g $REF | bedtools intersect -a - -b <(cat c_ll_no_n008.transformedThetas_iteration"$iteration"."${FEATURE}" |  awk -v OFS='\t' '{print $1, $2, $3}') -sorted -g $REF> c_ll_iteration"$iteration"."${FEATURE}".innercoordinates
 
 # Filter ki for the coordinates in common.
-bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_ll_ki_n008.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF > "${OUTPUT_DIR}"/c_ll_ki_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+#bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_ll_ki_n008.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF > "${OUTPUT_DIR}"/c_ll_ki_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
 
 # Filter no for the coordinates in common.
-bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_ll_no_n008.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF > "${OUTPUT_DIR}"/c_ll_no_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+#bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_ll_no_n008.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF > "${OUTPUT_DIR}"/c_ll_no_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
 
 # Filter po for the coordinates in common.
-bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_ll_po_n008.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF > "${OUTPUT_DIR}"/c_ll_po_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
+#bedtools intersect -a  <(cat "${OUTPUT_DIR}"/c_ll_po_n008.transformedThetas_iteration"$iteration"."${FEATURE}") -b <(cat c_ll_iteration"$iteration"."${FEATURE}".innercoordinates) -sorted -g $REF > "${OUTPUT_DIR}"/c_ll_po_n008.transformedThetas_iteration"$iteration".filtered."${FEATURE}"
 done
 done
 
@@ -183,10 +184,12 @@ Los archivos son:
 
 cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature
 
-POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
+#POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
 
-FEATURES=(intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000 )
+#FEATURES=(intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000 )
 REF=/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated
+FEATURES=(5UTR intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000)
+POPS=(c_lp_sm_n012)
 
 
 for FEATURE in "${FEATURES[@]}"
@@ -220,7 +223,7 @@ awk -v OFS='\t' '{print "CONCATENATION", NR, NR+1, $4, $5, $6, $7, $8, $9}' "$PO
 
 awk -v OFS='\t' '{print "CONCATENATION", NR, NR+1, $4, $5, $6, $7, $8, $9}' "$POP".transformedThetas.filtered.Auto."${FEATURE}" > "$POP".transformedThetas.filtered.CONCATENATION.Auto."${FEATURE}" 
 
-echo "Done with "$POP" and" $FEATURE"
+echo "Done with" $POP "and" $FEATURE
 
 done
 done
@@ -326,6 +329,10 @@ slide=10000
 Esto lo he hecho con un archivo concatenado pero realmente no lo necestio. 
 ```{bash}
 
+# 03/03/2020
+# Como he detectado un error en Tajima D de los archivos submuestreados (explicado en 2.SFS_contemporary),  no voy a usar este valor para calcular mi tajima sino que lo voy a volver a calcular yo. 
+
+
 POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
 FEATURES=(intergenic CDS intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000 UCNE 3UTR 5UTR)
 
@@ -335,10 +342,43 @@ do
 for FEATURE in "${FEATURES[@]}"
 do
 echo $POP $FEATURE "autosome"
+
+## Add tajima!
+DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(awk -v OFS="\t" '{print $5-$4 }' <(tail -n +2 $POP.transformedThetas.filtered.CONCATENATION.Auto.$FEATURE) | awk -v OFS="\t" 
+
+
+awk -v OFS="\t" 'BEGIN{window=10000;slide=5000} { if(NR==1) print "sd_difference_pi_minus_watterson"} 
+
+{mod=NR%window; 
+if(NR<=window){count++}
+else{sum-=array[mod];
+
+sum2-=array2[mod]}sum+=$4;
+sum2+=$5;
+array[mod]=$4;
+array2[mod]=$5;} (NR%slide)==0
+
+{print NR,sum/count,sum2/count}'
+
+
+awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+ 
+
+
+DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP".iter.transformedThetas.iteration"$iteration".borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
+
+
+
+
 awk -v OFS="\t" 'BEGIN{window=10000;slide=5000} { if(NR==1) print "coord_end","ave_watterson","ave_pairwise"} {mod=NR%window; if(NR<=window){count++}else{sum-=array[mod];sum2-=array2[mod]}sum+=$4;sum2+=$5;array[mod]=$4;array2[mod]=$5;} (NR%slide)==0{print NR,sum/count,sum2/count}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Auto.$FEATURE) > $POP.transformedThetas.filtered.windows.AUTO.$FEATURE
+
 
 echo $POP $FEATURE  "Xchr"
 awk -v OFS="\t" 'BEGIN{window=10000;slide=5000} { if(NR==1) print "coord_end","ave_watterson","ave_pairwise"} {mod=NR%window; if(NR<=window){count++}else{sum-=array[mod];sum2-=array2[mod]}sum+=$4;sum2+=$5;array[mod]=$4;array2[mod]=$5;} (NR%slide)==0{print NR,sum/count,sum2/count}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Xchr.$FEATURE) > $POP.transformedThetas.filtered.windows.XCHR.$FEATURE
+
+
+
+
 
 done 
 done
@@ -529,8 +569,7 @@ for (DATAFRAME in DATAFRAMES)
     theme(axis.text.x = element_text(angle=90, hjust=1)) +
     ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_corrected_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
 
- 
-  # PI
+ # PI
    # Distribution 
   ggplot(get(DATAFRAME), aes(x=(delta_pairwise))) + 
     geom_histogram() +
@@ -557,9 +596,6 @@ for (DATAFRAME in DATAFRAMES)
     facet_wrap(~feature, scales = "free")  +
     theme(axis.text.x = element_text(angle=90, hjust=1)) +
     ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_corrected_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
- 
-
- 
 }
 ```
 
