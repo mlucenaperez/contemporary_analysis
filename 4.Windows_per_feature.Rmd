@@ -196,6 +196,10 @@ for FEATURE in "${FEATURES[@]}"
 do
 for POP in "${POPS[@]}"
 do
+
+rm "$POP".transformedThetas.filtered.Xchr."${FEATURE}"
+rm "$POP".transformedThetas.filtered.Auto."${FEATURE}"
+
 # join all files
 for iteration in {1..10}
 do
@@ -245,7 +249,6 @@ REF=/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_l
 
 
 FEATURES=(intron)
-POPS=(c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
 
 for FEATURE in "${FEATURES[@]}"
 do
@@ -258,7 +261,7 @@ echo $POP $FEATURE "doing concat Xchr"
 # assign consecutive coordinates
 awk -v OFS='\t' '{print "CONCATENATION", NR, NR+1, $4, $5, $6, $7, $8, $9}' "$POP".transformedThetas.filtered.Xchr."${FEATURE}" > "$POP".transformedThetas.filtered.CONCATENATION.Xchr."${FEATURE}" 
 
-gzip "$POP".transformedThetas.filtered.Xchr."${FEATURE}"
+#gzip "$POP".transformedThetas.filtered.Xchr."${FEATURE}"
 
 #######
 echo $POP $FEATURE "doing intersect AUTOSOMES"
@@ -268,7 +271,7 @@ echo $POP $FEATURE "doing concat AUTOSOMES"
 
 awk -v OFS='\t' '{print "CONCATENATION", NR, NR+1, $4, $5, $6, $7, $8, $9}' "$POP".transformedThetas.filtered.Auto."${FEATURE}" > "$POP".transformedThetas.filtered.CONCATENATION.Auto."${FEATURE}" 
 
-gzip "$POP".transformedThetas.filtered.Auto."${FEATURE}"
+#gzip "$POP".transformedThetas.filtered.Auto."${FEATURE}"
 
 done
 done
@@ -332,7 +335,6 @@ Esto lo he hecho con un archivo concatenado pero realmente no lo necestio.
 # 03/03/2020
 # Como he detectado un error en Tajima D de los archivos submuestreados (explicado en 2.SFS_contemporary),  no voy a usar este valor para calcular mi tajima sino que lo voy a volver a calcular yo. 
 
-
 POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
 FEATURES=(intergenic CDS intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000 UCNE 3UTR 5UTR)
 
@@ -343,42 +345,41 @@ for FEATURE in "${FEATURES[@]}"
 do
 echo $POP $FEATURE "autosome"
 
-## Add tajima!
-DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(awk -v OFS="\t" '{print $5-$4 }' <(tail -n +2 $POP.transformedThetas.filtered.CONCATENATION.Auto.$FEATURE) | awk -v OFS="\t" 
+awk -v OFS="\t" '{print $4,$5,$5-$4}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Auto.$FEATURE) |  
+awk -v OFS="\t" 'BEGIN{window=10000;slide=5000}  
+{
+mod=NR%window; if(NR<=window){count++}
+else
+{sum1-=array1[mod]; sum2-=array2[mod]; sum3-=array3[mod]; sumsq3-=array3[mod]}
+sum1+=$1;
+sum2+=$2;
+sum3+=$3;
+sumsq3+=($3)^2
+array1[mod]=$1;
+array2[mod]=$2;
+array3[mod]=$3
+} 
+(NR%slide)==0{print NR, sum1/count, sum2/count, sqrt((sumsq3-(sum3^2/NR))/NR)}' | awk -v OFS="\t" '{ if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "tajimaD"} {print $1, $2, $3, ($3-$2)/$4}' | \
+sed -e '2d' > $POP.transformedThetas.filtered.windows.AUTO.$FEATURE
 
+echo $POP $FEATURE "Xchr"
 
-awk -v OFS="\t" 'BEGIN{window=10000;slide=5000} { if(NR==1) print "sd_difference_pi_minus_watterson"} 
-
-{mod=NR%window; 
-if(NR<=window){count++}
-else{sum-=array[mod];
-
-sum2-=array2[mod]}sum+=$4;
-sum2+=$5;
-array[mod]=$4;
-array2[mod]=$5;} (NR%slide)==0
-
-{print NR,sum/count,sum2/count}'
-
-
-awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
- 
-
-
-DIFFERENCE_PAIRWISE_WATTERSON_SD_PER_UNIT=$(cut -f 6  "$POP".iter.transformedThetas.iteration"$iteration".borrar   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' | sed 's/[eE]+\{0,1\}/*10^/g') 
-
-
-
-
-awk -v OFS="\t" 'BEGIN{window=10000;slide=5000} { if(NR==1) print "coord_end","ave_watterson","ave_pairwise"} {mod=NR%window; if(NR<=window){count++}else{sum-=array[mod];sum2-=array2[mod]}sum+=$4;sum2+=$5;array[mod]=$4;array2[mod]=$5;} (NR%slide)==0{print NR,sum/count,sum2/count}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Auto.$FEATURE) > $POP.transformedThetas.filtered.windows.AUTO.$FEATURE
-
-
-echo $POP $FEATURE  "Xchr"
-awk -v OFS="\t" 'BEGIN{window=10000;slide=5000} { if(NR==1) print "coord_end","ave_watterson","ave_pairwise"} {mod=NR%window; if(NR<=window){count++}else{sum-=array[mod];sum2-=array2[mod]}sum+=$4;sum2+=$5;array[mod]=$4;array2[mod]=$5;} (NR%slide)==0{print NR,sum/count,sum2/count}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Xchr.$FEATURE) > $POP.transformedThetas.filtered.windows.XCHR.$FEATURE
-
-
-
-
+awk -v OFS="\t" '{print $4,$5,$5-$4}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Xchr.$FEATURE) |
+awk -v OFS="\t" 'BEGIN{window=10000;slide=5000}  
+{
+mod=NR%window; if(NR<=window){count++}
+else
+{sum1-=array1[mod]; sum2-=array2[mod]; sum3-=array3[mod]; sumsq3-=array3[mod]}
+sum1+=$1;
+sum2+=$2;
+sum3+=$3;
+sumsq3+=($3)^2
+array1[mod]=$1;
+array2[mod]=$2;
+array3[mod]=$3
+} 
+(NR%slide)==0{print NR, sum1/count, sum2/count, sqrt((sumsq3-sum3^2/NR)/NR)}' | awk -v OFS="\t" '{ if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "tajimaD"} {print $1, $2, $3, ($3-$2)/$4}' | \
+sed -e '2d'   > $POP.transformedThetas.filtered.windows.XCHR.$FEATURE
 
 done 
 done
