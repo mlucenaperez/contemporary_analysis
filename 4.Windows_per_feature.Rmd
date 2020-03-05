@@ -344,45 +344,55 @@ do
 for FEATURE in "${FEATURES[@]}"
 do
 echo $POP $FEATURE "autosome"
-
-awk -v OFS="\t" '{print $4,$5,$5-$4}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Auto.$FEATURE) |  
+awk -v OFS="\t" '{print $4,$5,$5-$4,($5-$4)^2}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Auto.$FEATURE) |  
 awk -v OFS="\t" 'BEGIN{window=10000;slide=5000}  
 {
 mod=NR%window; if(NR<=window){count++}
 else
-{sum1-=array1[mod]; sum2-=array2[mod]; sum3-=array3[mod]; sumsq3-=array3[mod]}
+{sum1-=array1[mod]; sum2-=array2[mod]; sum3-=array3[mod]; sumsq4-=array4[mod]}
 sum1+=$1;
 sum2+=$2;
 sum3+=$3;
-sumsq3+=($3)^2
+sumsq4+=$4
 array1[mod]=$1;
 array2[mod]=$2;
-array3[mod]=$3
+array3[mod]=$3;
+array4[mod]=$4
 } 
-(NR%slide)==0{print NR, sum1/count, sum2/count, sqrt((sumsq3-(sum3^2/NR))/NR)}' | awk -v OFS="\t" '{ if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "tajimaD"} {print $1, $2, $3, ($3-$2)/$4}' | \
-sed -e '2d' > $POP.transformedThetas.filtered.windows.AUTO.$FEATURE
+(NR%slide)==0{print NR, sum1/count, sum2/count, sqrt((sumsq4-((sum3^2)/count))/count)}'  | awk -v OFS="\t" '{ if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "tajimaD"} {print $1, $2, $3, ($3-$2)/$4}' | \
+sed -e '2d' > $POP.transformedThetas.filtered.windows.auto.$FEATURE
 
 echo $POP $FEATURE "Xchr"
 
-awk -v OFS="\t" '{print $4,$5,$5-$4}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Xchr.$FEATURE) |
+awk -v OFS="\t" '{print $4,$5,$5-$4,($5-$4)^2}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Xchr.$FEATURE) |  
 awk -v OFS="\t" 'BEGIN{window=10000;slide=5000}  
 {
 mod=NR%window; if(NR<=window){count++}
 else
-{sum1-=array1[mod]; sum2-=array2[mod]; sum3-=array3[mod]; sumsq3-=array3[mod]}
+{sum1-=array1[mod]; sum2-=array2[mod]; sum3-=array3[mod]; sumsq4-=array4[mod]}
 sum1+=$1;
 sum2+=$2;
 sum3+=$3;
-sumsq3+=($3)^2
+sumsq4+=$4
 array1[mod]=$1;
 array2[mod]=$2;
-array3[mod]=$3
+array3[mod]=$3;
+array4[mod]=$4
 } 
-(NR%slide)==0{print NR, sum1/count, sum2/count, sqrt((sumsq3-sum3^2/NR)/NR)}' | awk -v OFS="\t" '{ if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "tajimaD"} {print $1, $2, $3, ($3-$2)/$4}' | \
-sed -e '2d'   > $POP.transformedThetas.filtered.windows.XCHR.$FEATURE
+(NR%slide)==0{print NR, sum1/count, sum2/count, sqrt((sumsq4-((sum3^2)/count))/count)}'  | awk -v OFS="\t" '{ if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "tajimaD"} {print $1, $2, $3, ($3-$2)/$4}' | \
+sed -e '2d'   > $POP.transformedThetas.filtered.windows.Xchr.$FEATURE
 
 done 
 done
+
+
+
+
+
+
+
+cut -f 3  kk   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' 
+
 
 ```
 
