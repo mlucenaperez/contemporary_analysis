@@ -344,7 +344,7 @@ do
 for FEATURE in "${FEATURES[@]}"
 do
 echo $POP $FEATURE "autosome"
-awk -v OFS="\t" '{print $4,$5,$5-$4,($5-$4)^2}' <(cat $POP.transformedThetas.filtered.CONCATENATION.Auto.$FEATURE) |  
+awk -v OFS="\t" '{print $4,$5,$5-$4,($5-$4)^2}' $POP.transformedThetas.filtered.CONCATENATION.Auto.$FEATURE |  
 awk -v OFS="\t" 'BEGIN{window=10000;slide=5000}  
 {
 mod=NR%window; if(NR<=window){count++}
@@ -386,13 +386,15 @@ done
 done
 
 
+# Lo que hago en este script es: primero quedarme solo con la columna de watterson, de pi y luego de la diferencia y la diferencia al cuadrado. 
+# La de la diferencia al cuadrado la calculo ya, porque he encontradoun problema cuando la intentaba calcular en la slidding window de la forma 
+# sumsq3+=$3^2
+# A veces me daba problema y creo que es por la slidding window,porque cuando lo usaba esto mismo en el script de per unit no tenía este problema y además parece cambiante de como define las ventanas, lo cual es un poco extraño. Esto quiere decir, yo había detectado un problema en la ventana 40000, y si recortaba dejando las 40000 primeras bases pasaba. Si esto lo recortaba un poco mas y me quedaba con las 20000 ultimas, teninedo en cuenta que la ventana es de 10000, pasaba, pero si recortaba y me quedaba con las 10000 ultimas no pasaba, a pesar de que el problema era en esta ventana. 
 
-
-
-
-
-cut -f 3  kk   |  awk -v OFS='\t' '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} END {for (i=1;i<=NF;i++) {printf ("%.10e\n", sqrt((sumsq[i]-sum[i]^2/NR)/NR ))}}' 
-
+# No he entendido bien porque pasa esto, pero me he dado cuenta de que si lo defino antes no pasa, asi que en la preimera parte (primer awk) me quedo con las columnas de interes y calculo el cuadrado de la diferencia. 
+# En el script de despues que es una modificación de este: https://shearnrylan.wordpress.com/2016/05/30/sliding-window-in-awk/, calculo la media para pi y watterson, y además la standard deviation de la diferencia definido como: raiz cuadrada((suma de (valores)^2 (que en este caso es diferencia entre pi y watterson)- ((suma de valores)^2/numero de lineas) )/numero de lineas).
+# En el siguiente awk lo que hago es calcular la tajima en si, que es pi - wateerson / sd de la diferencia. 
+# Por último con sed -e '2d' me quito la segunda linea que corresponde a media ventana que hace al rpincipio. Si las ventnaas son de 10000, al principio hace una de 5000 que son los pasos y no he sabido quitarlo con el awk. 
 
 ```
 
@@ -408,12 +410,12 @@ FEATURES=(intergenic CDS intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 pr
 
 for POP in "${POPS[@]}"
 do 
-rm $POP.transformedThetas.filtered.windows.XCHR
+rm $POP.transformedThetas.filtered.windows.Xchr
 echo $POP
 for FEATURE in "${FEATURES[@]}"
 do
 echo $FEATURE
-awk -v OFS="\t" -v FEATURE="$FEATURE" -v POP="$POP" ' { if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "feature", "pop"} {print $0, FEATURE, POP}' <(tail -n+2 $POP.transformedThetas.filtered.windows.XCHR.$FEATURE) >> $POP.transformedThetas.filtered.windows.XCHR
+awk -v OFS="\t" -v FEATURE="$FEATURE" -v POP="$POP" ' { if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "feature", "pop"} {print $0, FEATURE, POP}' <(tail -n+2 $POP.transformedThetas.filtered.windows.Xchr.$FEATURE) >> $POP.transformedThetas.filtered.windows.Xchr
 done
 done
 
@@ -422,12 +424,12 @@ done
 
 for POP in "${POPS[@]}"
 do 
-rm $POP.transformedThetas.filtered.windows.AUTO
+rm $POP.transformedThetas.filtered.windows.auto
 echo $POP
 for FEATURE in "${FEATURES[@]}"
 do
 echo $FEATURE
-awk -v OFS="\t" -v FEATURE="$FEATURE" -v POP="$POP" ' { if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "feature", "pop"} {print $0, FEATURE, POP}' <(tail -n+2 $POP.transformedThetas.filtered.windows.AUTO.$FEATURE) >> $POP.transformedThetas.filtered.windows.AUTO
+awk -v OFS="\t" -v FEATURE="$FEATURE" -v POP="$POP" ' { if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "feature", "pop"} {print $0, FEATURE, POP}' <(tail -n+2 $POP.transformedThetas.filtered.windows.auto.$FEATURE) >> $POP.transformedThetas.filtered.windows.auto
 done
 done
 ```
