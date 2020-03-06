@@ -360,7 +360,7 @@ array3[mod]=$3;
 array4[mod]=$4
 } 
 (NR%slide)==0{print NR, sum1/count, sum2/count, sqrt((sumsq4-((sum3^2)/count))/count)}'  | awk -v OFS="\t" '{ if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "tajimaD"} {print $1, $2, $3, ($3-$2)/$4}' | \
-sed -e '2d' > $POP.transformedThetas.filtered.windows.auto.$FEATURE
+sed -e '2d' > $POP.transformedThetas.filtered.windows.auto.$FEATURE 
 
 echo $POP $FEATURE "Xchr"
 
@@ -395,6 +395,14 @@ done
 # En el script de despues que es una modificación de este: https://shearnrylan.wordpress.com/2016/05/30/sliding-window-in-awk/, calculo la media para pi y watterson, y además la standard deviation de la diferencia definido como: raiz cuadrada((suma de (valores)^2 (que en este caso es diferencia entre pi y watterson)- ((suma de valores)^2/numero de lineas) )/numero de lineas).
 # En el siguiente awk lo que hago es calcular la tajima en si, que es pi - wateerson / sd de la diferencia. 
 # Por último con sed -e '2d' me quito la segunda linea que corresponde a media ventana que hace al rpincipio. Si las ventnaas son de 10000, al principio hace una de 5000 que son los pasos y no he sabido quitarlo con el awk. 
+
+
+## Actualización:
+
+# Parece que el problema que estoy encontrando con awk, que me devuelve error de que en ocasiones la sqrt la está haciendo de un numero negativo, es debido a la precisión de los numeros. Por ahora no me preocupa, porque afecta a cuando los valores de diversidad son extremadamente bajos, y por tanto, estos se eliminaría. Lo que tengo que hacer a posteriori es filtrar, de alguna manera las diversidades para quedarme solo con aquellas ventanas que presenten diversidad y descartar la tajima calculada sobre vetnanas sin diversidad.  
+
+
+
 
 ```
 
