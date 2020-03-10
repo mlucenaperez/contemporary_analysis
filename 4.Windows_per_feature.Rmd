@@ -409,6 +409,7 @@ done
 # Join per pop
 
 ```{bash}
+cd /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature
 
 POPS=(c_ll_ki_n008 c_ll_po_n008 c_ll_no_n008 c_lp_do_n012 c_lp_sm_n012)
 FEATURES=(intergenic CDS intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 promoter_lncRNA_1000 UCNE 3UTR 5UTR)
@@ -419,11 +420,12 @@ FEATURES=(intergenic CDS intron intron_lncRNA lncRNA ncRNA promoter_gene_1000 pr
 for POP in "${POPS[@]}"
 do 
 rm $POP.transformedThetas.filtered.windows.Xchr
+echo -e "coord_end\tave_watterson\tave_pairwise\ttajimaD\tfeature\tpop" > $POP.transformedThetas.filtered.windows.Xchr
 echo $POP
 for FEATURE in "${FEATURES[@]}"
 do
 echo $FEATURE
-awk -v OFS="\t" -v FEATURE="$FEATURE" -v POP="$POP" ' { if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "feature", "pop"} {print $0, FEATURE, POP}' <(tail -n+2 $POP.transformedThetas.filtered.windows.Xchr.$FEATURE) >> $POP.transformedThetas.filtered.windows.Xchr
+awk -v OFS="\t" -v FEATURE="$FEATURE" -v POP="$POP" ' {print $0, FEATURE, POP}' <(tail -n+2 $POP.transformedThetas.filtered.windows.Xchr.$FEATURE) >> $POP.transformedThetas.filtered.windows.Xchr
 done
 done
 
@@ -433,11 +435,12 @@ done
 for POP in "${POPS[@]}"
 do 
 rm $POP.transformedThetas.filtered.windows.auto
+echo -e "coord_end\tave_watterson\tave_pairwise\ttajimaD\tfeature\tpop" > $POP.transformedThetas.filtered.windows.auto
 echo $POP
 for FEATURE in "${FEATURES[@]}"
 do
 echo $FEATURE
-awk -v OFS="\t" -v FEATURE="$FEATURE" -v POP="$POP" ' { if(NR==1) print "coord_end","ave_watterson","ave_pairwise", "feature", "pop"} {print $0, FEATURE, POP}' <(tail -n+2 $POP.transformedThetas.filtered.windows.auto.$FEATURE) >> $POP.transformedThetas.filtered.windows.auto
+awk -v OFS="\t" -v FEATURE="$FEATURE" -v POP="$POP" ' {print $0, FEATURE, POP}' <(tail -n+2 $POP.transformedThetas.filtered.windows.auto.$FEATURE) >> $POP.transformedThetas.filtered.windows.auto
 done
 done
 ```
@@ -446,7 +449,10 @@ done
 # Download to local
 
 ```{bash}
-scp mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature/*.windows* /Users/marialucenaperez/Documents/WG_lynx_diversity_per_windows_features/raw
+scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature/*.windows.Xchr /Users/marialucenaperez/Documents/WG_lynx_diversity_per_windows_features/raw
+
+scp -p mlucena@genomics-b.ebd.csic.es:/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/diversity_window_feature/*.windows.auto /Users/marialucenaperez/Documents/WG_lynx_diversity_per_windows_features/raw
+
 ```
 
 # R
@@ -480,33 +486,267 @@ wd_input <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_windows_fea
 
 ```{r}
 
-c_ll_ki_n008_diversity_windows_auto <- read.csv(paste(wd_input, "c_ll_ki_n008.transformedThetas.filtered.windows.AUTO", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  viridis_pal()(5)[1]) %>% mutate (type_chr="AUTO") %>% mutate (Population="Kirov")
+c_ll_ki_n008_diversity_windows_auto <- read.csv(paste(wd_input, "c_ll_ki_n008.transformedThetas.filtered.windows.auto", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  viridis_pal()(5)[1]) %>% mutate (type_chr="auto") %>% mutate (Population="Kirov") %>% mutate (feature=as.factor(feature))
 
-c_ll_no_n008_diversity_windows_auto <- read.csv(paste(wd_input, "c_ll_no_n008.transformedThetas.filtered.windows.AUTO", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color = viridis_pal()(5)[2]) %>% mutate (type_chr="AUTO") %>% mutate (Population="Norway")
+c_ll_no_n008_diversity_windows_auto <- read.csv(paste(wd_input, "c_ll_no_n008.transformedThetas.filtered.windows.auto", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color = viridis_pal()(5)[2]) %>% mutate (type_chr="auto") %>% mutate (Population="Norway") %>% mutate (feature=as.factor(feature))
 
-c_ll_po_n008_diversity_windows_auto <- read.csv(paste(wd_input, "c_ll_po_n008.transformedThetas.filtered.windows.AUTO", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  viridis_pal()(5)[3]) %>% mutate (type_chr="AUTO") %>% mutate (Population="Poland")
+c_ll_po_n008_diversity_windows_auto <- read.csv(paste(wd_input, "c_ll_po_n008.transformedThetas.filtered.windows.auto", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  viridis_pal()(5)[3]) %>% mutate (type_chr="auto") %>% mutate (Population="Poland") %>% mutate (feature=as.factor(feature))
 
-c_lp_sm_n012_diversity_windows_auto <- read.csv(paste(wd_input, "c_lp_sm_n012.transformedThetas.filtered.windows.AUTO", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  "#5DC863FF") %>% mutate (type_chr="AUTO") %>% mutate (Population="Andujar")
+c_lp_sm_n012_diversity_windows_auto <- read.csv(paste(wd_input, "c_lp_sm_n012.transformedThetas.filtered.windows.auto", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  "#5DC863FF") %>% mutate (type_chr="auto") %>% mutate (Population="Andujar") %>% mutate (feature=as.factor(feature))
 
-c_lp_do_n012_diversity_windows_auto <- read.csv(paste(wd_input, "c_lp_do_n012.transformedThetas.filtered.windows.AUTO", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  "#FDE725FF") %>% mutate (type_chr="AUTO") %>% mutate (Population="Donana")
+c_lp_do_n012_diversity_windows_auto <- read.csv(paste(wd_input, "c_lp_do_n012.transformedThetas.filtered.windows.auto", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  "#FDE725FF") %>% mutate (type_chr="auto") %>% mutate (Population="Donana") %>% mutate (feature=as.factor(feature))
 
 
 ### 
 
-c_ll_ki_n008_diversity_windows_X <- read.csv(paste(wd_input, "c_ll_ki_n008.transformedThetas.filtered.windows.XCHR", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  viridis_pal()(5)[1]) %>% mutate (type_chr="Xchr") %>% mutate (Population="Kirov") %>% mutate (feature=as.factor(feature))
+c_ll_ki_n008_diversity_windows_X <- read.csv(paste(wd_input, "c_ll_ki_n008.transformedThetas.filtered.windows.Xchr", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  viridis_pal()(5)[1]) %>% mutate (type_chr="Xchr") %>% mutate (Population="Kirov") %>% mutate (feature=as.factor(feature))
 
-c_ll_no_n008_diversity_windows_X <- read.csv(paste(wd_input, "c_ll_no_n008.transformedThetas.filtered.windows.XCHR", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color = viridis_pal()(5)[2]) %>% mutate (type_chr="Xchr") %>% mutate (Population="Norway") %>% mutate (feature=as.factor(feature))
+c_ll_no_n008_diversity_windows_X <- read.csv(paste(wd_input, "c_ll_no_n008.transformedThetas.filtered.windows.Xchr", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color = viridis_pal()(5)[2]) %>% mutate (type_chr="Xchr") %>% mutate (Population="Norway") %>% mutate (feature=as.factor(feature))
 
-c_ll_po_n008_diversity_windows_X <- read.csv(paste(wd_input, "c_ll_po_n008.transformedThetas.filtered.windows.XCHR", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  viridis_pal()(5)[3]) %>% mutate (type_chr="Xchr") %>% mutate (Population="Poland") %>% mutate (feature=as.factor(feature))
+c_ll_po_n008_diversity_windows_X <- read.csv(paste(wd_input, "c_ll_po_n008.transformedThetas.filtered.windows.Xchr", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  viridis_pal()(5)[3]) %>% mutate (type_chr="Xchr") %>% mutate (Population="Poland") %>% mutate (feature=as.factor(feature))
 
-c_lp_sm_n012_diversity_windows_X <- read.csv(paste(wd_input, "c_lp_sm_n012.transformedThetas.filtered.windows.XCHR", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  "#5DC863FF") %>% mutate (type_chr="Xchr") %>% mutate (Population="Andujar") %>% mutate (feature=as.factor(feature))
+c_lp_sm_n012_diversity_windows_X <- read.csv(paste(wd_input, "c_lp_sm_n012.transformedThetas.filtered.windows.Xchr", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  "#5DC863FF") %>% mutate (type_chr="Xchr") %>% mutate (Population="Andujar") %>% mutate (feature=as.factor(feature))
 
-c_lp_do_n012_diversity_windows_X <- read.csv(paste(wd_input, "c_lp_do_n012.transformedThetas.filtered.windows.XCHR", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  "#FDE725FF") %>% mutate (type_chr="Xchr") %>% mutate (Population="Donana") %>% mutate (feature=as.factor(feature))
+c_lp_do_n012_diversity_windows_X <- read.csv(paste(wd_input, "c_lp_do_n012.transformedThetas.filtered.windows.Xchr", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  "#FDE725FF") %>% mutate (type_chr="Xchr") %>% mutate (Population="Donana") %>% mutate (feature=as.factor(feature))
 
 
 
 
 ```
+
+http://ianmadd.github.io/pages/PeakDensityDistribution.html
+## 2. Density plot watterson
+Now we are plotting a density plot of the diversity (watterson and pi) of the populations. Those are bimodal. Therefore I will get the lowest value of this density plot in order to stablish a threshold for "no diverse" vs "diverse" units. 
+```{r}
+DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto", "c_ll_po_n008_diversity_windows_auto", "c_ll_no_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto", "c_lp_do_n012_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_X", "c_ll_po_n008_diversity_windows_X", "c_ll_no_n008_diversity_windows_X", "c_lp_sm_n012_diversity_windows_X", "c_lp_do_n012_diversity_windows_X")
+
+
+for (DATAFRAME_USED in DATAFRAMES) 
+{
+  
+DATAFRAME <- get(DATAFRAME_USED) 
+POP=get(DATAFRAME_USED) %>% select(pop) %>% mutate(pop=as.character(pop)) %>% .[1,1] 
+TYPE_CHR=get(DATAFRAME_USED) %>% select(type_chr) %>% mutate(type_chr=as.character(type_chr)) %>% .[1,1] 
+print (DATAFRAME_USED)
+
+if (POP=="c_lp_sm_n012" || POP=="c_ll_no_n008" && TYPE_CHR=="Xchr")
+{
+maxY1_position <- which.max(density(log10(DATAFRAME$ave_watterson))$y)
+maxX1_value <- density(log10(DATAFRAME$ave_watterson))$x[maxY1_position] 
+maxY_value <- max(density(log10(DATAFRAME$ave_watterson))$y[density(log10(DATAFRAME$ave_watterson))$x<(maxX1_value-1)])
+maxY2_position <- which(density(log10(DATAFRAME$ave_watterson))$y == maxY_value)
+maxX2_value <- density(log10(DATAFRAME$ave_watterson))$x[maxY2_position] 
+Densitywatterson.Y <- density(log10(DATAFRAME$ave_watterson))$y
+Densitywatterson.X <- density(log10(DATAFRAME$ave_watterson))$x
+minY_value <- min(Densitywatterson.Y[Densitywatterson.X > maxX2_value & Densitywatterson.X < maxX1_value])
+minY_position <- which(Densitywatterson.Y == minY_value)
+minX_value <- density(log10(DATAFRAME$ave_watterson))$x[minY_position] 
+assign(paste0(POP,"_", TYPE_CHR,"_density_min_value_watterson"), c(POP,minX_value))
+} else {
+ maxY1_position <- which.max(density(log10(DATAFRAME$ave_watterson))$y)
+maxX1_value <- density(log10(DATAFRAME$ave_watterson))$x[maxY1_position] 
+maxY_value <- max(density(log10(DATAFRAME$ave_watterson))$y[density(log10(DATAFRAME$ave_watterson))$x>(maxX1_value+1)])
+maxY2_position <- which(density(log10(DATAFRAME$ave_watterson))$y == maxY_value)
+maxX2_value <- density(log10(DATAFRAME$ave_watterson))$x[maxY2_position] 
+Densitywatterson.Y <- density(log10(DATAFRAME$ave_watterson))$y
+Densitywatterson.X <- density(log10(DATAFRAME$ave_watterson))$x
+minY_value <- min(Densitywatterson.Y[Densitywatterson.X < maxX2_value & Densitywatterson.X > maxX1_value])
+minY_position <- which(Densitywatterson.Y == minY_value)
+minX_value <- density(log10(DATAFRAME$ave_watterson))$x[minY_position] 
+assign(paste0(POP,"_", TYPE_CHR,"_density_min_value_watterson"), c(POP,minX_value))
+}}
+
+# Uno las distintas tablas de puntos de corte. 
+
+density_min_values_watterson_auto <- as.data.frame(rbind (c_lp_sm_n012_auto_density_min_value_watterson, c_lp_do_n012_auto_density_min_value_watterson, c_ll_ki_n008_auto_density_min_value_watterson, c_ll_po_n008_auto_density_min_value_watterson, c_ll_no_n008_auto_density_min_value_watterson)) %>% mutate (type_chr="auto")
+density_min_values_watterson_xchr <- as.data.frame(rbind (c_lp_sm_n012_Xchr_density_min_value_watterson, c_lp_do_n012_Xchr_density_min_value_watterson, c_ll_ki_n008_Xchr_density_min_value_watterson, c_ll_po_n008_Xchr_density_min_value_watterson, c_ll_no_n008_Xchr_density_min_value_watterson)) %>% mutate (type_chr="Xchr")
+
+density_min_values_watterson <- as.data.frame(rbind(density_min_values_watterson_auto, density_min_values_watterson_xchr))
+
+names(density_min_values_watterson) <- c("pop", "min_density_value_watterson", "type_chr")
+density_min_values_watterson$min_density_value_watterson <- as.numeric(as.character(density_min_values_watterson$min_density_value_watterson))
+
+rm (c_lp_sm_n012_auto_density_min_value_watterson)
+rm (c_lp_sm_n012_Xchr_density_min_value_watterson)
+
+rm (c_lp_do_n012_auto_density_min_value_watterson)
+rm (c_lp_do_n012_Xchr_density_min_value_watterson)
+
+rm (c_ll_ki_n008_auto_density_min_value_watterson)
+rm (c_ll_ki_n008_Xchr_density_min_value_watterson)
+
+rm (c_ll_po_n008_auto_density_min_value_watterson)
+rm (c_ll_po_n008_Xchr_density_min_value_watterson)
+
+rm (c_ll_no_n008_auto_density_min_value_watterson) 
+rm (c_ll_no_n008_Xchr_density_min_value_watterson) 
+
+rm (density_min_values_watterson_auto)
+rm (density_min_values_watterson_xchr)
+rm (DATAFRAME)
+```
+
+## 3. Density plot pairwise
+
+```{r}
+DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto", "c_ll_po_n008_diversity_windows_auto", "c_ll_no_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto", "c_lp_do_n012_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_X", "c_ll_po_n008_diversity_windows_X", "c_ll_no_n008_diversity_windows_X", "c_lp_sm_n012_diversity_windows_X", "c_lp_do_n012_diversity_windows_X")
+
+
+for (DATAFRAME_USED in DATAFRAMES) 
+{
+  
+  
+DATAFRAME <- get(DATAFRAME_USED) 
+POP=get(DATAFRAME_USED) %>% select(pop) %>% mutate(pop=as.character(pop)) %>% .[1,1] 
+TYPE_CHR=get(DATAFRAME_USED) %>% select(type_chr) %>% mutate(type_chr=as.character(type_chr)) %>% .[1,1] 
+print (DATAFRAME_USED)
+
+# Esto lo hago porque el pico más alto está en la deecha en este ejemplo concreto por eso tengo que buscar el mínimo a la iquierda de este pico x<(maxvalue -1) & tb esta modificado esto: minY_value <- min(Densitypairwise.Y[Densitypairwise.X > maxX2_value & Densitypairwise.X < maxX1_value])
+
+if (POP=="c_lp_sm_n012" && TYPE_CHR=="auto" )
+{
+maxY1_position <- which.max(density(log10(DATAFRAME$ave_pairwise))$y)
+maxX1_value <- density(log10(DATAFRAME$ave_pairwise))$x[maxY1_position] 
+maxY_value <- max(density(log10(DATAFRAME$ave_pairwise))$y[density(log10(DATAFRAME$ave_pairwise))$x<(maxX1_value-1)])
+maxY2_position <- which(density(log10(DATAFRAME$ave_pairwise))$y == maxY_value)
+maxX2_value <- density(log10(DATAFRAME$ave_pairwise))$x[maxY2_position] 
+Densitypairwise.Y <- density(log10(DATAFRAME$ave_pairwise))$y
+Densitypairwise.X <- density(log10(DATAFRAME$ave_pairwise))$x
+minY_value <- min(Densitypairwise.Y[Densitypairwise.X > maxX2_value & Densitypairwise.X < maxX1_value])
+minY_position <- which(Densitypairwise.Y == minY_value)
+minX_value <- density(log10(DATAFRAME$ave_pairwise))$x[minY_position] 
+assign(paste0(POP,"_", TYPE_CHR,"_density_min_value_pairwise"), c(POP,minX_value))
+
+}else{
+
+maxY1_position <- which.max(density(log10(DATAFRAME$ave_pairwise))$y)
+maxX1_value <- density(log10(DATAFRAME$ave_pairwise))$x[maxY1_position] 
+maxY_value <- max(density(log10(DATAFRAME$ave_pairwise))$y[density(log10(DATAFRAME$ave_pairwise))$x>(maxX1_value+1)])
+maxY2_position <- which(density(log10(DATAFRAME$ave_pairwise))$y == maxY_value)
+maxX2_value <- density(log10(DATAFRAME$ave_pairwise))$x[maxY2_position] 
+Densitypairwise.Y <- density(log10(DATAFRAME$ave_pairwise))$y
+Densitypairwise.X <- density(log10(DATAFRAME$ave_pairwise))$x
+minY_value <- min(Densitypairwise.Y[Densitypairwise.X < maxX2_value & Densitypairwise.X > maxX1_value])
+minY_position <- which(Densitypairwise.Y == minY_value)
+minX_value <- density(log10(DATAFRAME$ave_pairwise))$x[minY_position] 
+assign(paste0(POP,"_", TYPE_CHR,"_density_min_value_pairwise"), c(POP,minX_value))
+}
+}
+
+# Uno las distintas tablas de puntos de corte. 
+
+density_min_values_pairwise_auto <- as.data.frame(rbind (c_lp_sm_n012_auto_density_min_value_pairwise, c_lp_do_n012_auto_density_min_value_pairwise, c_ll_ki_n008_auto_density_min_value_pairwise, c_ll_po_n008_auto_density_min_value_pairwise, c_ll_no_n008_auto_density_min_value_pairwise)) %>% mutate (type_chr="auto")
+density_min_values_pairwise_xchr <- as.data.frame(rbind (c_lp_sm_n012_Xchr_density_min_value_pairwise, c_lp_do_n012_Xchr_density_min_value_pairwise, c_ll_ki_n008_Xchr_density_min_value_pairwise, c_ll_po_n008_Xchr_density_min_value_pairwise, c_ll_no_n008_Xchr_density_min_value_pairwise)) %>% mutate (type_chr="Xchr")
+
+density_min_values_pairwise <- as.data.frame(rbind(density_min_values_pairwise_auto, density_min_values_pairwise_xchr))
+
+names(density_min_values_pairwise) <- c("pop", "min_density_value_pairwise", "type_chr")
+density_min_values_pairwise$min_density_value_pairwise <- as.numeric(as.character(density_min_values_pairwise$min_density_value_pairwise))
+
+rm (c_lp_sm_n012_auto_density_min_value_pairwise)
+rm (c_lp_sm_n012_Xchr_density_min_value_pairwise)
+
+rm (c_lp_do_n012_auto_density_min_value_pairwise)
+rm (c_lp_do_n012_Xchr_density_min_value_pairwise)
+
+rm (c_ll_ki_n008_auto_density_min_value_pairwise)
+rm (c_ll_ki_n008_Xchr_density_min_value_pairwise)
+
+rm (c_ll_po_n008_auto_density_min_value_pairwise)
+rm (c_ll_po_n008_Xchr_density_min_value_pairwise)
+
+rm (c_ll_no_n008_auto_density_min_value_pairwise) 
+rm (c_ll_no_n008_Xchr_density_min_value_pairwise) 
+
+rm (density_min_values_pairwise_auto)
+rm (density_min_values_pairwise_xchr)
+rm (DATAFRAME)
+```
+
+## 4. Create new variable low values to zero
+Now I create a new variable replacing the diversity of units below the minimun of the density plot by 0; i.e. below the minimum value of the bimodal distributions, units are not variable, and hence, 0. 
+```{r}
+
+DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto", "c_ll_po_n008_diversity_windows_auto", "c_ll_no_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto", "c_lp_do_n012_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_X", "c_ll_po_n008_diversity_windows_X", "c_ll_no_n008_diversity_windows_X", "c_lp_sm_n012_diversity_windows_X", "c_lp_do_n012_diversity_windows_X")
+
+
+for (DATAFRAME_USED in DATAFRAMES) 
+{
+DATAFRAME <- get(DATAFRAME_USED) 
+TYPE_CHR=get(DATAFRAME_USED) %>% select(type_chr) %>% mutate(type_chr=as.character(type_chr)) %>% .[1,1] 
+
+if (TYPE_CHR=="auto"){
+  density_min_values_watterson_filtered <- filter(density_min_values_watterson, type_chr=="auto") 
+  density_min_values_pairwise_filtered <- filter(density_min_values_pairwise, type_chr=="auto") 
+
+} else { 
+  density_min_values_watterson_filtered <- filter(density_min_values_watterson, type_chr=="Xchr")
+  density_min_values_pairwise_filtered <- filter(density_min_values_pairwise, type_chr=="Xchr") 
+
+}
+  
+DATAFRAME_MODIF <- DATAFRAME %>% 
+  dplyr::mutate (watterson_zero = ifelse (
+pop=="c_lp_sm_n012"&log10(ave_watterson)<(filter(density_min_values_watterson_filtered,pop=="c_lp_sm_n012")$min_density_value_watterson) | 
+pop=="c_lp_do_n012"&log10(ave_watterson)<(filter(density_min_values_watterson_filtered,pop=="c_lp_do_n012")$min_density_value_watterson) | 
+pop=="c_ll_ki_n008"&log10(ave_watterson)<(filter(density_min_values_watterson_filtered,pop=="c_ll_ki_n008")$min_density_value_watterson) | 
+pop=="c_ll_po_n008"&log10(ave_watterson)<(filter(density_min_values_watterson_filtered,pop=="c_ll_po_n008")$min_density_value_watterson) | 
+pop=="c_ll_no_n008"&log10(ave_watterson)<(filter(density_min_values_watterson_filtered,pop=="c_ll_no_n008")$min_density_value_watterson),0,ave_watterson)) %>% 
+  dplyr::mutate (pairwise_zero = ifelse (pop=="c_lp_sm_n012"&log10(ave_pairwise)<(filter(density_min_values_pairwise_filtered,pop=="c_lp_sm_n012")$min_density_value_pairwise) | 
+pop=="c_lp_do_n012"&log10(ave_pairwise)<(filter(density_min_values_pairwise_filtered,pop=="c_lp_do_n012")$min_density_value_pairwise) | 
+pop=="c_ll_ki_n008"&log10(ave_pairwise)<(filter(density_min_values_pairwise_filtered,pop=="c_ll_ki_n008")$min_density_value_pairwise) | 
+pop=="c_ll_po_n008"&log10(ave_pairwise)<(filter(density_min_values_pairwise_filtered,pop=="c_ll_po_n008")$min_density_value_pairwise) | 
+pop=="c_ll_no_n008"&log10(ave_pairwise)<(filter(density_min_values_pairwise_filtered,pop=="c_ll_no_n008")$min_density_value_pairwise),0,ave_pairwise)) %>%
+  dplyr::mutate(tajimaD_transformed = ifelse(watterson_zero!="0" | pairwise_zero!="0", tajimaD, NA)) %>% select (-tajimaD) %>%  dplyr::rename(.,"tajimaD"="tajimaD_transformed")
+assign(paste0(DATAFRAME_USED), DATAFRAME_MODIF , envir = globalenv() )
+
+}
+```
+
+# Plot
+
+```{r}
+
+DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto", "c_ll_po_n008_diversity_windows_auto", "c_ll_no_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto", "c_lp_do_n012_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_X", "c_ll_po_n008_diversity_windows_X", "c_ll_no_n008_diversity_windows_X", "c_lp_sm_n012_diversity_windows_X", "c_lp_do_n012_diversity_windows_X")
+
+
+for (DATAFRAME_USED in DATAFRAMES) 
+{
+DATAFRAME <- get(DATAFRAME_USED) 
+TYPE_CHR=get(DATAFRAME_USED) %>% select(type_chr) %>% mutate(type_chr=as.character(type_chr)) %>% .[1,1] 
+POP=get(DATAFRAME_USED) %>% select(pop) %>% mutate(pop.x=as.character(pop)) %>% .[1,1] 
+
+if (TYPE_CHR=="auto"){
+  density_min_values_watterson_filtered <- filter(density_min_values_watterson, type_chr=="auto") 
+  density_min_values_pairwise_filtered <- filter(density_min_values_pairwise, type_chr=="auto") 
+
+} else { 
+  density_min_values_watterson_filtered <- filter(density_min_values_watterson, type_chr=="Xchr")
+  density_min_values_pairwise_filtered <- filter(density_min_values_pairwise, type_chr=="Xchr") 
+
+}
+  
+# Pairwise:
+min_pop_value_pairwise <- as.numeric(density_min_values_pairwise_filtered %>% dplyr::filter(pop==POP) %>% .[1,2] )
+min_pop_value_watterson <- as.numeric(density_min_values_watterson_filtered %>% dplyr::filter(pop==POP) %>% .[1,2] )
+
+ggplot (DATAFRAME , aes(log10(ave_pairwise)))+
+  geom_density()+
+  geom_vline(xintercept= min_pop_value_pairwise, color='grey20') +
+  ggsave (paste0(wd_output, POP, "_", TYPE_CHR, "_pairwise_density.pdf"))
+
+
+ggplot (DATAFRAME , aes(log10(ave_watterson)))+
+  geom_density()+
+  geom_vline(xintercept= min_pop_value_watterson, color='grey20') +
+ggsave (paste0(wd_output, POP, "_", TYPE_CHR, "_watterson_density.pdf"))
+
+
+}
+
+
+```
+
 
 # Create comparison dataframe.
 
@@ -521,6 +761,8 @@ create_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_
     dplyr::mutate (delta_watterson = (as.numeric(ave_watterson.y) - as.numeric(ave_watterson.x))) %>% 
     dplyr::mutate (delta_pairwise_corrected = (as.numeric(ave_pairwise.y) - as.numeric(ave_pairwise.x))/(as.numeric(ave_pairwise.y) + as.numeric(ave_pairwise.x))) %>% 
     dplyr::mutate (delta_watterson_corrected = ((as.numeric(ave_watterson.y) - as.numeric(ave_watterson.x))/(as.numeric(ave_watterson.y) + as.numeric(ave_watterson.x)))) %>% 
+    dplyr::mutate (delta_tajimaD=(as.numeric(tajimaD.y)-as.numeric(tajimaD.x))) %>% 
+    dplyr::mutate (new_delta=delta_pairwise_corrected-delta_watterson_corrected) %>% 
        # Add comparison title  
     dplyr::mutate(comparison=paste(POPULATION1, "-", POPULATION2, sep=""))
   dataframename <- paste (name_POP1, name_POP2, sep="_")
@@ -552,9 +794,7 @@ create_data_diversity_bootleneck_vs_non_bootleneck(c_lp_sm_n012_diversity_window
 
 ## *Delta distribution
 ```{r}
-DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto")
-
-DATAFRAMES=c("c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X")
+DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X")
 
 for (DATAFRAME in DATAFRAMES) 
 {
@@ -564,20 +804,7 @@ for (DATAFRAME in DATAFRAMES)
   POPULATION2=get(DATAFRAME) %>% select(Population.y) %>% mutate(Population.y=as.character(Population.y)) %>% .[1,1] 
   
  # Watterson
- # Plot de la distribución de delta
-  ggplot(get(DATAFRAME), aes(x=(delta_watterson))) + 
-    geom_histogram() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_average_distribution.pdf", sep=""))
-  # Plot de la distribución de delta para cada feature
- ggplot(get(DATAFRAME)) + 
-    aes(x = delta_watterson) +
-    geom_histogram() +
-    facet_wrap(~feature, scales = "free")  +
-    theme(axis.text.x = element_text(angle=90, hjust=1)) +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
- 
-  # Plot de la distribución de delta corregida
+   # Plot de la distribución de delta corregida
   ggplot(get(DATAFRAME), aes(x=(delta_watterson_corrected))) + 
     geom_histogram() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
@@ -591,20 +818,6 @@ for (DATAFRAME in DATAFRAMES)
     ggsave (paste(wd_output,DATAFRAME,"_delta_watterson_corrected_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
 
  # PI
-   # Distribution 
-  ggplot(get(DATAFRAME), aes(x=(delta_pairwise))) + 
-    geom_histogram() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_average_distribution.pdf", sep=""))
-  # Plot de la distribución de delta para cada feature
- ggplot(get(DATAFRAME)) + 
-    aes(x = delta_pairwise) +
-    geom_histogram() +
-    facet_wrap(~feature, scales = "free")  +
-    theme(axis.text.x = element_text(angle=90, hjust=1)) +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_pairwise_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
- 
- 
   # Plot de la distribución de delta corregida
  ggplot(get(DATAFRAME), aes(x=(delta_pairwise_corrected))) + 
     geom_histogram() +
@@ -639,13 +852,10 @@ ggplot (c_ll_ki_n008_diversity_windows_c_ll_no_n008_diversity_windows, aes(x = l
 ## *Delta summary
 
 ```{r}
-DATAFRAMES=c("c_ll_ki_n008_diversity_windows_c_ll_no_n008_diversity_windows", "c_ll_ki_n008_diversity_windows_c_ll_po_n008_diversity_windows", "c_lp_sm_n019_diversity_windows_c_lp_do_n012_diversity_windows")
+DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X")
 
-DELTA_MEASURES=c("delta_watterson", "delta_watterson_corrected", "delta_pairwise", "delta_pairwise_corrected")
+DELTA_MEASURES=c("delta_watterson_corrected", "delta_pairwise_corrected", "delta_tajimaD", "new_delta")
 
-DATAFRAMES=c("c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X", "c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X")
-
-DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto")
 
 scale_x_discrete2 <- function(..., expand = waiver(), position = "bottom") {
   sc <- discrete_scale(c("x", "xmin", "xmax", "xend"), "position_d", identity, ..., expand = expand, guide = "none", position = position, super = ScaleDiscretePositionFunc)
@@ -680,17 +890,7 @@ ggsave (paste(wd_output,POP1, "_", POP2, "_", DELTA_MEASURE,"_", type_chr, ".pdf
 }
 }
 
-
-
-
 ```
 
 
-## *Sanity: Diversity one pop against other
-
-```{r}
-ggplot (c_ll_ki_n008_diversity_windows_c_ll_no_n008_diversity_windows, aes(x = ave_watterson.x, y = ave_watterson.y))+
-  geom_point() +
-  geom_smooth()
-```
 
