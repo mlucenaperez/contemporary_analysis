@@ -577,6 +577,18 @@ ggplot (c_ll_ki_n008_diversity_windows_c_ll_no_n008_diversity_windows, aes(x = l
 ```
 
 
+## *Sanity: Delta pi - delta watterson
+
+```{r}
+ggplot (c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto, aes(x = delta_pairwise_corrected, y = delta_watterson_corrected))+
+  geom_point() +
+  geom_smooth() +
+  facet_wrap(~feature)
+
+
+
+```
+
 
 
 ## *Delta summary
