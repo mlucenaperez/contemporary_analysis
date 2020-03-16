@@ -3,6 +3,7 @@ title: "pipeline_contemporary_sfs"
 output: html_document
 ---
 
+
 # Generating SAF,SFS & thetas per site.
 
 ## Introduction and populations:
@@ -137,8 +138,6 @@ done
 ```
 
 
-
-
 ##  Make bed theta        
 
 La población de sierra morena se volvió a lanzar desde aquí en abril/mayo de 2018 porque me di cuenta de que los archivos que había creado se habína corrompido por el camino. Antes de esto (archivos saf, sfs, etc) sí están bien. 
@@ -171,7 +170,13 @@ wc -l $POP*borrar
 
 
 paste $POP.0basedcoordinates.borrar "$POP".watterson.borrar "$POP".pairwise.borrar "$POP".thetaFL.borrar "$POP".thetaH.borrar "$POP".thetaL.borrar | \
-awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-4, $6, $7, $8}' >> "$POP".transformedThetas
+awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> "$POP".transformedThetas
+
+# Ojo a día 02/03/2020 estoy corrigiendo que antes ponía $5-4, y he puesto $5-$4. Este resultado a afectado al menos a los siguiente archivos:
+# 1. c_ll_ki_n008.transformedThetas
+# 2. c_lp_sm_n012.transformedThetas
+
+# que son los dos archivos submuestreados. 
 
 rm "$POP".*.borrar
 mv $POP.printed.stats /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis/
@@ -273,6 +278,8 @@ done
 Esto me devuelve un mensaje de error para dos poblaciones Noruega y Doñana.
 
 ## Sanity check -- > Problema detectado
+
+Lee hasta el final!
 
 Nos hemos dado cuenta al hacer el filtrado que bedtools cantaba porque decía que había archivos que tenían 8 columnas en vez de 9. Hemos ido a /backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis y nos hemos dado cuenta que la columna que falta es watterson. Esto es grave porque es la primera columna, así que pasaría desapercibido.
 
@@ -438,7 +445,7 @@ wc -l c_ll_no_n008.transformedThetas_subset
 
 # Ahora junto estas columnas y las añado a nuestro archivo subset. 
 
-paste c_ll_no_n008.0basedcoordinates.borrar c_ll_no_n008.watterson.borrar c_ll_no_n008.pairwise.borrar c_ll_no_n008.thetaFL.borrar c_ll_no_n008.thetaH.borrar c_ll_no_n008.thetaL.borrar | awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-4, $6, $7, $8}' >> c_ll_no_n008.transformedThetas_subset
+paste c_ll_no_n008.0basedcoordinates.borrar c_ll_no_n008.watterson.borrar c_ll_no_n008.pairwise.borrar c_ll_no_n008.thetaFL.borrar c_ll_no_n008.thetaH.borrar c_ll_no_n008.thetaL.borrar | awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> c_ll_no_n008.transformedThetas_subset
 
 # ¿Y ahora cuanto mide?
 
@@ -517,7 +524,9 @@ awk 'NR<=1369623420 { print }' c_lp_do_n012.transformedThetas > c_lp_do_n012.tra
 
 # Ahora junto estas columnas y las añado a nuestro archivo subset. 
 
-paste c_lp_do_n012.0basedcoordinates.borrar c_lp_do_n012.watterson.borrar c_lp_do_n012.pairwise.borrar c_lp_do_n012.thetaFL.borrar c_lp_do_n012.thetaH.borrar c_lp_do_n012.thetaL.borrar | awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-4, $6, $7, $8}' >> c_lp_do_n012.transformedThetas_subset
+paste c_lp_do_n012.0basedcoordinates.borrar c_lp_do_n012.watterson.borrar c_lp_do_n012.pairwise.borrar c_lp_do_n012.thetaFL.borrar c_lp_do_n012.thetaH.borrar c_lp_do_n012.thetaL.borrar | awk -v OFS='\t'  '{print $1, $2, $3, $4, $5, $5-$4, $6, $7, $8}' >> c_lp_do_n012.transformedThetas_subset
+
+# 03/03/2020 ojo! he corregido $5-$4! porque ponia $5-4. El problema está explicado más adelante. 
 
 wc -l c_lp_do_n012.transformedThetas_subset
 # 1369906375 c_lp_do_n012.transformedThetas_subset
@@ -572,9 +581,120 @@ tail c_lp_sm_n019.transformedThetas # --> Buena pinta
 tail c_ll_ki_n013.transformedThetas # --> Buena pinta
 tail c_ll_po_n008.transformedThetas # --> Buena pinta
 
- 
 ```
 
+
+## 03/03/2020 PROBLEMA DETECTADO.
+
+
+En algún momento en el que generaba los archivos para calcular la diferencia de Pairwise-watterson hacíamos $5-$4, sin embargo se ve que en algun momento lo copie mal y escribí $5-4. 
+Esta diferencia se usa para calcular despues la estandar deviation por la que dividir mi valor de tajima. Este fallo afecto a los siguientes datasets:
+
+- c_ll_ki_n008 --> afectado entero
+- c_lp_sm_n012 --> afectado entero
+
+- c_ll_no_n008 --> afectado a partir del scaffold lp23.s37389
+- c_lp_do_n012 --> afectado a partir del scaffold lp23.s37350
+ 
+Es decir, están afectados los archivos submuestreados que se hiceron despues que los demás y la corrección de los archivos de doñana y noruega que tuvieron un fallo. 
+El impacto de este problema es el siguiente:
+
+1) ¿Para que se usa la columna de la diferencia?
+- La columna de la diferencia se usa para calcular la estandar deviation de la misma. 
+Tajima se calcula como la  media de pairwise - la media de watterson /standard deviation de la diferencia de cada una de las bases. 
+
+Este problema lo que provocaría sería que en vez de estar usando la standard deviation de la diferencia ahora estaría usando la standard deviation de pi, porque realmente yo estoy haciendo pi - 4, y por tanto la estandar deviation será la de pi. 
+
+2) ¿A cuantas unidades afecta?
+Con respecto a los submuestreados a nada por ahora porque no estoy usando estos datos más que para diversidad por ventanas, y esto no está afectado.
+
+¿Y para las poblaciones de noruega y doñana?
+
+----NORWAY----
+
+Hemos calculado a cuantas unidades finales afecta. Para ello, hemos cogido el archivo final que usamos para todos los calculos, que es data_diversity_filtered_ave_corrected.
+Este archivo está en el script 13.Diversity_calculation_contemporary. 
+Sobre este hemos seleccionado las unidades afectadas, para ver cuantas son.
+
+Lo que hemos visto es que hay 133 unidades afectadas en noruega, de las cuales tenemos valor de tajima para 48, porque en los otros casos o bien watterson o bien pairwise era cero y por tanto no lo hemos calculado. De estas 48 unidades, 2 son CDS, 2 son intrones y lo demás son intergenico. 
+
+Las unidades TOTALES (con valor para tajima): 144002
+Unidades afectadas= 48
+
+Un 0,03% de las unidades. 
+
+En numero de bases: TOTAL=1045044731
+BASES AFECTADAS: 37849
+
+Es aun menor y tenemos que el 0.003621759 de las bases están afectadas. 
+
+----DOÑANA----
+
+En el caso de Doñana hay 144 unidades afectadas, de las cuales para 36 tenemos datos de tajima. 2 CDS y lo demás intergenico. 
+
+Las unidades TOTALES (con valor para tajima): 87133
+Unidades afectadas= 48
+
+Un 0.055% de las unidades. 
+
+En numero de bases: TOTAL=883318777
+BASES AFECTADAS: 25925
+Un 2.934954e-05 de las bases afectadas.
+
+3) ¿Son los valores de las unidades afectadas distinguibles de las no afectadas?
+
+La realidad es que no. Si los ordenas por valor, los valores "erroneos" aparecen intercalados entre los buenos, y esto se debe a que posiblemente, el valor de standard deviation de pi sea muy parecido al valor de la estandar deviation de la diferencia. 
+
+Vamos a calcular también la media para los valores erroneos para compararla con la media normal:
+
+Norway:
+
+Weighted mean tajima erronea = 0.004512704
+Weighted mean tajima buena   = 0.006937857
+Incluyendo ambos valores =     0.006937769
+
+Doñana:
+Weighted mean tajima erronea =  0.01087424
+Weighted mean tajima buena   =  0.005145623
+Incluyendo ambos valores =      0.005145791
+
+El script usado para comprobar la afectación ha sido el siguiente. Despues de cargar los datos para analizar en el script 13.Diversity_calculation_contemporary.
+
+```{r}
+
+substrRight <- function(x, n){
+  substr(x, nchar(x)-n+1, nchar(x))
+}
+
+kk_Norway <- data_diversity_filtered_ave_corrected %>% filter (Populations=="Norway") %>% mutate (scaffold_number=substrRight(scaffold, 5)) %>% select (scaffold, scaffold_number, feature, informative_sites,tajimaD) %>% filter (scaffold_number>37000) %>% mutate (tajima_status=ifelse (scaffold_number>37388, "WRONG_TAJIMA", "GREAT_TAJIMA") ) 
+kk_Norway %>% filter (scaffold_number>37388) %>% filter (tajimaD!="NA") %>% nrow()
+data_diversity_filtered_ave_corrected %>% filter (Populations=="Norway") %>% filter (tajimaD!="NA") %>% nrow()
+data_diversity_filtered_ave_corrected %>% filter (Populations=="Norway") %>% filter (tajimaD!="NA") %>% summarise(sum_informative_sites=sum(informative_sites))
+kk_Norway %>% filter (scaffold_number>37388) %>% filter (tajimaD!="NA") %>% summarise(sum_informative_sites=sum(informative_sites))
+
+kk_Norway %>% filter (scaffold_number>37388) %>% filter (tajimaD!="NA") %>% summarise(media_tajima=weighted.mean(tajimaD, informative_sites))
+data_diversity_filtered_ave_corrected %>% filter (Populations=="Norway") %>% mutate (scaffold_number=substrRight(scaffold, 5)) %>% filter (scaffold_number<37388) %>% filter (tajimaD!="NA") %>% summarise(media_tajima=weighted.mean(tajimaD, informative_sites))
+data_diversity_filtered_ave_corrected %>% filter (Populations=="Norway") %>% filter (tajimaD!="NA") %>% summarise(media_tajima=weighted.mean(tajimaD, informative_sites))
+
+                                                                                      
+                                                                                      
+kk_Donana <- data_diversity_filtered_ave_corrected %>% filter (Populations=="Donana") %>% mutate (scaffold_number=substrRight(scaffold, 5)) %>% select (scaffold, scaffold_number, feature, informative_sites, tajimaD, watterson_zero, pairwise_zero) %>% filter (scaffold_number>37000) %>% mutate (tajima_status=ifelse (scaffold_number>37350, "WRONG_TAJIMA", "GREAT_TAJIMA") ) 
+kk_Donana %>% filter (scaffold_number>37350) %>% filter (tajimaD!="NA") %>% nrow()
+data_diversity_filtered_ave_corrected %>% filter (Populations=="Donana") %>% filter (tajimaD!="NA") %>% nrow()
+data_diversity_filtered_ave_corrected %>% filter (Populations=="Donana") %>% filter (tajimaD!="NA") %>% summarise(sum_informative_sites=sum(informative_sites))
+kk_Donana %>% filter (scaffold_number>37350) %>% filter (tajimaD!="NA") %>% summarise(sum_informative_sites=sum(informative_sites))
+
+kk_Donana %>% filter (scaffold_number>37350) %>% filter (tajimaD!="NA") %>% summarise(media_tajima=weighted.mean(tajimaD, informative_sites))
+data_diversity_filtered_ave_corrected %>% filter (Populations=="Donana") %>% mutate (scaffold_number=substrRight(scaffold, 5)) %>% filter (scaffold_number<37350) %>% filter (tajimaD!="NA") %>% summarise(media_tajima=weighted.mean(tajimaD, informative_sites))
+data_diversity_filtered_ave_corrected %>% filter (Populations=="Donana") %>% filter (tajimaD!="NA") %>% summarise(media_tajima=weighted.mean(tajimaD, informative_sites))
+
+
+```
+
+Por tanto, resumen:
+
+> Los valores no están afectados, y por tanto no merece la pena correr todo.
+> Voy a poner un warning, en los archivos afectados. 
 
 # ---------------------------------------------
 

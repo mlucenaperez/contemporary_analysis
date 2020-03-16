@@ -1152,18 +1152,37 @@ for (DATAFRAME in DATAFRAMES)
 ND_ND <- full_join (get(DATAFRAME) %>% filter (evolution_category=="ND_ND_watterson" & recombination_rate <= 0.5)  %>% group_by (feature) %>% summarise (below_0.5=n()), 
            get(DATAFRAME) %>% filter (evolution_category=="ND_ND_watterson" & recombination_rate > 0.5)  %>% group_by (feature) %>% summarise (above_0.5=n())) %>% 
   mutate (percentage_0.5_ND_ND=below_0.5/above_0.5) %>% 
-  select (-below_0.5, -above_0.5)
+  dplyr::select (-below_0.5, -above_0.5)
 
 
 ND_D <- full_join (get(DATAFRAME) %>% filter (evolution_category=="ND_D_watterson" & recombination_rate <= 0.5)  %>% group_by (feature) %>% summarise (below_0.5=n()), 
            get(DATAFRAME) %>% filter (evolution_category=="ND_D_watterson" & recombination_rate > 0.5)  %>% group_by (feature) %>% summarise (above_0.5=n())) %>% 
   mutate (percentage_0.5_ND_D=below_0.5/above_0.5) %>% 
-  select (-below_0.5, -above_0.5)
+  dplyr::select (-below_0.5, -above_0.5)
 
 ND_ND_ND_D <- full_join(ND_ND, ND_D, by="feature")
+cases_ND_ND <- get(DATAFRAME) %>% filter (diversity_category=="LD_watterson") %>% mutate (recombination_category=ifelse(recombination_rate <= 0.5,"below_0.5", "above_0.5")) %>% dplyr::select (., "evolution_category", "recombination_category", "feature")
+
 
 write.table(ND_ND_ND_D, paste(wd_output,POP1,"_",POP2,"_low_recombination_regions_in_ND_ND_vs_ND_D_watterson.txt",sep=""), row.names = F, quote=F, dec=",") 
 
+#### hasta aquí la tabla. 
+
+# Ahora hago el test de contingencia para cada feature.
+
+library(tidyverse)
+library(broom)
+
+chi_results <- cases_ND_ND %>%
+  group_by(feature) %>%
+  nest() %>% 
+  mutate(
+    chi_sq_results = map(data, ~ chisq.test(droplevels(.x$evolution_category), .x$recombination_category)),
+    tidied = map(chi_sq_results, tidy)
+  ) %>%
+  unnest(tidied, .drop = TRUE)
+
+write.table(chi_results, paste(wd_output,POP1,"_",POP2,"_low_recombination_regions_in_ND_ND_vs_ND_D_watterson_chi_square_results.txt",sep=""), row.names = F, quote=F, dec=",") 
 }
 ```
 
