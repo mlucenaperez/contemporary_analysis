@@ -156,8 +156,6 @@ data_diversity <- read.table(paste(wd_out, "global.per.unit.averages.chr.all.reg
 ```{r}
 # Ojo los lncRNA tienen más de un trasncrito, así que hay que eliminarlo. 
 # En primer lugar vamos a sacar una lista para que luego la podamos filtrar. 
-
-
 all_lncRNA <- data_diversity %>% ungroup(.) %>% dplyr::filter (pop=="c_ll_ki_n013") %>%  dplyr::filter (feature=="lncRNA"| feature=="intron_lncRNA" ) %>% dplyr::mutate(id2=id) %>% separate (id2,c("a", "b", "c", "d", "e"), "_", extra = "drop") %>% dplyr::mutate(new_id=paste(c,d, sep="_")) %>% dplyr::select (-c(a,b,c,d,e)) 
 
 # Selecciono todos los que tienen más de un transcrito.
@@ -351,6 +349,8 @@ Primero me lo bajo a mi escritorio. Esto lo he cogido del script de Dani (rvis_d
 Esto ya está hecho así que no tengo que hacerlo ahora. 
 ```{bash}
 scp -p mlucena@genomics-b.ebd.csic.es://GRUPOS/grupolince/lynx_genomes_5x/VCFs_Dani/nmVCFs/c_lp_sm_c_lp_do_c_ll_ki_c_ll_no_c_ll_po_nm2nm3_origcov/annotation/rvis/lypa_rvis_database_uniprot_joined.txt /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/rvis 
+
+# Usamos la ultima db creada por dani con mas de 12000 genes anotados
 ```
 
 
