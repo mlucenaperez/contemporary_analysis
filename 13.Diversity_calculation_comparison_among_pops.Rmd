@@ -507,6 +507,7 @@ library(ggrepel)
 library(ggsignif)
 library(ggpubr)
 library(cowplot)
+library(ggsignif)
 
 wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
 wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/"
@@ -624,97 +625,6 @@ stats_all_pops_region$comparison <- factor (stats_all_pops_region$comparison, le
 ## ----------
 # A) Empirical data
 
-## *Delta distribution
-```{r}
-DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
-for (DATAFRAME in DATAFRAMES) 
-{
-  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-  POPULATION1=get(DATAFRAME) %>% select(Populations.x) %>% mutate(Populations.x=as.character(Populations.x)) %>% .[1,1] 
-  POPULATION2=get(DATAFRAME) %>% select(Populations.y) %>% mutate(Populations.y=as.character(Populations.y)) %>% .[1,1] 
- # Watterson
- # Plot de la distribución de delta global
-  ggplot(get(DATAFRAME), aes(x=(delta_watterson_per_unit_normalized_zero))) + 
-    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
-    geom_histogram(data = get(DATAFRAME) %>% filter(delta_watterson_per_unit_normalized_zero!=-1 & delta_watterson_per_unit_normalized_zero!=1) %>% mutate(subset = "Subset"), binwidth = 0.05) +
-    facet_wrap(~subset, scales = "free", nrow=2)  +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_average_distribution.pdf", sep=""))
-  # Plot de la distribución de delta para cada feature
- ggplot() + 
-    aes(x = delta_watterson_per_unit_normalized_zero) +
-    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
-    geom_histogram(data = get(DATAFRAME) %>% filter(delta_watterson_per_unit_normalized_zero!=-1 & delta_watterson_per_unit_normalized_zero!=1) %>% mutate(subset = "Subset"), binwidth = 0.05) +
-    facet_wrap(feature~subset, scales = "free", nrow=4)  +
-    theme(axis.text.x = element_text(angle=90, hjust=1)) +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_watterson_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
-  # PI
-   # Distribution 
-  ggplot(get(DATAFRAME), aes(x=(delta_pairwise_per_unit_normalized_zero))) + 
-    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
-    geom_histogram(data = get(DATAFRAME) %>% filter(delta_pairwise_per_unit_normalized_zero!=-1 & delta_pairwise_per_unit_normalized_zero!=1) %>% mutate(subset = "Subset"), binwidth = 0.05) +
-    facet_wrap(~subset, scales = "free", nrow=2)  +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_average_distribution.pdf", sep=""))
-  ggplot() + 
-    aes(x = delta_pairwise_per_unit_normalized_zero) +
-    geom_histogram(data = get(DATAFRAME) %>% mutate(subset = "All data"), binwidth = 0.05) +
-    geom_histogram(data = get(DATAFRAME) %>% filter(delta_pairwise_per_unit_normalized_zero!=-1 & delta_pairwise_per_unit_normalized_zero!=1) %>% mutate(subset = "Subset"), binwidth = 0.05) +
-    facet_wrap(feature~subset, scales = "free", nrow=4)  +
-    theme(axis.text.x = element_text(angle=90, hjust=1)) +
-    ggsave (paste(wd_output,DATAFRAME,"_delta_zero_pairwise_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
-}
-```
-
-## *Delta skewness
-```{r}
-# Skewness watterson
-# La skewness se calcula del tipo 3, por defecto. He corrido el tipo 1 para ver que no había diferencias, y las diferencias son algo de escala pero nada de colocación, así que dejo este tipo que es el que viene por defecto. Type 3 is b1 = [(n-1)/n]^{3/2} m_3/m_2^{3/2} and b2 = [(n-1)/n]^{3/2} m_4/m_2^2).
-all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_watterson <- all_comparisons_diversity_bootleneck_vs_non_bootleneck %>%  filter(delta_watterson_per_unit_normalized_zero!=-1 & delta_watterson_per_unit_normalized_zero!=1)
-skeweness_watterson_comparison_feature <- aggregate(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_watterson$delta_watterson_per_unit_normalized_zero, list(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_watterson$comparison, all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_watterson$feature), skew)
-skeweness_watterson_comparison_all <- aggregate(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_watterson$delta_watterson_per_unit_normalized_zero, list(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_watterson$comparison), skew) %>% mutate(Group.2="All")
-skeweness_watterson <- rbind(skeweness_watterson_comparison_feature, skeweness_watterson_comparison_all)
-skeweness_watterson$Group.2 <- factor (skeweness_watterson$Group.2, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic","All"))
-skeweness_watterson$Group.1 <- factor (skeweness_watterson$Group.1, levels=c("Kirov-Norway", "Kirov-NE_Poland", "Andujar-Donana"))
-ggplot(skeweness_watterson %>% filter(Group.2!="All"), aes(x=Group.2, y=x, fill=Group.1, color=Group.1, shape=Group.1)) +
-    geom_point() +
-    geom_hline(data=skeweness_watterson %>% filter(Group.2=="All"), aes(yintercept=x, colour = Group.1)) +
-    labs(title=paste("Skewness for the Delta comparing Watterson: no -1 or +1",sep =" "),
-         x ="Feature", y = "Skewness") +    
-    coord_flip()  +
-    scale_fill_viridis_d (option = "plasma") +
-    scale_colour_viridis_d (option = "plasma") +
-    ggsave (paste(wd_output,"delta_zero_watterson_skewness_per_feature.pdf", sep=""))
-# Skewness Pi
-all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_pairwise <- all_comparisons_diversity_bootleneck_vs_non_bootleneck %>%  filter(delta_pairwise_per_unit_normalized_zero!=-1 & delta_pairwise_per_unit_normalized_zero!=1)
-skeweness_pairwise_comparison_feature <- aggregate(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_pairwise$delta_pairwise_per_unit_normalized_zero, list(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_pairwise$comparison, all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_pairwise$feature), skew)
-skeweness_pairwise_comparison_all <- aggregate(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_pairwise$delta_pairwise_per_unit_normalized_zero, list(all_comparisons_diversity_bootleneck_vs_non_bootleneck_filtered_pairwise$comparison), skew) %>% mutate(Group.2="All")
-skeweness_pairwise <- rbind(skeweness_pairwise_comparison_feature, skeweness_pairwise_comparison_all)
- skeweness_pairwise$Group.2 <- factor (skeweness_pairwise$Group.2, levels=c("lncRNA_promoter", "UCNE", "ncRNA", "lncRNA_intron", "lncRNA_exons", "3UTR", "Intron", "CDS","5UTR", "Gen_promoter", "Intergenic","All"))
- skeweness_pairwise$Group.1 <- factor (skeweness_pairwise$Group.1, levels=c("Kirov-Norway", "Kirov-NE_Poland", "Andujar-Donana"))
-ggplot(data=skeweness_pairwise %>% filter(Group.2!="All"), aes(x=Group.2, y=x, fill=Group.1, color=Group.1, shape=Group.1)) +
-    geom_point() +
-    geom_hline(data=skeweness_pairwise %>% filter(Group.2=="All"), aes(yintercept=x, colour = Group.1)) +
-    labs(title=paste("Skewness for the Delta comparing Pairwise: no -1 or +1",sep =" "),
-         x ="Feature", y = "Skewness") +    
-    coord_flip() +
-    scale_fill_viridis_d (option = "plasma") +
-    scale_colour_viridis_d (option = "plasma") +
-    ggsave (paste(wd_output,"delta_zero_pairwise_skewness_per_feature.pdf", sep=""))
-```
-
-## *Delta vs initial diversity
-```{r}
-ggplot (c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(x = log10(watterson_zero.x), y = delta_watterson_per_unit_normalized_zero))+
-  geom_point()
-
-ggplot (c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(x = log10(pairwise_zero.x), y = delta_pairwise_per_unit_normalized_zero))+
-  geom_point()
-
-ggplot (c_ll_ki_n013_diversity_c_ll_no_n008_diversity, aes(x = log10(watterson_zero.x), y = delta_pairwise_per_unit_normalized_zero))+
-  geom_point()
-```
 
 ## *Dataset categories prep
 ```{r}
