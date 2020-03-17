@@ -478,6 +478,10 @@ library(gridExtra)
 library(mgcv)
 library(MuMIn)
 
+sample.wtd.mean <- function(x, w, d) {
+    return(weighted.mean(x = x[d], w = w[d], na.rm=T ))
+}
+
 wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/window_per_feature/"
 wd_input <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_windows_features/raw/"
 ```
@@ -487,6 +491,7 @@ wd_input <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_windows_fea
 ```{r}
 
 c_ll_ki_n008_diversity_windows_auto <- read.csv(paste(wd_input, "c_ll_ki_n008.transformedThetas.filtered.windows.auto", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color =  viridis_pal()(5)[1]) %>% mutate (type_chr="auto") %>% mutate (Population="Kirov") %>% mutate (feature=as.factor(feature))
+
 
 c_ll_no_n008_diversity_windows_auto <- read.csv(paste(wd_input, "c_ll_no_n008.transformedThetas.filtered.windows.auto", sep=""), header=T, na.strings=c("NA", "na"), stringsAsFactors=F, row.names=NULL, sep="\t", dec=".") %>% mutate (., color = viridis_pal()(5)[2]) %>% mutate (type_chr="auto") %>% mutate (Population="Norway") %>% mutate (feature=as.factor(feature))
 
@@ -528,6 +533,9 @@ DATAFRAME <- get(DATAFRAME_USED)
 POP=get(DATAFRAME_USED) %>% select(pop) %>% mutate(pop=as.character(pop)) %>% .[1,1] 
 TYPE_CHR=get(DATAFRAME_USED) %>% select(type_chr) %>% mutate(type_chr=as.character(type_chr)) %>% .[1,1] 
 print (DATAFRAME_USED)
+DATAFRAME$ave_pairwise <- as.numeric(DATAFRAME$ave_pairwise)
+DATAFRAME$ave_watterson <- as.numeric(DATAFRAME$ave_watterson)
+
 
 if (POP=="c_lp_sm_n012" || POP=="c_ll_no_n008" && TYPE_CHR=="Xchr")
 {
@@ -762,7 +770,7 @@ create_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_
     dplyr::mutate (delta_pairwise_corrected = (as.numeric(ave_pairwise.y) - as.numeric(ave_pairwise.x))/(as.numeric(ave_pairwise.y) + as.numeric(ave_pairwise.x))) %>% 
     dplyr::mutate (delta_watterson_corrected = ((as.numeric(ave_watterson.y) - as.numeric(ave_watterson.x))/(as.numeric(ave_watterson.y) + as.numeric(ave_watterson.x)))) %>% 
     dplyr::mutate (delta_tajimaD=(as.numeric(tajimaD.y)-as.numeric(tajimaD.x))) %>% 
-    dplyr::mutate (new_delta=delta_pairwise_corrected-delta_watterson_corrected) %>% 
+    dplyr::mutate (delta_w_delta_p=delta_watterson_corrected-delta_pairwise_corrected) %>% 
        # Add comparison title  
     dplyr::mutate(comparison=paste(POPULATION1, "-", POPULATION2, sep=""))
   dataframename <- paste (name_POP1, name_POP2, sep="_")
@@ -851,12 +859,27 @@ ggplot (c_ll_ki_n008_diversity_windows_c_ll_no_n008_diversity_windows, aes(x = l
 
 ```{r}
 ggplot (c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto, aes(x = delta_pairwise_corrected, y = delta_watterson_corrected))+
-  geom_point() +
   geom_smooth() +
-  facet_wrap(~feature)
+  geom_point() +
+  geom_abline(intercept = 0) + 
+  facet_wrap(~feature) +
+  ggsave (paste(wd_output,"c_ll_ki_n008_c_ll_no_n008_delta_pairwise_corrected_vs_delta_watterson_correcter.jpg", sep=""), width = 25, height = 25, units = "cm", dev="jpg")
+
+ggplot (head(c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto), 
+        aes(x = delta_pairwise_corrected, y = delta_watterson_corrected))+
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=0.1) +
+  stat_summary(fun.y=mean, geom="line") +
+  stat_summary(fun.y=mean, geom="point") +
+  scale_y_continuous(limits=c(0, max(df.m$Pupil_Dilation)))
 
 
 
+  geom_abline(intercept = 0) + 
+  ggsave (paste(wd_output,"c_ll_ki_n008_c_ll_no_n008_delta_pairwise_corrected_vs_delta_watterson_correcter.jpg", sep=""), width = 25, height = 25, units = "cm", dev="jpg")
+
+stat_summary(fun.data = "mean_cl_boot", colour = "red", size = 2)
+
+ggplot(df, aes(x=factor(age), y=score)) + stat_summary(fun.y="mean", geom="bar")
 ```
 
 
@@ -866,7 +889,7 @@ ggplot (c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto,
 ```{r}
 DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X")
 
-DELTA_MEASURES=c("delta_watterson_corrected", "delta_pairwise_corrected", "delta_tajimaD", "new_delta")
+DELTA_MEASURES=c("delta_watterson_corrected", "delta_pairwise_corrected", "delta_tajimaD", "delta_w_delta_p")
 
 
 scale_x_discrete2 <- function(..., expand = waiver(), position = "bottom") {
@@ -901,6 +924,59 @@ ggplot(get(DATAFRAME), aes_string(x="feature", y=DELTA_MEASURE))+
 ggsave (paste(wd_output,POP1, "_", POP2, "_", DELTA_MEASURE,"_", type_chr, ".pdf", sep=""), width = 80, height = 80, units = "mm")
 }
 }
+
+```
+
+
+```{r}
+DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X")
+
+
+comparison_pops_auto <- rbind (c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto, c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto, c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto)
+
+
+
+comparison_pops_auto_summary <- comparison_pops_auto %>% 
+             dplyr::group_by(feature, comparison) %>%
+             dplyr::summarise(
+                       mean_delta_watterson=mean(delta_watterson_corrected, na.rm = TRUE),
+                       se_mean_delta_watterson = sd(boot(delta_watterson_corrected, sample.wtd.mean, R = 100)$t),
+                       mean_delta_pairwise=mean(delta_pairwise_corrected, na.rm = TRUE),
+                       se_mean_delta_pairwise = sd(boot(delta_pairwise_corrected, sample.wtd.mean, R = 100)$t))
+
+ggplot(data=comparison_pops_auto_summary, aes(mean_delta_pairwise, mean_delta_watterson)) +
+  geom_point(aes(colour=feature, fill=feature))+
+  scale_fill_viridis_d(option = "plasma")+
+  scale_colour_viridis_d(option = "plasma")+
+  geom_abline (colour="grey", linetype = "dashed") +
+  geom_errorbar(aes(ymin=mean_delta_watterson-se_mean_delta_watterson, ymax=mean_delta_watterson+se_mean_delta_watterson, colour=feature, fill=feature)) +
+  geom_errorbarh(aes(xmin = mean_delta_pairwise - se_mean_delta_pairwise, xmax = mean_delta_pairwise + se_mean_delta_pairwise, colour=feature, fill=feature)) +
+  facet_wrap(~comparison)+
+  geom_text_repel(aes(label = feature),
+                  box.padding   = 1, 
+                  point.padding = 0.1,
+                  size          = 2.5,
+                  force         = 80,
+                  segment.size  = 0.2,
+                  segment.color = 'grey50') +
+  theme(legend.position = "none") +
+  ggsave (paste(wd_output,"delta_pi_vs_delta_watterson.pdf", sep=""), width = 160, height = 160, units = "mm")
+
+
+
+
+
+
+ggplot(comparison_pops_auto, aes(x=feature, y=delta_w_delta_p, colour=comparison, fill=comparison, shape=comparison))+
+  stat_summary(fun.data = "mean_cl_boot", size = 0.8) +
+  stat_summary(fun.y = mean,
+               geom = "line")+
+  coord_flip() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values=c("#588C7E", "#F2AE72", "#8C4646")) +
+  scale_color_manual(values=c("#588C7E", "#F2AE72", "#8C4646")) 
+ggsave (paste(wd_output,"delta_delta_all_pops.pdf", sep=""), width = 160, height = 160, units = "mm")
+
 
 ```
 
