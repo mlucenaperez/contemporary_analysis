@@ -509,6 +509,7 @@ library(ggpubr)
 library(cowplot)
 library(ggsignif)
 library(tidyverse)
+library(corrplot)
 
 wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
 wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/"
@@ -1155,8 +1156,8 @@ for (DATAFRAME in DATAFRAMES)
 
    POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
    POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
- 
 
+# Seleccino la información de interes en la df
 cases_ND_ND <- get(DATAFRAME) %>% 
   filter (diversity_category=="LD_watterson") %>% 
   mutate (recombination_category=ifelse(recombination_rate <= 0.5,"below_0.5", "above_0.5")) %>% 
@@ -1164,14 +1165,16 @@ cases_ND_ND <- get(DATAFRAME) %>%
   droplevels(.$evolutionary_category) %>% 
   group_by(feature) 
 
+# Creo tabla de contingencia para recombination y para region. 
 cases_ND_ND_recomb_contingency <-  xtabs(~ evolution_category+recombination_category+feature, cases_ND_ND)
 cases_ND_ND_region_contingency <-  xtabs(~ evolution_category+region+feature, cases_ND_ND)
 
-write.table(cases_ND_ND_recomb_contingency, paste(wd_output,POP1,"_",POP2,"_low_recombination_in_ND_ND_vs_ND_D_watterson.txt",sep=""), row.names = F, quote=F, dec=",") 
+# Las guardo
+write.table(cases_ND_ND_recomb_contingency, paste(wd_output,"contingency/",POP1,"_",POP2,"_low_recombination_in_ND_ND_vs_ND_D_watterson.txt",sep=""), row.names = F, quote=F, dec=",") 
+write.table(cases_ND_ND_region_contingency, paste(wd_output,"contingency/",POP1,"_",POP2,"_regions_in_ND_ND_vs_ND_D_watterson.txt",sep=""), row.names = F, quote=F, dec=",") 
 
-write.table(cases_ND_ND_region_contingency, paste(wd_output,POP1,"_",POP2,"_regions_in_ND_ND_vs_ND_D_watterson.txt",sep=""), row.names = F, quote=F, dec=",") 
 
-
+# Hago el test para todas las feautres y guardo los resultados. 
 chi_results_recomb <- cases_ND_ND %>%
   group_by(feature) %>%
   select (-region) %>% 
@@ -1180,65 +1183,77 @@ chi_results_recomb <- cases_ND_ND %>%
     chi_sq_results = map(data, ~ chisq.test(.x$evolution_category, .x$recombination_category)),
     tidied = map(chi_sq_results, tidy)
   ) %>%
-  unnest(tidied, .drop = TRUE)
+  unnest(tidied, .drop = TRUE) %>% 
+  mutate (comparison=paste0(POP1,"_", POP2)) %>%
+  mutate (variable="low_recombination_regions") %>% 
+  mutate (method="Pearson_Chi-squared_Yates_continuity_correction") %>% 
+  mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n013_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n013_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n019_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  select (-comparison)
+
+write.table(chi_results_recomb, paste(wd_output,"contingency/", POP1,"_",POP2,"_low_recombination_in_ND_ND_vs_ND_D_watterson_chi_square_results.txt",sep=""), row.names = F, quote=F, dec=",") 
 
 
-write.table(chi_results_recomb, paste(wd_output,POP1,"_",POP2,"_low_recombination_in_ND_ND_vs_ND_D_watterson_chi_square_results.txt",sep=""), row.names = F, quote=F, dec=",") 
+# Selecciono las features para las que el test es significativo
+features_recomb_signif <- filter (chi_results_recomb, p.value <0.05) %>% mutate (FEATURES=as.character (feature)) %>% select (FEATURES) %>% as.vector() %>% unlist(., use.names = FALSE)
+
+# Corro de nuevo estas features y las pinto. 
+# Esto lo hago así porque con mi codigo anterior no he encontrado forma de incluirlo. 
+for (FEATURE in features_recomb_signif) {
+  print (FEATURE)
+   df_temp_recomb <- cases_ND_ND %>% select (-region) %>% filter (feature==FEATURE)
+   chi_recomb <- chisq.test(df_temp_recomb$evolution_category, df_temp_recomb$recombination_category)
+   jpeg(paste0(wd_output,"contingency/sig/", POP1,"_",POP2,"_",FEATURE,"_coorplot_low_recomb.jpg"))
+   corrplot(chi_recomb$residuals, is.cor = FALSE)
+   dev.off()
+}
 
 
+# Ahora hago lo mismo con la region
 chi_results_region <- cases_ND_ND %>%
   mutate (region=as.factor(region)) %>% 
-  #filter (feature == "CDS" | feature == "Intergenic" | ) %>% 
   select (-recombination_category) %>% 
   group_by(feature) %>%
   nest() %>% 
   mutate(
     chi_sq_results = map(data, ~ chisq.test(.x$evolution_category, .x$region)),
     tidied = map(chi_sq_results, tidy)
-  ) 
+  ) %>%
+  unnest(tidied, .drop = TRUE) %>% 
+  mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  mutate (variable="genomic_region") %>% 
+  mutate (method="Pearson_Chi-squared") %>% 
+  mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n013_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n013_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n019_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  select (-comparison)
 
+write.table(chi_results_region, paste(wd_output,"contingency/", POP1,"_",POP2,"_regions_in_ND_ND_vs_ND_D_watterson_chi_square_results.txt",sep=""), row.names = F, quote=F, dec=",") 
 
-u <-chi_results_region$chi_sq_results
-e <-lapply(u,function(x)
-corrplot(u$residuals, is.cor = FALSE)
- )
-lapply(M, function(x){
-corrplot(x$r, type="upper",tl.col="black", tl.cex=0.7,tl.srt=45, col=col,
-         p.mat = x$P, insig = "blank", sig.level = 0.01)
+features_region_signif <- filter (chi_results_region, p.value <0.05) %>% mutate (FEATURES=as.character (feature)) %>% select (FEATURES) %>% as.vector() %>% unlist(., use.names = FALSE)
+
+for (FEATURE in features_region_signif) {
+  print (FEATURE)
+   df_temp_region <- cases_ND_ND %>% select (-recombination_category) %>% filter (feature==FEATURE)
+   chi_region <- chisq.test(df_temp_region$evolution_category, df_temp_region$region)
+   jpeg(paste0(wd_output,"contingency/sig/", POP1,"_",POP2,"_",FEATURE,"_coorplot_region.jpg"))
+   corrplot(chi_region$residuals, is.cor = FALSE)
+   dev.off()
 }
 
 
-chi_results_region %>%
-  unnest(tidied, .drop = TRUE)
-
-
-write.table(chi_results_region, paste(wd_output,POP1,"_",POP2,"_regions_in_ND_ND_vs_ND_D_watterson_chi_square_results.txt",sep=""), row.names = F, quote=F, dec=",") 
-
-library("gplots")
-
-my.list[[FEATURE_NUMBER]] <- merge(FEATURE, chisq_results$p.value)
-  #chisq_results$expected
-  if (chisq_results$p.value > 0.05)
-  {jpeg(paste0(wd_output_contingency,"/no_sig/", POPS,"_",DIVERSITY_MEASURE,"_",FEATURE ,".jpg"))
-  corrplot(chisq_results$residuals, is.cor = FALSE)
-  dev.off()} 
-  else {
-  jpeg(paste0(wd_output_contingency,"/sig/", POPS,"_",DIVERSITY_MEASURE,"_",FEATURE ,".jpg"))
-  corrplot(chisq_results$residuals, is.cor = FALSE)
-  dev.off()
-
-test <-summary(cases_ND_ND_region_contingency)
-chisq.test(cases_ND_ND_region_contingency)
-
-chi.result(cases_ND_ND_region_contingency)
-kk <- filter(cases_ND_ND, feature=="UCNE")
-test <-chisq.test(droplevels(kk$evolution_category), kk$region)
-test <-chisq.test(cases_ND_ND_region_contingency$region)
-
-corrplot(test$residuals, is.cor = FALSE)
 }
 ```
 
+En mi local
+
+```{bash}
+cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/contingency/*low_recombination_in_ND_ND_vs_ND_D_watterson_chi_square_results.txt > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/contingency/all_pops_low_recombination_in_ND_ND_vs_ND_D_watterson_chi_square_results.txt
+
+cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/contingency/*regions_in_ND_ND_vs_ND_D_watterson_chi_square_results.txt > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/contingency/all_pops_regions_in_ND_ND_vs_ND_D_watterson_chi_square_results.txt
+
+```
 
 
 ### Recombination per feature
