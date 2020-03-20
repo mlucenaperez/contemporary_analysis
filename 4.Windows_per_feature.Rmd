@@ -920,23 +920,6 @@ cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comp
 ```
 
 
-```{r}
-df <- data.frame(matrix(rnorm(100), ncol = 10))
-colnames(df) <- paste0("X", 1:10)
-
-# Create combinations of the variables
-combinations <- combn(colnames(df),2, simplify = FALSE)
-
-# Do the t.test
-results <- lapply(seq_along(combinations), function (n) {
-                  df <- df[,colnames(df) %in% unlist(combinations[n])]
-                  result <- t.test(df[,1], df[,2])
-                  return(result)})
-
-# Rename list for legibility    
-names(results) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = " vs. ")
-```
-
 
 ## *Sanity: Delta vs initial diversity
 
@@ -951,26 +934,12 @@ ggplot (c_ll_ki_n008_diversity_windows_c_ll_no_n008_diversity_windows, aes(x = l
 
 ```
 
-
-## *Sanity: Delta pi - delta watterson
-
-```{r}
-ggplot (c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto, aes(x = delta_pairwise_corrected, y = delta_watterson_corrected))+
-  geom_smooth() +
-  geom_point() +
-  geom_abline(intercept = 0) + 
-  facet_wrap(~feature) +
-  ggsave (paste(wd_output,"c_ll_ki_n008_c_ll_no_n008_delta_pairwise_corrected_vs_delta_watterson_correcter.jpg", sep=""), width = 25, height = 25, units = "cm", dev="jpg")
-```
-
-
-
 ## *Delta watterson and delta pi per pop and feature.
 
 ```{r}
 DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X")
 
-DELTA_MEASURES=c("delta_watterson_corrected", "delta_pairwise_corrected", "delta_tajimaD", "delta_w_delta_p")
+DELTA_MEASURES=c("delta_watterson_corrected", "delta_pairwise_corrected")
 
 
 scale_x_discrete2 <- function(..., expand = waiver(), position = "bottom") {
@@ -1014,9 +983,18 @@ ggsave (paste(wd_output,POP1, "_", POP2, "_", DELTA_MEASURE,"_", type_chr, ".pdf
 DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X")
 
 # AUTO
-comparison_pops_auto <- rbind (c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto, c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto, c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto)
+comparison_pops_auto <- rbind (c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto, c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto, c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto) %>% 
+   mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008-c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008-c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012-c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  select (-comparison) %>% 
+  mutate(comparison=pop1_pop2) %>% 
+  select (-pop1_pop2)
 
+comparison_pops_auto$feature <- plyr::revalue(comparison_pops_auto$feature, c("intergenic"="Intergenic", "promoter_gene_1000"="Gen_promoter", "5UTR"="5UTR", "CDS"="CDS", "intron"="Intron", "3UTR"="3UTR", "promoter_lncRNA_1000"="lncRNA_promoter", "lncRNA"="lncRNA_exons", "intron_lncRNA"="lncRNA_intron", "ncRNA"="ncRNA", "UCNE"="UCNE"))
+comparison_pops_auto$feature <- factor (comparison_pops_auto$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
 
+comparison_pops_auto$comparison <- factor (comparison_pops_auto$comparison, levels=c("Kirov_Poland", "Kirov_Norway", "Andujar_Donana"))
 
 comparison_pops_auto_summary <- comparison_pops_auto %>% 
              dplyr::group_by(feature, comparison) %>%
@@ -1042,23 +1020,32 @@ ggplot(data=comparison_pops_auto_summary, aes(mean_delta_pairwise, mean_delta_wa
                   segment.size  = 0.2,
                   segment.color = 'grey50') +
   theme(legend.position = "none") +
-  ggsave (paste(wd_output,"delta_pi_vs_delta_watterson_auto.pdf", sep=""), width = 160, height = 160, units = "mm")
-
-
+  ggsave (paste(wd_output,"delta_pi_vs_delta_watterson_auto.pdf", sep=""), width = 160, height = 80, units = "mm")
 
 ggplot(comparison_pops_auto, aes(x=feature, y=delta_w_delta_p, colour=comparison, fill=comparison, shape=comparison))+
-  stat_summary(fun.data = "mean_cl_boot", size = 0.8) +
+  stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
   stat_summary(fun.y = mean,
                geom = "line")+
   coord_flip() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  facet_wrap (~comparison) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")+
   scale_fill_manual(values=c("#588C7E", "#F2AE72", "#8C4646")) +
-  scale_color_manual(values=c("#588C7E", "#F2AE72", "#8C4646")) 
-ggsave (paste(wd_output,"delta_delta_all_pops_auto.pdf", sep=""), width = 160, height = 160, units = "mm")
-
+  scale_color_manual(values=c("#588C7E", "#F2AE72", "#8C4646")) +
+ggsave (paste(wd_output,"delta_delta_all_pops_auto_separated.pdf", sep=""), width = 160, height = 80, units = "mm")
 
 # Xchr
-comparison_pops_Xchr <- rbind (c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X, c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X, c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X)
+comparison_pops_Xchr <- rbind (c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X, c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X, c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X) %>% 
+   mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008-c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008-c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012-c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  select (-comparison) %>% 
+  mutate(comparison=pop1_pop2) %>% 
+  select (-pop1_pop2)
+
+comparison_pops_Xchr$feature <- plyr::revalue(comparison_pops_Xchr$feature, c("intergenic"="Intergenic", "promoter_gene_1000"="Gen_promoter", "5UTR"="5UTR", "CDS"="CDS", "intron"="Intron", "3UTR"="3UTR", "promoter_lncRNA_1000"="lncRNA_promoter", "lncRNA"="lncRNA_exons", "intron_lncRNA"="lncRNA_intron", "ncRNA"="ncRNA", "UCNE"="UCNE"))
+comparison_pops_Xchr$feature <- factor (comparison_pops_Xchr$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+
+comparison_pops_Xchr$comparison <- factor (comparison_pops_Xchr$comparison, levels=c("Kirov_Poland", "Kirov_Norway", "Andujar_Donana"))
 
 
 
@@ -1086,20 +1073,20 @@ ggplot(data=comparison_pops_Xchr_summary, aes(mean_delta_pairwise, mean_delta_wa
                   segment.size  = 0.2,
                   segment.color = 'grey50') +
   theme(legend.position = "none") +
-  ggsave (paste(wd_output,"delta_pi_vs_delta_watterson_Xchr.pdf", sep=""), width = 160, height = 160, units = "mm")
+  ggsave (paste(wd_output,"delta_pi_vs_delta_watterson_Xchr.pdf", sep=""), width = 160, height = 80, units = "mm")
 
 
 
 ggplot(comparison_pops_Xchr, aes(x=feature, y=delta_w_delta_p, colour=comparison, fill=comparison, shape=comparison))+
-  stat_summary(fun.data = "mean_cl_boot", size = 0.8) +
+  stat_summary(fun.data = "mean_cl_boot", size = 0.5) +
   stat_summary(fun.y = mean,
                geom = "line")+
   coord_flip() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  facet_wrap (~comparison) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")+
   scale_fill_manual(values=c("#588C7E", "#F2AE72", "#8C4646")) +
-  scale_color_manual(values=c("#588C7E", "#F2AE72", "#8C4646")) 
-ggsave (paste(wd_output,"delta_delta_all_pops_Xchr.pdf", sep=""), width = 160, height = 160, units = "mm")
-
+  scale_color_manual(values=c("#588C7E", "#F2AE72", "#8C4646")) +
+ggsave (paste(wd_output,"delta_delta_all_pops_Xchr.pdf", sep=""), width = 160, height = 80, units = "mm")
 ```
 
 
