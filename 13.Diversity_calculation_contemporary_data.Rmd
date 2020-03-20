@@ -1043,6 +1043,18 @@ ggplot (data = data_diversity_filtered_ave_corrected, aes(length)) +
   facet_wrap (~feature, scales = "free")
 ggsave(paste (wd_output, "length_per_unit_all_pops.pdf", sep=""))
 
+ggplot (data = data_diversity_filtered_ave_corrected %>% 
+          filter (Populations=="Kirov" | Populations=="Andujar") %>% 
+          filter (feature !="Gen_promoter") %>% 
+          filter(feature !="lncRNA_promoter"), 
+        aes(length)) +
+  geom_density() +
+  scale_fill_viridis() +
+  facet_wrap (Species~feature, scales = "free") +
+  theme(text = element_text(size=15), axis.text.x = element_text(angle = 45, hjust = 1)) +
+ggsave(paste (wd_output, "length_per_unit_per_pops.pdf", sep=""), width = 16, height = 20 )
+
+
 for (pop in unique(data_diversity_filtered_ave_corrected$Populations))
   {
   print (pop)
