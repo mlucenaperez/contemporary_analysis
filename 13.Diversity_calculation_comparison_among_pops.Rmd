@@ -510,6 +510,8 @@ library(cowplot)
 library(ggsignif)
 library(tidyverse)
 library(corrplot)
+library(rcompanion)
+
 
 wd <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
 wd_output <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/"
@@ -703,6 +705,9 @@ c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson$feature  <- f
 ```
 
 # Statistical analysis
+
+
+
 Empleo el wilcox.test (por defecto tiene paired=F). Es un test para medidas no parametricas para comparación de rank. 
 
 Explicacion: https://en.wikipedia.org/wiki/Mann–Whitney_U_test
@@ -743,7 +748,7 @@ Por tanto, los p-values son una aproximacion normal (In one case the p-value is 
 
 
 
-### U-MW diversity lost (HD)
+### U-MW and effect size diversity lost (HD)
 
 First we test for normality. I already did that, no need to do it again. 
 
@@ -797,6 +802,8 @@ write.csv(b,paste0(wd_output, "diversity_lost_UMW/",POP1,"_",POP2,"_",DIVERSITY_
 
 ```
 
+UMW test
+
 ```{r}
 
 ruta_UMW_test_diversity <- "diversity_lost_UMW/"
@@ -839,7 +846,6 @@ diversity.less <- with(DATAFRAME_filtered,
           function(x) wilcox.test(pairwise_ave.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
 }
 
-
   if (DIVERSITY_MEASURE_CONSIDERED=="watterson") 
         {
 diversity.greater <- with(DATAFRAME_filtered,
@@ -873,6 +879,21 @@ lista_results_diversity_melted.PI <- melt(list(diversity.greater.PI , diversity.
 
 write.table(format(lista_results_diversity_melted.PI, digits=8, scientific=T), paste(wd_output,ruta_UMW_test_diversity,POP1,"_",POP2,"_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt",sep=""), row.names = F, quote=F)
 
+# Effect Size
+effect_size_pi_in_watterson <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$pairwise_ave.x, g=x$evolution_category))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="pairwise_evaluation_watterson_quadrants") %>%
+  mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  mutate (method="r") %>% 
+  mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n013_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n013_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n019_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  select (-comparison)
+
+
+write.table(format(effect_size_pi_in_watterson, digits=8, scientific=T), paste(wd_output,ruta_UMW_test_diversity,POP1,"_",POP2,"_effect_size_pairwise_evaluation_watterson_quadrants_HD.txt",sep=""), row.names = F, quote=F)
+
 }
 
 lista_results_diversity_melted <- melt(list(diversity.greater , diversity.less)) %>% mutate(genomic_variable=DIVERSITY_MEASURE_CONSIDERED) %>% spread(., variable, value) %>% 
@@ -890,6 +911,7 @@ rm(diversity.greater, diversity.less, lista_results_diversity_melted)
 
 }
 
+
 ```
 
 En mi local
@@ -897,10 +919,13 @@ En mi local
 
 ```{bash}
 cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_no_n008_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_po_n008_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt ) <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_lp_sm_n019_c_lp_do_n012_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt )  > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/all_pops_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt 
+
+cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_lp_sm_n019_c_lp_do_n012_effect_size_pairwise_evaluation_watterson_quadrants_HD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_no_n008_effect_size_pairwise_evaluation_watterson_quadrants_HD.txt ) <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_po_n008_effect_size_pairwise_evaluation_watterson_quadrants_HD.txt )  > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/all_pops_effect_size_pairwise_evaluation_watterson_quadrants_HD.txt
+
 ```
 
 
-### U-MW test evolutionary category vs genomic variables
+### U-MW test and effect size evolutionary category vs genomic variables
 
 Aquí sí hago el test de U-MW por categoría y feature. 
 ```{r}
@@ -931,31 +956,9 @@ for (DATAFRAME in DATAFRAMES)
     .[1,1]
 
 DATAFRAME_filtered=get(DATAFRAME) %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep="")) %>% filter (type_chr=="autosomes") 
+DATAFRAME_filtered$evolution_category <- droplevels(DATAFRAME_filtered$evolution_category)
 
-# Divergence:
-divergence.greater <- with(DATAFRAME_filtered,
-       by(DATAFRAME_filtered, feature,
-          function(x) wilcox.test(divergence ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
-divergence.less <- with(DATAFRAME_filtered,
-       by(DATAFRAME_filtered, feature,
-          function(x) wilcox.test(divergence ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
-
-# Recombination
-recombination.greater <- with(DATAFRAME_filtered,
-       by(DATAFRAME_filtered, feature,
-          function(x) wilcox.test(recombination_rate ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
-recombination.less <- with(DATAFRAME_filtered,
-       by(DATAFRAME_filtered, feature,
-          function(x) wilcox.test(recombination_rate ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
-
-# GC content
-GC_content.greater <- with(DATAFRAME_filtered,
-       by(DATAFRAME_filtered, feature,
-          function(x) wilcox.test(GC_content ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
-GC_content.less <- with(DATAFRAME_filtered,
-       by(DATAFRAME_filtered, feature,
-          function(x) wilcox.test(GC_content ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
-
+####################################
 # Size
 informative_sites.greater <- with(DATAFRAME_filtered,
        by(DATAFRAME_filtered, feature,
@@ -964,28 +967,127 @@ informative_sites.less <- with(DATAFRAME_filtered,
        by(DATAFRAME_filtered, feature,
           function(x) wilcox.test(informative_sites.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
 
+lista_results_size <- melt (list (informative_sites.greater, informative_sites.less)) %>% mutate(genomic_variable="informative_sites") %>% spread(., variable, value)
+
+## Effect size
+effect_size_informative_sites.x <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$informative_sites.x, g=x$evolution_category))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="informative_sites.x") %>%
+  mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  mutate (method="r") %>% 
+  mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n013_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n013_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n019_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  select (-comparison)
+
+####################################
+# Divergence:
+divergence.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(divergence ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+divergence.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(divergence ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+
+lista_results_divergence_melted <- melt(list(divergence.greater , divergence.less)) %>% mutate(genomic_variable="divergence") %>% spread(., variable, value)
+
+## Effect size
+effect_size_divergence <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$divergence, g=x$evolution_category))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="divergence") %>%
+  mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  mutate (method="r") %>% 
+  mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n013_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n013_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n019_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  select (-comparison)
+
+####################################
+# Recombination
+recombination.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(recombination_rate ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+recombination.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(recombination_rate ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+lista_results_recombination_melted <- melt(list(recombination.greater, recombination.less)) %>% mutate(genomic_variable="recombination") %>% spread(., variable, value)
+
+
+## Effect size
+effect_size_recombination_rate <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$recombination_rate, g=x$evolution_category))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="recombination_rate") %>%
+  mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  mutate (method="r") %>% 
+  mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n013_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n013_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n019_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  select (-comparison)
+
+
+####################################
+# GC content
+GC_content.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(GC_content ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+GC_content.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(GC_content ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+lista_results_GC_content_melted <- melt(list(GC_content.greater, GC_content.less)) %>% mutate(genomic_variable="GC_content") %>% spread(., variable, value)
+
+
+## Effect size
+effect_size_GC_content <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$GC_content, g=x$evolution_category))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="GC_content") %>%
+  mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  mutate (method="r") %>% 
+  mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n013_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n013_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n019_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  select (-comparison)
+
+####################################
 # rvis_score
 rvis_score.greater <- wilcox.test(rvis_score ~ evolution_category, data = DATAFRAME_filtered %>% filter(feature=="CDS"), conf.int = TRUE, alternative = "greater")  %>% tidy(.)
 
 rvis_score.less <- wilcox.test(rvis_score ~ evolution_category, data = DATAFRAME_filtered %>% filter(feature=="CDS"), conf.int = TRUE, alternative = "less")  %>% tidy(.)
+## Effect size
+effect_size_rvis_score <-with(DATAFRAME_filtered %>%  filter(feature=="CDS"),
+       by(DATAFRAME_filtered %>%  filter(feature=="CDS"), feature,
+          function(x) wilcoxonR(x=x$rvis_score, g=x$evolution_category))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="rvis_score") %>%
+  mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  mutate (method="r") %>% 
+  mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n013_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n013_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n019_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  select (-comparison)
 
-# RVIS (Residual Variation Intolerance Score) is a gene-based score intended to help in the interpretation of human sequence data. The intolerance score in its current form is based upon allele frequency data as represented in whole exome sequence data from the NHLBI-ESP6500 data set. The score is designed to rank genes in terms of whether they have more or less common functional genetic variation relative to the genome wide expectation given the amount of apparently neutral variation the gene has. A gene with a positive score has more common functional variation, and a gene with a negative score has less and is referred to as "intolerant". By convention we rank all genes in order from most intolerant to least. As an example, a gene such as ATP1A3 has a RVIS score of -1.53 and a percentile of 3.37%, meaning it is amongst the 3.37% most intolerant of human genes. Depending on what disease area you are a studying, you may way to consider either intolerant genes (neurodevelomental disease) or tolerant genes (some immunological diseases) as better candidates. Data sourced from: EVS-v.0.0.14, (June 20, 2012)
-
-
-lista_results_divergence_melted <- melt(list(divergence.greater , divergence.less)) %>% mutate(genomic_variable="divergence") %>% spread(., variable, value)
-lista_results_recombination_melted <- melt(list(recombination.greater, recombination.less)) %>% mutate(genomic_variable="recombination") %>% spread(., variable, value)
-lista_results_GC_content_melted <- melt(list(GC_content.greater, GC_content.less)) %>% mutate(genomic_variable="GC_content") %>% spread(., variable, value)
-lista_results_size <- melt (list (informative_sites.greater, informative_sites.less)) %>% mutate(genomic_variable="informative_sites") %>% spread(., variable, value)
 lista_results_rvis <- melt (list (rvis_score.greater, rvis_score.less)) %>% mutate(genomic_variable="rvis_score") %>% spread(., variable, value) %>% mutate (L2="CDS")
 
+####################################
+# Rbind results and write table
 
-
+### Test
 resultados_U_Man_Whitney <- rbind(lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_size, lista_results_rvis) %>% mutate (SIG=ifelse(p.value<0.05, "SIGN", "no")) %>% mutate (comparison=paste0(POP1,"_", POP2)) %>% mutate (method="wilcox.test")
 
 write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_features_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,"_",DIVERSITY_CATEGORY, ".txt",sep=""), row.names = F, quote=F, dec=",")
 
-rm(divergence.greater, divergence.less, recombination.greater, recombination.less , GC_content.greater, GC_content.less, lista_results_divergence_melted,  lista_results_recombination_melted,  lista_results_GC_content_melted, resultados_U_Man_Whitney)
+### Effect size
+resultados_effect_size <- rbind (effect_size_informative_sites.x, effect_size_divergence, effect_size_recombination_rate, effect_size_GC_content, effect_size_rvis_score)
 
+write.table(format(resultados_effect_size, digits=8, scientific=T), paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_features_effect_size",DIVERSITY_MEASURE_CONSIDERED,"_",DIVERSITY_CATEGORY, ".txt",sep=""), row.names = F, quote=F, dec=",")
+
+
+rm(divergence.greater, divergence.less, recombination.greater, recombination.less , GC_content.greater, GC_content.less, lista_results_divergence_melted,  lista_results_recombination_melted,  lista_results_GC_content_melted, resultados_U_Man_Whitney, effect_size_informative_sites.x, effect_size_divergence, effect_size_recombination_rate, effect_size_GC_content, effect_size_rvis_score)
 }
 }
 
@@ -995,6 +1097,9 @@ En mi local hago lo siguiente:
 
 ```{bash}
 cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/c_lp_sm_n019_c_lp_do_n012_features_UMW_test_watterson_LD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/c_ll_ki_n013_c_ll_po_n008_features_UMW_test_watterson_LD.txt ) <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/c_ll_ki_n013_c_ll_no_n008_features_UMW_test_watterson_LD.txt )  > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/all_comparisons_features_UMW_test_watterson_LD.txt 
+
+
+cat 
 ```
 
 
