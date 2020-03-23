@@ -825,6 +825,7 @@ for (DATAFRAME in DATAFRAMES)
   POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
   POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
 
+  DIVERSITY_CATEGORY="HD"
   DIVERSITY_MEASURE_CONSIDERED = get(DATAFRAME) %>% 
     dplyr::select(evolution_category) %>% 
     dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
@@ -906,13 +907,16 @@ effect_size_informative_sites.x <-with(DATAFRAME_filtered,
   select (-comparison)
 
 
-lista_results <- rbind
-(melt(list(diversity.greater.PI , diversity.less.PI, )) %>% 
+div <-melt(list(diversity.greater.PI , diversity.less.PI)) %>% 
     mutate(genomic_variable="pairwise_evaluation_watterson_quadrants") %>% 
-    spread(., variable, value), 
-  melt (list (informative_sites.greater, informative_sites.less)) %>% 
+    spread(., variable, value)
+
+inf<- melt (list (informative_sites.greater, informative_sites.less)) %>% 
     mutate(genomic_variable="informative_sites") %>% 
-    spread(., variable, value)) %>% 
+    spread(., variable, value)
+
+
+lista_results <- rbind(as.data.frame(div), as.data.frame(inf)) %>% 
   mutate (SIG=ifelse(p.value<0.05, "SIGN", "no")) %>% 
   mutate (comparison=paste0(POP1,"_", POP2)) %>% 
   mutate (method="wilcox.test") %>% 
@@ -920,6 +924,7 @@ lista_results <- rbind
           ifelse (comparison == "c_ll_ki_n013_c_ll_no_n008", "Kirov_Norway",
           ifelse (comparison == "c_lp_sm_n019_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
   select (-comparison)
+
 
 write.table(format(lista_results, digits=8, scientific=T), paste(wd_output,ruta_UMW_test_diversity,POP1,"_",POP2,"_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt",sep=""), row.names = F, quote=F)
 
@@ -952,9 +957,13 @@ En mi local
 
 
 ```{bash}
-cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_no_n008_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_po_n008_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt ) <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_lp_sm_n019_c_lp_do_n012_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt )  > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/all_pops_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt 
+# cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_no_n008_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_po_n008_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt ) <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_lp_sm_n019_c_lp_do_n012_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt )  > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/all_pops_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt 
 
-cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_lp_sm_n019_c_lp_do_n012_effect_size_pairwise_evaluation_watterson_quadrants_HD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_no_n008_effect_size_pairwise_evaluation_watterson_quadrants_HD.txt ) <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_po_n008_effect_size_pairwise_evaluation_watterson_quadrants_HD.txt )  > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/all_pops_effect_size_pairwise_evaluation_watterson_quadrants_HD.txt
+# cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_lp_sm_n019_c_lp_do_n012_effect_size_pairwise_evaluation_watterson_quadrants_HD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_no_n008_effect_size_pairwise_evaluation_watterson_quadrants_HD.txt ) <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_po_n008_effect_size_pairwise_evaluation_watterson_quadrants_HD.txt )  > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/all_pops_effect_size_pairwise_evaluation_watterson_quadrants_HD.txt
+
+cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_lp_sm_n019_c_lp_do_n012_features_effect_sizewatterson_HD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_po_n008_features_effect_sizewatterson_HD.txt) <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_no_n008_features_effect_sizewatterson_HD.txt) > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/all_pops_features_effect_sizewatterson_HD.txt
+
+cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_lp_sm_n019_c_lp_do_n012_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_no_n008_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt) <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_po_n008_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt) > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/all_pops_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt
 
 ```
 
@@ -1138,7 +1147,7 @@ cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comp
 
 
 
-### *Boxplot categories vs. genomic category
+### *Boxplot & mean categories vs. genomic category
 
 ```{r}
 ruta_UMW_test <- "genomic_variable_diversity_category_UMT_boxplot_mean/"
@@ -1256,8 +1265,186 @@ for (DATAFRAME in DATAFRAMES)
 
 
 ```
+### *Mean article 
 
-### *Genomic variables against informative sites.
+```{r}
+ruta_plot <- "plot_article/"
+
+DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson" )
+
+all_pops <- rbind (
+  c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson, 
+  c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson, 
+  c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson) %>% 
+  filter (feature=="CDS" | feature=="Intergenic" | feature=="Intron")
+
+all_pops$comparison <- factor (all_pops$comparison, levels=c("Kirov-NE_Poland", "Kirov-Norway", "Andujar-Donana"))
+all_pops$feature <- factor (all_pops$feature, levels=c("Intergenic", "Intron", "CDS"))
+all_pops$feature <- droplevels(all_pops$feature)
+
+
+### HD
+
+all_pops_filtered_HD <- all_pops %>% 
+  filter(diversity_category=="HD_watterson")  %>% 
+  filter (type_chr=="autosomes") %>% 
+  select ("comparison","informative_sites.x","pairwise_ave.x", "evolution_category", "feature") %>% 
+  mutate (feature2=ifelse(feature=="Intergenic", "Intrg", as.character(feature))) %>% 
+  mutate (comparison2=ifelse (comparison =="Kirov-NE_Poland", "KIR-POL", 
+                      ifelse (comparison =="Kirov-Norway", "KIR-NOR","AND-DON"))) %>% 
+  select (-feature, -comparison ) %>% 
+  rename (., feature = feature2) %>% 
+  rename (., comparison = comparison2) %>% 
+  rename (., Informative_sites=informative_sites.x) %>% 
+  rename (., Initial_pi_diversity=pairwise_ave.x)
+
+all_pops_filtered_HD$evolution_category <- droplevels(all_pops_filtered_HD$evolution_category) 
+
+
+all_pops_filtered_HD_gather <- all_pops_filtered_HD %>% 
+  tidyr::gather (., key="genomic_variable", value="value", -evolution_category, -comparison, -feature )
+all_pops_filtered_HD_gather$feature <-  factor (all_pops_filtered_HD_gather$feature, levels=c("Intrg", "Intron", "CDS"))
+all_pops_filtered_HD_gather$comparison <-  factor (all_pops_filtered_HD_gather$comparison, levels=c("KIR-POL", "KIR-NOR", "AND-DON"))
+
+
+### LD
+
+all_pops_filtered_LD <- all_pops %>% 
+  filter(diversity_category=="LD_watterson") %>% 
+  filter (type_chr=="autosomes") %>% 
+  select ("comparison","divergence", "recombination_rate", "GC_content", "informative_sites.x", "rvis_score", "feature", "evolution_category") %>% 
+  mutate (feature2=ifelse(feature=="Intergenic", "Intrg", as.character(feature))) %>% 
+  mutate (comparison2=ifelse (comparison =="Kirov-NE_Poland", "KIR-POL", 
+                      ifelse (comparison =="Kirov-Norway", "KIR-NOR","AND-DON"))) %>% 
+  select (-feature, -comparison ) %>% 
+  rename (., feature = feature2) %>% 
+  rename (., comparison = comparison2) %>% 
+  rename (., Divergence=divergence) %>% 
+  rename (., Recombination_rate=recombination_rate) %>% 
+  rename (., Informative_sites=informative_sites.x) %>% 
+  rename (., RVIS=rvis_score)  
+
+all_pops_filtered_LD$evolution_category <- droplevels(all_pops_filtered_LD$evolution_category)
+
+all_pops_filtered_LD_gather <- all_pops_filtered_LD %>% 
+  tidyr::gather (., key="genomic_variable", value="value", -evolution_category, -comparison, -feature )
+all_pops_filtered_LD_gather$feature <-  factor (all_pops_filtered_LD_gather$feature, levels=c("Intrg", "Intron", "CDS"))
+all_pops_filtered_LD_gather$comparison <-  factor (all_pops_filtered_LD_gather$comparison, levels=c("KIR-POL", "KIR-NOR", "AND-DON"))
+
+# ## Mean HD all variables all comparisons ##
+
+ggplot(all_pops_filtered_HD_gather, aes(evolution_category,value, colour=evolution_category)) +
+  facet_grid(genomic_variable~comparison+feature, 
+             scales = "free")+
+  stat_summary(fun.data = "mean_cl_boot", size = 0.1)  +
+  theme_minimal() +
+  scale_fill_manual(values=c("yellow", "orange")) +
+  scale_color_manual(values=c("yellow", "orange")) +
+  theme (axis.text.x=element_blank(),
+         axis.ticks.x=element_blank(),
+         axis.title.x = element_blank(), 
+         axis.title.y = element_blank(),
+         axis.text.y = element_text(size=6),
+         strip.placement = "outside", 
+         strip.text.x = element_text(size = 6, angle = 45),
+         legend.position = "none") +
+  ggsave(paste(wd_output,ruta_plot,"all_pops_HD_all_variables_mean_se_features_.pdf",sep=""), width = 80, height = 85, units ="mm")
+
+# ## Mean LD all variables all comparisons ##
+
+ggplot(all_pops_filtered_LD_gather, aes(evolution_category,value, colour=evolution_category)) +
+  facet_grid(genomic_variable~comparison+feature, 
+             scales = "free", switch="y")+
+  stat_summary(fun.data = "mean_cl_boot", size = 0.1) +  
+  theme_minimal() +
+  scale_fill_manual(values=c("red", "blue")) +
+  scale_color_manual(values=c("red", "blue")) +
+  theme (axis.text.x=element_blank(),
+         axis.ticks.x=element_blank(),
+         axis.title.x = element_blank(), 
+         axis.title.y = element_blank(),
+         axis.text.y = element_text(size=8),
+         strip.placement = "outside", 
+         strip.text.x = element_text(size = 5, angle = 45),
+         legend.position = "none") +
+  ggsave(paste(wd_output,ruta_plot,"all_pops_LD_all_variables_mean_se_features_.pdf",sep=""), width = 80, height = 185, units ="mm")
+
+
+```
+
+### *Plot diversity comparison
+
+```{r}
+# Plot de diversidad de una población frente a otra, con el corte de los valores más bajos en el density plot para ambos casos, y graficamente ploteados esos cortes.
+DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+for (DATAFRAME in DATAFRAMES)
+{
+  POPULATION1=get(DATAFRAME) %>% select(Populations.x) %>% mutate(Populations.x=as.character(Populations.x)) %>% .[1,1]
+  POPULATION2=get(DATAFRAME) %>% select(Populations.y) %>% mutate(Populations.y=as.character(Populations.y)) %>% .[1,1]
+  POP1=get(DATAFRAME) %>% select(pop.x) %>% mutate(pop.x=as.character(pop.x)) %>% .[1,1]
+  POP2=get(DATAFRAME) %>% select(pop.y) %>% mutate(pop.y=as.character(pop.y)) %>% .[1,1]
+  # Pairwise:
+  min_non_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POP1) %>% .[1,2] )
+  min_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POP2) %>% .[1,2] )
+  above95_non_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_feature %>% filter(type_chr=="autosomes") %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & Populations==POPULATION1) %>% dplyr::select ("q95_pairwise_ave") %>% as.data.frame(.) %>%  .[1,1] )
+  above95_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_feature %>% filter(type_chr=="autosomes") %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & Populations==POPULATION2) %>% dplyr::select ("q95_pairwise_ave") %>% as.data.frame(.) %>%  .[1,1] )
+  # Añadimos una columna para que se coloreen los genes que luego vamos a pasarle al GO term enrichment. Estos genes son: los que presentan ALTA diversidad en ambas poblaciones, y un delta parecido.
+  DATAFRAME_modif_pairwise <- get(DATAFRAME) %>% mutate (col=ifelse(log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & ratio_pairwise_average>0.6 & ratio_pairwise_average<1.4 & feature=="CDS" & pairwise_ave.x > above95_non_bootleneck_pop_value_pairwise & pairwise_ave.y > above95_bootleneck_pop_value_pairwise, "interesting_genes", "shit"))
+  # Plot de todas las features
+  ggplot(data=DATAFRAME_modif_pairwise, aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x) )) +
+    geom_point(alpha = 1/100, color='grey41') +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
+    facet_wrap(~feature) +
+    theme_minimal() +
+    theme(legend.position="none") +
+   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise.pdf", sep=""), width = 7, height = 7)
+  ggplot() +
+    geom_point(data=DATAFRAME_modif_pairwise %>% filter(., feature=="CDS") %>% filter(col=="shit"),
+               aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x)), alpha = 1/10, colour="grey41", size=1 ) +
+    geom_point(data=DATAFRAME_modif_pairwise %>% filter(., feature=="CDS") %>% filter(col=="interesting_genes"),
+               aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x)), colour="#FF0000", size=1 ) +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
+    theme_minimal() +
+    theme(legend.position="none") +
+    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise_interesting_CDS.pdf", sep=""), width = 7, height = 7)
+  min_non_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POP1) %>% .[1,2] )
+  min_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POP2) %>% .[1,2] )
+  # Watterson
+  above95_non_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_feature %>% filter(type_chr=="autosomes") %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & pop==POP1) %>% dplyr::select ("q95_watterson_ave") %>% as.data.frame(.) %>%  .[1,1] )
+  above95_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_feature %>% filter(type_chr=="autosomes") %>% dplyr::ungroup() %>% filter(feature=="CDS" & pop==POP2) %>% dplyr::select ("q95_watterson_ave") %>% as.data.frame(.) %>%  .[1,1] )
+  # Añadimos una columna para que se coloreen los genes que luego vamos a pasarle al GO term enrichment. Estos genes son: ls¡os que presentan ALTA diversidad en ambas poblaciones, y un ratio parecido.
+  DATAFRAME_modif_watterson <- get(DATAFRAME) %>% mutate (col=ifelse(log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson & ratio_watterson_average>0.6 & ratio_watterson_average<1.4 & feature=="CDS" & watterson_ave.x > above95_non_bootleneck_pop_value_watterson & watterson_ave.y > above95_bootleneck_pop_value_watterson, "interesting_genes", "shit"))
+  # Plot de todas las features
+  ggplot(data=DATAFRAME_modif_watterson, aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x) )) +
+    geom_point(alpha = 1/100, color='grey41') +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_watterson, color='grey20') +
+    facet_wrap(~feature) +
+    theme(legend.position="none") +
+   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson.pdf", sep=""), width = 7, height = 7)
+  ggplot() +
+    geom_point(data=DATAFRAME_modif_watterson %>% filter(., feature=="CDS") %>% filter(col=="shit"),
+               aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x)), alpha = 1/10, colour="grey41", size=1 ) +
+    geom_point(data=DATAFRAME_modif_watterson %>% filter(., feature=="CDS") %>% filter(col=="interesting_genes"),
+               aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x)), colour="#FF0000", size=1 ) +
+    geom_abline(intercept = 0, color='grey20') +
+    geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
+    geom_vline(xintercept = min_bootleneck_pop_value_watterson, color='grey20') +
+    theme(legend.position="none") +
+    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson_interesting_CDS.pdf", sep=""), width = 7, height = 7)
+   rm (DATAFRAME_modif_watterson, DATAFRAME_modif_pairwise)
+}
+
+```
+
+
+
+### *Sanity: Genomic variables against informative sites.
 
 Para ver si como pasa con la diversidad, el cambio en cualquiera de las variables genómicas está mediado por el tamaño de la unidad. 
 ```{r}
@@ -1395,7 +1582,7 @@ cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comp
 ```
 
 
-### Recombination per feature
+### *Recombination per feature
 
 ```{r}
 library(reshape2)
@@ -1608,373 +1795,6 @@ ggplot() +
 
 
 ```
-
-
-##---------
-
-
-
-## Contingency test
-
-```{r}
-library(corrplot)
-
-wd <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/"
-wd_output_contingency <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/contingency_test_ND_D_distribution_regions"
-
-# c_ll_ki_n013_c_ll_no_n008_pairwise_percentage_of_ND_D_in_different_regions.tsv
-# c_ll_ki_n013_c_ll_po_n008_pairwise_percentage_of_ND_D_in_different_regions.tsv
-# c_lp_sm_n019_c_lp_do_n012_pairwise_percentage_of_ND_D_in_different_regions.tsv
-# c_ll_ki_n013_c_ll_po_n008_watterson_percentage_of_ND_D_in_different_regions.tsv
-# c_ll_ki_n013_c_ll_no_n008_watterson_percentage_of_ND_D_in_different_regions.tsv
-# c_lp_sm_n019_c_lp_do_n012_watterson_percentage_of_ND_D_in_different_regions.tsv
-
-DATA="c_lp_sm_n019_c_lp_do_n012_pairwise_percentage_of_ND_D_in_different_regions.tsv"
-
-
-DATAFRAME <- read.table(paste0(wd, DATA),stringsAsFactors = F) %>% select (-total_count)
-POPS=substr(DATA, 1, 25)
-DIVERSITY_MEASURE=substr(DATA, 27, 34)
-  
-DATAFRAME_SPLITTED <- split(DATAFRAME, DATAFRAME$feature) 
-number_of_data_frames <- unique(DATAFRAME$feature) %>% length()
-my.list <- vector("list", number_of_data_frames)
-
-
-for(FEATURE_NUMBER in 1:number_of_data_frames)
-{
-  print (FEATURE_NUMBER)
-  temp_data <- DATAFRAME_SPLITTED[[FEATURE_NUMBER]] 
-  temp_data[is.na(temp_data)] <- 0
-  FEATURE <- as.character(temp_data %>% select(feature) %>% .[1,])
-  temp_data_matrix <- temp_data %>% select (-feature, -D_D, -D_ND)
-  rownames(temp_data_matrix) <- temp_data_matrix[,1] 
-  temp_data_matrix_ready <- temp_data_matrix %>%  select (-1) 
-  chisq_results <- chisq.test( temp_data_matrix_ready) 
-  my.list[[FEATURE_NUMBER]] <- merge(FEATURE, chisq_results$p.value)
-  #chisq_results$expected
-  if (chisq_results$p.value > 0.05)
-  {jpeg(paste0(wd_output_contingency,"/no_sig/", POPS,"_",DIVERSITY_MEASURE,"_",FEATURE ,".jpg"))
-  corrplot(chisq_results$residuals, is.cor = FALSE)
-  dev.off()} 
-  else {
-  jpeg(paste0(wd_output_contingency,"/sig/", POPS,"_",DIVERSITY_MEASURE,"_",FEATURE ,".jpg"))
-  corrplot(chisq_results$residuals, is.cor = FALSE)
-  dev.off()
-  }
-  
-  rm(temp_data, temp_data_matrix, chisq_results, FEATURE)
- }
-
-
-df_results <- do.call("rbind", my.list) 
-write.table( df_results, paste0(wd_output_contingency,"/", POPS,"_",DIVERSITY_MEASURE,".tsv"))
-rm (df_results)
-```
-
-
-#------------
-
-
-
-
-
-
-
-### U-MW test diversity category vs genomic variables
-
-```{r}
-
-ruta_UMW_test <- "genomic_variable_diversity_category_UMT_boxplot_mean/"
-
-library(broom)
-
-DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson")
-
-# Divergence
-#Con este código lo que hacemos es que por cada feature (by) corremos el wilcox test. El resultado se guarda en una tabla que despues se va a limpiar usando la función tidy, y luego haciendo list juntamos todos los resultados, hasta que finalmente escribimos una tabla usando melt. 
-
-for (DATAFRAME in DATAFRAMES) {
-  
-  POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-  POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-
-  DIVERSITY_MEASURE_CONSIDERED = get(DATAFRAME) %>% 
-    dplyr::select(evolution_category) %>% 
-    dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
-    head(.,1) %>% 
-    dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
-                              ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
-    select(diversity) %>% 
-    .[1,1]
-
-# Divergence:
-divergence.greater <- with(get(DATAFRAME),
-       by(get(DATAFRAME), feature,
-          function(x) wilcox.test(divergence ~ diversity_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
-divergence.less <- with(get(DATAFRAME),
-       by(get(DATAFRAME), feature,
-          function(x) wilcox.test(divergence ~ diversity_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
-
-# Recombination
-recombination.greater <- with(get(DATAFRAME),
-       by(get(DATAFRAME), feature,
-          function(x) wilcox.test(recombination_rate ~ diversity_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
-recombination.less <- with(get(DATAFRAME),
-       by(get(DATAFRAME), feature,
-          function(x) wilcox.test(recombination_rate ~ diversity_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
-
-# GC content
-GC_content.greater <- with(get(DATAFRAME),
-       by(get(DATAFRAME), feature,
-          function(x) wilcox.test(GC_content ~ diversity_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
-GC_content.less <- with(get(DATAFRAME),
-       by(get(DATAFRAME), feature,
-          function(x) wilcox.test(GC_content ~ diversity_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
-
-lista_results_divergence_melted <- melt(list(divergence.greater , divergence.less)) %>% mutate(genomic_variable="divergence") %>% spread(., variable, value)
-lista_results_recombination_melted <- melt(list(recombination.greater, recombination.less)) %>% mutate(genomic_variable="recombination") %>% spread(., variable, value)
-lista_results_GC_content_melted <- melt(list(GC_content.greater, GC_content.less)) %>% mutate(genomic_variable="GC_content") %>% spread(., variable, value)
-
-resultados_U_Man_Whitney <- rbind(lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted)
-
-write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_features_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,".txt",sep=""), row.names = F)
-
-rm(divergence.greater, divergence.less, recombination.greater, recombination.less , GC_content.greater, GC_content.less, lista_results_divergence_melted,  lista_results_recombination_melted,  lista_results_GC_content_melted, resultados_U_Man_Whitney)
-
-}
-
-
-for (DATAFRAME in DATAFRAMES) 
-  {
-
-  POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-  POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-
-  DIVERSITY_MEASURE_CONSIDERED = get(DATAFRAME) %>% 
-    dplyr::select(evolution_category) %>% 
-    dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
-    head(.,1) %>% 
-    dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
-                              ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
-    select(diversity) %>% 
-    .[1,1]
-
-# Divergence
-divergence.greater <- wilcox.test(divergence ~ diversity_category, data = get(DATAFRAME), conf.int = TRUE, alternative = "greater") %>% tidy(.) 
-divergence.less <- wilcox.test(divergence ~ diversity_category, data = get(DATAFRAME), conf.int = TRUE, alternative = "less") %>%  tidy(.) 
-lista_divergence <- melt(list(divergence.greater, divergence.less)) %>% mutate(genomic_variable="divergence") %>% spread(., variable, value)
-
-# Recombination
-recombination.greater <- wilcox.test(recombination_rate ~ diversity_category, data = get(DATAFRAME), conf.int = TRUE, alternative = "greater") %>%  tidy(.)
-recombination.less <- wilcox.test(recombination_rate ~ diversity_category, data = get(DATAFRAME), conf.int = TRUE, alternative = "less") %>%  tidy(.)
-lista_recombination <- melt(list(recombination.greater, recombination.less)) %>% mutate(genomic_variable="recombination") %>% spread(., variable, value)
-
-# GC content
-GC_content.greater <- wilcox.test(GC_content ~ diversity_category, data = get(DATAFRAME), conf.int = TRUE, alternative = "greater") %>%  tidy(.)
-GC_content.less <- wilcox.test(GC_content ~ diversity_category, data = get(DATAFRAME), conf.int = TRUE, alternative = "less") %>%  tidy(.)
-lista_GC_content <- melt(list(GC_content.greater, GC_content.less)) %>% mutate(genomic_variable="GC_content") %>% spread(., variable, value)
-
-resultados_U_Man_Whitney <- rbind(lista_divergence, lista_recombination, lista_GC_content)
-
-write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,".txt",sep=""), row.names = F)
-
-rm(divergence.greater, divergence.less, recombination.greater, recombination.less , GC_content.greater, GC_content.less, lista_divergence,  lista_recombination,  lista_GC_content, resultados_U_Man_Whitney)
-
-}
-
-
-```
-
-### U-MW test evolutionary category vs genomic variables
-
-
-```{r}
-ruta_UMW_test <- "genomic_variable_diversity_category_UMT_boxplot_mean/"
-
-
-DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson")
-
-DIVERSITY_CATEGORIES=c("HD","LD")
-# Factor order: D_ND_pairwise D_D_pairwise ND_ND_pairwise ND_D_pairwise
-# HD --> D_ND_pairwise D_D_pairwise
-# LD --> ND_ND_pairwise ND_D_pairwise
-
-for (DATAFRAME in DATAFRAMES) 
-  {
-  for (DIVERSITY_CATEGORY in DIVERSITY_CATEGORIES)
-  {
-  
-  POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-  POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-
-  DIVERSITY_MEASURE_CONSIDERED = get(DATAFRAME) %>% 
-    dplyr::select(evolution_category) %>% 
-    dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
-    head(.,1) %>% 
-    dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
-                              ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
-    select(diversity) %>% 
-    .[1,1]
-
-DATAFRAME_filtered=get(DATAFRAME) %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))
-
-# Divergence:
-divergence.greater <- with(DATAFRAME_filtered,
-       by(DATAFRAME_filtered, feature,
-          function(x) wilcox.test(divergence ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
-divergence.less <- with(DATAFRAME_filtered,
-       by(DATAFRAME_filtered, feature,
-          function(x) wilcox.test(divergence ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
-
-# Recombination
-recombination.greater <- with(DATAFRAME_filtered,
-       by(DATAFRAME_filtered, feature,
-          function(x) wilcox.test(recombination_rate ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
-recombination.less <- with(DATAFRAME_filtered,
-       by(DATAFRAME_filtered, feature,
-          function(x) wilcox.test(recombination_rate ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
-
-# GC content
-GC_content.greater <- with(DATAFRAME_filtered,
-       by(DATAFRAME_filtered, feature,
-          function(x) wilcox.test(GC_content ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
-GC_content.less <- with(DATAFRAME_filtered,
-       by(DATAFRAME_filtered, feature,
-          function(x) wilcox.test(GC_content ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
-
-lista_results_divergence_melted <- melt(list(divergence.greater , divergence.less)) %>% mutate(genomic_variable="divergence") %>% spread(., variable, value)
-lista_results_recombination_melted <- melt(list(recombination.greater, recombination.less)) %>% mutate(genomic_variable="recombination") %>% spread(., variable, value)
-lista_results_GC_content_melted <- melt(list(GC_content.greater, GC_content.less)) %>% mutate(genomic_variable="GC_content") %>% spread(., variable, value)
-
-resultados_U_Man_Whitney <- rbind(lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted)
-
-write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_features_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,"_",DIVERSITY_CATEGORY, ".txt",sep=""), row.names = F)
-
-rm(divergence.greater, divergence.less, recombination.greater, recombination.less , GC_content.greater, GC_content.less, lista_results_divergence_melted,  lista_results_recombination_melted,  lista_results_GC_content_melted, resultados_U_Man_Whitney)
-
-}
-}
-
-```
-
-
-#### Boxplot categories vs. divergence
-
-```{r}
-
-library("ggsignif")
-library("ggpubr")
-library("cowplot")
-library(ggplot2); theme_set(theme_minimal())
-
-ruta_UMW_test <- "genomic_variable_diversity_category_UMT_boxplot_mean/"
-
-DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson" )
-
-DIVERSITY_CATEGORIES=c("HD","LD")
-# Factor order: D_ND_pairwise D_D_pairwise ND_ND_pairwise ND_D_pairwise
-# HD --> D_ND_pairwise D_D_pairwise
-# LD --> ND_ND_pairwise ND_D_pairwise
-
-GENOMIC_VARIABLES=c("divergence", "recombination_rate", "GC_content")
-TEST_TYPES=c("less", "greater")
-#fun_mean <- function(x){return(round(data.frame(y=mean(x),label=mean(x,na.rm=T)),digit=5))}
-
-for (DATAFRAME in DATAFRAMES) 
-{
-  for (DIVERSITY_CATEGORY in DIVERSITY_CATEGORIES)
-  {
-    for (GENOMIC_VARIABLE in GENOMIC_VARIABLES)
-    {
-      for (TEST_TYPE in TEST_TYPES)
-      {
-        POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
-        POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
-        
-        DIVERSITY_MEASURE_CONSIDERED = get(DATAFRAME) %>% 
-          dplyr::select(evolution_category) %>% 
-          dplyr::mutate(evolution_category=as.character(evolution_category)) %>% 
-          head(.,1) %>% 
-          dplyr::mutate(diversity = ifelse (grepl("pairwise", evolution_category), "pairwise",
-                                            ifelse (grepl("watterson", evolution_category), "watterson", NA))) %>% 
-          select(diversity) %>% 
-          .[1,1]
-        
-        # Filtro mi DF para las categorías con las que estamos trabajando
-        DATAFRAME_filtered=get(DATAFRAME) %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))
-        
-        # Selecciono cuales van a ser mis comparaciones (eg. ND-ND vs ND-D)
-        my_comparisons <- unique(DATAFRAME_filtered$evolution_category) %>% as.vector() %>% list()
-        
-        # Selecciono los límites del plot
-        if (GENOMIC_VARIABLE=="divergence") 
-        {
-          sts <- boxplot.stats((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep="")))$divergence)$stats  # Compute lower and upper whisker limits
-        }
-        
-        if (GENOMIC_VARIABLE=="recombination_rate") 
-        {
-          sts <- boxplot.stats((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep="")))$recombination_rate)$stats  # Compute lower and upper whisker limits
-        }
-        
-        if (GENOMIC_VARIABLE=="GC_content") 
-        {
-          sts <- boxplot.stats((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep="")))$GC_content)$stats  # Compute lower and upper whisker limits
-        }
-        
-               
-        # Mean general ##
-
-        #   ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
-        #   coord_cartesian(ylim = c(0,sts[5])) +
-        #   stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
-        #   scale_colour_viridis_d(option="cividis") +
-        #   geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=sts[4], tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE)) + 
-        #   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
-        #   ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_mean_se_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
-        # 
-        # ## Mean feature ##
-        # 
-        #   ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
-        #   coord_cartesian(ylim = c(0,sts[5])) +
-        #   facet_grid(col = vars(feature) ) +
-        #   stat_summary(aes(colour=evolution_category),fun.data = "mean_cl_boot", size = 0.5) +
-        #   scale_colour_viridis_d(option="cividis") +
-        #   geom_signif(comparisons = my_comparisons, test="wilcox.test", y_position=sts[4], tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE)) + 
-        #   theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
-        #   ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_mean_se_features_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
-        
-        ## Boxplot general ##
-        
-        ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
-          geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
-          scale_colour_viridis_d(option="cividis") +
-          coord_cartesian(ylim = c(0,max(sts)*2.3)) +
-          geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts)*2.1, tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE), map_signif_level=TRUE)  + 
-          theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
-          ggplot2::ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_boxplot_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
-        
-        
-        ## Boxplot por feature ##
-        
-        ggplot((DATAFRAME_filtered %>% filter (type_chr=="autosomes") %>% filter(diversity_category==paste(DIVERSITY_CATEGORY,"_",DIVERSITY_MEASURE_CONSIDERED,sep=""))), aes_string("evolution_category",GENOMIC_VARIABLE)) +
-          facet_grid(col = vars(feature) ) +
-          geom_boxplot(aes(colour=evolution_category),outlier.shape = NA) +
-          scale_colour_viridis_d(option="cividis") +
-          coord_cartesian(ylim = c(0,max(sts)*2.3)) +
-          geom_signif(comparisons = my_comparisons, test="wilcox.test",  y_position=max(sts)*2.1, tip_length=0, linetype="blank", test.args=list(alternative=TEST_TYPE), map_signif_level=TRUE)  + 
-          theme(strip.text.x = element_text(angle = 75), axis.text.x = element_blank()) +
-          ggplot2::ggsave(paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_boxplot_features_",DIVERSITY_CATEGORY,"_", DIVERSITY_MEASURE_CONSIDERED, "_alternative_",TEST_TYPE ,".pdf",sep=""))
-        
-      }
-    }
-  }
-}
-
-```
-
-
 
 #----------------------------------------
 # Global
