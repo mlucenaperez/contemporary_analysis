@@ -980,9 +980,7 @@ ggsave (paste(wd_output,POP1, "_", POP2, "_", DELTA_MEASURE,"_", type_chr, ".pdf
 # *Delta_D per pop and feature. 
 
 ```{r}
-DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X")
-
-# AUTO
+# AUTOSOMES
 comparison_pops_auto <- rbind (c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto, c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto, c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto) %>% 
    mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008-c_ll_po_n008", "Kirov_Poland",
           ifelse (comparison == "c_ll_ki_n008-c_ll_no_n008", "Kirov_Norway",
@@ -1040,10 +1038,11 @@ comparison_pops_Xchr <- rbind (c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_div
           ifelse (comparison == "c_lp_sm_n012-c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
   select (-comparison) %>% 
   mutate(comparison=pop1_pop2) %>% 
-  select (-pop1_pop2)
+  select (-pop1_pop2) %>% 
+  filter (feature!="UCNE") # Los quito porque solo hay dos valores y no es fiable. 
 
-comparison_pops_Xchr$feature <- plyr::revalue(comparison_pops_Xchr$feature, c("intergenic"="Intergenic", "promoter_gene_1000"="Gen_promoter", "5UTR"="5UTR", "CDS"="CDS", "intron"="Intron", "3UTR"="3UTR", "promoter_lncRNA_1000"="lncRNA_promoter", "lncRNA"="lncRNA_exons", "intron_lncRNA"="lncRNA_intron", "ncRNA"="ncRNA", "UCNE"="UCNE"))
-comparison_pops_Xchr$feature <- factor (comparison_pops_Xchr$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+comparison_pops_Xchr$feature <- plyr::revalue(comparison_pops_Xchr$feature, c("intergenic"="Intergenic", "promoter_gene_1000"="Gen_promoter", "5UTR"="5UTR", "CDS"="CDS", "intron"="Intron", "3UTR"="3UTR", "promoter_lncRNA_1000"="lncRNA_promoter", "lncRNA"="lncRNA_exons", "intron_lncRNA"="lncRNA_intron", "ncRNA"="ncRNA"))
+comparison_pops_Xchr$feature <- factor (comparison_pops_Xchr$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA"))
 
 comparison_pops_Xchr$comparison <- factor (comparison_pops_Xchr$comparison, levels=c("Kirov_Poland", "Kirov_Norway", "Andujar_Donana"))
 
