@@ -1063,7 +1063,19 @@ for (pop in unique(data_diversity_filtered_ave_corrected$Populations))
   scale_fill_viridis() +
   facet_wrap (~feature, scales = "free") 
   ggsave(paste (wd_output, "length_per_unit_",pop,".pdf", sep="" ), device="pdf")
-  }
+}
+
+# Informative_sites
+ggplot (data = data_diversity_filtered_ave_corrected %>% 
+          filter (Populations=="Kirov" | Populations=="Andujar") %>% 
+          filter (feature !="Gen_promoter") %>% 
+          filter(feature !="lncRNA_promoter"), 
+        aes(informative_sites)) +
+  geom_density() +
+  scale_fill_viridis() +
+  facet_wrap (Species~feature, scales = "free") +
+  theme(text = element_text(size=15), axis.text.x = element_text(angle = 45, hjust = 1)) +
+ggsave(paste (wd_output, "informative_sites_per_unit_per_pops.pdf", sep=""), width = 16, height = 20 )
 ```
 
 ## *Recombination histogram
