@@ -1099,12 +1099,21 @@ effect_size_GC_content <-with(DATAFRAME_filtered,
 
 ####################################
 # rvis_score
-rvis_score.greater <- wilcox.test(rvis_score ~ evolution_category, data = DATAFRAME_filtered %>% filter(feature=="CDS"), conf.int = TRUE, alternative = "greater")  %>% tidy(.)
+DATAFRAME_filtered2 <- DATAFRAME_filtered %>% filter(feature=="CDS" | feature=="Intron")
+DATAFRAME_filtered2$feature <- droplevels(DATAFRAME_filtered2$feature)
 
-rvis_score.less <- wilcox.test(rvis_score ~ evolution_category, data = DATAFRAME_filtered %>% filter(feature=="CDS"), conf.int = TRUE, alternative = "less")  %>% tidy(.)
+rvis.greater <- with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcox.test(rvis_score ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+rvis.less <- with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcox.test(rvis_score ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+lista_results_rvis_melted <- melt(list(rvis.greater, rvis.less)) %>% mutate(genomic_variable="rvis_score") %>% spread(., variable, value)
+
 ## Effect size
-effect_size_rvis_score <-with(DATAFRAME_filtered %>%  filter(feature=="CDS"),
-       by(DATAFRAME_filtered %>%  filter(feature=="CDS"), feature,
+effect_size_rvis_score <-with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
           function(x) wilcoxonR(x=x$rvis_score, g=x$evolution_category))) %>%  
   lapply(., tidy) %>% melt(list()) %>% mutate(variable="rvis_score") %>%
   mutate (comparison=paste0(POP1,"_", POP2)) %>% 
@@ -1114,13 +1123,13 @@ effect_size_rvis_score <-with(DATAFRAME_filtered %>%  filter(feature=="CDS"),
           ifelse (comparison == "c_lp_sm_n019_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
   select (-comparison)
 
-lista_results_rvis <- melt (list (rvis_score.greater, rvis_score.less)) %>% mutate(genomic_variable="rvis_score") %>% spread(., variable, value) %>% mutate (L2="CDS")
+
 
 ####################################
 # Rbind results and write table
 
 ### Test
-resultados_U_Man_Whitney <- rbind(lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_size, lista_results_rvis) %>% mutate (SIG=ifelse(p.value<0.05, "SIGN", "no")) %>% mutate (comparison=paste0(POP1,"_", POP2)) %>% mutate (method="wilcox.test")
+resultados_U_Man_Whitney <- rbind(lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_size, lista_results_rvis_melted) %>% mutate (SIG=ifelse(p.value<0.05, "SIGN", "no")) %>% mutate (comparison=paste0(POP1,"_", POP2)) %>% mutate (method="wilcox.test")
 
 write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_features_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,"_",DIVERSITY_CATEGORY, ".txt",sep=""), row.names = F, quote=F, dec=",")
 
@@ -1348,7 +1357,30 @@ ggplot(all_pops_filtered_HD_gather, aes(evolution_category,value, colour=evoluti
          strip.placement = "outside", 
          strip.text.x = element_text(size = 6, angle = 45),
          legend.position = "none") +
-  ggsave(paste(wd_output,ruta_plot,"all_pops_HD_all_variables_mean_se_features_.pdf",sep=""), width = 80, height = 85, units ="mm")
+  ggsave(paste(wd_output,ruta_plot,"all_pops_HD_all_variables_mean_se_features_.pdf",sep=""), width = 80, height = 90, units ="mm")
+
+
+ggplot(all_pops_filtered_HD_gather, aes(evolution_category,value, colour=evolution_category)) +
+  facet_grid(genomic_variable~comparison+feature, 
+             scales = "free")+
+geom_pointrange(stat = "summary",
+                  fun.ymin = function(z) {quantile(z,0.25)},
+                  fun.ymax = function(z) {quantile(z,0.75)},
+                  fun.y = median, size = 0.1) + 
+  theme_minimal() +
+  scale_fill_manual(values=c("yellow", "orange")) +
+  scale_color_manual(values=c("yellow", "orange")) +
+  scale_y_continuous(position = "right") +
+  theme (axis.text.x=element_blank(),
+         axis.ticks.x=element_blank(),
+         axis.title.x = element_blank(), 
+         axis.title.y = element_blank(),
+         axis.text.y = element_text(size=6),
+         strip.placement = "outside", 
+         strip.text.x = element_text(size = 6, angle = 45),
+         legend.position = "none") +
+  ggsave(paste(wd_output,ruta_plot,"all_pops_HD_all_variables_median_se_features_.pdf",sep=""), width = 80, height = 90, units ="mm")
+
 
 # ## Mean LD all variables all comparisons ##
 
@@ -1369,7 +1401,26 @@ ggplot(all_pops_filtered_LD_gather, aes(evolution_category,value, colour=evoluti
          legend.position = "none") +
   ggsave(paste(wd_output,ruta_plot,"all_pops_LD_all_variables_mean_se_features_.pdf",sep=""), width = 80, height = 185, units ="mm")
 
-
+# Median
+ggplot(all_pops_filtered_LD_gather, aes(evolution_category,value, colour=evolution_category)) +
+  facet_grid(genomic_variable~comparison+feature, 
+             scales = "free", switch="y")+
+  geom_pointrange(stat = "summary",
+                  fun.ymin = function(z) {quantile(z,0.25)},
+                  fun.ymax = function(z) {quantile(z,0.75)},
+                  fun.y = median, size = 0.1) + 
+  theme_minimal() +
+  scale_fill_manual(values=c("red", "blue")) +
+  scale_color_manual(values=c("red", "blue")) +
+  theme (axis.text.x=element_blank(),
+         axis.ticks.x=element_blank(),
+         axis.title.x = element_blank(), 
+         axis.title.y = element_blank(),
+         axis.text.y = element_text(size=8),
+         strip.placement = "outside", 
+         strip.text.x = element_text(size = 5, angle = 45),
+         legend.position = "none") +
+  ggsave(paste(wd_output,ruta_plot,"all_pops_LD_all_variables_median_se_features_.pdf",sep=""), width = 80, height = 185, units ="mm")
 ```
 
 ### *Plot diversity comparison
@@ -1377,6 +1428,8 @@ ggplot(all_pops_filtered_LD_gather, aes(evolution_category,value, colour=evoluti
 ```{r}
 # Plot de diversidad de una población frente a otra, con el corte de los valores más bajos en el density plot para ambos casos, y graficamente ploteados esos cortes.
 DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
+
+
 for (DATAFRAME in DATAFRAMES)
 {
   POPULATION1=get(DATAFRAME) %>% select(Populations.x) %>% mutate(Populations.x=as.character(Populations.x)) %>% .[1,1]
@@ -1389,9 +1442,9 @@ for (DATAFRAME in DATAFRAMES)
   above95_non_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_feature %>% filter(type_chr=="autosomes") %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & Populations==POPULATION1) %>% dplyr::select ("q95_pairwise_ave") %>% as.data.frame(.) %>%  .[1,1] )
   above95_bootleneck_pop_value_pairwise <- as.numeric(stats_df_pop_feature %>% filter(type_chr=="autosomes") %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & Populations==POPULATION2) %>% dplyr::select ("q95_pairwise_ave") %>% as.data.frame(.) %>%  .[1,1] )
   # Añadimos una columna para que se coloreen los genes que luego vamos a pasarle al GO term enrichment. Estos genes son: los que presentan ALTA diversidad en ambas poblaciones, y un delta parecido.
-  DATAFRAME_modif_pairwise <- get(DATAFRAME) %>% mutate (col=ifelse(log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & ratio_pairwise_average>0.6 & ratio_pairwise_average<1.4 & feature=="CDS" & pairwise_ave.x > above95_non_bootleneck_pop_value_pairwise & pairwise_ave.y > above95_bootleneck_pop_value_pairwise, "interesting_genes", "shit"))
+#  DATAFRAME_modif_pairwise <- get(DATAFRAME) %>% mutate (col=ifelse(log10(pairwise_ave.x)>min_non_bootleneck_pop_value_pairwise & log10(pairwise_ave.y)>min_bootleneck_pop_value_pairwise & ratio_pairwise_average>0.6 & ratio_pairwise_average<1.4 & feature=="CDS" & pairwise_ave.x > above95_non_bootleneck_pop_value_pairwise & pairwise_ave.y > above95_bootleneck_pop_value_pairwise, "interesting_genes", "shit"))
   # Plot de todas las features
-  ggplot(data=DATAFRAME_modif_pairwise, aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x) )) +
+  ggplot(data=get(DATAFRAME), aes(x=log10(pairwise_ave.x) ,y=log10(pairwise_ave.y) )) +
     geom_point(alpha = 1/100, color='grey41') +
     geom_abline(intercept = 0, color='grey20') +
     geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
@@ -1400,26 +1453,26 @@ for (DATAFRAME in DATAFRAMES)
     theme_minimal() +
     theme(legend.position="none") +
    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise.pdf", sep=""), width = 7, height = 7)
-  ggplot() +
-    geom_point(data=DATAFRAME_modif_pairwise %>% filter(., feature=="CDS") %>% filter(col=="shit"),
-               aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x)), alpha = 1/10, colour="grey41", size=1 ) +
-    geom_point(data=DATAFRAME_modif_pairwise %>% filter(., feature=="CDS") %>% filter(col=="interesting_genes"),
-               aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x)), colour="#FF0000", size=1 ) +
-    geom_abline(intercept = 0, color='grey20') +
-    geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
-    geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
-    theme_minimal() +
-    theme(legend.position="none") +
-    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise_interesting_CDS.pdf", sep=""), width = 7, height = 7)
+#   ggplot() +
+#     geom_point(data=DATAFRAME_modif_pairwise %>% filter(., feature=="CDS") %>% filter(col=="shit"),
+#                aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x)), alpha = 1/10, colour="grey41", size=1 ) +
+#     geom_point(data=DATAFRAME_modif_pairwise %>% filter(., feature=="CDS") %>% filter(col=="interesting_genes"),
+#                aes(x=log10(pairwise_ave.y) ,y=log10(pairwise_ave.x)), colour="#FF0000", size=1 ) +
+#     geom_abline(intercept = 0, color='grey20') +
+#     geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
+#     geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
+#     theme_minimal() +
+#     theme(legend.position="none") +
+#     ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_pairwise_interesting_CDS.pdf", sep=""), width = 7, height = 7)
   min_non_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POP1) %>% .[1,2] )
   min_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POP2) %>% .[1,2] )
   # Watterson
   above95_non_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_feature %>% filter(type_chr=="autosomes") %>% dplyr::ungroup() %>% dplyr::filter(feature=="CDS" & pop==POP1) %>% dplyr::select ("q95_watterson_ave") %>% as.data.frame(.) %>%  .[1,1] )
   above95_bootleneck_pop_value_watterson <- as.numeric(stats_df_pop_feature %>% filter(type_chr=="autosomes") %>% dplyr::ungroup() %>% filter(feature=="CDS" & pop==POP2) %>% dplyr::select ("q95_watterson_ave") %>% as.data.frame(.) %>%  .[1,1] )
   # Añadimos una columna para que se coloreen los genes que luego vamos a pasarle al GO term enrichment. Estos genes son: ls¡os que presentan ALTA diversidad en ambas poblaciones, y un ratio parecido.
-  DATAFRAME_modif_watterson <- get(DATAFRAME) %>% mutate (col=ifelse(log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson & ratio_watterson_average>0.6 & ratio_watterson_average<1.4 & feature=="CDS" & watterson_ave.x > above95_non_bootleneck_pop_value_watterson & watterson_ave.y > above95_bootleneck_pop_value_watterson, "interesting_genes", "shit"))
+#  DATAFRAME_modif_watterson <- get(DATAFRAME) %>% mutate (col=ifelse(log10(watterson_ave.x)>min_non_bootleneck_pop_value_watterson & log10(watterson_ave.y)>min_bootleneck_pop_value_watterson & ratio_watterson_average>0.6 & ratio_watterson_average<1.4 & feature=="CDS" & watterson_ave.x > above95_non_bootleneck_pop_value_watterson & watterson_ave.y > above95_bootleneck_pop_value_watterson, "interesting_genes", "shit"))
   # Plot de todas las features
-  ggplot(data=DATAFRAME_modif_watterson, aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x) )) +
+  ggplot(data=get(DATAFRAME) , aes(x=log10(watterson_ave.x) ,y=log10(watterson_ave.y) )) +
     geom_point(alpha = 1/100, color='grey41') +
     geom_abline(intercept = 0, color='grey20') +
     geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
@@ -1427,19 +1480,43 @@ for (DATAFRAME in DATAFRAMES)
     facet_wrap(~feature) +
     theme(legend.position="none") +
    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson.pdf", sep=""), width = 7, height = 7)
-  ggplot() +
-    geom_point(data=DATAFRAME_modif_watterson %>% filter(., feature=="CDS") %>% filter(col=="shit"),
-               aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x)), alpha = 1/10, colour="grey41", size=1 ) +
-    geom_point(data=DATAFRAME_modif_watterson %>% filter(., feature=="CDS") %>% filter(col=="interesting_genes"),
-               aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x)), colour="#FF0000", size=1 ) +
+  
+ 
+  # ggplot() +
+  #   geom_point(data=DATAFRAME_modif_watterson %>% filter(., feature=="CDS") %>% filter(col=="shit"),
+  #              aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x)), alpha = 1/10, colour="grey41", size=1 ) +
+  #   geom_point(data=DATAFRAME_modif_watterson %>% filter(., feature=="CDS") %>% filter(col=="interesting_genes"),
+  #              aes(x=log10(watterson_ave.y) ,y=log10(watterson_ave.x)), colour="#FF0000", size=1 ) +
+  #   geom_abline(intercept = 0, color='grey20') +
+  #   geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
+  #   geom_vline(xintercept = min_bootleneck_pop_value_watterson, color='grey20') +
+  #   theme(legend.position="none") +
+  #   ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson_interesting_CDS.pdf", sep=""), width = 7, height = 7)
+ #  rm (DATAFRAME_modif_watterson, DATAFRAME_modif_pairwise)
+}
+
+```
+
+
+## *Schematic div 1 vs div 2
+
+```{r}
+DATAFRAME="c_lp_sm_n019_diversity_c_lp_do_n012_diversity"
+
+  ## Plot article
+p1 <-     ggplot(data=get(DATAFRAME) %>% filter (feature=="3UTR")  , aes(x=log10(watterson_ave.x) ,y=log10(watterson_ave.y) )) +
+    geom_point( alpha = 1/20, color='grey41') +
     geom_abline(intercept = 0, color='grey20') +
     geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
     geom_vline(xintercept = min_bootleneck_pop_value_watterson, color='grey20') +
-    theme(legend.position="none") +
-    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson_interesting_CDS.pdf", sep=""), width = 7, height = 7)
-   rm (DATAFRAME_modif_watterson, DATAFRAME_modif_pairwise)
-}
+    theme(legend.position="none") 
+     
+p2 <- ggExtra::ggMarginal(p1, type = "density") 
+p3 <- ggExtra::ggMarginal(p1, type = "histogram")  
 
+
+ggsave (paste0(wd_output,"schematic_pop1div_vs_pop2div_densi.pdf"), p2, width = 7, height = 7, device = "pdf")
+ggsave (paste0(wd_output,"schematic_pop1div_vs_pop2div_hist.pdf"), p3, width = 7, height = 7, device = "pdf")
 ```
 
 
