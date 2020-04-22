@@ -1,0 +1,129 @@
+---
+title: '*differences_XA_ratio_theta_watterson'
+output: html_document
+---
+
+Comrpuebo las posiciones consideradas intergenic X en el paper de filogeografía:
+
+# Paper filogeografía: ¿Cómo se hicieron?
+
+1. Bedtools intersect de regiones de la sintenia con intergénico (que en ese momento incluía UCNE).
+--> /home/mlucena/ANGSD_analysis/intergenic_analysis/intergenic_sfs_intergenic_Xchr/Xchr.intergenic.bed
+Posiciones: 29My.
+2. Este archivo se cruza con el archivo de ventanas y calculo el número de posiciones en esa ventana asignadas a X.
+3. Para la misma ventana calculo el número de posiciones asignadas a autosómico.
+4. ANOTO LAS VENTANAS que tienen 100% de bases asignadas a una u otra categoría como ventanas X o ventanas autosómicas. Esto no significa que todas las posiciones en esa ventana estén asignadas, sino que de las asignadas el 100% son X o autosómicas. 
+5. Este archivo no está en el servido, porque se corrio en R directamente, está en el script: 2.SFS_contemporary_intergenic en la parte de window analysis.
+
+# Paper diversidad: ¿Cómo se hicieron?
+
+1. Unidades intergénicas basandonos en la notación (sin UCNE) cruzadas con la sintenia.
+2. Miramos si la unidad está asignada a más de una cromosoma y si es así se elimina, si no se ANOTA la unidad. 
+--> /home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation/c_ll_no_n008.per.unit.averages.chr_filtered.tsv
+Posiciones: 96 Mya.
+
+```{bash}
+/home/mlucena/ANGSD_analysis/whole_genome_analysis/sfs/chromosome_annotation
+# Archivo 
+c_ll_no_n008.per.unit.averages.chr_filtered.tsv
+```
+
+
+Aun así deberían de ser equivalentes. ¿Por qué no lo son? Varios motivos:
+1. Las ventanas de ANGSD siempre se saltan la primera, y en algunos casos esta es X. En nuestro caso de unidades, esta unidad al principio si la tenemos en cuenta
+2. En filogeografía se filtra por ventanas comunes para TODAS las poblaciones mientras que en el de WG se filtra para ventanas comunes entre kir-nor-pol y por otro lado iberico. 
+
+# Comprobación de diferencias
+
+Lo que mas me preocupa es que haya habido diferencias en la asignación de la diversidad y esto es lo que quiero comprobar. Para ello, creo una carpeta donde se ponen los dos archivos sobre los que vamos a correr el de theta para ver qué pasa.
+
+El diseño idea sería:
+
+- Probar a cortar con el bed de intergéncio (ventanas) el archivo de diversidad de WG y ver si sale lo mismo que en filogeografía.
+- Probar a cortar con el bed de WG (unidades) el archvio de diversidad de intergenico y a ver si sale lo mismo que en diversidad WG. 
+
+```{bash}
+mkdir /GRUPOS/grupolince/test_differences_between_XA_ratio_theta_watterson_norway
+```
+
+Aqui voy a copiar las unidades de intergénico asignada a X. 
+
+## WG bed.
+
+```{bash}
+grep chrX c_ll_no_n008.per.unit.averages.chr_filtered.tsv | grep "intergenic" | awk -v OFS='\t' '{print $1,$2, $3}' > /GRUPOS/grupolince/test_differences_between_XA_ratio_theta_watterson_norway/X_units_diversity_paper.bed
+```
+
+## Intergenic bed
+
+Como el archivo de las ventanas se corrio en R en local, lo que voy a hacer es correr este script y guardar la tabla con las coordenadas de las ventanas que son X y copiarlas al servidor a la carpeta que acabamos de crear.
+
+Este script es una modificación del original (2.SFS_contemporary_intergenic) en el que solo me quedo con las ventanas X. 
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library (tidyr)
+library(boot)
+library(broom)
+library(RColorBrewer)
+
+wd_diversity <- "/Users/marialucenaperez/Dropbox/PhD/contemporary/ANGSD/intergenic_analysis/analysis_sfs/analysis_diversity_window/"
+
+diversity_X <- read.table(paste (wd_diversity, "c_ll_no_n008-c_ll_po_n008-c_ll_ki_n013-c_ll_to-c_ll_ka-c_ll_og_n008-c_ll_ya_n008-c_ll_vl_n008-c_ll_la_n006-c_ll_cr_n006-c_ll_tu_n006-c_ll_ur_n006.thetasWindow_50000.50000.gz.pestPG.with_x_autosomic_positions", sep=""), sep="\t", dec=".", header=T, na.strings = "-nan")  %>% 
+mutate (XvsTOTAL= Xpositions/(Xpositions+AUTOSOMICpositions)) %>% 
+mutate (windows_identity = paste(Chr,"_",WinStart,"_", WinStop, sep ="")) %>% 
+filter(nSites>10000) %>% 
+filter(XvsTOTAL=="1" | XvsTOTAL=="0" ) %>% 
+mutate(window_type=ifelse(XvsTOTAL==1 , "Xchr", "Autosomic")) %>% # Lo que hago es quedarme con las posiciones que son solo X o sólo autosomicas.
+mutate(tP_per_site=tP/nSites) %>% 
+mutate(tW_per_site=tW/nSites) %>% 
+mutate(tajima_per_site=Tajima/nSites) %>% 
+filter(XvsTOTAL=="1") %>% 
+filter(population=="c_ll_no_n008") %>% 
+select (Chr, WinStart, WinStop)
+
+write.table(diversity_X, file="/Users/marialucenaperez/Desktop/X_windows_philogeography_paper.bed", col.names = F, quote = F, row.names = F, sep = '\t')
+```
+
+Lo copio al servidor
+
+```{bash}
+scp /Users/marialucenaperez/Desktop/X_windows_philogeography_paper.bed mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/test_differences_between_XA_ratio_theta_watterson_norway
+```
+
+## Comprobamos:
+
+¿Dónde están los archivos con las diversidades?
+
+-> Integénico:
+/home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs/c_ll_no_n008.transformedThetas
+
+-> WG:
+/backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis/c_ll_no_n008.transformedThetas_filtered
+
+```{bash}
+#Theta WG Bed intergenic
+WG_theta_file=/backup/mlucena/intermediate_files_ANGSD/whole_genome_analysis/c_ll_no_n008.transformedThetas_filtered
+X_bed_intergenic=/GRUPOS/grupolince/test_differences_between_XA_ratio_theta_watterson_norway/X_windows_philogeography_paper.bed
+OUTPUT_DIR=/GRUPOS/grupolince/test_differences_between_XA_ratio_theta_watterson_norway
+
+bedtools intersect -a <(tail -n+2 $WG_theta_file) -b $X_bed_intergenic -sorted -g /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23 -wb |\
+awk -v OFS='\t' '{print $10, $11, $12, $4}' | bedtools merge -c 4 -o mean -i - > $OUTPUT_DIR/WG_thetas_intergenic_windows_bed.bed
+
+#Theta Intergenic Bed WG
+Intergenic_theta_file=/home/mlucena/datos/intermediate_ANGSD_files/intergenic_analysis/intergenic_sfs/c_ll_no_n008.transformedThetas
+X_bed_WG=/GRUPOS/grupolince/test_differences_between_XA_ratio_theta_watterson_norway/X_units_diversity_paper.bed
+OUTPUT_DIR=/GRUPOS/grupolince/test_differences_between_XA_ratio_theta_watterson_norway
+
+bedtools intersect -a <(tail -n+2 $Intergenic_theta_file) -b $X_bed_WG -sorted -g /GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23 -wb |\
+awk -v OFS='\t' '{print $10, $11, $12, $4}' | bedtools merge -c 4 -o mean -i - > $OUTPUT_DIR/Intergenic_thetas_WG_bed.bed
+
+```
+
+Estos archivos los he comprobado a mano y para una misma ventan no dan los mismo valores de diversidad. Por tanto, hay dos discrepancias principales entre los dos tipos de analisis:
+
+1.Los archivos de entrada de diversidad no son equivalentes. Esto se puede deber a:
+a)
+
+2. Las ventanas que se comparan no son iguales, porque en el bed de ventanas para filogeografía se salta la primera que si esta en 
