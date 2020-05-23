@@ -981,9 +981,18 @@ data_diversity_filtered_ave_corrected <- read.table(paste(wd, "data_diversity_fi
 
 data_diversity_filtered_ave_corrected$Populations <- factor (data_diversity_filtered_ave_corrected$Populations, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
 data_diversity_filtered_ave_corrected$feature <- factor (data_diversity_filtered_ave_corrected$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
+```
 
+### Save table with common fields
+
+```{r}
+data_common_fields <- data_diversity_filtered_ave_corrected %>% select ("scaffold","start_cero_based","end","length","feature","strandness","frame","id","centr_bases" ,"centr_percentage" ,"tel10m_bases","tel10m_percentage","tel2m_bases", "tel2m_percentage", "region" , "chr", "cat_position_start", "cat_position_end", "unique_id", "id_gene", "informative_sites_substitutions", "substitutions", "divergence" , "GC_content" ,"recombination_rate", "rvis_score","recomb","type_chr")  %>% unique(.)
+
+write.table(data_common_fields, paste(wd,"common_fields_per_unit",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 ```
+
+
 
 ## B) Summarize data
 ```{r}
@@ -1001,10 +1010,10 @@ stats_df_pop_region_recomb <- read.table(paste(wd_output,"stats_diversity_per_po
 
 # Sort factors. 
 
-stats_df_pop_feature
-stats_df_pop_feature_chr
-stats_df_pop_feature_region
-stats_df_pop_feature_recomb
+#stats_df_pop_feature
+#stats_df_pop_feature_chr
+#stats_df_pop_feature_region
+#stats_df_pop_feature_recomb
 
 
 # tienes q cambiar el nombre de la dataframe cada vez
@@ -1013,6 +1022,7 @@ stats_df_pop_feature$Populations <- factor (stats_df_pop_feature$Populations, le
 
 stats_df_pop_feature$feature <- factor (stats_df_pop_feature$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
 
+stats_df_pop$Populations <- factor (stats_df_pop$Populations, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
 
 ```
 ## --------
@@ -1034,6 +1044,7 @@ cols <- c("NE_Poland"=viridis_pal()(5)[3],
           "Andujar"="#5DC863FF",
           "Donana"="#CC6600")
 ```
+
 ## *Unit size
 ```{r}
 # Tamaño de las unidades
@@ -1163,6 +1174,100 @@ cols <- c("NE_Poland"=viridis_pal()(5)[3],
           "Andujar"="#5DC863FF",
           "Donana"="#CC6600")
 ```
+
+
+## *Plot diversity per pop
+
+```{r}
+ stats_df_pop_reshape1<- stats_df_pop %>% filter(type_chr=="autosomes") %>% select (Populations,wmean_watterson_ave,wmean_pairwise_ave) %>% tidyr::gather(., 'wmean_watterson_ave','wmean_pairwise_ave', key="diversity_measure",value="diversity_value"  )
+
+ stats_df_pop_reshape2<- stats_df_pop %>% filter(type_chr=="autosomes") %>% select (Populations,se_wmean_watterson_boot, se_wmean_pairwise_boot) %>% tidyr::gather(., 'se_wmean_watterson_boot','se_wmean_pairwise_boot', key="stdev_measure",value="stdev"  )
+
+stats_df_pop_reshape <-full_join(stats_df_pop_reshape1, stats_df_pop_reshape2) %>% 
+  mutate (filtro= ifelse (diversity_measure=="wmean_watterson_ave" & stdev_measure=="se_wmean_watterson_boot",
+                          1,  ifelse (diversity_measure=="wmean_pairwise_ave" & stdev_measure=="se_wmean_pairwise_boot", 1, 2))) %>% filter (filtro==1) 
+
+# Bar
+
+ggplot() + 
+  geom_bar (data=subset(stats_df_pop_reshape), 
+              aes(x=Populations, y=diversity_value, fill=Populations, colour=Populations),stat = "identity") +
+  geom_segment (data=subset(stats_df_pop_reshape), 
+                aes(x = Populations, xend=Populations, y = diversity_value-stdev, yend = diversity_value-stdev, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  coord_flip() +
+  facet_wrap(~diversity_measure, strip.position = "bottom") +
+  scale_x_discrete(limits = rev(levels(stats_df_pop$Populations))) +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1),  legend.position="none", legend.title = element_blank(),axis.title.x=element_blank())
+  ggsave(paste(wd_output,"autosomes_per_pop_bar.pdf",sep=""), width = 80, height = 40, units = "mm")
+
+
+
+
+
+
+
+
+
+# Barplot
+
+ggplot() + 
+  geom_bar (data=subset(stats_df_pop_reshape), 
+              aes(x=Populations, y=diversity_value, fill=Populations, colour=Populations),stat = "identity") +
+  geom_segment (data=subset(stats_df_pop_reshape), 
+                aes(x = Populations, xend=Populations, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),  legend.position="none", legend.title = element_blank()) +
+  coord_flip() +
+  scale_x_discrete(limits = rev(levels(stats_df_pop$Populations)))
+  ggsave(paste(wd_output,"watterson_autosomes_per_pop_bar.pdf",sep=""), width = 80, height = 100, units = "mm")
+
+ggplot() + 
+  geom_bar (data=subset(stats_df_pop %>% filter(type_chr=="autosomes")), 
+              aes(x=Populations, y=wmean_pairwise_ave, fill=Populations, colour=Populations),stat = "identity") +
+  geom_segment (data=subset(stats_df_pop %>% filter(type_chr=="autosomes")), 
+                aes(x = Populations, xend=Populations, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),  legend.position="none", legend.title = element_blank()) +
+  coord_flip() +
+  scale_x_discrete(limits = rev(levels(stats_df_pop$Populations)))
+  ggsave(paste(wd_output,"pairwise_autosomes_per_pop_bar.pdf",sep=""), width = 80, height = 100, units = "mm")
+  
+# Point
+  
+
+ggplot() + 
+  geom_point (data=subset(stats_df_pop %>% filter(type_chr=="autosomes")), 
+              aes(x=Populations, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop %>% filter(type_chr=="autosomes")), 
+                aes(x = Populations, xend=Populations, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),  legend.position="none", legend.title = element_blank()) +
+  coord_flip() +
+  scale_x_discrete(limits = rev(levels(stats_df_pop$Populations)))
+  ggsave(paste(wd_output,"watterson_autosomes_per_pop_point.pdf",sep=""), width = 80, height = 100, units = "mm")
+
+ggplot() + 
+  geom_point (data=subset(stats_df_pop %>% filter(type_chr=="autosomes")), 
+              aes(x=Populations, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
+  geom_segment (data=subset(stats_df_pop %>% filter(type_chr=="autosomes")), 
+                aes(x = Populations, xend=Populations, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),  legend.position="none", legend.title = element_blank()) +
+  coord_flip() +
+  scale_x_discrete(limits = rev(levels(stats_df_pop$Populations)))
+  ggsave(paste(wd_output,"pairwise_autosomes_per_pop_point.pdf",sep=""), width = 80, height = 100, units = "mm")
+  
+  
+  
+```
+
+
 
 ## *Recombination and diversity
 
@@ -1674,4 +1779,134 @@ ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("mea
 
 ```
 
+### Plot R^2 & a. 
+
+```{r}
+INDEXES=c("mean_watterson_ave", "mean_pairwise_ave") 
+POPULATIONS=c("Kirov","Norway","NE_Poland", "Donana", "Andujar")
+
+data_watterson <- stas_df_pop_chr_plus_extra_info %>% 
+  filter (chr!="chrX") %>% 
+  dplyr::select ("mean_divergence", "GC_content", "cM.Mb", "percentage_genes", "SizeMb_v8", "mean_watterson_ave", "Populations") %>% ungroup()
+
+data_pairwise <- stas_df_pop_chr_plus_extra_info %>% 
+  filter (chr!="chrX") %>% 
+  dplyr::select ("mean_divergence", "GC_content", "cM.Mb", "percentage_genes", "SizeMb_v8", "mean_pairwise_ave", "Populations") %>% ungroup()
+
+tableR2sW = list()
+tableR2sP = list()
+tablepredictW = list()
+tablepredictP = list()
+
+i=1
+for (POP in POPULATIONS)
+{
+
+  # Table prep:
+  
+data_watterson_per_pop <- data_watterson %>% 
+    dplyr::filter(Populations==POP) %>%  
+    dplyr::select (-Populations) %>% ungroup()
+ 
+data_pairwise_per_pop <- data_pairwise %>% 
+    dplyr::filter(Populations==POP) %>%  
+    dplyr::select (-Populations) %>% ungroup()
+ 
+# R squared 
+r2sw <- data_watterson_per_pop %>% 
+    dplyr::select(-mean_watterson_ave) %>%  # exclude outcome, leave only predictors 
+    purrr::map(~lm(data_watterson_per_pop$mean_watterson_ave ~ .x, data = data_watterson_per_pop)) %>% 
+    purrr::map(summary) %>% 
+    purrr::map_dbl("r.squared") %>% 
+    tidy %>% 
+    dplyr::arrange(desc(x)) %>% 
+    rename(r.squared = x) %>% 
+    mutate(pop=POP) %>% 
+    mutate(index="Watterson")
+  
+ r2sp <- data_pairwise_per_pop %>% 
+    dplyr::select(-mean_pairwise_ave) %>%  # exclude outcome, leave only predictors 
+    purrr::map(~lm(data_pairwise_per_pop$mean_pairwise_ave ~ .x, data = data_pairwise_per_pop)) %>% 
+    purrr::map(summary) %>% 
+    purrr::map_dbl("r.squared") %>% 
+    tidy %>% 
+    dplyr::arrange(desc(x)) %>% 
+    rename(r.squared = x) %>% 
+    mutate(pop=POP) %>% 
+    mutate(index="Pi")
+  
+# Predictor
+predict1w <- data_watterson_per_pop %>% 
+  dplyr::select(-mean_watterson_ave) %>%  # exclude outcome, leave only predictors 
+  purrr::map(~lm(data_watterson_per_pop$mean_watterson_ave ~ .x, data = data_watterson_per_pop)) %>% 
+  purrr::map(summary) %>% 
+  purrr::map(broom::tidy) %>% 
+  purrr::map_df("estimate")  %>% 
+  mutate(variable = c("intercept", "predictor")) %>% 
+  filter (variable=="predictor" )%>% 
+  select (-variable)
+predict2w <- as_tibble(cbind(names = names(predict1w), t(predict1w)), validate = TRUE) %>% 
+  mutate(pop=POP) %>% 
+  mutate(index="Watterson") %>% 
+  rename(., predictor = V2)
+
+predict1p <- data_pairwise_per_pop %>% 
+  dplyr::select(-mean_pairwise_ave) %>%  # exclude outcome, leave only predictors 
+  purrr::map(~lm(data_pairwise_per_pop$mean_pairwise_ave ~ .x, data = data_pairwise_per_pop)) %>% 
+  purrr::map(summary) %>% 
+  purrr::map(broom::tidy) %>% 
+  purrr::map_df("estimate")  %>% 
+  mutate(variable = c("intercept", "predictor")) %>% 
+  filter (variable=="predictor" ) %>% 
+  select (-variable)
+predict2p <- as_tibble(cbind(names = names(predict1p), t(predict1p)), validate = TRUE) %>% 
+  mutate(pop=POP) %>% 
+  mutate(index="Pi") %>% 
+  rename(., predictor = V2) %>% 
+  as.numeric (.$predictor)
+  
+    tableR2sW[[i]] <- r2sw # add it to your list
+    tableR2sP[[i]] <- r2sp # add it to your list
+    tablepredictW[[i]] <- predict2w # add it to your list
+    tablepredictP[[i]] <- predict2p # add it to your list
+
+i=i+1
+}
+
+all_popsr2 = full_join(do.call(rbind, tableR2sW), do.call(rbind, tableR2sP))
+all_popspredict = full_join(do.call(rbind, tablepredictW), do.call(rbind, tablepredictP)) 
+
+# Normalize predictor, to make values comparable
+all_popspredictN <- all_popspredict %>% 
+group_by(index,names) %>% 
+  mutate(predictorN = predictor / mean(predictor))
+
+# Normalize predictor, to make values comparable
+all_popsr2N <- all_popsr2 %>% 
+group_by(index,names) %>% 
+  mutate(r.squaredN = r.squared / mean(r.squared))
+
+# Order factor
+all_popsr2N$pop <- factor (all_popsr2N$pop, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
+all_popspredictN$pop <- factor (all_popspredictN$pop, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
+
+
+# Plot
+ggplot(data = data.frame(all_popsr2N), aes(x = pop, y = names, fill= r.squaredN)) + 
+  geom_tile() +
+  facet_wrap(~index) +
+  scale_fill_viridis(option="magma")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+ggsave(paste(wd_output, "all_popsr2N_heatmap.pdf", sep=""), width = 160, height = 160, units = "mm")
+
+
+ggplot(data = data.frame(all_popspredictN), aes(x = pop, y = names, fill= predictorN)) + 
+  geom_tile() +
+  facet_wrap(~index) +
+  scale_fill_viridis(option="magma")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+ # geom_text(aes(label=formatC(predictor, format = "e", digits = 2),angle=45))
+ggsave(paste(wd_output, "all_popspredictN_heatmap.pdf", sep=""), width = 160, height = 160, units = "mm")
+
+```
 
