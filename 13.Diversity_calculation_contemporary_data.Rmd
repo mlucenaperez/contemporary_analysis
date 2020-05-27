@@ -92,7 +92,7 @@ wd_out <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
 wd_recom <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/recombination"
 wd_diver <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/divergence"
 wd_GC <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/GC_content"
-
+wd_site_density <- "/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/functional_sites_density/"
 
 ```
 
@@ -366,7 +366,22 @@ rvis_score_df_filtered <- aggregate(rvis_score~lynx_gene,rvis_score_df,function(
 
 data_diversity_filtered_scored <- dplyr::left_join (data_diversity_filtered, rvis_score_df_filtered, by=c("id_gene"="lynx_gene"))
 
-write.table (data_diversity_filtered_scored, paste(wd_out, "global.per.unit.averages.chr.all.regions.filtered.watterson.modif.chrX.tsv", sep=""), row.names = F, quote = F, sep = '\t')
+
+```
+
+## 6. Adding selective sites density
+
+
+```{r}
+
+funcitonal_site_density_df <- read.table (paste0(wd_site_density, "windows_2Mb_density_functional_sites_per_unit.tsv"), header=F, dec=".") %>% 
+  dplyr::rename(scaffold=V1, pos1_1based=V2, pos2=V3,functional_sites_percentage=V4 ) %>% 
+  mutate (pos1_0based=pos1_1based-1)
+
+data_diversity_filtered_scored_functional_sites <- dplyr::left_join (data_diversity_filtered_scored, funcitonal_site_density_df, by=c("scaffold"="scaffold", "start_cero_based"="pos1_0based", "end"="pos2")) %>% 
+  select (-pos1_1based)
+
+write.table (data_diversity_filtered_scored_functional_sites, paste(wd_out, "global.per.unit.averages.chr.all.regions.filtered.watterson.modif.chrX.tsv", sep=""), row.names = F, quote = F, sep = '\t')
 
 
 # Borro las que no necesito luego
@@ -389,7 +404,6 @@ rm (c_lp_do_n012)
 rm (c_lp_sm_n019)
 
 ```
-
 
 # -------------------------------------------------
 
@@ -550,13 +564,22 @@ pop=="c_ll_no_n008"&log10(pairwise_ave)<(filter(density_min_values_pairwise,pop=
 rm (data_diversity_filtered_recomb_cat)
 ```
 
-## 5. Rename & order factors
+## 5. Create Skewness variable
+
+```{r}
+data_diversity_filtered_recomb_cat_zero_variable <- data_diversity_filtered_recomb_cat_zero_variable %>% 
+   ## Calculate Δθw4 = 1 − π4 /θw4 (skewness SFS)
+  dplyr::mutate (skewness_SFS = 1 - pairwise_ave / watterson_ave)                                   
+# Where π4 and θw4 are the estimates of diversity based on the mean pairwise difference between alleles and the number of segregating sites, respectively
+```
+
+## 6. Rename & order factors
 ```{r}
 data_diversity_filtered_recomb_cat_zero_variable$Populations <- factor (data_diversity_filtered_recomb_cat_zero_variable$Populations, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
 data_diversity_filtered_recomb_cat_zero_variable$feature <- plyr::revalue(data_diversity_filtered_recomb_cat_zero_variable$feature, c("intergenic"="Intergenic", "promoter_gene_1000"="Gen_promoter", "5UTR"="5UTR", "CDS"="CDS", "intron"="Intron", "3UTR"="3UTR", "promoter_lncRNA_1000"="lncRNA_promoter", "lncRNA"="lncRNA_exons", "intron_lncRNA"="lncRNA_intron", "ncRNA"="ncRNA", "UCNE"="UCNE"))
 data_diversity_filtered_recomb_cat_zero_variable$feature <- factor (data_diversity_filtered_recomb_cat_zero_variable$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
 ```
-## 6. Autosomes vs chrX
+## 7. Autosomes vs chrX
 Now I split my data.frame between X and autosomes. 
 Consideramos como autosomicas todas aquellas posiciones que no estén en un cromosoma chrX.
 ```{r}
@@ -564,7 +587,7 @@ data_diversity_filtered_autosomes <- data_diversity_filtered_recomb_cat_zero_var
 data_diversity_filtered_chrX <- data_diversity_filtered_recomb_cat_zero_variable %>% dplyr::filter (chr=="chrX") %>% dplyr::mutate (type_chr="chrX")
 rm (data_diversity_filtered_recomb_cat_zero_variable)
 ```
-## 7. Corrected with intergenic
+## 8. Corrected with intergenic
 Corrijo los valores individuales para la media de intergénico
 Los datos para qcada poblacion van a tener el mismo dibujo, pero en los ratios si afecta.
 Primero calculo los valores para intergénico para poder corregir por ellos, de media y mediana, pero voy a usar media para corregir. La media o mediana que uso para corregir es la sacada de los valores originales, no la que contempla los ceros, pero en realidad estos valores corregidos no se van a usar en ningún análisis posterior, aunque los dejo, por si necesitasemos usarlos en el futuro.
@@ -623,7 +646,7 @@ for (POP in POPS)
   rm (dataframe_chrX)
 }
 ```
-## 8. Fusiono y escribo tablas
+## 9. Fusiono y escribo tablas
 ```{r}
 c_ll_ki_n013_diversity <- rbind (c_ll_ki_n013_autosomes_diversity, c_ll_ki_n013_chrX_diversity ) %>% 
   mutate (., color =  ifelse (Populations == "NE-Poland", viridis_pal()(5)[3], 
@@ -736,7 +759,10 @@ diversity_stats_pop <- function(DATAFRAME)
                        lowerw_watterson_ave = q25_watterson_ave - 1.5 * IQR_watterson_ave,
                        lowerw_pairwise_ave  = q25_pairwise_ave  - 1.5 * IQR_pairwise_ave,
                        upperw_watterson_ave = q75_watterson_ave + 1.5 * IQR_watterson_ave,
-                       upperw_pairwise_ave  = q75_pairwise_ave  + 1.5 * IQR_pairwise_ave) %>% 
+                       upperw_pairwise_ave  = q75_pairwise_ave  + 1.5 * IQR_pairwise_ave) %>%  
+    ## Calculate Δθw4 = 1 − π4 /θw4 (skewness SFS)
+  dplyr::mutate (skewness = 1-wmean_pairwise_ave/wmean_watterson_ave) %>%                                    
+# Where π4 and θw4 are the estimates of diversity based on the mean pairwise difference between alleles and the number of segregating sites, respectively
   mutate (., Species =ifelse (Populations == "NE_Poland", "L.lynx",
                             ifelse (Populations == "Kirov", "L.lynx",
                             ifelse (Populations == "c_ll_no_n008", "L.lynx",  
@@ -755,6 +781,7 @@ write.table(stats_df_pop, paste(wd_output_stats,"stats_diversity_per_pop.tsv",se
 #rm (stats_df_pop_autosomes)
 #rm (stats_df_pop_chrX)
 ```
+
 
 ### Summary stats per pop & different group (feature, chr, region, recomb) 
 ```{r}
@@ -801,10 +828,19 @@ diversity_stats_grouped <- function(DATAFRAME ,GROUP)
                        upperw_pairwise_ave  = q75_pairwise_ave  + 1.5* IQR_pairwise_ave,
                        # Valores recombinación
                        mean_recombination_rate=mean(recombination_rate, na.rm=TRUE),
-                       wmean_recombination_rate=weighted.mean(recombination_rate,w=informative_sites, na.rm=TRUE),
+                       #wmean_recombination_rate=weighted.mean(recombination_rate,w=informative_sites, na.rm=TRUE),
                        # Valores divergencia
                        mean_divergence_rate=mean(divergence, na.rm=TRUE),
-                       wmean_divergence_rate=weighted.mean(divergence,w=informative_sites_substitutions, na.rm=TRUE)) %>% 
+                       wmean_divergence_rate=weighted.mean(divergence,w=informative_sites_substitutions, na.rm=TRUE),
+                       # Valores GC_content (no hago weighted pq no tiene sentido ya q la info esta sacada del genoma que tiene todos los sitios)
+                       mean_GC_content=mean(GC_content, na.rm=TRUE),
+                       # Valores Rvis
+                       mean_rvis_score=mean (rvis_score, na.rm=TRUE),
+                       # Valores functional sites density
+                       mean_functional_sites_percentage=mean(functional_sites_percentage, na.rm=TRUE)) %>% 
+    ## Calculate Δθw4 = 1 − π4 /θw4 (skewness SFS)
+  dplyr::mutate (skewness = 1-wmean_pairwise_ave/wmean_watterson_ave) %>%                                    
+# Where π4 and θw4 are the estimates of diversity based on the mean pairwise difference between alleles and the number of segregating sites, respectively
   dplyr::mutate (., Species =ifelse (Populations == "NE_Poland", "L.lynx",
                             ifelse (Populations == "Kirov", "L.lynx", 
                             ifelse (Populations == "Norway", "L.lynx", 
@@ -883,16 +919,21 @@ diversity_stats_doble_grouped <- function(DATAFRAME, GROUP1, GROUP2)
                        lowerw_pairwise_ave  = q25_pairwise_ave  - 1.5* IQR_pairwise_ave,
                        lowerw_tajimaD       = q25_tajimaD       - 1.5* IQR_tajimaD,
                        upperw_watterson_ave = q75_watterson_ave + 1.5* IQR_watterson_ave,
-                       upperw_pairwise_ave  = q75_pairwise_ave  + 1.5* IQR_pairwise_ave,
-                       
-                       # Valores recombinación
+                       upperw_pairwise_ave  = q75_pairwise_ave  + 1.5* IQR_pairwise_ave,# Valores recombinación
                        mean_recombination_rate=mean(recombination_rate, na.rm=TRUE),
-                       wmean_recombination_rate=weighted.mean(recombination_rate,w=informative_sites, na.rm=TRUE),
-                       
+                       #wmean_recombination_rate=weighted.mean(recombination_rate,w=informative_sites, na.rm=TRUE),
                        # Valores divergencia
                        mean_divergence_rate=mean(divergence, na.rm=TRUE),
-                       wmean_divergence_rate=weighted.mean(divergence,w=informative_sites_substitutions, na.rm=TRUE)
-                       ) %>% 
+                       wmean_divergence_rate=weighted.mean(divergence,w=informative_sites_substitutions, na.rm=TRUE),
+                       # Valores GC_content (no hago weighted pq no tiene sentido ya q la info esta sacada del genoma que tiene todos los sitios)
+                       mean_GC_content=mean(GC_content, na.rm=TRUE),
+                       # Valores Rvis
+                       mean_rvis_score=mean (rvis_score, na.rm=TRUE),
+                       # Valores functional sites density
+                       mean_functional_sites_percentage=mean(functional_sites_percentage, na.rm=TRUE)) %>% 
+    ## Calculate Δθw4 = 1 − π4 /θw4 (skewness SFS)
+  dplyr::mutate (skewness = 1-wmean_pairwise_ave/wmean_watterson_ave) %>%                                 
+# Where π4 and θw4 are the estimates of diversity based on the mean pairwise difference between alleles and the number of segregating sites, respectively
   mutate (., Species =ifelse (Populations == "NE_Poland", "L.lynx",
                             ifelse (Populations == "Kirov", "L.lynx",
                             ifelse (Populations == "Norway", "L.lynx", 
@@ -986,13 +1027,11 @@ data_diversity_filtered_ave_corrected$feature <- factor (data_diversity_filtered
 ### Save table with common fields
 
 ```{r}
-data_common_fields <- data_diversity_filtered_ave_corrected %>% select ("scaffold","start_cero_based","end","length","feature","strandness","frame","id","centr_bases" ,"centr_percentage" ,"tel10m_bases","tel10m_percentage","tel2m_bases", "tel2m_percentage", "region" , "chr", "cat_position_start", "cat_position_end", "unique_id", "id_gene", "informative_sites_substitutions", "substitutions", "divergence" , "GC_content" ,"recombination_rate", "rvis_score","recomb","type_chr")  %>% unique(.)
+data_common_fields <- data_diversity_filtered_ave_corrected %>% select ("scaffold","start_cero_based","end","length","feature","strandness","frame","id","centr_bases" ,"centr_percentage" ,"tel10m_bases","tel10m_percentage","tel2m_bases", "tel2m_percentage", "region" , "chr", "cat_position_start", "cat_position_end", "unique_id", "id_gene", "informative_sites_substitutions", "substitutions", "divergence" , "GC_content" ,"recombination_rate", "rvis_score","recomb","functional_sites_percentage","type_chr")  %>% unique(.)
 
 write.table(data_common_fields, paste(wd,"common_fields_per_unit",sep=""),quote = F,  row.names = F, sep =";", dec="," )
 
 ```
-
-
 
 ## B) Summarize data
 ```{r}
@@ -1145,14 +1184,28 @@ ggplot(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"),
 
 ```
 
-# ----------
-# GLM
-De que depende la diversidad?
-Recombinación?
-feature?
-chr?
-```{r}
+## *GC content  histogram
 
+```{r}
+ggplot(filter(data_diversity_filtered_ave_corrected, pop=="c_ll_ki_n013"), aes(x=GC_content)) + 
+  geom_histogram(color="black", fill="white") +
+  ggsave(paste (wd_output, "histogram_GC_content.pdf", sep=""))
+```
+
+## *RVIS  histogram
+
+```{r}
+ggplot(filter(data_diversity_filtered_ave_corrected, pop=="c_ll_ki_n013"), aes(x=rvis_score)) + 
+  geom_histogram(color="black", fill="white") +
+  ggsave(paste (wd_output, "histogram_rvis_score.pdf", sep=""))
+```
+
+## *Functional sites density  histogram
+
+```{r}
+ggplot(filter(data_diversity_filtered_ave_corrected, pop=="c_ll_ki_n013"), aes(x=functional_sites_percentage)) + 
+  geom_histogram(color="black", fill="white") +
+  ggsave(paste (wd_output, "functional_sites_percentage_divergence.pdf", sep=""))
 ```
 
 # ----------
@@ -1589,35 +1642,28 @@ cat_chr_info <- read.table("/Users/marialucenaperez/Owncloud/publico/PhD/WG_dive
 # Creo tablas con la información de diversidad y de cromosomas. 
 stas_df_pop_chr_plus_cat_info <- right_join(x = cat_chr_info, y = stats_df_pop_chr, by="chr") 
 stas_df_pop_chr_plus_cat_info$pop <- factor (stas_df_pop_chr_plus_cat_info$Populations, levels=c("Kirov","NE_Poland","Norway", "Andujar", "Donana"))
+
+# como la divergencia es la única variable distinta entre sps, la hacemos dos columnas, y así sacamos solo un plot para todo, y no tenemos que sacar un plot para cada especie, cuando todas las demás son iguales en las dos species. 
+
+average_divergence_per_pop <- stas_df_pop_chr_plus_cat_info %>% 
+  filter (Populations=="Kirov" | Populations=="Andujar") %>% 
+  select (Species, mean_divergence_rate, chr) %>% 
+  tidyr::spread(., Species, mean_divergence_rate ) %>% 
+  dplyr::rename(., "L.lynx_divergence"="L.lynx") %>% dplyr::rename(.,"L.pardinus_divergence"="L.pardinus") 
+
+# Filtro la tabla para que solo tenga una población y eliminamos esa columna y la unimos con la divergencia calculada antes.
+
 ```
-
-#### Chromosome divergence
-
-Voy a sacar la divergencia por cromosoma porque no la tengo
-
-```{r}
-average_divergence_per_pop <- data_diversity_filtered_ave_corrected %>% 
-             dplyr::group_by(Species,chr) %>%
-             dplyr::summarise(mean_divergence=mean(divergence,na.rm=TRUE)) 
-
-  if("chr" %in% colnames(average_divergence_per_pop)){average_divergence_per_pop$chr <- factor(average_divergence_per_pop$chr, levels = c("chrA1","chrC1","chrB1","chrA2","chrB2","chrC2","chrA3","chrB3","chrB4","chrD1","chrD2","chrD3","chrD4","chrE1","chrE2","chrF1","chrF2","chrX"))}
-
-# Hacemos la tablas
-average_divergence_per_pop_spread <- average_divergence_per_pop %>% tidyr::spread(., Species, mean_divergence ) %>% as.data.frame(.) %>% dplyr::rename(., "L.lynx_divergence"="L.lynx") %>% dplyr::rename(.,"L.pardinus_divergence"="L.pardinus")
-
-# Lo uno a los datos de gato
-cat_chr_info_divergence <- right_join(x = cat_chr_info, y = average_divergence_per_pop_spread, by="chr") 
-
-# Lo uno también con los datos de diversidad
-stas_df_pop_chr_plus_extra_info <- right_join(stas_df_pop_chr_plus_cat_info, average_divergence_per_pop, by=c("chr", "Species") )
-```
-
-
 ### General plots cat info
 
 ```{r}
 # La filtro para hacer plots
-cat_chr_info_filtered <- cat_chr_info_divergence %>% filter(., chr!="chrX") %>% select (SizeMb_v8, GC_content, percentage_genes, cM.Mb, L.lynx_divergence, L.pardinus_divergence)
+cat_chr_info_filtered <- stas_df_pop_chr_plus_cat_info %>%  
+  full_join (., average_divergence_per_pop, by="chr") %>%
+  filter(., chr!="chrX") %>% 
+  select ( SizeMb_v8, GC_content, percentage_genes, cM.Mb, L.lynx_divergence, L.pardinus_divergence, mean_functional_sites_percentage, mean_rvis_score, mean_GC_content) %>% 
+  unique()
+
 
 # Hago una matriz de correlación entre las variables
 res <- cor(cat_chr_info_filtered )
@@ -1777,6 +1823,47 @@ ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("mea
   ggsave(paste(wd_output, "divergence_vs_",INDEX,".pdf", sep=""), width = 180, height = 180, units = "mm")
 }
 
+
+# Diversidad vs RVIS
+
+for (INDEX in INDEXES)
+  {
+ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("mean_rvis_score", INDEX)) +
+  geom_point(aes(fill=Populations , colour=Populations)) +
+  geom_smooth(method = "lm", aes(fill=Populations , colour=Populations)) +
+  facet_wrap(pop~.) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  theme(axis.text.x = element_text(angle = 90))+
+  stat_poly_eq(formula = my.formula,coef.digits=2 ,
+                aes(label = paste(..eq.label..)), 
+                parse = TRUE,label.y = 0) +  
+  stat_poly_eq(formula = my.formula, 
+                aes(label = paste(..rr.label..)), 
+                parse = TRUE,label.y = 0.1) +
+  ggsave(paste(wd_output, "RVIS_vs_",INDEX,".pdf", sep=""), width = 180, height = 180, units = "mm")
+}
+
+# Diversidad vs functional sites percentage
+
+for (INDEX in INDEXES)
+  {
+ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("mean_functional_sites_percentage", INDEX)) +
+  geom_point(aes(fill=Populations , colour=Populations)) +
+  geom_smooth(method = "lm", aes(fill=Populations , colour=Populations)) +
+  facet_wrap(pop~.) +
+  scale_colour_manual(values = cols) +
+  scale_fill_manual(values = cols) +
+  theme(axis.text.x = element_text(angle = 90))+
+  stat_poly_eq(formula = my.formula,coef.digits=2 ,
+                aes(label = paste(..eq.label..)), 
+                parse = TRUE,label.y = 0) +  
+  stat_poly_eq(formula = my.formula, 
+                aes(label = paste(..rr.label..)), 
+                parse = TRUE,label.y = 0.1) +
+  ggsave(paste(wd_output, "fucntional_sites_vs_",INDEX,".pdf", sep=""), width = 180, height = 180, units = "mm")
+}
+
 ```
 
 ### Plot R^2 & a. 
@@ -1787,11 +1874,11 @@ POPULATIONS=c("Kirov","Norway","NE_Poland", "Donana", "Andujar")
 
 data_watterson <- stas_df_pop_chr_plus_extra_info %>% 
   filter (chr!="chrX") %>% 
-  dplyr::select ("mean_divergence", "GC_content", "cM.Mb", "percentage_genes", "SizeMb_v8", "mean_watterson_ave", "Populations") %>% ungroup()
+  dplyr::select ("mean_divergence", "GC_content", "cM.Mb", "percentage_genes", "SizeMb_v8", "mean_watterson_ave", "Populations", "mean_functional_sites_percentage","mean_rvis_score" )  %>% ungroup()
 
 data_pairwise <- stas_df_pop_chr_plus_extra_info %>% 
   filter (chr!="chrX") %>% 
-  dplyr::select ("mean_divergence", "GC_content", "cM.Mb", "percentage_genes", "SizeMb_v8", "mean_pairwise_ave", "Populations") %>% ungroup()
+  dplyr::select ("mean_divergence", "GC_content", "cM.Mb", "percentage_genes", "SizeMb_v8", "mean_pairwise_ave", "Populations", "mean_functional_sites_percentage","mean_rvis_score" ) %>% ungroup()
 
 tableR2sW = list()
 tableR2sP = list()
@@ -1850,6 +1937,8 @@ predict2w <- as_tibble(cbind(names = names(predict1w), t(predict1w)), validate =
   mutate(index="Watterson") %>% 
   rename(., predictor = V2)
 
+predict2w$predictor <- as.numeric(predict2w$predictor)
+
 predict1p <- data_pairwise_per_pop %>% 
   dplyr::select(-mean_pairwise_ave) %>%  # exclude outcome, leave only predictors 
   purrr::map(~lm(data_pairwise_per_pop$mean_pairwise_ave ~ .x, data = data_pairwise_per_pop)) %>% 
@@ -1859,12 +1948,14 @@ predict1p <- data_pairwise_per_pop %>%
   mutate(variable = c("intercept", "predictor")) %>% 
   filter (variable=="predictor" ) %>% 
   select (-variable)
+
 predict2p <- as_tibble(cbind(names = names(predict1p), t(predict1p)), validate = TRUE) %>% 
   mutate(pop=POP) %>% 
   mutate(index="Pi") %>% 
-  rename(., predictor = V2) %>% 
-  as.numeric (.$predictor)
-  
+  rename(., predictor = V2)
+
+predict2p$predictor <- as.numeric(predict2p$predictor)
+
     tableR2sW[[i]] <- r2sw # add it to your list
     tableR2sP[[i]] <- r2sp # add it to your list
     tablepredictW[[i]] <- predict2w # add it to your list
@@ -1895,7 +1986,7 @@ all_popspredictN$pop <- factor (all_popspredictN$pop, levels=c("Kirov","NE_Polan
 ggplot(data = data.frame(all_popsr2N), aes(x = pop, y = names, fill= r.squaredN)) + 
   geom_tile() +
   facet_wrap(~index) +
-  scale_fill_viridis(option="magma")+
+  scale_fill_gradient(low = "white", high = "dodgerblue4")+
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
 ggsave(paste(wd_output, "all_popsr2N_heatmap.pdf", sep=""), width = 160, height = 160, units = "mm")
 
@@ -1903,7 +1994,7 @@ ggsave(paste(wd_output, "all_popsr2N_heatmap.pdf", sep=""), width = 160, height 
 ggplot(data = data.frame(all_popspredictN), aes(x = pop, y = names, fill= predictorN)) + 
   geom_tile() +
   facet_wrap(~index) +
-  scale_fill_viridis(option="magma")+
+  scale_fill_gradient(low = "white", high = "dodgerblue4")+
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
  # geom_text(aes(label=formatC(predictor, format = "e", digits = 2),angle=45))
 ggsave(paste(wd_output, "all_popspredictN_heatmap.pdf", sep=""), width = 160, height = 160, units = "mm")
