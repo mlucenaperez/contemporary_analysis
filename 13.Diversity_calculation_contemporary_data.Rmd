@@ -759,7 +759,19 @@ diversity_stats_pop <- function(DATAFRAME)
                        lowerw_watterson_ave = q25_watterson_ave - 1.5 * IQR_watterson_ave,
                        lowerw_pairwise_ave  = q25_pairwise_ave  - 1.5 * IQR_pairwise_ave,
                        upperw_watterson_ave = q75_watterson_ave + 1.5 * IQR_watterson_ave,
-                       upperw_pairwise_ave  = q75_pairwise_ave  + 1.5 * IQR_pairwise_ave) %>%  
+                       upperw_pairwise_ave  = q75_pairwise_ave  + 1.5 * IQR_pairwise_ave,
+                       # Valores recombinación
+                       mean_recombination_rate=mean(recombination_rate, na.rm=TRUE),
+                       #wmean_recombination_rate=weighted.mean(recombination_rate,w=informative_sites, na.rm=TRUE),
+                       # Valores divergencia
+                       mean_divergence_rate=mean(divergence, na.rm=TRUE),
+                       wmean_divergence_rate=weighted.mean(divergence,w=informative_sites_substitutions, na.rm=TRUE),
+                       # Valores GC_content (no hago weighted pq no tiene sentido ya q la info esta sacada del genoma que tiene todos los sitios)
+                       mean_GC_content=mean(GC_content, na.rm=TRUE),
+                       # Valores Rvis
+                       mean_rvis_score=mean (rvis_score, na.rm=TRUE),
+                       # Valores functional sites density
+                       mean_functional_sites_percentage=mean(functional_sites_percentage, na.rm=TRUE)) %>% 
     ## Calculate Δθw4 = 1 − π4 /θw4 (skewness SFS)
   dplyr::mutate (skewness = 1-wmean_pairwise_ave/wmean_watterson_ave) %>%                                    
 # Where π4 and θw4 are the estimates of diversity based on the mean pairwise difference between alleles and the number of segregating sites, respectively
@@ -774,7 +786,8 @@ return(diversity_stats_df)
 
 # Creo las tablas
 stats_df_pop_autosomes <- diversity_stats_pop(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes")) %>%  mutate (type_chr="autosomes")
-stats_df_pop_chrX <- diversity_stats_pop(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX")) %>%  mutate (type_chr="chrX")
+
+stats_df_pop_chrX <- diversity_stats_pop(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX") %>% filter(tel10m_percentage<0.75)) %>%  mutate (type_chr="chrX") 
 # Las fusiono y las guardo
 stats_df_pop <- rbind (stats_df_pop_autosomes, stats_df_pop_chrX)
 write.table(stats_df_pop, paste(wd_output_stats,"stats_diversity_per_pop.tsv",sep=""),quote = F,  row.names = F, sep =";", dec="," )
@@ -854,13 +867,20 @@ return (diversity_stats_df_grouped)
 
 # Hacemos la tablas
 stats_df_pop_autosomes_feature <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), "feature") %>%  mutate (type_chr="autosomes")
-stats_df_pop_chrX_feature <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "feature") %>%  mutate (type_chr="chrX")
+
+stats_df_pop_chrX_feature <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX") %>% filter(tel10m_percentage<0.75), "feature") %>%  mutate (type_chr="chrX")
+
 stats_df_pop_autosomes_region  <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), "region") %>%  mutate (type_chr="autosomes")
-stats_df_pop_chrX_region  <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "region") %>%  mutate (type_chr="chrX")
+
+stats_df_pop_chrX_region  <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX") %>% filter(tel10m_percentage<0.75), "region") %>%  mutate (type_chr="chrX")
+
 stats_df_pop_autosomes_chr     <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), "chr") %>%  mutate (type_chr="autosomes")
-stats_df_pop_chrX_chr     <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "chr") %>%  mutate (type_chr="chrx")
+
+stats_df_pop_chrX_chr     <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX") %>% filter(tel10m_percentage<0.75), "chr") %>%  mutate (type_chr="chrx")
+
 stats_df_pop_autosomes_recomb <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), "recomb") %>%  mutate (type_chr="autosomes")
-stats_df_pop_chrX_recomb <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "recomb") %>%  mutate (type_chr="chrX")
+
+stats_df_pop_chrX_recomb <- diversity_stats_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX") %>% filter(tel10m_percentage<0.75), "recomb") %>%  mutate (type_chr="chrX")
 
 # Fusiono y guardo
 stats_df_pop_feature <- rbind (stats_df_pop_autosomes_feature, stats_df_pop_chrX_feature)
@@ -954,12 +974,12 @@ stats_df_pop_autosomes_feature_region <- diversity_stats_doble_grouped(data_dive
 stats_df_pop_autosomes_feature_recomb <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), "feature", "recomb") %>%  mutate (type_chr="autosomes")
 stats_df_pop_autosomes_region_recomb <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="autosomes"), "region", "recomb") %>%  mutate (type_chr="autosomes")
 
-stats_df_pop_chrX_feature_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "feature", "chr") %>%  mutate (type_chr="chrX")
-stats_df_pop_chrX_region_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"),  "region", "chr") %>%  mutate (type_chr="chrX")
-stats_df_pop_chrX_recomb_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"),  "recomb", "chr") %>%  mutate (type_chr="chrX")
-stats_df_pop_chrX_feature_region <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "feature", "region") %>%  mutate (type_chr="chrX")
-stats_df_pop_chrX_feature_recomb <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "feature", "recomb") %>%  mutate (type_chr="chrX")
-stats_df_pop_chrX_region_recomb <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX"), "region", "recomb") %>%  mutate (type_chr="chrX")
+stats_df_pop_chrX_feature_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX") %>% filter(tel10m_percentage<0.75), "feature", "chr") %>%  mutate (type_chr="chrX")
+stats_df_pop_chrX_region_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX") %>% filter(tel10m_percentage<0.75),  "region", "chr") %>%  mutate (type_chr="chrX")
+stats_df_pop_chrX_recomb_chr <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX") %>% filter(tel10m_percentage<0.75),  "recomb", "chr") %>%  mutate (type_chr="chrX")
+stats_df_pop_chrX_feature_region <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX") %>% filter(tel10m_percentage<0.75), "feature", "region") %>%  mutate (type_chr="chrX")
+stats_df_pop_chrX_feature_recomb <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX") %>% filter(tel10m_percentage<0.75), "feature", "recomb") %>%  mutate (type_chr="chrX")
+stats_df_pop_chrX_region_recomb <- diversity_stats_doble_grouped(data_diversity_filtered_ave_corrected %>% filter (type_chr=="chrX") %>% filter(tel10m_percentage<0.75), "region", "recomb") %>%  mutate (type_chr="chrX")
 
 # Fusiono y guardo
 stats_df_pop_feature_chr <- rbind (stats_df_pop_autosomes_feature_chr, stats_df_pop_chrX_feature_chr)
@@ -1228,6 +1248,76 @@ cols <- c("NE_Poland"=viridis_pal()(5)[3],
           "Donana"="#CC6600")
 ```
 
+### Ratio X/A
+
+(u_f^2 / f^2) = (u_a^2 / a^2) + (u_b^2 / b^2) where u_f is the uncertainty of the ratio f=a/b, u_a is the uncertainty of the variable a and u_b is the uncertainty of variable b. In your case variables a and b are arithmetic means (I guess) so the uncertainty of arithmetic means (u_a and u_b in our examples) can be again calculated using the propagation of uncertainties
+
+```{r}
+# Per pop
+
+stats_df_pop_subset <- stats_df_pop %>% 
+  select (Populations, wmean_watterson_ave, se_wmean_watterson_boot, wmean_pairwise_ave, se_wmean_pairwise_boot, mean_recombination_rate, mean_divergence_rate, wmean_divergence_rate, mean_GC_content, mean_rvis_score, mean_functional_sites_percentage, type_chr) 
+
+ratio_per_pop_per <- stats_df_pop_subset %>%
+  gather(variable, value, -c(type_chr,Populations)) %>%
+  unite(temp, type_chr, variable ) %>%
+  spread(temp, value) %>% 
+  mutate (ratio_x_a_watterson = chrX_wmean_watterson_ave / autosomes_wmean_watterson_ave) %>%
+  mutate (error_ratio_x_a_watterson = 
+            sqrt (
+                  ( chrX_se_wmean_watterson_boot^2 / chrX_wmean_watterson_ave^2 + 
+                    autosomes_se_wmean_watterson_boot^2 / autosomes_wmean_watterson_ave^2
+                    ) * 
+                    chrX_wmean_watterson_ave / autosomes_wmean_watterson_ave)) %>% 
+  mutate (ratio_x_a_pairwise = chrX_wmean_pairwise_ave / autosomes_wmean_pairwise_ave) %>%
+  mutate (error_ratio_x_a_pairwise = 
+            sqrt (
+                  ( chrX_se_wmean_pairwise_boot^2 / chrX_wmean_pairwise_ave^2 + 
+                    autosomes_se_wmean_pairwise_boot^2 / autosomes_wmean_pairwise_ave^2
+                    ) * 
+                    chrX_wmean_pairwise_ave / autosomes_wmean_pairwise_ave)) %>% 
+  mutate (ratio_x_a_divergence = chrX_mean_divergence_rate/autosomes_mean_divergence_rate) %>% 
+  mutate (ratio_x_a_GC = chrX_mean_GC_content / autosomes_mean_GC_content) %>% 
+  mutate (ratio_x_a_functional_sites_percentage = chrX_mean_functional_sites_percentage / autosomes_mean_functional_sites_percentage) %>% 
+  mutate (ratio_x_a_recombination_rate = chrX_mean_recombination_rate / autosomes_mean_recombination_rate) %>% 
+  mutate (ratio_x_a_rvis_score = chrX_mean_rvis_score / autosomes_mean_rvis_score) 
+
+write.table (ratio_per_pop_per, paste0 (wd_output,"ratio_x_a_per_pop.txt"), row.names = F, quote = F) 
+
+# Per pop & feature
+
+stats_df_pop_feature_subset <- stats_df_pop_feature %>% 
+  select (Populations, feature, wmean_watterson_ave, se_wmean_watterson_boot, wmean_pairwise_ave, se_wmean_pairwise_boot, mean_recombination_rate, mean_divergence_rate, wmean_divergence_rate, mean_GC_content, mean_rvis_score, mean_functional_sites_percentage, type_chr) %>% 
+  filter (feature=="CDS" | feature=="Intron" | feature =="Intergenic") 
+
+ratio_per_pop_per_feature <- stats_df_pop_feature_subset %>%
+  gather(variable, value, -c(type_chr,Populations,feature)) %>%
+  unite(temp, type_chr, variable ) %>%
+  spread(temp, value) %>% 
+  mutate (ratio_x_a_watterson = chrX_wmean_watterson_ave / autosomes_wmean_watterson_ave) %>%
+  mutate (error_ratio_x_a_watterson = 
+            sqrt (
+                  ( chrX_se_wmean_watterson_boot^2 / chrX_wmean_watterson_ave^2 + 
+                    autosomes_se_wmean_watterson_boot^2 / autosomes_wmean_watterson_ave^2
+                    ) * 
+                    chrX_wmean_watterson_ave / autosomes_wmean_watterson_ave)) %>% 
+  mutate (ratio_x_a_pairwise = chrX_wmean_pairwise_ave / autosomes_wmean_pairwise_ave) %>%
+  mutate (error_ratio_x_a_pairwise = 
+            sqrt (
+                  ( chrX_se_wmean_pairwise_boot^2 / chrX_wmean_pairwise_ave^2 + 
+                    autosomes_se_wmean_pairwise_boot^2 / autosomes_wmean_pairwise_ave^2
+                    ) * 
+                    chrX_wmean_pairwise_ave / autosomes_wmean_pairwise_ave)) %>% 
+  mutate (ratio_x_a_divergence = chrX_mean_divergence_rate/autosomes_mean_divergence_rate) %>% 
+  mutate (ratio_x_a_GC = chrX_mean_GC_content / autosomes_mean_GC_content) %>% 
+  mutate (ratio_x_a_functional_sites_percentage = chrX_mean_functional_sites_percentage / autosomes_mean_functional_sites_percentage) %>% 
+  mutate (ratio_x_a_recombination_rate = chrX_mean_recombination_rate / autosomes_mean_recombination_rate) %>% 
+  mutate (ratio_x_a_rvis_score = chrX_mean_rvis_score / autosomes_mean_rvis_score) 
+  
+write.table (ratio_per_pop_per_feature, paste0 (wd_output,"ratio_x_a_per_pop_per_feature.txt"), row.names = F, quote = F) 
+
+
+```
 
 ## *Plot diversity per pop
 
@@ -1466,8 +1556,8 @@ ggplot() +
 ggplot() + 
   geom_point (data=subset(stats_df_pop_feature %>% filter(type_chr=="autosomes"), !is.na(feature)), 
               aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_feature %>% filter(type_chr=="autosomes"), !is.na(feature)), 
-                aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  geom_errorbar (data=subset(stats_df_pop_feature %>% filter(type_chr=="autosomes"), !is.na(feature)), 
+                aes(x = feature, ymin = wmean_watterson_ave-se_wmean_watterson_boot, ymax = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations, width=0.4)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~Species, ncol=1, scales="free_y") +
@@ -1478,8 +1568,8 @@ ggplot() +
 ggplot() + 
   geom_point (data=subset(stats_df_pop_feature %>% filter(type_chr=="autosomes"), !is.na(feature)), 
               aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_feature %>% filter(type_chr=="autosomes"), !is.na(feature)), 
-                aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  geom_errorbar (data=subset(stats_df_pop_feature %>% filter(type_chr=="autosomes"), !is.na(feature)), 
+                aes(x = feature, ymin = wmean_pairwise_ave-se_wmean_pairwise_boot, ymax = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations, width=0.4)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~Species, ncol=1, scales="free_y") +
@@ -1490,8 +1580,8 @@ ggplot() +
 ggplot() + 
   geom_point (data=subset(stats_df_pop_feature %>% filter(type_chr=="chrX"), !is.na(feature)), 
               aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_feature %>% filter(type_chr=="chrX"), !is.na(feature)), 
-                aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  geom_errorbar (data=subset(stats_df_pop_feature %>% filter(type_chr=="chrX"), !is.na(feature)), 
+                aes(x = feature, ymin = wmean_watterson_ave-se_wmean_watterson_boot, ymax = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~Species, ncol=1, scales="free_y") +
@@ -1502,8 +1592,8 @@ ggplot() +
 ggplot() + 
   geom_point (data=subset(stats_df_pop_feature %>% filter(type_chr=="chrX"), !is.na(feature)), 
               aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_feature %>% filter(type_chr=="chrX"), !is.na(feature)), 
-                aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  geom_errorbar (data=subset(stats_df_pop_feature %>% filter(type_chr=="chrX"), !is.na(feature)), 
+                aes(x = feature, ymin = wmean_pairwise_ave-se_wmean_pairwise_boot, ymax = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
@@ -1520,8 +1610,8 @@ ggplot() +
 ggplot() + 
   geom_point (data=subset(stats_df_pop_feature_region %>% filter(type_chr=="autosomes"), !is.na(feature)), 
               aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_feature_region %>% filter(type_chr=="autosomes"), !is.na(feature)), 
-                aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  geom_errorbar (data=subset(stats_df_pop_feature_region %>% filter(type_chr=="autosomes"), !is.na(feature)), 
+                aes(x = feature, ymin = wmean_watterson_ave-se_wmean_watterson_boot, ymax = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(region~Species, ncol=2, scales="free_y") +
@@ -1532,8 +1622,8 @@ ggplot() +
 ggplot() + 
   geom_point (data=subset(stats_df_pop_feature_region %>% filter(type_chr=="autosomes"), !is.na(feature)), 
               aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_feature_region %>% filter(type_chr=="autosomes"), !is.na(feature)), 
-                aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  geom_errorbar (data=subset(stats_df_pop_feature_region %>% filter(type_chr=="autosomes"), !is.na(feature)), 
+                aes(x = feature, ymin = wmean_pairwise_ave-se_wmean_pairwise_boot, ymax = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(region~Species, ncol=2, scales="free_y") +
@@ -1548,8 +1638,8 @@ ggplot() +
 ggplot() + 
   geom_point (data=subset(stats_df_pop_feature_chr , !is.na(feature)), 
               aes(x=feature, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_feature_chr , !is.na(feature)), 
-                aes(x = feature, xend=feature, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  geom_errorbar (data=subset(stats_df_pop_feature_chr , !is.na(feature)), 
+                aes(x = feature, ymin = wmean_watterson_ave-se_wmean_watterson_boot, ymax = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~chr,  scales="free_y") +
@@ -1560,8 +1650,8 @@ ggplot() +
 ggplot() + 
   geom_point (data=subset(stats_df_pop_feature_chr , !is.na(feature)), 
               aes(x=feature, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_feature_chr, !is.na(feature)), 
-                aes(x = feature, xend=feature, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  geom_errorbar (data=subset(stats_df_pop_feature_chr, !is.na(feature)), 
+                aes(x = feature, ymin = wmean_pairwise_ave-se_wmean_pairwise_boot, ymax = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~chr, ncol=3, scales="free_y") +
@@ -1579,8 +1669,8 @@ ggplot() +
 ggplot() + 
   geom_point (data=subset(stats_df_pop_region %>% filter(type_chr=="autosomes"), !is.na(region)), 
               aes(x=region, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_region %>% filter(type_chr=="autosomes"), !is.na(region)), 
-                aes(x = region, xend=region, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  geom_errorbar (data=subset(stats_df_pop_region %>% filter(type_chr=="autosomes"), !is.na(region)), 
+                aes(x = region, ymin = wmean_watterson_ave-se_wmean_watterson_boot, ymax = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~Species, ncol=1, scales="free_y") +
@@ -1591,8 +1681,8 @@ ggplot() +
 ggplot() + 
   geom_point (data=subset(stats_df_pop_region %>% filter(type_chr=="autosomes"), !is.na(region)), 
               aes(x=region, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_region %>% filter(type_chr=="autosomes"), !is.na(region)), 
-                aes(x = region, xend=region, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  geom_errorbar (data=subset(stats_df_pop_region %>% filter(type_chr=="autosomes"), !is.na(region)), 
+                aes(x = region, ymin = wmean_pairwise_ave-se_wmean_pairwise_boot, ymax = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~Species, ncol=1, scales="free_y") +
@@ -1607,8 +1697,8 @@ ggplot() +
 ggplot() + 
   geom_point (data=subset(stats_df_pop_chr , !is.na(chr)), 
               aes(x=chr, y=wmean_watterson_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_chr, !is.na(chr)), 
-                aes(x = chr, xend=chr, y = wmean_watterson_ave-se_wmean_watterson_boot, yend = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
+  geom_errorbar (data=subset(stats_df_pop_chr, !is.na(chr)), 
+                aes(x = chr, ymin = wmean_watterson_ave-se_wmean_watterson_boot, ymax = wmean_watterson_ave+se_wmean_watterson_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~Species, ncol=1, scales="free_y") +
@@ -1618,8 +1708,8 @@ ggplot() +
 ggplot() + 
   geom_point (data=subset(stats_df_pop_chr , !is.na(chr)), 
               aes(x=chr, y=wmean_pairwise_ave, fill=Populations, colour=Populations)) +
-  geom_segment (data=subset(stats_df_pop_chr, !is.na(chr)), 
-                aes(x = chr, xend=chr, y = wmean_pairwise_ave-se_wmean_pairwise_boot, yend = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
+  geom_errorbar (data=subset(stats_df_pop_chr, !is.na(chr)), 
+                aes(x = chr, ymin = wmean_pairwise_ave-se_wmean_pairwise_boot, ymax = wmean_pairwise_ave+se_wmean_pairwise_boot, colour=Populations)) +
   scale_colour_manual(values = cols) +
   scale_fill_manual(values = cols) +
   facet_wrap(~Species, ncol=1, scales="free_y") +
