@@ -225,7 +225,6 @@ write.table(stats_df_pop_comparison_recomb_chr, paste(wd_output,"stats_df_pop_co
 
 ```
 
-
 ## 3. Modify individal per pop stat file
 
 We have loaded per pop stats. No we have to change the configuration of those so that we can compare two populations.
@@ -543,6 +542,8 @@ scale_x_discrete2 <- function(..., expand = waiver(), position = "bottom") {
   sc
 }
 
+my.formula <- y ~ x
+
 ```
 
 ## Load data 
@@ -603,6 +604,11 @@ stats_df_pop_recomb_chr <- read.table(paste(wd_input_stats,"stats_diversity_per_
 stats_df_pop_feature_region <- read.table(paste(wd_input_stats,"stats_diversity_per_pop_per_feature_region.tsv",sep=""), row.names = NULL, sep =";", dec="," , header=T)
 stats_df_pop_feature_recomb <- read.table(paste(wd_input_stats,"stats_diversity_per_pop_per_feature_recomb.tsv",sep=""),row.names = NULL, sep =";", dec="," , header=T)
 stats_df_pop_region_recomb <- read.table(paste(wd_input_stats,"stats_diversity_per_pop_per_region_recomb.tsv",sep=""), row.names = NULL, sep =";", dec="," , header=T)
+
+### Ratio X/A
+ratio_x_a_per_pop <- read.table(paste(wd_input_stats,"ratio_x_a_per_pop.txt",sep=""), row.names = NULL, dec="," , header=T)
+ratio_x_a_per_pop_per_feature <- read.table(paste(wd_input_stats,"ratio_x_a_per_pop_per_feature.txt",sep=""), row.names = NULL, dec="," , header=T)
+
 ```
 
 #### Order
@@ -1447,8 +1453,8 @@ for (DATAFRAME in DATAFRAMES)
   ggplot(data=get(DATAFRAME), aes(x=log10(pairwise_ave.x) ,y=log10(pairwise_ave.y) )) +
     geom_point(alpha = 1/100, color='grey41') +
     geom_abline(intercept = 0, color='grey20') +
-    geom_hline(yintercept= min_non_bootleneck_pop_value_pairwise, color='grey20') +
-    geom_vline(xintercept = min_bootleneck_pop_value_pairwise, color='grey20') +
+    geom_hline(yintercept= min_bootleneck_pop_value_pairwise, color='grey20') +
+    geom_vline(xintercept = min_non_bootleneck_pop_value_pairwise, color='grey20') +
     facet_wrap(~feature) +
     theme_minimal() +
     theme(legend.position="none") +
@@ -1475,8 +1481,8 @@ for (DATAFRAME in DATAFRAMES)
   ggplot(data=get(DATAFRAME) , aes(x=log10(watterson_ave.x) ,y=log10(watterson_ave.y) )) +
     geom_point(alpha = 1/100, color='grey41') +
     geom_abline(intercept = 0, color='grey20') +
-    geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
-    geom_vline(xintercept = min_bootleneck_pop_value_watterson, color='grey20') +
+    geom_hline(yintercept= min_bootleneck_pop_value_watterson, color='grey20') +
+    geom_vline(xintercept = min_non_bootleneck_pop_value_watterson, color='grey20') +
     facet_wrap(~feature) +
     theme(legend.position="none") +
    ggsave (paste(wd_output,DATAFRAME,"_relation_by_feature_watterson.pdf", sep=""), width = 7, height = 7)
@@ -1507,8 +1513,8 @@ DATAFRAME="c_lp_sm_n019_diversity_c_lp_do_n012_diversity"
 p1 <-     ggplot(data=get(DATAFRAME) %>% filter (feature=="3UTR")  , aes(x=log10(watterson_ave.x) ,y=log10(watterson_ave.y) )) +
     geom_point( alpha = 1/20, color='grey41') +
     geom_abline(intercept = 0, color='grey20') +
-    geom_hline(yintercept= min_non_bootleneck_pop_value_watterson, color='grey20') +
-    geom_vline(xintercept = min_bootleneck_pop_value_watterson, color='grey20') +
+    geom_hline(yintercept= min_bootleneck_pop_value_watterson, color='grey20') +
+    geom_vline(xintercept = min_non_bootleneck_pop_value_watterson, color='grey20') +
     theme(legend.position="none") 
      
 p2 <- ggExtra::ggMarginal(p1, type = "density") 
@@ -1674,6 +1680,125 @@ p <- ggplot(dat.m) +
 
 # B) Summarized data
 
+## Ratio X/A
+
+### Per pop
+```{r}
+ratio_x_a_per_pop_kir_watterson <- as.numeric(paste(ratio_x_a_per_pop %>% 
+  dplyr::filter (Populations=="Kirov") %>%
+  select (ratio_x_a_watterson) %>%
+  droplevels(.) %>% 
+  .[,1]))
+
+ratio_x_a_per_pop_kir_pairwise <- as.numeric(paste(ratio_x_a_per_pop %>% 
+  dplyr::filter (Populations=="Kirov") %>%
+  select (ratio_x_a_pairwise) %>%
+  droplevels(.) %>% 
+  .[,1]))
+
+ratio_x_a_per_pop_sm_watterson <- as.numeric(paste(ratio_x_a_per_pop %>% 
+  dplyr::filter (Populations=="Andujar") %>%
+  select (ratio_x_a_watterson) %>%
+  droplevels(.) %>% 
+  .[,1]))
+
+ratio_x_a_per_pop_sm_pairwise <- as.numeric(paste(ratio_x_a_per_pop %>% 
+  dplyr::filter (Populations=="Andujar") %>%
+  select (ratio_x_a_pairwise) %>%
+  droplevels(.) %>% 
+  .[,1]))
+
+lynx_lynx <- ratio_x_a_per_pop %>% 
+  dplyr::select (Populations, ratio_x_a_watterson, error_ratio_x_a_watterson, ratio_x_a_pairwise, error_ratio_x_a_pairwise) %>% 
+  filter (Populations=="Norway" | Populations=="NE_Poland") %>% 
+  mutate (ratioB_ratioNB_watterson = as.numeric(as.character(ratio_x_a_watterson))/ratio_x_a_per_pop_kir_watterson) %>% 
+  mutate (ratioB_ratioNB_pairwise = as.numeric(as.character(ratio_x_a_pairwise))/ratio_x_a_per_pop_kir_pairwise) %>% 
+  mutate (comparison=paste0(Populations, "_Kirov")) %>% 
+  select (-Populations)
+
+lynx_pardinus <- ratio_x_a_per_pop %>% 
+  dplyr::select (Populations, ratio_x_a_watterson, error_ratio_x_a_watterson, ratio_x_a_pairwise, error_ratio_x_a_pairwise) %>% 
+  filter (Populations=="Donana") %>% 
+  mutate (ratioB_ratioNB_watterson = as.numeric(as.character(ratio_x_a_watterson))/ratio_x_a_per_pop_sm_watterson) %>% 
+  mutate (ratioB_ratioNB_pairwise = as.numeric(as.character(ratio_x_a_pairwise))/ratio_x_a_per_pop_sm_pairwise) %>% 
+  mutate (comparison=paste0(Populations, "_Andujar")) %>% 
+  select (-Populations)
+
+ratio_ratio_per_pop <- rbind(lynx_lynx, lynx_pardinus)
+
+write.table(ratio_ratio_per_pop, paste0(wd_output, "ratio_ratio_per_pop.txt"), quote = F, row.names = F)
+
+
+```
+
+### Per pop & feature
+```{r}
+ratio_x_a_per_pop_per_feature_kir_watterson <- ratio_x_a_per_pop_per_feature %>% 
+  dplyr::filter (Populations=="Kirov") %>%
+  select (ratio_x_a_watterson, feature) %>% 
+  rename (ratio_x_a_watterson_NB=ratio_x_a_watterson)
+
+ratio_x_a_per_pop_per_feature_kir_pairwise <- ratio_x_a_per_pop_per_feature %>% 
+  dplyr::filter (Populations=="Kirov") %>%
+  select (ratio_x_a_pairwise, feature) %>% 
+  rename (ratio_x_a_pairwise_NB=ratio_x_a_pairwise)
+
+ratio_x_a_per_pop_per_feature_sm_watterson <- ratio_x_a_per_pop_per_feature %>% 
+  dplyr::filter (Populations=="Andujar") %>%
+  select (ratio_x_a_watterson, feature) %>% 
+  rename (ratio_x_a_watterson_NB=ratio_x_a_watterson)
+
+ratio_x_a_per_pop_per_feature_sm_pairwise <- ratio_x_a_per_pop_per_feature %>% 
+  dplyr::filter (Populations=="Andujar") %>%
+  select (ratio_x_a_pairwise, feature) %>% 
+  rename (ratio_x_a_pairwise_NB=ratio_x_a_pairwise)
+
+lynx_lynx_feature <- ratio_x_a_per_pop_per_feature %>% 
+  dplyr::select (Populations,feature, ratio_x_a_watterson, error_ratio_x_a_watterson, ratio_x_a_pairwise, error_ratio_x_a_pairwise) %>%
+  filter (Populations=="Norway" | Populations=="NE_Poland") %>%
+  full_join (., ratio_x_a_per_pop_per_feature_kir_watterson) %>% 
+  full_join (., ratio_x_a_per_pop_per_feature_kir_pairwise) %>% 
+  mutate (ratioB_ratioNB_watterson = 
+            as.numeric ( as.character ( ratio_x_a_watterson )) / as.numeric (as.character (ratio_x_a_watterson_NB))) %>% 
+  mutate (ratioB_ratioNB_pairwise = 
+            as.numeric ( as.character (ratio_x_a_pairwise)) / as.numeric (as.character(ratio_x_a_pairwise_NB))) %>% 
+  mutate (comparison=paste0(Populations, "_Kirov")) %>% 
+  select (-Populations)
+
+lynx_pardinus_feature <- ratio_x_a_per_pop_per_feature %>% 
+  dplyr::select (Populations,feature, ratio_x_a_watterson, error_ratio_x_a_watterson, ratio_x_a_pairwise, error_ratio_x_a_pairwise) %>%
+  filter (Populations=="Donana") %>%
+  full_join (., ratio_x_a_per_pop_per_feature_sm_watterson) %>% 
+  full_join (., ratio_x_a_per_pop_per_feature_sm_pairwise) %>% 
+  mutate (ratioB_ratioNB_watterson = 
+            as.numeric ( as.character ( ratio_x_a_watterson )) / as.numeric (as.character (ratio_x_a_watterson_NB))) %>% 
+  mutate (ratioB_ratioNB_pairwise = 
+            as.numeric ( as.character (ratio_x_a_pairwise)) / as.numeric (as.character(ratio_x_a_pairwise_NB))) %>% 
+  mutate (comparison=paste0(Populations, "_Andujar")) %>% 
+  select (-Populations)
+
+
+ratio_ratio_per_feature <-rbind (lynx_lynx_feature, lynx_pardinus_feature)
+
+ratio_ratio_per_feature$comparison <- factor (ratio_ratio_per_feature$comparison, levels=c("NE_Poland_Kirov", "Norway_Kirov", "Donana_Andujar"))
+
+
+write.table(ratio_ratio_per_feature, paste0(wd_output, "ratio_ratio_per_pop_per_feature.txt"), quote = F, row.names = F)
+
+```
+
+## * Plot Rati X/A
+
+```{r}
+ggplot(data=ratio_ratio_per_feature, aes(comparison, ratioB_ratioNB_watterson , fill=feature, color=feature))+
+  geom_point()
+ggsave (paste(wd_output,"ratio_ratio_NB_B_watterson.pdf", sep=""), width = 80, height = 40, units = "mm")
+
+ggplot(data=ratio_ratio_per_feature, aes(comparison, ratioB_ratioNB_pairwise , fill=feature, color=feature))+
+  geom_point()
+ggsave (paste(wd_output,"ratio_ratio_NB_B_pairwise.pdf", sep=""), width = 80, height = 40, units = "mm")
+```
+
 ## *Comparison NB & B
 ### *Chr
 ```{r}
@@ -1721,6 +1846,7 @@ ggsave (paste(wd_output,"panel_chr_autosomes_vs_x", DIVERSITY_MEASURE,".pdf", se
 ### *Feature
 
 ```{r}
+
 DIVERSITY_MEASURES=c( "wmean_pairwise_ave", "wmean_watterson_ave")
   for (DIVERSITY_MEASURE in DIVERSITY_MEASURES)
 {
@@ -1826,10 +1952,157 @@ ggsave (paste(wd_output,"panel_region_", DIVERSITY_MEASURE,".pdf", sep=""), widt
 
 ```
 
+### *Heatmap regions chr
+
+```{r}
+### Plot R^2 & a. 
+COMPARISONS=c("Kirov-Norway", "Kirov-NE_Poland", "Andujar-Donana" )
+REGIONS=c( "Interstitial", "Centromere", "Telomere_2m" )
+
+data_watterson <- stats_all_pops_region_chr %>% 
+  dplyr::mutate(comparison=paste0(Populations.x,"-", Populations.y)) %>% 
+  filter (chr!="chrX") %>% 
+  dplyr::select ("region", "chr",  "comparison", "wmean_watterson_ave.x" ,"wmean_watterson_ave.y")  %>% ungroup()
+
+data_pairwise <- stats_all_pops_region_chr %>% 
+  dplyr::mutate(comparison=paste0(Populations.x,"-", Populations.y)) %>% 
+  filter (chr!="chrX") %>% 
+  dplyr::select ("region", "chr",  "comparison", "wmean_pairwise_ave.x" ,"wmean_pairwise_ave.y")  %>% ungroup()
+
+tableR2sW = list()
+tableR2sP = list()
+tablepredictW = list()
+tablepredictP = list()
+
+i=1
+for (REGION in REGIONS)
+{
+for (COMPARISON in COMPARISONS)
+  {
+  # Table prep:
+  
+data_watterson_per_region_per_pop <- data_watterson %>% 
+    dplyr::filter(region==REGION) %>% 
+    dplyr::filter(comparison==COMPARISON) %>% 
+    dplyr::select (-region, -chr, -comparison) %>% ungroup()
+ 
+data_pairwise_per_region_per_pop <- data_pairwise %>% 
+    dplyr::filter(region==REGION) %>% 
+    dplyr::filter(comparison==COMPARISON) %>% 
+    dplyr::select (-region, -chr, -comparison) %>% ungroup()
+ 
+# R squared 
+r2sw <- data_watterson_per_region_per_pop %>% 
+    dplyr::select(-wmean_watterson_ave.x) %>%  # exclude outcome, leave only predictors 
+    purrr::map(~lm(data_watterson_per_region_per_pop$wmean_watterson_ave.x ~ wmean_watterson_ave.y, data = data_watterson_per_region_per_pop)) %>% 
+    purrr::map(summary) %>% 
+    purrr::map_dbl("r.squared") %>% 
+    tidy %>% 
+    dplyr::arrange(desc(x)) %>% 
+    rename(r.squared = x) %>% 
+    mutate(comparison = COMPARISON) %>%
+    mutate(region = REGION) %>% 
+    mutate(index = "Watterson")
+  
+ r2sp <- data_pairwise_per_region_per_pop %>% 
+    dplyr::select(-wmean_pairwise_ave.x) %>%  # exclude outcome, leave only predictors 
+    purrr::map(~lm(data_pairwise_per_region_per_pop$wmean_pairwise_ave.x ~ wmean_pairwise_ave.y, data = data_pairwise_per_region_per_pop)) %>% 
+    purrr::map(summary) %>% 
+    purrr::map_dbl("r.squared") %>% 
+    tidy %>% 
+    dplyr::arrange(desc(x)) %>% 
+    rename(r.squared = x) %>% 
+    mutate(comparison = COMPARISON) %>%
+    mutate(region = REGION) %>% 
+    mutate(index="Pi")
+  
+# Predictor
+predict1w <- data_watterson_per_region_per_pop %>% 
+  dplyr::select(-wmean_watterson_ave.x) %>%  # exclude outcome, leave only predictors 
+  purrr::map(~lm(data_watterson_per_region_per_pop$wmean_watterson_ave.x ~ wmean_watterson_ave.y, data = data_watterson_per_region_per_pop)) %>% 
+  purrr::map(summary) %>% 
+  purrr::map(broom::tidy) %>% 
+  purrr::map_df("estimate")  %>% 
+  mutate(variable = c("intercept", "predictor")) %>% 
+  filter (variable=="predictor" )%>% 
+  select (-variable)
+predict2w <- as_tibble(cbind(names = names(predict1w), t(predict1w)), validate = TRUE) %>% 
+  mutate(comparison=COMPARISON) %>%
+  mutate(region=REGION) %>% 
+  mutate(index="Watterson") %>% 
+  rename(., predictor = V2)
+
+predict2w$predictor <- as.numeric(predict2w$predictor)
+
+predict1p <- data_pairwise_per_region_per_pop %>% 
+  dplyr::select(-wmean_pairwise_ave.x) %>%  # exclude outcome, leave only predictors 
+  purrr::map(~lm(data_pairwise_per_region_per_pop$wmean_pairwise_ave.x ~ wmean_pairwise_ave.y, data = data_pairwise_per_region_per_pop)) %>% 
+  purrr::map(summary) %>% 
+  purrr::map(broom::tidy) %>% 
+  purrr::map_df("estimate")  %>% 
+  mutate(variable = c("intercept", "predictor")) %>% 
+  filter (variable=="predictor" )%>% 
+  select (-variable)
+predict2p <- as_tibble(cbind(names = names(predict1w), t(predict1w)), validate = TRUE) %>% 
+  mutate(comparison=COMPARISON) %>%
+  mutate(region=REGION) %>% 
+  mutate(index="Pi") %>% 
+  rename(., predictor = V2)
+
+predict2p$predictor <- as.numeric(predict2w$predictor)
 
 
+    tableR2sW[[i]] <- r2sw # add it to your list
+    tableR2sP[[i]] <- r2sp # add it to your list
+    tablepredictW[[i]] <- predict2w # add it to your list
+    tablepredictP[[i]] <- predict2p # add it to your list
 
-## Recombination
+i=i+1
+  }
+}
+
+all_popsr2 = full_join(do.call(rbind, tableR2sW), do.call(rbind, tableR2sP))
+all_popspredict = full_join(do.call(rbind, tablepredictW), do.call(rbind, tablepredictP)) 
+
+# Normalize predictor, to make values comparable
+all_popspredictN <- all_popspredict %>% 
+group_by(index, region) %>% 
+  mutate(predictorN = predictor / mean(predictor))
+
+# Normalize predictor, to make values comparable
+all_popsr2N <- all_popsr2 %>% 
+group_by(index, region) %>% 
+  mutate(r.squaredN = r.squared / mean(r.squared))
+
+# Order factor
+all_popsr2N$comparison <- factor (all_popsr2N$comparison, levels=c("Kirov-NE_Poland", "Kirov-Norway", "Andujar-Donana" ))
+all_popsr2N$region <- factor (all_popsr2N$region , levels=c("Telomere_2m", "Interstitial", "Centromere"))
+all_popspredictN$comparison <- factor (all_popspredictN$comparison, levels=c("Kirov-NE_Poland", "Kirov-Norway", "Andujar-Donana" ))
+all_popspredictN$region <- factor (all_popspredictN$region , levels=c("Telomere_2m", "Interstitial", "Centromere"))
+
+# Plot
+ggplot(data = data.frame(all_popsr2N), aes(x = comparison, y = region, fill= r.squaredN)) + 
+  geom_tile() +
+  facet_wrap(~index) +
+  scale_fill_gradient(low = "white", high = "dodgerblue4")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  theme_minimal() +
+ggsave(paste(wd_output, "all_popsr2N_heatmap_regions_comparisons.pdf", sep=""), width = 160, height = 160, units = "mm")
+
+
+ggplot(data = data.frame(all_popspredictN), aes(x = comparison, y = region, fill= predictorN)) + 
+  geom_tile() +
+  facet_wrap(~index) +
+  scale_fill_gradient(low = "white", high = "dodgerblue4")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  theme_minimal() +
+ # geom_text(aes(label=formatC(predictor, format = "e", digits = 2),angle=45))
+ggsave(paste(wd_output, "all_popspredictN_heatmap_regions_comparisons.pdf", sep=""), width = 160, height = 160, units = "mm")
+
+```
+
+
+### Recombination
 
 ```{r}
 ggplot() + 
@@ -1872,6 +2145,8 @@ ggplot() +
 
 
 ```
+
+
 
 #----------------------------------------
 # Global
