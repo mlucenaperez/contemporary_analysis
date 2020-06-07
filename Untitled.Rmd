@@ -1,0 +1,97 @@
+---
+title: '*genic_content'
+output: html_document
+---
+
+We will try to estimate genic content in 2Mb windows. 
+
+# Hago ventanas
+```{bash}
+mkdir -p /GRUPOS/grupolince/mlucena/gene_density_annotation
+cd /GRUPOS/grupolince/mlucena/gene_density_annotation
+OUTPUT=/GRUPOS/grupolince/mlucena/gene_density_annotation
+REF=/GRUPOS/grupolince/reference_genomes/lynx_pardinus_genome/Length_scaffolds_lp23_tab_separated
+
+awk '$2>2000000' $REF > $OUTPUT/Scaffold_bigger_than_2000000.tsv
+# Los scaffold de mas de 2Mb son aproximadamente 0.9 GB. 
+
+bedtools makewindows -g $OUTPUT/Scaffold_bigger_than_2Mb.tsv -w 2000000 > $OUTPUT/windows_2Mb
+
+
+```
+
+# Anoto las ventanas
+
+```{bash}
+OUTPUT=/GRUPOS/grupolince/mlucena/gene_density_annotation
+ANNOTATION_FILE=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3
+WINDOW_FILE=$OUTPUT/windows_2Mb
+
+# Me quedo con los sitios "selective" despues de hablarlo con Godo:
+# Lo que me ha dicho: Quizás todo lo que dices, menos intrones, no? Lo que sugieres más que gene content sería la densidad de sitios funcionales, pero en principio valdría. Sí, nos quedamos con la densidad de sitios no neutrales. Me parece que hacer el cálculo en bloques de 2Mb es correcto. Tenemos que capturar la densidad de sitios seleccionados en los alrededores de cada ventana. Me parece una buena aproximación.
+
+
+bedtools intersect -a $WINDOW_FILE \
+-b <(awk '!/intergenic/' $ANNOTATION_FILE | awk '!/intron/' | awk '!/promoter_gene_250/'| awk '!/promoter_gene_500/' | awk '!/promoter_lncRNA_250/' | awk '!/promoter_lncRNA_500/' ) -wb -wa | awk -v OFS="\t" '{print $1, $2, $3, $6, $8-$7}' | sort -k1,1 -k2,2n -k3,3n -k4,4 | bedtools groupby -g 1-3 -c 5 -o sum | awk -v OFS="\t" '{print $1, $2, $3, $4, $4/20000}' > $OUTPUT/windows_2Mb_density_functional_sites.tsv
+
+# Lo que hago es quitarme todos los promotores repetidos, y todo lo que no es funcional (i.e. intron (tanto de gen como lncRNA) e intergenic), sumo todas esas bases y las divido por 2MB que es mi unidad. 
+# 20000= /2Mb*100 Percentage // Podría usar tb la suma de las bases, pero a veces es mayor q 2Mb pq una misma base es CDS y UTR, asi que considero que esto puede ser una mejor medida. 
+# Como hemos usado un archivo para hacer las ventanas que tiene solo aquellos scaffold >2Mb, este archivo ya está filtrado para esos scaffold. 
+```
+
+# Anoto las units
+
+```{bash}
+OUTPUT=/GRUPOS/grupolince/mlucena/gene_density_annotation
+ANNOTATION_FILE=/GRUPOS/grupolince/Lyp_annotation_Apr14_final/LYPA23C.CDS.GENE_promoters.GENE_introns.UTRs.ncRNA.lncRNA.lncRNA_introns.lncRNA_promoters.UCNE.intergenic.nr.gff3
+
+bedtools intersect -a <(awk -v OFS="\t" '{print $1, $4, $5}' $ANNOTATION_FILE) -b $OUTPUT/windows_2Mb_density_functional_sites.tsv -wb | \
+awk -v OFS="\t" '{print $1, $2, $3, $8}' > $OUTPUT/windows_2Mb_density_functional_sites_per_unit.tsv
+
+```
+
+
+
+
+## Me lo bajo a local
+```{bash}
+scp -p  mlucena@genomics-b.ebd.csic.es:/GRUPOS/grupolince/mlucena/gene_density_annotation/windows_2Mb_annotated.tsv /Users/marialucenaperez/Documents/WG_genomic_variables/
+```
+
+```{r}
+
+window_size=1000
+window_step=1000
+
+library(viridis)
+library(ggplot2); theme_set(theme_minimal())
+library(tidyr)
+library(plyr)
+library(dplyr)
+library(data.table)
+library(arules)
+library(psych)
+library(ggpubr)
+library(boot)
+library(broom)
+library(ggpubr)
+library(ggrepel)
+library(ggpmisc)
+library(gridExtra)
+library(mgcv)
+library(MuMIn)
+library(stringr)
+
+
+sample.wtd.mean <- function(x, w, d) {
+return(weighted.mean(x = x[d], w = w[d], na.rm=T ))
+}
+
+wd_output <- paste0("/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/window_per_feature","_",window_size,"_",window_step, "/")
+wd_input <- paste0("/Users/marialucenaperez/Documents/WG_lynx_diversity_per_windows_features/raw/")
+wd_input_common_fields <- "/Users/marialucenaperez/Documents/WG_lynx_diversity_per_unit/"
+
+
+```
+
+
