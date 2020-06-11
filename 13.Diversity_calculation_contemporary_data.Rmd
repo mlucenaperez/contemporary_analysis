@@ -1252,6 +1252,8 @@ cols <- c("NE_Poland"=viridis_pal()(5)[3],
 
 (u_f^2 / f^2) = (u_a^2 / a^2) + (u_b^2 / b^2) where u_f is the uncertainty of the ratio f=a/b, u_a is the uncertainty of the variable a and u_b is the uncertainty of variable b. In your case variables a and b are arithmetic means (I guess) so the uncertainty of arithmetic means (u_a and u_b in our examples) can be again calculated using the propagation of uncertainties
 
+u_f = sqrt((u_a^2 / a^2) + (u_b^2 / b^2)*f^2)
+
 ```{r}
 # Per pop
 
@@ -1268,14 +1270,18 @@ ratio_per_pop_per <- stats_df_pop_subset %>%
                   ( chrX_se_wmean_watterson_boot^2 / chrX_wmean_watterson_ave^2 + 
                     autosomes_se_wmean_watterson_boot^2 / autosomes_wmean_watterson_ave^2
                     ) * 
-                    chrX_wmean_watterson_ave / autosomes_wmean_watterson_ave)) %>% 
+                    (chrX_wmean_watterson_ave / autosomes_wmean_watterson_ave)^2
+                  )
+          )%>% 
   mutate (ratio_x_a_pairwise = chrX_wmean_pairwise_ave / autosomes_wmean_pairwise_ave) %>%
   mutate (error_ratio_x_a_pairwise = 
             sqrt (
                   ( chrX_se_wmean_pairwise_boot^2 / chrX_wmean_pairwise_ave^2 + 
                     autosomes_se_wmean_pairwise_boot^2 / autosomes_wmean_pairwise_ave^2
                     ) * 
-                    chrX_wmean_pairwise_ave / autosomes_wmean_pairwise_ave)) %>% 
+                    (chrX_wmean_pairwise_ave / autosomes_wmean_pairwise_ave)^2
+                  )
+          )%>% 
   mutate (ratio_x_a_divergence = chrX_mean_divergence_rate/autosomes_mean_divergence_rate) %>% 
   mutate (ratio_x_a_GC = chrX_mean_GC_content / autosomes_mean_GC_content) %>% 
   mutate (ratio_x_a_functional_sites_percentage = chrX_mean_functional_sites_percentage / autosomes_mean_functional_sites_percentage) %>% 
@@ -1318,6 +1324,35 @@ write.table (ratio_per_pop_per_feature, paste0 (wd_output,"ratio_x_a_per_pop_per
 
 
 ```
+
+## *Plot ratio per pop per feature
+
+```{r}
+a_value <-ratio_per_pop_per_feature %>% select (Populations, feature, ratio_x_a_watterson, ratio_x_a_pairwise) %>% 
+  gather("Type", "Value",-c(Populations, feature)) 
+a_error <-ratio_per_pop_per_feature %>% select (Populations, feature, error_ratio_x_a_watterson, error_ratio_x_a_pairwise) %>% 
+  rename(ratio_x_a_watterson=error_ratio_x_a_watterson, ratio_x_a_pairwise=error_ratio_x_a_pairwise) %>% 
+  gather("Type", "Error",-c(Populations, feature)) 
+a <- full_join(a_value, a_error)
+b <- ratio_per_pop_per_feature %>% select (Populations, feature, ratio_x_a_divergence, ratio_x_a_GC, ratio_x_a_functional_sites_percentage, ratio_x_a_recombination_rate, ratio_x_a_rvis_score) %>% filter (Populations=="Kirov" ) %>% 
+  gather("Type", "Value",-c(Populations, feature)) 
+
+ggplot (a, aes(feature, Value)) +
+  geom_col (aes(colour=feature, fill=feature)) +
+   geom_errorbar (aes(x = feature, ymin = Value-Error, ymax = Value+Error, width=0.4)) +
+  facet_wrap(Type~Populations,scales = "free_x",nrow=2) +
+  theme(legend.position="bottom") +
+  ggsave (paste0(wd_output,"plot_ratio_per_pop_diversity.pdf"), width = 80, height = 110, units = "mm")
+
+ggplot (b, aes(feature, Value, colour=feature, fill=feature)) +
+  geom_col () +
+  # Añadir barra de error
+  facet_wrap(Type~Populations,scales = "free_x",nrow=5) +
+#  ggsave (plot_ratio_per_pop_diversity)
+```
+
+
+
 
 ## *Plot diversity per pop
 
@@ -1739,9 +1774,9 @@ average_divergence_per_pop <- stas_df_pop_chr_plus_cat_info %>%
   filter (Populations=="Kirov" | Populations=="Andujar") %>% 
   select (Species, mean_divergence_rate, chr) %>% 
   tidyr::spread(., Species, mean_divergence_rate ) %>% 
-  dplyr::rename(., "L.lynx_divergence"="L.lynx") %>% dplyr::rename(.,"L.pardinus_divergence"="L.pardinus") 
-
+  dplyr::rename(., "L.lynx_divergence"="L.lynx") %>%   dplyr::rename(.,"L.pardinus_divergence"="L.pardinus") 
 # Filtro la tabla para que solo tenga una población y eliminamos esa columna y la unimos con la divergencia calculada antes.
+
 
 ```
 ### General plots cat info
@@ -1962,13 +1997,13 @@ ggplot (stas_df_pop_chr_plus_extra_info %>% filter(chr!="chrX"), aes_string("mea
 INDEXES=c("mean_watterson_ave", "mean_pairwise_ave") 
 POPULATIONS=c("Kirov","Norway","NE_Poland", "Donana", "Andujar")
 
-data_watterson <- stas_df_pop_chr_plus_extra_info %>% 
+data_watterson <- stas_df_pop_chr_plus_cat_info %>% 
   filter (chr!="chrX") %>% 
-  dplyr::select ("mean_divergence", "GC_content", "cM.Mb", "percentage_genes", "SizeMb_v8", "mean_watterson_ave", "Populations", "mean_functional_sites_percentage","mean_rvis_score" )  %>% ungroup()
+  dplyr::select ("wmean_divergence_rate", "GC_content", "cM.Mb", "percentage_genes", "SizeMb_v8", "mean_watterson_ave", "Populations", "mean_functional_sites_percentage","mean_rvis_score" )  %>% ungroup()
 
-data_pairwise <- stas_df_pop_chr_plus_extra_info %>% 
+data_pairwise <- stas_df_pop_chr_plus_cat_info %>% 
   filter (chr!="chrX") %>% 
-  dplyr::select ("mean_divergence", "GC_content", "cM.Mb", "percentage_genes", "SizeMb_v8", "mean_pairwise_ave", "Populations", "mean_functional_sites_percentage","mean_rvis_score" ) %>% ungroup()
+  dplyr::select ("wmean_divergence_rate", "GC_content", "cM.Mb", "percentage_genes", "SizeMb_v8", "mean_pairwise_ave", "Populations", "mean_functional_sites_percentage","mean_rvis_score" ) %>% ungroup()
 
 tableR2sW = list()
 tableR2sP = list()
@@ -2058,36 +2093,70 @@ all_popsr2 = full_join(do.call(rbind, tableR2sW), do.call(rbind, tableR2sP))
 all_popspredict = full_join(do.call(rbind, tablepredictW), do.call(rbind, tablepredictP)) 
 
 # Normalize predictor, to make values comparable
-all_popspredictN <- all_popspredict %>% 
+all_popspredictN_normalize_per_variable <- all_popspredict %>% 
 group_by(index,names) %>% 
   mutate(predictorN = predictor / mean(predictor))
 
-# Normalize predictor, to make values comparable
-all_popsr2N <- all_popsr2 %>% 
+
+all_popspredictN_normalize_per_pop <- all_popspredict %>% 
+group_by(index,pop) %>% 
+  mutate(predictorN = predictor / mean(predictor))
+
+
+# Normalize Rsquare, to make values comparable
+all_popsr2N_normalize_per_variable <- all_popsr2 %>% 
 group_by(index,names) %>% 
   mutate(r.squaredN = r.squared / mean(r.squared))
 
 # Order factor
-all_popsr2N$pop <- factor (all_popsr2N$pop, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
-all_popspredictN$pop <- factor (all_popspredictN$pop, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
+all_popspredict$pop <- factor (all_popspredict$pop, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
+all_popspredictN_normalize_per_variable$pop <- factor (all_popspredictN_normalize_per_variable$pop, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
+all_popspredictN_normalize_per_pop$pop <- factor (all_popspredictN_normalize_per_pop$pop, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
+
+all_popsr2$pop <- factor (all_popsr2$pop, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
+all_popsr2N_normalize_per_variable$pop <- factor (all_popsr2N_normalize_per_variable$pop, levels=c("Kirov","NE_Poland","Norway", "Andujar","Donana"))
 
 
 # Plot
-ggplot(data = data.frame(all_popsr2N), aes(x = pop, y = names, fill= r.squaredN)) + 
+ggplot(data = data.frame(all_popsr2), aes(x = pop, y = names, fill= r.squared)) + 
   geom_tile() +
   facet_wrap(~index) +
   scale_fill_gradient(low = "white", high = "dodgerblue4")+
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-ggsave(paste(wd_output, "all_popsr2N_heatmap.pdf", sep=""), width = 160, height = 160, units = "mm")
+ggsave(paste(wd_output, "all_popsr2N_no_normalized_heatmap.pdf", sep=""), width = 160, height = 160, units = "mm")
+
+ggplot(data = data.frame(all_popsr2N_normalize_per_variable), aes(x = pop, y = names, fill= r.squaredN)) + 
+  geom_tile() +
+  facet_wrap(~index) +
+  scale_fill_gradient(low = "white", high = "dodgerblue4")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+ggsave(paste(wd_output, "all_popsr2N_normalized_per_variable_heatmap.pdf", sep=""), width = 160, height = 160, units = "mm")
 
 
-ggplot(data = data.frame(all_popspredictN), aes(x = pop, y = names, fill= predictorN)) + 
+ggplot(data = data.frame(all_popspredict), aes(x = pop, y = names, fill= predictor)) + 
   geom_tile() +
   facet_wrap(~index) +
   scale_fill_gradient(low = "white", high = "dodgerblue4")+
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
  # geom_text(aes(label=formatC(predictor, format = "e", digits = 2),angle=45))
-ggsave(paste(wd_output, "all_popspredictN_heatmap.pdf", sep=""), width = 160, height = 160, units = "mm")
+ggsave(paste(wd_output, "all_popspredictN_no_normalized_heatmap.pdf", sep=""), width = 160, height = 160, units = "mm")
+
+ggplot(data = data.frame(all_popspredictN_normalize_per_variable), aes(x = pop, y = names, fill= predictorN)) + 
+  geom_tile() +
+  facet_wrap(~index) +
+  scale_fill_gradient(low = "white", high = "dodgerblue4")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+ # geom_text(aes(label=formatC(predictor, format = "e", digits = 2),angle=45))
+ggsave(paste(wd_output, "all_popspredictN_normalized_per_variable_heatmap.pdf", sep=""), width = 160, height = 160, units = "mm")
+
+
+ggplot(data = data.frame(all_popspredictN_normalize_per_pop), aes(x = pop, y = names, fill= predictorN)) + 
+  geom_tile() +
+  facet_wrap(~index) +
+  scale_fill_gradient(low = "white", high = "dodgerblue4")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+ # geom_text(aes(label=formatC(predictor, format = "e", digits = 2),angle=45))
+ggsave(paste(wd_output, "all_popspredictN_normalized_per_pop_heatmap.pdf", sep=""), width = 160, height = 160, units = "mm")
 
 ```
 
