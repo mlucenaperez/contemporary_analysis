@@ -890,6 +890,7 @@ c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X %>%
 window_size=1000
 window_step=1000
 
+library(rcompanion)
 library(viridis)
 library(ggplot2); theme_set(theme_minimal())
 library(tidyr)
@@ -1388,20 +1389,407 @@ for (DATAFRAME in DATAFRAMES)
   group_df <- get(DATAFRAME) %>% 
   dplyr::filter (feature=="CDS" | feature=="Intron" | feature=="Intergenic") %>% 
   dplyr::mutate(GROUP_DELTA_W = 
-         ifelse (delta_watterson_corrected > 0.1, "B>NB", 
-         ifelse (delta_watterson_corrected < -0.1, "NB>B", NA))) %>% 
+         ifelse (delta_watterson_corrected > 0.1, "B_gain", 
+         ifelse (delta_watterson_corrected < -0.1, "B_loss", NA))) %>% 
   dplyr::mutate(GROUP_DELTA_P =
-         ifelse (delta_pairwise_corrected > 0.1, "B>NB", 
-         ifelse (delta_pairwise_corrected < -0.1, "NB>B", NA))) %>% 
+         ifelse (delta_pairwise_corrected > 0.1, "B_gain", 
+         ifelse (delta_pairwise_corrected < -0.1, "B_loss", NA))) %>% 
   dplyr::mutate(GROUP_DELTA_D=
-         ifelse (delta_w_delta_p > 0.1, "B>NB", 
-         ifelse (delta_w_delta_p < -0.1, "NB>B", NA))) %>% 
+         ifelse (delta_w_delta_p > 0.1, "B_gain", 
+         ifelse (delta_w_delta_p < -0.1, "B_loss", NA))) %>% 
   dplyr::mutate (log10_watterson.x=log10(ave_watterson.x)) %>% 
   dplyr::mutate (log10_pairwise.x=log10(ave_pairwise.x))
       assign(paste0(DATAFRAME, "_GROUPED_BY_DELTA"), group_df) 
 }
 
 ```
+
+# Statistical analysis
+
+Empleo el wilcox.test (por defecto tiene paired=F). Es un test para medidas no parametricas para comparación de rank. 
+
+Explicacion: https://en.wikipedia.org/wiki/Mann–Whitney_U_test
+https://data.library.virginia.edu/the-wilcoxon-rank-sum-test/
+Check also: https://stats.stackexchange.com/questions/250468/wilcoxon-mann-whitney-test-giving-surprising-results
+
+In statistics, the Mann–Whitney U test (also called the Mann–Whitney–Wilcoxon (MWW), Wilcoxon rank-sum test, or Wilcoxon–Mann–Whitney test) is a nonparametric test of the null hypothesis that it is equally likely that a randomly selected value from one sample will be less than or greater than a randomly selected value from a second sample.
+
+Unlike the t-test it does not require the assumption of normal distributions. It is nearly as efficient as the t-test on normal distributions.
+
+This test can be used to determine whether two independent samples were selected from populations having the same distribution; a similar nonparametric test used on dependent samples is the Wilcoxon signed-rank test.
+
+--> “true location shift is not equal to 0”. That’s another way of saying “the distribution of one population is shifted to the left or right of the other,” which implies different medians.
+--> The Wilcoxon statistic is returned as W. This is NOT an estimate of the difference in medians.
+
+--> wilcox.test function provides this information when we set conf.int = TRUE.
+
+wilcox.test(weight ~ company, data = dat, conf.int = TRUE)
+
+	Wilcoxon rank sum test
+
+data:  weight by company
+W = 13, p-value = 0.04988
+alternative hypothesis: true location shift is not equal to 0
+95 percent confidence interval:
+ -8.5 -0.1
+sample estimates:
+difference in location 
+                 -4.65 
+
+This returns a “difference in location” measure of -4.65. The documentation for the wilcox.test function states this “does not estimate the difference in medians (a common misconception) but rather the median of the difference between a sample from x and a sample from y.”
+
+Nota: https://stackoverflow.com/questions/54842012/different-p-value-in-ggplot2-stat-compare-means-and-wilcox-test
+According to help(wilcox.test), if the samples contain less than 50 values (as in your case), the exact p-value is computed (unless you specify otherwise).
+
+stat_compare_means has a method.args argument but it doesn't seem to pass the exact = TRUE specification correctly. Instead you can compute the p-value exactly how you want it first and then add it to the plot
+Por tanto, los p-values son una aproximacion normal (In one case the p-value is exact and in the other it is a normal approximation.)
+
+### U-MW and effect size HD
+
+Shapiro negativo --> no es normal. 
+
+ES EL CASO.
+
+```{r}
+
+DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto_GROUPED_BY_DELTA", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto_GROUPED_BY_DELTA", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto_GROUPED_BY_DELTA")
+
+# Esto está programado para delta y no para pi.
+
+for (DATAFRAME in DATAFRAMES) 
+  {
+  POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+  DATAFRAME_filtered <- get(DATAFRAME) %>% 
+    drop_na(GROUP_DELTA_W) #%>% 
+    #dplyr::mutate(GROUP_DELTA_W=as.character(GROUP_DELTA_W)) %>% 
+
+results_watterson <- shapiro.test(DATAFRAME_filtered$ave_watterson.x[0:5000])
+a <- results_watterson$p.value
+write.csv(a,paste0(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_watterson_evaluated_normality_p_value.csv")) 
+
+results_pairwise <- shapiro.test(DATAFRAME_filtered$ave_pairwise.x[0:5000])
+b <- results_pairwise$p.value
+write.csv(b,paste0(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_pairwise_evaluated_normality_p_value.csv")) 
+
+results_skewness_SFS <- shapiro.test(DATAFRAME_filtered$skewness_SFS.x[0:5000])
+c <- results_skewness_SFS$p.value
+write.csv(c,paste0(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_skewness_evaluated_normality_p_value.csv")) 
+
+results_divergence <- shapiro.test(DATAFRAME_filtered$divergence_weighted[0:5000])
+d <- results_divergence$p.value
+write.csv(d,paste0(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_divergence_evaluated_normality_p_value.csv")) 
+
+results_recombination <- shapiro.test(DATAFRAME_filtered$recombination_weighted[0:5000])
+f <- results_recombination$p.value
+write.csv(f,paste0(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_recombination_evaluated_normality_p_value.csv")) 
+
+results_GC_content <- shapiro.test(DATAFRAME_filtered$GC_content_weighted[0:5000])
+g <- results_GC_content$p.value
+write.csv(g,paste0(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_GC_content_evaluated_normality_p_value.csv")) 
+
+results_rvis <- shapiro.test(DATAFRAME_filtered$rvis_score_weighted[0:5000])
+h <- results_rvis$p.value
+write.csv(h,paste0(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_rvis_evaluated_normality_p_value.csv")) 
+
+results_functional_sites_percentage <- shapiro.test(DATAFRAME_filtered$functional_sites_percentage_weighted[0:5000])
+i <- results_functional_sites_percentage$p.value
+write.csv(i,paste0(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_functional_sites_percentage_evaluated_normality_p_value.csv")) 
+
+results_tel2m_percentage <- shapiro.test(DATAFRAME_filtered$tel2m_percentage_weighted[0:5000])
+j <- results_tel2m_percentage$p.value
+write.csv(j,paste0(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_tel2m_percentage_evaluated_normality_p_value.csv")) 
+}
+```
+
+UMW test
+
+```{r}
+DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto_GROUPED_BY_DELTA", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto_GROUPED_BY_DELTA", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto_GROUPED_BY_DELTA")
+
+for (DATAFRAME in DATAFRAMES) 
+  {
+
+  POP1=get(DATAFRAME) %>% dplyr::select(pop.x) %>% dplyr::mutate(pop.x=as.character(pop.x)) %>% .[1,1] 
+  POP2=get(DATAFRAME) %>% dplyr::select(pop.y) %>% dplyr::mutate(pop.y=as.character(pop.y)) %>% .[1,1] 
+
+  DATAFRAME_filtered <- get(DATAFRAME) %>% 
+    drop_na(GROUP_DELTA_W) %>% 
+    filter (feature=="CDS" | feature=="Intergenic" | feature=="Intron") #%>% 
+    #dplyr::mutate(GROUP_DELTA_W=as.character(GROUP_DELTA_W)) %>% 
+
+DATAFRAME_filtered$feature <- droplevels(DATAFRAME_filtered$feature)
+
+####################################
+### Pi
+diversity.greater.PI <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(ave_pairwise.x ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)
+
+diversity.less.PI <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(ave_pairwise.x ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy)
+
+lista_results_PI_melted <- melt(list(diversity.greater.PI , diversity.less.PI)) %>%
+  dplyr::mutate(genomic_variable="Pairwise_diversity") %>%
+  spread(., variable, value)
+
+## Effect size
+effect_size_diversity_PI <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$ave_pairwise.x, g=x$GROUP_DELTA_W))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="ave_pairwise.x") %>%
+  dplyr::mutate (comparison=paste0(POP1,"-", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008-c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008-c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012-c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+
+####################################
+# Watterson
+diversity.greater.WAT <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(ave_watterson.x ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)
+diversity.less.WAT <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(ave_watterson.x ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy)
+
+lista_results_wat_melted <- melt(list(diversity.greater.WAT , diversity.less.WAT)) %>%
+  dplyr::mutate(genomic_variable="watterson") %>%
+  spread(., variable, value)
+
+## Effect size
+effect_size_diversity_WAT <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$ave_watterson.x, g=x$GROUP_DELTA_W))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="ave_watterson.x") %>%
+  dplyr::mutate (comparison=paste0(POP1,"-", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008-c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008-c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012-c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+
+####################################
+# # Skewness
+diversity.greater.SKEWNESS <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(skewness_SFS.x  ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)
+diversity.less.SKEWNESS <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(skewness_SFS.x  ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy)
+
+lista_results_SKEWNESS_melted <- melt(list(diversity.greater.SKEWNESS , diversity.less.SKEWNESS)) %>%
+  dplyr::mutate(genomic_variable="Skewness") %>%
+  spread(., variable, value)
+
+## Effect size
+effect_size_diversity_SKEWNESS <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$skewness_SFS.x , g=x$GROUP_DELTA_W))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="skewness_SFS.x ") %>%
+  dplyr::mutate (comparison=paste0(POP1,"-", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008-c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008-c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012-c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+
+
+####################################
+# Divergence:
+divergence.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(divergence_weighted ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)
+divergence.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(divergence_weighted ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy)
+
+
+lista_results_divergence_melted <- melt(list(divergence.greater , divergence.less)) %>%
+  dplyr::mutate(genomic_variable="divergence") %>%
+  spread(., variable, value)
+
+## Effect size
+effect_size_divergence <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$divergence_weighted, g=x$GROUP_DELTA_W))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="divergence_weighted") %>%
+  dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+
+####################################
+# Recombination
+recombination.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(recombination_weighted ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)
+recombination.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(recombination_weighted ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy)
+
+lista_results_recombination_melted <- melt(list(recombination.greater, recombination.less)) %>% mutate(genomic_variable="recombination") %>% spread(., variable, value)
+
+
+## Effect size
+effect_size_recombination_rate <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$recombination_weighted, g=x$GROUP_DELTA_W))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="recombination_rate_weighted") %>%
+  dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+
+
+####################################
+# GC content
+GC_content.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(GC_content_weighted ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)
+GC_content.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(GC_content_weighted ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy)
+
+lista_results_GC_content_melted <- melt(list(GC_content.greater, GC_content.less)) %>%
+  dplyr::mutate(genomic_variable="GC_content") %>%
+  spread(., variable, value)
+
+
+## Effect size
+effect_size_GC_content <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$GC_content_weighted, g=x$GROUP_DELTA_W))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="GC_content_weighted") %>%
+  dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+
+####################################
+# rvis_score
+DATAFRAME_filtered2 <- DATAFRAME_filtered %>% filter(feature=="CDS" | feature=="Intron")
+DATAFRAME_filtered2$feature <- droplevels(DATAFRAME_filtered2$feature)
+
+rvis.greater <- with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcox.test(rvis_score_weighted ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)
+rvis.less <- with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcox.test(rvis_score_weighted ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy)
+
+lista_results_rvis_melted <- melt(list(rvis.greater, rvis.less)) %>% mutate(genomic_variable="rvis_score") %>% spread(., variable, value)
+
+## Effect size
+effect_size_rvis_score <-with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcoxonR(x=x$rvis_score_weighted, g=x$GROUP_DELTA_W))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="rvis_score") %>%
+  dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+
+####################################
+# functional sites percentage
+DATAFRAME_filtered2 <- DATAFRAME_filtered %>% filter(feature=="CDS" | feature=="Intron")
+DATAFRAME_filtered2$feature <- droplevels(DATAFRAME_filtered2$feature)
+
+functional.greater <- with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcox.test(functional_sites_percentage_weighted ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)
+functional.less <- with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcox.test(functional_sites_percentage_weighted ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy)
+
+lista_results_functional_melted <- melt(list(functional.greater, functional.less)) %>% mutate(genomic_variable="functional_sites_percentage") %>% spread(., variable, value)
+
+## Effect size
+effect_size_functional_score <-with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcoxonR(x=x$functional_sites_percentage_weighted, g=x$GROUP_DELTA_W))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="functional_sites_percentage") %>%
+  dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+####################################
+# % bases telomeric 2Mb
+DATAFRAME_filtered2 <- DATAFRAME_filtered %>% filter(feature=="CDS" | feature=="Intron" | feature=="Intergenic")
+DATAFRAME_filtered2$feature <- droplevels(DATAFRAME_filtered2$feature)
+
+tel2Mb.greater <- with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcox.test(tel2m_percentage_weighted ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)
+tel2Mb.less <- with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcox.test(tel2m_percentage_weighted ~ GROUP_DELTA_W, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy)
+
+lista_results_tel2Mb_melted <- melt(list(tel2Mb.greater, tel2Mb.less)) %>% mutate(genomic_variable="percentage_tel2Mb_bases") %>% spread(., variable, value)
+
+## Effect size
+effect_size_tel2Mb_score <-with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcoxonR(x=x$tel2m_percentage_weighted, g=x$GROUP_DELTA_W))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="percentage_tel2Mb_bases") %>%
+  dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+
+
+
+####################################
+# Rbind results and write table
+
+### Test
+resultados_U_Man_Whitney <- rbind(lista_results_PI_melted, lista_results_wat_melted, lista_results_SKEWNESS_melted, lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_rvis_melted, lista_results_functional_melted, lista_results_tel2Mb_melted) %>% mutate (SIG=ifelse(p.value<0.0003, "SIGN", "no")) %>% mutate (comparison=paste0(POP1,"_", POP2)) %>% mutate (method="wilcox.test")
+#bonferoni estricto (p-value de referencia 0,05 / 156 test)
+
+write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_delta_vs_genomic_variables_features_UMW_test.txt",sep=""), row.names = F, quote=F, dec=",")
+
+### Effect size
+resultados_effect_size <- rbind (effect_size_diversity_PI, effect_size_diversity_WAT, effect_size_diversity_SKEWNESS, effect_size_divergence, effect_size_recombination_rate, effect_size_GC_content, effect_size_rvis_score, effect_size_functional_score, effect_size_tel2Mb_score)
+
+write.table(format(resultados_effect_size, digits=8, scientific=T), paste(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_delta_vs_genomic_variables_features_effect_size.txt",sep=""), row.names = F, quote=F, dec=",")
+
+
+rm(diversity.greater.PI, diversity.less.PI, diversity.greater.WAT, diversity.less.WAT, diversity.greater.SKEWNESS, diversity.less.SKEWNESS, divergence.greater, divergence.less, recombination.greater, recombination.less, GC_content.greater, GC_content.less, rvis.greater, rvis.less, functional.less, functional.greater, lista_results_PI_melted, lista_results_wat_melted, lista_results_SKEWNESS_melted, lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_rvis_melted, lista_results_functional_melted, lista_results_tel2Mb_melted, resultados_U_Man_Whitney)
+
+rm (effect_size_diversity_PI, effect_size_diversity_WAT, effect_size_diversity_SKEWNESS, effect_size_divergence, effect_size_recombination_rate, effect_size_GC_content, effect_size_rvis_score, effect_size_functional_score, effect_size_tel2Mb_score, resultados_effect_size)
+
+}
+
+
+```
+
+En mi local
+
+```{bash}
+RUTA=/Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/window_per_feature_1000_1000/delta_genomic_variables
+
+cat $RUTA/c_lp_sm_n012_c_lp_do_n012_delta_vs_genomic_variables_features_UMW_test.txt <(tail -n +2 $RUTA/c_ll_ki_n008_c_ll_po_n008_delta_vs_genomic_variables_features_UMW_test.txt) <(tail -n +2 $RUTA/c_ll_ki_n008_c_ll_no_n008_delta_vs_genomic_variables_features_UMW_test.txt) > $RUTA/all_pops_delta_vs_genomic_variables_features_UMW_test.txt
+
+cat $RUTA/c_lp_sm_n012_c_lp_do_n012_delta_vs_genomic_variables_features_effect_size.txt \
+<(tail -n +2 $RUTA/c_ll_ki_n008_c_ll_no_n008_delta_vs_genomic_variables_features_effect_size.txt) \
+<(tail -n +2 $RUTA/c_ll_ki_n008_c_ll_po_n008_delta_vs_genomic_variables_features_effect_size.txt) > $RUTA/all_pops_delta_vs_genomic_variables_features_effect_size.txt
+```
+
 
 # -> Create DF: Summary genomic variable vs Delta categories
 
@@ -1418,7 +1806,7 @@ comparison_pops_auto_GROUPED_BY_DELTA1 <- comparison_pops_auto_GROUPED_BY_DELTA 
 #  rename (., Initial_watterson_diversity=ave_watterson.x)
 
 comparison_pops_auto_GROUPED_BY_DELTA_W <- comparison_pops_auto_GROUPED_BY_DELTA1 %>% 
-  dplyr::select (GROUP_DELTA_W, ave_watterson.x, ave_pairwise.x, feature, comparison, skewness_SFS.x, divergence_weighted, recombination_weighted, GC_content_weighted, rvis_score_weighted, functional_sites_percentage_weighted) %>% 
+  dplyr::select (GROUP_DELTA_W, ave_watterson.x, ave_pairwise.x, feature, comparison, skewness_SFS.x, divergence_weighted, recombination_weighted, GC_content_weighted, rvis_score_weighted, functional_sites_percentage_weighted, tel2m_percentage_weighted) %>% 
   tidyr::gather (., key="genomic_variable", value="value", -GROUP_DELTA_W, -comparison, -feature )
 
 comparison_pops_auto_GROUPED_BY_DELTA_W_sum <- drop_na(comparison_pops_auto_GROUPED_BY_DELTA_W, GROUP_DELTA_W) %>% 
@@ -1440,22 +1828,25 @@ write.table(comparison_pops_auto_GROUPED_BY_DELTA_W_sum,paste0(wd_output, "df/co
 ruta_plot <- "plot_article/"
 
 ggplot(comparison_pops_auto_GROUPED_BY_DELTA_W_sum, 
-       aes (GROUP_DELTA_W, mean_value, color=GROUP_DELTA_W)) +
+       aes (GROUP_DELTA_W, mean_value, color=GROUP_DELTA_W, fill=GROUP_DELTA_W)) +
   facet_grid(genomic_variable~comparison+feature, 
              scales = "free")+
-  geom_point() +
+  geom_col() +
+  geom_errorbar(aes(ymin=mean_value, ymax=mean_value+se_mean_value), width=.2,
+                 position=position_dodge(.9)) + 
   theme_minimal() +
-  scale_fill_manual(values=c("red", "green")) +
-  scale_color_manual(values=c("red", "green")) +
-  theme (axis.text.x=element_text(angle = 45),
+  scale_fill_manual(values=c("cadetblue", "coral4")) +
+  scale_color_manual(values=c("cadetblue", "coral4")) +
+  theme (axis.text.x=element_text(angle=45),
          axis.ticks.x=element_blank(),
          axis.title.x = element_blank(), 
          #axis.title.y = element_blank(),
          axis.text.y = element_text(size=6),
          strip.placement = "outside", 
          strip.text.x = element_text(size = 6, angle = 45),
-         legend.position = "none") +
+         legend.position = "none")+
   ggsave(paste(wd_output,ruta_plot,"genomic_varible_vs_delta_binarize.pdf",sep=""), width = 90, height = 190, units ="mm")
+
 
 ```
 
@@ -1879,31 +2270,13 @@ DATAFRAME_filtered <- get(DATAFRAME) %>%
 
 
 DATAFRAME_filtered$feature <- droplevels(DATAFRAME_filtered$feature)
-# Diversity:
-#   if (DIVERSITY_MEASURE_CONSIDERED=="pairwise") 
-#         {
-#     
-# diversity.greater <- with(DATAFRAME_filtered,
-#        by(DATAFRAME_filtered, feature,
-#           function(x) wilcox.test(ave_pairwise.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)  
-# 
-# diversity.less <- with(DATAFRAME_filtered,
-#        by(DATAFRAME_filtered, feature,
-#           function(x) wilcox.test(ave_pairwise.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
-# }
 
   if (DIVERSITY_MEASURE_CONSIDERED=="watterson") 
         {
-# diversity.greater <- with(DATAFRAME_filtered,
-#        by(DATAFRAME_filtered, feature,
-#           function(x) wilcox.test(ave_watterson.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)  
-# 
-# diversity.less <- with(DATAFRAME_filtered,
-#        by(DATAFRAME_filtered, feature,
-#           function(x) wilcox.test(ave_watterson.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
 
+####################################
+# Pi
 # Definimos cuadrantes para watterson pero los evaluamos en función de pi. Es decir, iro si los cuadrantes que han perdido o ganado diversidad para watterson, están influidos por la pi inicial. 
-
 diversity.greater.PI <- with(DATAFRAME_filtered,
        by(DATAFRAME_filtered, feature,
           function(x) wilcox.test(ave_pairwise.x ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy)  
@@ -1925,6 +2298,11 @@ effect_size_diversity_PI <-with(DATAFRAME_filtered,
   dplyr::select (-comparison)
 
 
+lista_results_pi_melted <-melt(list(diversity.greater.PI , diversity.less.PI)) %>% 
+    mutate(genomic_variable="pairwise_evaluation_watterson_quadrants") %>% 
+    spread(., variable, value)
+
+####################################
 # Watterson
 diversity.greater.WAT <- with(DATAFRAME_filtered,
        by(DATAFRAME_filtered, feature,
@@ -1946,6 +2324,12 @@ effect_size_diversity_WAT <-with(DATAFRAME_filtered,
           ifelse (comparison == "c_lp_sm_n012-c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
   dplyr::select (-comparison)
 
+
+lista_results_watterson_melted <- melt (list (diversity.greater.WAT, diversity.less.WAT)) %>% 
+    mutate(genomic_variable="watterson_evaluation_watterson_quadrants") %>% 
+    spread(., variable, value)
+
+####################################
 # Skewness
 diversity.greater.SKEWNESS <- with(DATAFRAME_filtered,
        by(DATAFRAME_filtered, feature,
@@ -1967,49 +2351,183 @@ effect_size_diversity_SKEWNESS <-with(DATAFRAME_filtered,
           ifelse (comparison == "c_lp_sm_n012-c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
   dplyr::select (-comparison)
 
-
-div_p <-melt(list(diversity.greater.PI , diversity.less.PI)) %>% 
-    mutate(genomic_variable="pairwise_evaluation_watterson_quadrants") %>% 
-    spread(., variable, value)
-
-div_w<- melt (list (diversity.greater.WAT, diversity.less.WAT)) %>% 
-    mutate(genomic_variable="watterson_evaluation_watterson_quadrants") %>% 
-    spread(., variable, value)
-
-div_s<- melt (list (diversity.greater.SKEWNESS, diversity.less.SKEWNESS)) %>% 
+lista_results_skewness_melted <- melt (list (diversity.greater.SKEWNESS, diversity.less.SKEWNESS)) %>% 
     mutate(genomic_variable="skewness_watterson_quadrants") %>% 
     spread(., variable, value)
 
-lista_results <- rbind(as.data.frame(div_p), as.data.frame(div_w), as.data.frame(div_s)) %>% 
-  dplyr::mutate (SIG=ifelse(p.value<0.05, "SIGN", "no")) %>% 
-  dplyr::mutate (comparison=paste0(POP1,"-", POP2)) %>% 
-  dplyr::mutate (method="wilcox.test") %>% 
-  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008-c_ll_po_n008", "Kirov_Poland",
-          ifelse (comparison == "c_ll_ki_n008-c_ll_no_n008", "Kirov_Norway",
-          ifelse (comparison == "c_lp_sm_n012-c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+
+####################################
+# Divergence:
+divergence.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(divergence_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+divergence.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(divergence_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+
+lista_results_divergence_melted <- melt(list(divergence.greater , divergence.less)) %>%
+  dplyr::mutate(genomic_variable="divergence") %>% 
+  spread(., variable, value)
+
+## Effect size
+effect_size_divergence <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$divergence_weighted, g=x$evolution_category))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="divergence_weighted") %>%
+  dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+
+####################################
+# Recombination
+recombination.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(recombination_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+recombination.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(recombination_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+lista_results_recombination_melted <- melt(list(recombination.greater, recombination.less)) %>% mutate(genomic_variable="recombination") %>% spread(., variable, value)
+
+
+## Effect size
+effect_size_recombination_rate <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$recombination_weighted, g=x$evolution_category))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="recombination_rate_weighted") %>%
+  dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
   dplyr::select (-comparison)
 
 
-write.table(format(lista_results, digits=8, scientific=T), paste(wd_output,RUTA_CUADRANTES,"diversity_lost_UMW/",POP1,"_",POP2,"_features_UMW_test_diversity_evaluation_watterson_quadrants_HD.txt",sep=""), row.names = F, quote=F)
+####################################
+# GC content
+GC_content.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(GC_content_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+GC_content.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(GC_content_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+lista_results_GC_content_melted <- melt(list(GC_content.greater, GC_content.less)) %>% 
+  dplyr::mutate(genomic_variable="GC_content") %>% 
+  spread(., variable, value)
 
 
-resultados_effect_size <- rbind (effect_size_diversity_PI, effect_size_diversity_WAT, effect_size_diversity_SKEWNESS)
+## Effect size
+effect_size_GC_content <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$GC_content_weighted, g=x$evolution_category))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="GC_content_weighted") %>%
+  dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+
+####################################
+# rvis_score
+DATAFRAME_filtered2 <- DATAFRAME_filtered %>% filter(feature=="CDS" | feature=="Intron")
+DATAFRAME_filtered2$feature <- droplevels(DATAFRAME_filtered2$feature)
+
+rvis.greater <- with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcox.test(rvis_score_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+rvis.less <- with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcox.test(rvis_score_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+lista_results_rvis_melted <- melt(list(rvis.greater, rvis.less)) %>% mutate(genomic_variable="rvis_score") %>% spread(., variable, value)
+
+## Effect size
+effect_size_rvis_score <-with(DATAFRAME_filtered2,
+       by(DATAFRAME_filtered2, feature,
+          function(x) wilcoxonR(x=x$rvis_score_weighted, g=x$evolution_category))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="rvis_score") %>%
+  dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+
+####################################
+# functional sites percentage
+functional.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(functional_sites_percentage_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+functional.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(functional_sites_percentage_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+lista_results_functional_melted <- melt(list(functional.greater, functional.less)) %>% mutate(genomic_variable="functional_sites_percentage") %>% spread(., variable, value)
+
+## Effect size
+effect_size_functional_score <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$functional_sites_percentage_weighted, g=x$evolution_category))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="functional_sites_percentage") %>%
+  dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+####################################
+# % bases telomeric 2Mb
+tel2Mb.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(tel2m_percentage_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
+tel2Mb.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcox.test(tel2m_percentage_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
+
+lista_results_tel2Mb_melted <- melt(list(tel2Mb.greater, tel2Mb.less)) %>% mutate(genomic_variable="percentage_tel2Mb_bases") %>% spread(., variable, value)
+
+## Effect size
+effect_size_tel2Mb_score <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
+          function(x) wilcoxonR(x=x$tel2m_percentage_weighted, g=x$evolution_category))) %>%  
+  lapply(., tidy) %>% melt(list()) %>% mutate(variable="percentage_tel2Mb_bases") %>%
+  dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  dplyr::mutate (method="r") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+
+
+
+### Test
+resultados_U_Man_Whitney <- rbind(lista_results_pi_melted, lista_results_watterson_melted, lista_results_skewness_melted, lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_rvis_melted, lista_results_functional_melted, lista_results_tel2Mb_melted) %>% 
+  dplyr::mutate (SIG=ifelse(p.value<0.0003, "SIGN", "no")) %>% 
+  dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
+  dplyr::mutate (method="wilcox.test") %>% 
+  dplyr::mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+          ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+          ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  dplyr::select (-comparison)
+
+
+write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,RUTA_CUADRANTES,"diversity_lost_UMW/",POP1,"_",POP2,"_features_UMW_test_diversity_evaluation_watterson_quadrants_HD.txt",sep=""), row.names = F, quote=F)
+
+
+
+### Effect size
+resultados_effect_size <- rbind (effect_size_diversity_PI, effect_size_diversity_WAT, effect_size_diversity_SKEWNESS, effect_size_divergence, effect_size_recombination_rate, effect_size_GC_content, effect_size_rvis_score, effect_size_functional_score, effect_size_tel2Mb_score)
 
 write.table(format(resultados_effect_size, digits=8, scientific=T), paste(wd_output,RUTA_CUADRANTES,"diversity_lost_UMW/",POP1,"_",POP2,"_features_effect_size",DIVERSITY_MEASURE_CONSIDERED,"_",DIVERSITY_CATEGORY, ".txt",sep=""), row.names = F, quote=F, dec=",")
 
+rm(diversity.greater.PI, diversity.less.PI, diversity.greater.WAT, diversity.less.WAT, diversity.greater.SKEWNESS, diversity.less.SKEWNESS, divergence.greater, divergence.less, recombination.greater, recombination.less, GC_content.greater, GC_content.less, rvis.greater, rvis.less, functional.less, functional.greater, lista_results_pi_melted, lista_results_watterson_melted, lista_results_skewness_melted, lista_results_divergence_melted,  lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_functional_melted, lista_results_rvis_melted, resultados_U_Man_Whitney, effect_size_diversity_PI, effect_size_diversity_WAT, effect_size_diversity_SKEWNESS, effect_size_divergence, effect_size_recombination_rate, effect_size_GC_content, effect_size_rvis_score, effect_size_functional_score, effect_size_tel2Mb_score, lista_results_tel2Mb_melted)
 
-# lista_results_diversity_melted <- melt(list(diversity.greater , diversity.less)) %>% mutate(genomic_variable=DIVERSITY_MEASURE_CONSIDERED) %>% spread(., variable, value) %>% 
-#   mutate (SIG=ifelse(p.value<0.05, "SIGN", "no")) %>% 
-#   mutate (comparison=paste0(POP1,"_", POP2)) %>% 
-#   mutate (method="wilcox.test") %>% 
-#   mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
-#           ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
-#           ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
-#   select (-comparison)
-# 
-# write.table(format(lista_results_diversity_melted, digits=8, scientific=T), paste(wd_output,ruta_UMW_test_diversity,POP1,"_",POP2,"_features_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,"_HD.txt",sep=""), row.names = F, quote=F)
-# 
-# rm(diversity.greater, diversity.less, lista_results_diversity_melted)
 
   }
 }
@@ -2174,21 +2692,18 @@ effect_size_rvis_score <-with(DATAFRAME_filtered2,
 
 ####################################
 # functional sites percentage
-DATAFRAME_filtered2 <- DATAFRAME_filtered %>% filter(feature=="CDS" | feature=="Intron")
-DATAFRAME_filtered2$feature <- droplevels(DATAFRAME_filtered2$feature)
-
-functional.greater <- with(DATAFRAME_filtered2,
-       by(DATAFRAME_filtered2, feature,
+functional.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
           function(x) wilcox.test(functional_sites_percentage_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
-functional.less <- with(DATAFRAME_filtered2,
-       by(DATAFRAME_filtered2, feature,
+functional.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
           function(x) wilcox.test(functional_sites_percentage_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
 
 lista_results_functional_melted <- melt(list(functional.greater, functional.less)) %>% mutate(genomic_variable="functional_sites_percentage") %>% spread(., variable, value)
 
 ## Effect size
-effect_size_functional_score <-with(DATAFRAME_filtered2,
-       by(DATAFRAME_filtered2, feature,
+effect_size_functional_score <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
           function(x) wilcoxonR(x=x$functional_sites_percentage_weighted, g=x$evolution_category))) %>%  
   lapply(., tidy) %>% melt(list()) %>% mutate(variable="functional_sites_percentage") %>%
   dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
@@ -2199,21 +2714,18 @@ effect_size_functional_score <-with(DATAFRAME_filtered2,
   dplyr::select (-comparison)
 ####################################
 # % bases telomeric 2Mb
-DATAFRAME_filtered2 <- DATAFRAME_filtered %>% filter(feature=="CDS" | feature=="Intron" | feature=="Intergenic")
-DATAFRAME_filtered2$feature <- droplevels(DATAFRAME_filtered2$feature)
-
-tel2Mb.greater <- with(DATAFRAME_filtered2,
-       by(DATAFRAME_filtered2, feature,
+tel2Mb.greater <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
           function(x) wilcox.test(tel2m_percentage_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "greater"))) %>% lapply(., tidy) 
-tel2Mb.less <- with(DATAFRAME_filtered2,
-       by(DATAFRAME_filtered2, feature,
+tel2Mb.less <- with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
           function(x) wilcox.test(tel2m_percentage_weighted ~ evolution_category, data = x, conf.int = TRUE, alternative = "less"))) %>% lapply(., tidy) 
 
 lista_results_tel2Mb_melted <- melt(list(tel2Mb.greater, tel2Mb.less)) %>% mutate(genomic_variable="percentage_tel2Mb_bases") %>% spread(., variable, value)
 
 ## Effect size
-effect_size_tel2Mb_score <-with(DATAFRAME_filtered2,
-       by(DATAFRAME_filtered2, feature,
+effect_size_tel2Mb_score <-with(DATAFRAME_filtered,
+       by(DATAFRAME_filtered, feature,
           function(x) wilcoxonR(x=x$tel2m_percentage_weighted, g=x$evolution_category))) %>%  
   lapply(., tidy) %>% melt(list()) %>% mutate(variable="percentage_tel2Mb_bases") %>%
   dplyr::mutate (comparison=paste0(POP1,"_", POP2)) %>% 
@@ -2229,7 +2741,7 @@ effect_size_tel2Mb_score <-with(DATAFRAME_filtered2,
 # Rbind results and write table
 
 ### Test
-resultados_U_Man_Whitney <- rbind(lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_rvis_melted, lista_results_functional_melted, lista_results_tel2Mb_melted) %>% mutate (SIG=ifelse(p.value<0.05, "SIGN", "no")) %>% mutate (comparison=paste0(POP1,"_", POP2)) %>% mutate (method="wilcox.test")
+resultados_U_Man_Whitney <- rbind(lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_rvis_melted, lista_results_functional_melted, lista_results_tel2Mb_melted) %>% mutate (SIG=ifelse(p.value<0.0005, "SIGN", "no")) %>% mutate (comparison=paste0(POP1,"_", POP2)) %>% mutate (method="wilcox.test")
 
 write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,RUTA_CUADRANTES,ruta_UMW_test,POP1,"_",POP2,"_features_UMW_test_",DIVERSITY_MEASURE_CONSIDERED,"_",DIVERSITY_CATEGORY, ".txt",sep=""), row.names = F, quote=F, dec=",")
 
@@ -2273,7 +2785,7 @@ all_pops$feature <- droplevels(all_pops$feature)
 all_pops_filtered_HD <- all_pops %>% 
   dplyr::filter(diversity_category=="HD_watterson")  %>% 
   dplyr::filter (type_chr=="autosomes") %>% 
-  dplyr::select ("comparison","ave_pairwise.x", "ave_watterson.x", "skewness_SFS.x","evolution_category", "feature") %>% 
+  dplyr::select ("comparison","ave_pairwise.x", "ave_watterson.x", "skewness_SFS.x","evolution_category", "feature", "divergence_weighted", "recombination_weighted", "GC_content_weighted", "rvis_score_weighted", "functional_sites_percentage_weighted","feature", "evolution_category", "tel2m_percentage_weighted") %>% 
   dplyr::mutate (feature2=ifelse(feature=="Intergenic", "Intrg", as.character(feature))) %>% 
   dplyr::mutate (comparison2=ifelse (comparison =="c_ll_ki_n008-c_ll_po_n008", "KIR-POL", 
                       ifelse (comparison =="c_ll_ki_n008-c_ll_no_n008", "KIR-NOR","AND-DON"))) %>% 
@@ -2362,8 +2874,8 @@ ggplot(all_pops_filtered_HD_gather_sum,
          axis.text.y = element_text(size=6),
          strip.placement = "outside", 
          strip.text.x = element_text(size = 6, angle = 45),
-         legend.position = "none")+
-  ggsave(paste(wd_output,ruta_plot,"genomic_varible_vs_HD.pdf",sep=""), width = 90, height = 100, units ="mm")
+         legend.position = "none") +
+  ggsave(paste(wd_output,ruta_plot,"genomic_varible_vs_HD.pdf",sep=""), width = 90, height = 190, units ="mm")
 
 
 ggplot(all_pops_filtered_LD_gather_sum, 
