@@ -1781,22 +1781,27 @@ lynx_pardinus_feature <- ratio_x_a_per_pop_per_feature %>%
 ratio_ratio_per_feature <-rbind (lynx_lynx_feature, lynx_pardinus_feature)
 
 ratio_ratio_per_feature$comparison <- factor (ratio_ratio_per_feature$comparison, levels=c("NE_Poland_Kirov", "Norway_Kirov", "Donana_Andujar"))
-
+ratio_ratio_per_feature$feature <- factor (ratio_ratio_per_feature$feature, levels=c("Intergenic", "Intron", "CDS"))
 
 write.table(ratio_ratio_per_feature, paste0(wd_output, "ratio_ratio_per_pop_per_feature.txt"), quote = F, row.names = F)
 
 ```
 
-## * Plot Rati X/A
+## * Plot Ratio X/A
 
 ```{r}
-ggplot(data=ratio_ratio_per_feature, aes(comparison, ratioB_ratioNB_watterson , fill=feature, color=feature))+
-  geom_point()
-ggsave (paste(wd_output,"ratio_ratio_NB_B_watterson.pdf", sep=""), width = 80, height = 40, units = "mm")
+ggplot(data=ratio_ratio_per_feature, aes(feature, ratioB_ratioNB_watterson , group=comparison, fill=comparison, color=comparison))+
+  geom_point() +
+  geom_line()+
+  theme(legend.position = "bottom") +
+  ggsave (paste(wd_output,"ratio_ratio_NB_B_watterson.pdf", sep=""), width = 80, height = 80, units = "mm")
 
-ggplot(data=ratio_ratio_per_feature, aes(comparison, ratioB_ratioNB_pairwise , fill=feature, color=feature))+
-  geom_point()
-ggsave (paste(wd_output,"ratio_ratio_NB_B_pairwise.pdf", sep=""), width = 80, height = 40, units = "mm")
+ggplot(data=ratio_ratio_per_feature, aes(feature, ratioB_ratioNB_pairwise, group=comparison, fill=comparison, color=comparison))+
+  geom_point() +
+  geom_line()+
+  theme(legend.position = "bottom") +
+  ggsave (paste(wd_output,"ratio_ratio_NB_B_pairwise.pdf", sep=""), width = 80, height = 80, units = "mm")
+
 ```
 
 ## *Comparison NB & B
@@ -2051,7 +2056,6 @@ predict2p <- as_tibble(cbind(names = names(predict1w), t(predict1w)), validate =
 
 predict2p$predictor <- as.numeric(predict2w$predictor)
 
-
     tableR2sW[[i]] <- r2sw # add it to your list
     tableR2sP[[i]] <- r2sp # add it to your list
     tablepredictW[[i]] <- predict2w # add it to your list
@@ -2077,8 +2081,14 @@ group_by(index, region) %>%
 # Order factor
 all_popsr2N$comparison <- factor (all_popsr2N$comparison, levels=c("Kirov-NE_Poland", "Kirov-Norway", "Andujar-Donana" ))
 all_popsr2N$region <- factor (all_popsr2N$region , levels=c("Telomere_2m", "Interstitial", "Centromere"))
+all_popsr2$comparison <- factor (all_popsr2$comparison, levels=c("Kirov-NE_Poland", "Kirov-Norway", "Andujar-Donana" ))
+all_popsr2$region <- factor (all_popsr2$region , levels=c("Telomere_2m", "Interstitial", "Centromere"))
+
 all_popspredictN$comparison <- factor (all_popspredictN$comparison, levels=c("Kirov-NE_Poland", "Kirov-Norway", "Andujar-Donana" ))
 all_popspredictN$region <- factor (all_popspredictN$region , levels=c("Telomere_2m", "Interstitial", "Centromere"))
+all_popspredict$comparison <- factor (all_popspredict$comparison, levels=c("Kirov-NE_Poland", "Kirov-Norway", "Andujar-Donana" ))
+all_popspredict$region <- factor (all_popspredict$region , levels=c("Telomere_2m", "Interstitial", "Centromere"))
+
 
 # Plot
 ggplot(data = data.frame(all_popsr2N), aes(x = comparison, y = region, fill= r.squaredN)) + 
@@ -2087,7 +2097,15 @@ ggplot(data = data.frame(all_popsr2N), aes(x = comparison, y = region, fill= r.s
   scale_fill_gradient(low = "white", high = "dodgerblue4")+
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   theme_minimal() +
-ggsave(paste(wd_output, "all_popsr2N_heatmap_regions_comparisons.pdf", sep=""), width = 160, height = 160, units = "mm")
+ggsave(paste(wd_output, "all_popsr2N_heatmap_regions_comparisons_normalized_across_regions.pdf", sep=""), width = 160, height = 160, units = "mm")
+
+ggplot(data = data.frame(all_popsr2), aes(x = comparison, y = region, fill= r.squared)) + 
+  geom_tile() +
+  facet_wrap(~index) +
+  scale_fill_gradient(low = "white", high = "dodgerblue4")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  theme_minimal() +
+ggsave(paste(wd_output, "all_popsr2_heatmap_regions_comparisons_non_normalized.pdf", sep=""), width = 160, height = 160, units = "mm")
 
 
 ggplot(data = data.frame(all_popspredictN), aes(x = comparison, y = region, fill= predictorN)) + 
@@ -2097,7 +2115,17 @@ ggplot(data = data.frame(all_popspredictN), aes(x = comparison, y = region, fill
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   theme_minimal() +
  # geom_text(aes(label=formatC(predictor, format = "e", digits = 2),angle=45))
-ggsave(paste(wd_output, "all_popspredictN_heatmap_regions_comparisons.pdf", sep=""), width = 160, height = 160, units = "mm")
+ggsave(paste(wd_output, "all_popspredictN_heatmap_regions_comparisons_normalized_across_regions.pdf", sep=""), width = 160, height = 160, units = "mm")
+
+ggplot(data = data.frame(all_popspredict), aes(x = comparison, y = region, fill= predictor)) + 
+  geom_tile() +
+  facet_wrap(~index) +
+  scale_fill_gradient(low = "white", high = "dodgerblue4")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  theme_minimal() +
+ # geom_text(aes(label=formatC(predictor, format = "e", digits = 2),angle=45))
+ggsave(paste(wd_output, "all_popspredict_heatmap_regions_comparisons_non_normalized.pdf", sep=""), width = 160, height = 160, units = "mm")
+
 
 ```
 
