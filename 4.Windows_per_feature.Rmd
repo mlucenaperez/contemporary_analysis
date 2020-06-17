@@ -1389,14 +1389,11 @@ for (DATAFRAME in DATAFRAMES)
   group_df <- get(DATAFRAME) %>% 
   dplyr::filter (feature=="CDS" | feature=="Intron" | feature=="Intergenic") %>% 
   dplyr::mutate(GROUP_DELTA_W = 
-         ifelse (delta_watterson_corrected > 0.1, "B_gain", 
-         ifelse (delta_watterson_corrected < -0.1, "B_loss", NA))) %>% 
+         ifelse (delta_watterson_corrected > 0.1, "B_watterson_gain", "rest_of_distribution")) %>% 
   dplyr::mutate(GROUP_DELTA_P =
-         ifelse (delta_pairwise_corrected > 0.1, "B_gain", 
-         ifelse (delta_pairwise_corrected < -0.1, "B_loss", NA))) %>% 
+         ifelse (delta_pairwise_corrected > 0.1, "B_pairwise_gain", "rest_of_distribution")) %>% 
   dplyr::mutate(GROUP_DELTA_D=
-         ifelse (delta_w_delta_p > 0.1, "B_gain", 
-         ifelse (delta_w_delta_p < -0.1, "B_loss", NA))) %>% 
+         ifelse (delta_w_delta_p > 0.1, "B_deltaD_gain", "rest_of_distribution")) %>% 
   dplyr::mutate (log10_watterson.x=log10(ave_watterson.x)) %>% 
   dplyr::mutate (log10_pairwise.x=log10(ave_pairwise.x))
       assign(paste0(DATAFRAME, "_GROUPED_BY_DELTA"), group_df) 
@@ -1761,12 +1758,12 @@ effect_size_tel2Mb_score <-with(DATAFRAME_filtered2,
 resultados_U_Man_Whitney <- rbind(lista_results_PI_melted, lista_results_wat_melted, lista_results_SKEWNESS_melted, lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_rvis_melted, lista_results_functional_melted, lista_results_tel2Mb_melted) %>% mutate (SIG=ifelse(p.value<0.0003, "SIGN", "no")) %>% mutate (comparison=paste0(POP1,"_", POP2)) %>% mutate (method="wilcox.test")
 #bonferoni estricto (p-value de referencia 0,05 / 156 test)
 
-write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_delta_vs_genomic_variables_features_UMW_test.txt",sep=""), row.names = F, quote=F, dec=",")
+write.table(format(resultados_U_Man_Whitney, digits=8, scientific=T), paste(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_delta_vs_genomic_variables_features_UMW_test_gain_vs_rest_of_the_distribution.txt",sep=""), row.names = F, quote=F, dec=",")
 
 ### Effect size
 resultados_effect_size <- rbind (effect_size_diversity_PI, effect_size_diversity_WAT, effect_size_diversity_SKEWNESS, effect_size_divergence, effect_size_recombination_rate, effect_size_GC_content, effect_size_rvis_score, effect_size_functional_score, effect_size_tel2Mb_score)
 
-write.table(format(resultados_effect_size, digits=8, scientific=T), paste(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_delta_vs_genomic_variables_features_effect_size.txt",sep=""), row.names = F, quote=F, dec=",")
+write.table(format(resultados_effect_size, digits=8, scientific=T), paste(wd_output,"delta_genomic_variables/",POP1,"_",POP2,"_delta_vs_genomic_variables_features_effect_size_gain_vs_rest_of_the_distribution.txt",sep=""), row.names = F, quote=F, dec=",")
 
 
 rm(diversity.greater.PI, diversity.less.PI, diversity.greater.WAT, diversity.less.WAT, diversity.greater.SKEWNESS, diversity.less.SKEWNESS, divergence.greater, divergence.less, recombination.greater, recombination.less, GC_content.greater, GC_content.less, rvis.greater, rvis.less, functional.less, functional.greater, lista_results_PI_melted, lista_results_wat_melted, lista_results_SKEWNESS_melted, lista_results_divergence_melted, lista_results_recombination_melted, lista_results_GC_content_melted, lista_results_rvis_melted, lista_results_functional_melted, lista_results_tel2Mb_melted, resultados_U_Man_Whitney)
@@ -1788,6 +1785,15 @@ cat $RUTA/c_lp_sm_n012_c_lp_do_n012_delta_vs_genomic_variables_features_UMW_test
 cat $RUTA/c_lp_sm_n012_c_lp_do_n012_delta_vs_genomic_variables_features_effect_size.txt \
 <(tail -n +2 $RUTA/c_ll_ki_n008_c_ll_no_n008_delta_vs_genomic_variables_features_effect_size.txt) \
 <(tail -n +2 $RUTA/c_ll_ki_n008_c_ll_po_n008_delta_vs_genomic_variables_features_effect_size.txt) > $RUTA/all_pops_delta_vs_genomic_variables_features_effect_size.txt
+
+cat $RUTA/c_lp_sm_n012_c_lp_do_n012_delta_vs_genomic_variables_features_UMW_test_gain_vs_rest_of_the_distribution.txt <(tail -n +2 $RUTA/c_ll_ki_n008_c_ll_po_n008_delta_vs_genomic_variables_features_UMW_test_gain_vs_rest_of_the_distribution.txt ) <(tail -n +2 $RUTA/c_ll_ki_n008_c_ll_no_n008_delta_vs_genomic_variables_features_UMW_test_gain_vs_rest_of_the_distribution.txt) > $RUTA/all_pops_delta_vs_genomic_variables_features_UMW_test_gain_vs_rest_of_the_distribution.txt
+
+
+cat $RUTA/c_lp_sm_n012_c_lp_do_n012_delta_vs_genomic_variables_features_effect_size_gain_vs_rest_of_the_distribution.txt \
+<(tail -n +2 $RUTA/c_ll_ki_n008_c_ll_no_n008_delta_vs_genomic_variables_features_effect_size_gain_vs_rest_of_the_distribution.txt) \
+<(tail -n +2 $RUTA/c_ll_ki_n008_c_ll_po_n008_delta_vs_genomic_variables_features_effect_size_gain_vs_rest_of_the_distribution.txt) > $RUTA/all_pops_delta_vs_genomic_variables_features_effect_size_gain_vs_rest_of_the_distribution.txt
+
+
 ```
 
 
@@ -1818,7 +1824,7 @@ comparison_pops_auto_GROUPED_BY_DELTA_W_sum <- drop_na(comparison_pops_auto_GROU
 comparison_pops_auto_GROUPED_BY_DELTA_W_sum$feature <-  factor (comparison_pops_auto_GROUPED_BY_DELTA_W_sum$feature, levels=c("Intrg", "Intron", "CDS"))
 comparison_pops_auto_GROUPED_BY_DELTA_W_sum$comparison <-  factor (comparison_pops_auto_GROUPED_BY_DELTA_W_sum$comparison, levels=c("KIR-POL", "KIR-NOR", "AND-DON"))
 
-write.table(comparison_pops_auto_GROUPED_BY_DELTA_W_sum,paste0(wd_output, "df/comparison_pops_auto_GROUPED_BY_DELTA_W_summary.csv"), row.names = F, quote = F, sep=";", dec=",")
+write.table(comparison_pops_auto_GROUPED_BY_DELTA_W_sum,paste0(wd_output, "df/comparison_pops_auto_GROUPED_BY_DELTA_W_summary_gain_vs_rest_distribution.csv"), row.names = F, quote = F, sep=";", dec=",")
 
 ```
 
@@ -1845,7 +1851,7 @@ ggplot(comparison_pops_auto_GROUPED_BY_DELTA_W_sum,
          strip.placement = "outside", 
          strip.text.x = element_text(size = 6, angle = 45),
          legend.position = "none")+
-  ggsave(paste(wd_output,ruta_plot,"genomic_varible_vs_delta_binarize.pdf",sep=""), width = 90, height = 190, units ="mm")
+  ggsave(paste(wd_output,ruta_plot,"genomic_varible_vs_delta_binarize_gain_vs_rest_distribution.pdf",sep=""), width = 90, height = 190, units ="mm")
 
 
 ```
