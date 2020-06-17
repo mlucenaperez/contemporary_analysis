@@ -1,5 +1,5 @@
 ---
-title: '*genic_content'
+title: '*functional_sites_percentage'
 output: html_document
 ---
 
