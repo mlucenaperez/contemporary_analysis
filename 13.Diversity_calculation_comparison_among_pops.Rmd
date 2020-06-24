@@ -635,7 +635,7 @@ stats_all_pops_region$comparison <- factor (stats_all_pops_region$comparison, le
 ## ----------
 # A) Empirical data
 
-
+Toda esta parte ya se hace con ventanas, así que no se corre. 
 ## *Dataset categories prep
 ```{r}
 DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
@@ -709,11 +709,7 @@ c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson$feature  <- f
 c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson$feature  <- factor (c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
 
 ```
-
 # Statistical analysis
-
-
-
 Empleo el wilcox.test (por defecto tiene paired=F). Es un test para medidas no parametricas para comparación de rank. 
 
 Explicacion: https://en.wikipedia.org/wiki/Mann–Whitney_U_test
@@ -752,12 +748,8 @@ According to help(wilcox.test), if the samples contain less than 50 values (as i
 stat_compare_means has a method.args argument but it doesn't seem to pass the exact = TRUE specification correctly. Instead you can compute the p-value exactly how you want it first and then add it to the plot
 Por tanto, los p-values son una aproximacion normal (In one case the p-value is exact and in the other it is a normal approximation.)
 
-
-
 ### U-MW and effect size diversity lost (HD)
-
 First we test for normality. I already did that, no need to do it again. 
-
 ```{r}
 
 DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_pairwise", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_pairwise", "c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson")
@@ -807,10 +799,7 @@ write.csv(b,paste0(wd_output, "diversity_lost_UMW/",POP1,"_",POP2,"_",DIVERSITY_
 
 
 ```
-
 UMW test
-
-
 ```{r}
 
 ruta_UMW_test_diversity <- "diversity_lost_UMW/"
@@ -958,10 +947,7 @@ write.table(format(resultados_effect_size, digits=8, scientific=T), paste(wd_out
 
 
 ```
-
 En mi local
-
-
 ```{bash}
 # cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_no_n008_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_po_n008_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt ) <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_lp_sm_n019_c_lp_do_n012_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt )  > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/all_pops_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt 
 
@@ -972,10 +958,7 @@ cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comp
 cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_lp_sm_n019_c_lp_do_n012_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_no_n008_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt) <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/c_ll_ki_n013_c_ll_po_n008_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt) > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/diversity_lost_UMW/all_pops_features_UMW_test_pairwise_evaluation_watterson_quadrants_HD.txt
 
 ```
-
-
 ### U-MW test and effect size evolutionary category vs genomic variables
-
 Aquí sí hago el test de U-MW por categoría y feature. 
 ```{r}
 ruta_UMW_test <- "genomic_variable_diversity_category_UMT_boxplot_mean/"
@@ -1150,20 +1133,14 @@ rm(divergence.greater, divergence.less, recombination.greater, recombination.les
 }
 
 ```
-
 En mi local hago lo siguiente:
-
 ```{bash}
 cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/c_lp_sm_n019_c_lp_do_n012_features_UMW_test_watterson_LD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/c_ll_ki_n013_c_ll_po_n008_features_UMW_test_watterson_LD.txt ) <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/c_ll_ki_n013_c_ll_no_n008_features_UMW_test_watterson_LD.txt )  > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/all_comparisons_features_UMW_test_watterson_LD.txt 
 
 
 cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/c_lp_sm_n019_c_lp_do_n012_features_effect_sizewatterson_LD.txt <(tail -n +2 /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/c_ll_ki_n013_c_ll_no_n008_features_effect_sizewatterson_LD.txt ) <(tail -n +2  /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/c_ll_ki_n013_c_ll_po_n008_features_effect_sizewatterson_LD.txt ) > /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comparison/genomic_variable_diversity_category_UMT_boxplot_mean/all_pops_features_effect_sizewatterson_LD.txt
 ```
-
-
-
 ### *Boxplot & mean categories vs. genomic category
-
 ```{r}
 ruta_UMW_test <- "genomic_variable_diversity_category_UMT_boxplot_mean/"
 
@@ -1281,7 +1258,6 @@ for (DATAFRAME in DATAFRAMES)
 
 ```
 ### *Mean article 
-
 ```{r}
 ruta_plot <- "plot_article/"
 
@@ -1428,9 +1404,7 @@ ggplot(all_pops_filtered_LD_gather, aes(evolution_category,value, colour=evoluti
          legend.position = "none") +
   ggsave(paste(wd_output,ruta_plot,"all_pops_LD_all_variables_median_se_features_.pdf",sep=""), width = 80, height = 185, units ="mm")
 ```
-
 ### *Plot diversity comparison
-
 ```{r}
 # Plot de diversidad de una población frente a otra, con el corte de los valores más bajos en el density plot para ambos casos, y graficamente ploteados esos cortes.
 DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity")
@@ -1502,10 +1476,7 @@ for (DATAFRAME in DATAFRAMES)
 }
 
 ```
-
-
 ## *Schematic div 1 vs div 2
-
 ```{r}
 DATAFRAME="c_lp_sm_n019_diversity_c_lp_do_n012_diversity"
 
@@ -1524,11 +1495,7 @@ p3 <- ggExtra::ggMarginal(p1, type = "histogram")
 ggsave (paste0(wd_output,"schematic_pop1div_vs_pop2div_densi.pdf"), p2, width = 7, height = 7, device = "pdf")
 ggsave (paste0(wd_output,"schematic_pop1div_vs_pop2div_hist.pdf"), p3, width = 7, height = 7, device = "pdf")
 ```
-
-
-
 ### *Sanity: Genomic variables against informative sites.
-
 Para ver si como pasa con la diversidad, el cambio en cualquiera de las variables genómicas está mediado por el tamaño de la unidad. 
 ```{r}
 DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson" )
@@ -1553,9 +1520,7 @@ ggsave (paste(wd_output,ruta_UMW_test,POP1,"_",POP2,"_",GENOMIC_VARIABLE,"_vs_in
 ```
 
 ### Contingency tables LD
-
 #### Low recombination & region
-
 Tengo que calcular cuantas unidades relativas al total teng con recombination menos que 0.5 en ND-ND y en ND-D. 
 ```{r}
 DATAFRAMES=c("c_ll_ki_n013_diversity_c_ll_no_n008_diversity_categories_watterson", "c_ll_ki_n013_diversity_c_ll_po_n008_diversity_categories_watterson", "c_lp_sm_n019_diversity_c_lp_do_n012_diversity_categories_watterson" )
@@ -1666,7 +1631,6 @@ cat /Users/marialucenaperez/Owncloud/publico/PhD/WG_diversity/ANGSD/sfs/pop_comp
 
 
 ### *Recombination per feature
-
 ```{r}
 library(reshape2)
 dat.m <- melt(c_ll_ki_n013_diversity_c_ll_no_n008_diversity,id.vars='unique_id', measure.vars=c('Freq','Freq.1','Freq.2'))
@@ -1674,7 +1638,6 @@ library(ggplot2)
 p <- ggplot(dat.m) +
       geom_boxplot(aes(x=ID, y=value, color=variable))
 ```
-
 
 ## ----------
 
@@ -1910,6 +1873,7 @@ ggplot (stats_all_pops_feature %>% filter(type_chr=="chrX"),
 
 DIVERSITY_MEASURES=c( "wmean_pairwise_ave", "wmean_watterson_ave")
 
+
   for (DIVERSITY_MEASURE in DIVERSITY_MEASURES)
 {
 # Region and chr 
@@ -1999,7 +1963,7 @@ data_pairwise_per_region_per_pop <- data_pairwise %>%
 # R squared 
 r2sw <- data_watterson_per_region_per_pop %>% 
     dplyr::select(-wmean_watterson_ave.x) %>%  # exclude outcome, leave only predictors 
-    purrr::map(~lm(data_watterson_per_region_per_pop$wmean_watterson_ave.x ~ wmean_watterson_ave.y, data = data_watterson_per_region_per_pop)) %>% 
+    purrr::map(~lm(data_watterson_per_region_per_pop$wmean_watterson_ave.y ~ wmean_watterson_ave.x, data = data_watterson_per_region_per_pop)) %>% 
     purrr::map(summary) %>% 
     purrr::map_dbl("r.squared") %>% 
     tidy %>% 
@@ -2011,7 +1975,7 @@ r2sw <- data_watterson_per_region_per_pop %>%
   
  r2sp <- data_pairwise_per_region_per_pop %>% 
     dplyr::select(-wmean_pairwise_ave.x) %>%  # exclude outcome, leave only predictors 
-    purrr::map(~lm(data_pairwise_per_region_per_pop$wmean_pairwise_ave.x ~ wmean_pairwise_ave.y, data = data_pairwise_per_region_per_pop)) %>% 
+    purrr::map(~lm(data_pairwise_per_region_per_pop$wmean_pairwise_ave.y ~ wmean_pairwise_ave.x, data = data_pairwise_per_region_per_pop)) %>% 
     purrr::map(summary) %>% 
     purrr::map_dbl("r.squared") %>% 
     tidy %>% 
@@ -2024,7 +1988,7 @@ r2sw <- data_watterson_per_region_per_pop %>%
 # Predictor
 predict1w <- data_watterson_per_region_per_pop %>% 
   dplyr::select(-wmean_watterson_ave.x) %>%  # exclude outcome, leave only predictors 
-  purrr::map(~lm(data_watterson_per_region_per_pop$wmean_watterson_ave.x ~ wmean_watterson_ave.y, data = data_watterson_per_region_per_pop)) %>% 
+  purrr::map(~lm(data_watterson_per_region_per_pop$wmean_watterson_ave.y ~ wmean_watterson_ave.x, data = data_watterson_per_region_per_pop)) %>% 
   purrr::map(summary) %>% 
   purrr::map(broom::tidy) %>% 
   purrr::map_df("estimate")  %>% 
@@ -2041,7 +2005,7 @@ predict2w$predictor <- as.numeric(predict2w$predictor)
 
 predict1p <- data_pairwise_per_region_per_pop %>% 
   dplyr::select(-wmean_pairwise_ave.x) %>%  # exclude outcome, leave only predictors 
-  purrr::map(~lm(data_pairwise_per_region_per_pop$wmean_pairwise_ave.x ~ wmean_pairwise_ave.y, data = data_pairwise_per_region_per_pop)) %>% 
+  purrr::map(~lm(data_pairwise_per_region_per_pop$wmean_pairwise_ave.y ~ wmean_pairwise_ave.x, data = data_pairwise_per_region_per_pop)) %>% 
   purrr::map(summary) %>% 
   purrr::map(broom::tidy) %>% 
   purrr::map_df("estimate")  %>% 
@@ -2131,7 +2095,7 @@ ggsave(paste(wd_output, "all_popspredict_heatmap_regions_comparisons_non_normali
 
 
 ### Recombination
-
+No lo corro.
 ```{r}
 ggplot() + 
   geom_point (data=subset(stats_all_pops_recomb %>% filter (type_chr=="autosomes"), !is.na(recomb)), 
@@ -2174,8 +2138,6 @@ ggplot() +
 
 ```
 
-
-
 #----------------------------------------
 # Global
 ### Summary stats 
@@ -2183,6 +2145,7 @@ ggplot() +
 Como queremos hacerlo relativo al tamaño de cada unidad primero tengo que calcular la tabla con los estadísticos (mean and stdev basado en bootstrapping), y despues plotearla. No puedo hacer las dos cosas en un mismo plot de R como hacía antes usando stat_summary (mean_cl_boot).
 
 ### Stats
+No lo corro
 
 ```{r}
   
@@ -2277,6 +2240,7 @@ mean <- get(DATAFRAME) %>%
 
 
 ##### Plot panel comparison MB & EB
+No lo corro
 
 ```{r}
 
