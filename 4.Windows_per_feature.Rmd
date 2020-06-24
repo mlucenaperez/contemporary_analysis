@@ -806,27 +806,59 @@ rm (density_min_values_pairwise_xchr)
 rm (DATAFRAME)
 ```
 
-# Create comparison dataframe.
+# Create comparison dataframe
+
+Creo las tablas tb con los cuadrantes y evolutionary (ND-ND,...) y diversity category (LD, HD).
 
 ```{r}
 create_data_diversity_bootleneck_vs_non_bootleneck <- function(POP1, POP2, name_POP1, name_POP2){
+
 POPULATION1=POP1 %>% select(pop) %>% mutate(Populations=as.character(pop)) %>% .[1,1] 
 POPULATION2=POP2 %>% select(pop) %>% mutate(Populations=as.character(pop)) %>% .[1,1] 
-  data_diversity_POP1_POP2 <- dplyr::inner_join (POP1, POP2, by = c("window_id", "feature", "type_chr", "window", "scaffold_pos1_pos2","divergence_weighted", "recombination_weighted", "GC_content_weighted", "rvis_score_weighted", "functional_sites_percentage_weighted", "centr_percentage_weighted", "tel10m_percentage_weighted", "tel2m_percentage_weighted", "region_collapse", "chr_collapse", "unique_id_collapse")) %>%  
+
+min_non_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POPULATION1) %>% .[1,2] )
+min_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POPULATION2) %>% .[1,2] )
+min_non_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POPULATION1) %>% .[1,2] )
+min_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POPULATION1) %>% .[1,2] )
+
+
+data_diversity_POP1_POP2 <- dplyr::inner_join (POP1, POP2, by = c("window_id", "feature", "type_chr", "window", "scaffold_pos1_pos2","divergence_weighted", "recombination_weighted", "GC_content_weighted", "rvis_score_weighted", "functional_sites_percentage_weighted", "centr_percentage_weighted", "tel10m_percentage_weighted", "tel2m_percentage_weighted", "region_collapse", "chr_collapse", "unique_id_collapse")) %>%  
+   mutate (evolution_category_pairwise=
+            ifelse (log10(ave_pairwise.x)>min_non_bootleneck_pop_value_pairwise & log10(ave_pairwise.y)>min_bootleneck_pop_value_pairwise, "D_D_pairwise",
+            ifelse (log10(ave_pairwise.x)>min_non_bootleneck_pop_value_pairwise & log10(ave_pairwise.y)<min_bootleneck_pop_value_pairwise, "D_ND_pairwise",
+            ifelse (log10(ave_pairwise.x)<min_non_bootleneck_pop_value_pairwise & log10(ave_pairwise.y)<min_bootleneck_pop_value_pairwise, "ND_ND_pairwise",
+            ifelse (log10(ave_pairwise.x)<min_non_bootleneck_pop_value_pairwise & log10(ave_pairwise.y)>min_bootleneck_pop_value_pairwise, "ND_D_pairwise",NA))))) %>% 
+  mutate (diversity_category_pairwise=
+            ifelse (log10(ave_pairwise.x)>min_non_bootleneck_pop_value_pairwise, "HD_pairwise",
+            ifelse (log10(ave_pairwise.x)<min_non_bootleneck_pop_value_pairwise, "LD_pairwise",NA)))%>% 
+  mutate (evolution_category_watterson=
+            ifelse (log10(ave_watterson.x)>min_non_bootleneck_pop_value_watterson & log10(ave_watterson.y)>min_bootleneck_pop_value_watterson, "D_D_watterson",
+            ifelse (log10(ave_watterson.x)>min_non_bootleneck_pop_value_watterson & log10(ave_watterson.y)<min_bootleneck_pop_value_watterson, "D_ND_watterson",
+            ifelse (log10(ave_watterson.x)<min_non_bootleneck_pop_value_watterson & log10(ave_watterson.y)<min_bootleneck_pop_value_watterson, "ND_ND_watterson",
+            ifelse (log10(ave_watterson.x)<min_non_bootleneck_pop_value_watterson & log10(ave_watterson.y)>min_bootleneck_pop_value_watterson, "ND_D_watterson",NA))))) %>% 
+  mutate (diversity_category_watterson=
+            ifelse (log10(ave_watterson.x)>min_non_bootleneck_pop_value_watterson, "HD_watterson",
+            ifelse (log10(ave_watterson.x)<min_non_bootleneck_pop_value_watterson, "LD_watterson",NA)))%>% 
   # Calculo el delta 
-dplyr::mutate (delta_pairwise = (as.numeric(ave_pairwise.y) - as.numeric(ave_pairwise.x))) %>%
-dplyr::mutate (delta_watterson = (as.numeric(ave_watterson.y) - as.numeric(ave_watterson.x))) %>% 
-dplyr::mutate (delta_pairwise_corrected = (as.numeric(ave_pairwise.y) - as.numeric(ave_pairwise.x))/(as.numeric(ave_pairwise.y) + as.numeric(ave_pairwise.x))) %>% 
-dplyr::mutate (delta_watterson_corrected = ((as.numeric(ave_watterson.y) - as.numeric(ave_watterson.x))/(as.numeric(ave_watterson.y) + as.numeric(ave_watterson.x)))) %>% 
-   # dplyr::mutate (delta_tajimaD=(as.numeric(tajimaD.y)-as.numeric(tajimaD.x))) %>% 
-dplyr::mutate (delta_w_delta_p=delta_watterson_corrected-delta_pairwise_corrected) %>% 
-dplyr::mutate (ratio_pi=(as.numeric(ave_pairwise.y) / as.numeric(ave_pairwise.x))) %>% 
-dplyr::mutate (ratio_watterson=(as.numeric(ave_watterson.y) / as.numeric(ave_watterson.x))) %>% 
+# Antes la calculaba para toda la distribución pero hice un sanity check y comprobé que para los alores que no tienen diversidad delta está sumando, y esta distribución de delta en cuadrantes ND-ND (es decir que no tienen diversidad en ninguna pop) es asimétrica, sumando a veces más valores positivos, o negativos, dependiendo de la comparación. Por lo tanto, lo que hago ahora es convertirla en 0, y de esta manera forma parte de la distribución, pero con valores 0. 
+dplyr::mutate (delta_pairwise = 
+                 ifelse(evolution_category_pairwise=="ND_ND_pairwise", "0", (as.numeric(ave_pairwise.y) - as.numeric(ave_pairwise.x)))) %>%
+dplyr::mutate (delta_watterson = 
+                 ifelse(evolution_category_watterson=="ND_ND_watterson", "0", (as.numeric(ave_watterson.y) - as.numeric(ave_watterson.x)))) %>% 
+dplyr::mutate (delta_pairwise_corrected = 
+                 ifelse(evolution_category_pairwise=="ND_ND_pairwise", "0", (as.numeric(ave_pairwise.y) - as.numeric(ave_pairwise.x))/(as.numeric(ave_pairwise.y) + as.numeric(ave_pairwise.x)))) %>% 
+dplyr::mutate (delta_watterson_corrected = 
+                  ifelse(evolution_category_watterson=="ND_ND_watterson", "0", (as.numeric(ave_watterson.y) - as.numeric(ave_watterson.x))/(as.numeric(ave_watterson.y) + as.numeric(ave_watterson.x)))) %>% 
+# dplyr::mutate (delta_tajimaD=(as.numeric(tajimaD.y)-as.numeric(tajimaD.x))) %>% 
+dplyr::mutate (delta_w_delta_p=as.numeric(delta_watterson_corrected)-as.numeric(delta_pairwise_corrected)) %>% 
+#dplyr::mutate (ratio_pi=(as.numeric(ave_pairwise.y) / as.numeric(ave_pairwise.x))) %>% 
+#dplyr::mutate (ratio_watterson=(as.numeric(ave_watterson.y) / as.numeric(ave_watterson.x))) %>% 
    # Add comparison title  
 dplyr::mutate(comparison=paste(POPULATION1, "-", POPULATION2, sep=""))
   dataframename <- paste (name_POP1, name_POP2, sep="_")
   assign (dataframename, data_diversity_POP1_POP2,.GlobalEnv)
-}
+  }
+
 
 # Autosomes
 # Create data frame
@@ -943,16 +975,83 @@ c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto$feature 
 c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto$feature <- factor (c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto$feature, levels=c("Intergenic", "Gen_promoter", "5UTR", "CDS", "Intron", "3UTR", "lncRNA_promoter", "lncRNA_exons", "lncRNA_intron", "ncRNA", "UCNE"))
 
 
-density_min_values_pairwise <- read.table(paste0(wd_input,"density_min_values_pairwise.txt"), header=T, sep=" ")
-density_min_values_watterson <- read.table(paste0(wd_input,"density_min_values_watterson.txt"), header=T, sep=" ")
+#density_min_values_pairwise <- read.table(paste0(wd_input,"density_min_values_pairwise.txt"), header=T, sep=" ")
+#density_min_values_watterson <- read.table(paste0(wd_input,"density_min_values_watterson.txt"), header=T, sep=" ")
 
 ```
+
+
+### Sanity
+Ya no tiene sentido pq he corregido el valor de delta, asi que ahora siempre será 0 cuando sea ND-ND.
+Lo explico en la Create comparison DF en el apartado de arriba.
+
+```{r}
+# Kir-Nor
+ggplot(data=c_ll_ki_n008_diversity_c_ll_no_n008_diversity_categories_watterson %>% filter(evolution_category=="ND_ND_watterson"), aes(delta_watterson_corrected)) +
+  geom_density()+
+  ggsave(paste0(wd_output, "sanity/density_delta_ND_ND_ki_no.pdf"))
+
+c_ll_ki_n008_diversity_c_ll_no_n008_diversity_categories_watterson_0 <- c_ll_ki_n008_diversity_c_ll_no_n008_diversity_categories_watterson %>%
+  filter(evolution_category=="ND_ND_watterson") %>%
+  mutate(delta_cat=ifelse(delta_watterson_corrected>0,"more_than_cero",
+                   ifelse(delta_watterson_corrected<0,"lesss_than_cero","cero"))) %>%
+  group_by(delta_cat) %>% 
+  summarise(count=n()) 
+write.table(c_ll_ki_n008_diversity_c_ll_no_n008_diversity_categories_watterson_0, paste0(wd_output, "sanity/delta_cat_0_ND_ND_ki_no.csv"))
+
+c_ll_ki_n008_diversity_c_ll_no_n008_diversity_categories_watterson_0 <- c_ll_ki_n008_diversity_c_ll_no_n008_diversity_categories_watterson %>%
+  filter(evolution_category=="ND_ND_watterson") %>%
+  mutate(delta_cat=ifelse(delta_watterson_corrected>0.1,"more_than_0.1","rest_of_distribution")) %>%
+  group_by(delta_cat) %>% 
+  summarise(count=n()) 
+write.table(c_ll_ki_n008_diversity_c_ll_no_n008_diversity_categories_watterson_0, paste0(wd_output, "sanity/delta_cat_0.1_ND_ND_ki_no.csv"))
+
+# Kir-Pol
+ggplot(data=c_ll_ki_n008_diversity_c_ll_po_n008_diversity_categories_watterson %>% filter(evolution_category=="ND_ND_watterson"), aes(delta_watterson_corrected)) +
+  geom_density()+
+  ggsave(paste0(wd_output, "sanity/density_delta_ND_ND_ki_po.pdf"))
+
+c_ll_ki_n008_diversity_c_ll_po_n008_diversity_categories_watterson_0 <- c_ll_ki_n008_diversity_c_ll_po_n008_diversity_categories_watterson %>%
+  filter(evolution_category=="ND_ND_watterson") %>%
+  mutate(delta_cat=ifelse(delta_watterson_corrected>0,"more_than_cero",
+                   ifelse(delta_watterson_corrected<0,"lesss_than_cero","cero"))) %>%
+  group_by(delta_cat) %>% 
+  summarise(count=n()) 
+write.table(c_ll_ki_n008_diversity_c_ll_po_n008_diversity_categories_watterson_0, paste0(wd_output, "sanity/delta_cat_0_ND_ND_ki_po.csv"))
+
+c_ll_ki_n008_diversity_c_ll_po_n008_diversity_categories_watterson_0 <- c_ll_ki_n008_diversity_c_ll_po_n008_diversity_categories_watterson %>%
+  filter(evolution_category=="ND_ND_watterson") %>%
+  mutate(delta_cat=ifelse(delta_watterson_corrected>0.1,"more_than_0.1","rest_of_distribution")) %>%
+  group_by(delta_cat) %>% 
+  summarise(count=n()) 
+write.table(c_ll_ki_n008_diversity_c_ll_po_n008_diversity_categories_watterson_0, paste0(wd_output, "sanity/delta_cat_0.1_ND_ND_ki_po.csv"))
+
+# And-Don
+ggplot(data=c_lp_sm_n012_diversity_c_lp_do_n012_diversity_categories_watterson %>% filter(evolution_category=="ND_ND_watterson"), aes(delta_watterson_corrected)) +
+  geom_density()+
+  ggsave(paste0(wd_output, "sanity/density_delta_ND_ND_sm_do.pdf"))
+
+c_lp_sm_n012_diversity_c_lp_do_n012_diversity_categories_watterson_0 <- c_lp_sm_n012_diversity_c_lp_do_n012_diversity_categories_watterson %>%
+  filter(evolution_category=="ND_ND_watterson") %>%
+  mutate(delta_cat=ifelse(delta_watterson_corrected>0,"more_than_cero",
+                   ifelse(delta_watterson_corrected<0,"lesss_than_cero","cero"))) %>%
+  group_by(delta_cat) %>% 
+  summarise(count=n()) 
+write.table(c_lp_sm_n012_diversity_c_lp_do_n012_diversity_categories_watterson_0, paste0(wd_output, "sanity/delta_cat_0_ND_ND_sm_do.csv"))
+
+c_lp_sm_n012_diversity_c_lp_do_n012_diversity_categories_watterson_0 <- c_lp_sm_n012_diversity_c_lp_do_n012_diversity_categories_watterson %>%
+  filter(evolution_category=="ND_ND_watterson") %>%
+  mutate(delta_cat=ifelse(delta_watterson_corrected>0.1,"more_than_0.1","rest_of_distribution")) %>%
+  group_by(delta_cat) %>% 
+  summarise(count=n()) 
+write.table(c_lp_sm_n012_diversity_c_lp_do_n012_diversity_categories_watterson_0, paste0(wd_output, "sanity/delta_cat_0.1_ND_ND_sm_do.csv"))
+```
+
 
 # DELTA ANALYSIS
 
 ## *Delta distribution
 ```{r}
-
 DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X", "c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X")
 
 for (DATAFRAME in DATAFRAMES) 
@@ -978,23 +1077,23 @@ theme(axis.text.x = element_text(angle=90, hjust=1)) +
 ggsave (paste(wd_output,"delta_distribution/",DATAFRAME,"_delta_watterson_corrected_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
 
  # Plot de la distribución de ratio para cada feature
-  ggplot(get(DATAFRAME)) + 
-aes(x = ratio_watterson) +
-geom_histogram() +
-facet_wrap(~feature, scales = "free")  +
-theme(axis.text.x = element_text(angle=90, hjust=1)) +
-ggsave (paste(wd_output,"delta_distribution/",DATAFRAME,"_ratio_watterson_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
+#   ggplot(get(DATAFRAME)) + 
+# aes(x = ratio_watterson) +
+# geom_histogram() +
+# facet_wrap(~feature, scales = "free")  +
+# theme(axis.text.x = element_text(angle=90, hjust=1)) +
+# ggsave (paste(wd_output,"delta_distribution/",DATAFRAME,"_ratio_watterson_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
 
  
- # PI
-  # Plot de la distribución de delta corregida
- ggplot(get(DATAFRAME), aes(x=(delta_pairwise_corrected))) + 
+# PI
+# Plot de la distribución de delta corregida
+ ggplot(get(DATAFRAME), aes(x=(delta_pairwise_corrected))) +
 geom_histogram() +
 theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
 ggsave (paste(wd_output,"delta_distribution/",DATAFRAME,"_delta_pairwise_corrected_average_distribution.pdf", sep=""))
-  
+
  # Plot de la distribución de delta para cada feature
- ggplot(get(DATAFRAME)) + 
+ ggplot(get(DATAFRAME)) +
 aes(x = delta_pairwise_corrected) +
 geom_histogram() +
 facet_wrap(~feature, scales = "free")  +
@@ -1002,21 +1101,21 @@ theme(axis.text.x = element_text(angle=90, hjust=1)) +
 ggsave (paste(wd_output,"delta_distribution/",DATAFRAME,"_delta_pairwise_corrected_average_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
 
 # Plot de la distribución de ratio para cada feature
-
- ggplot(get(DATAFRAME)) + 
-aes(x = ratio_pi) +
-geom_histogram() +
-facet_wrap(~feature, scales = "free")  +
-theme(axis.text.x = element_text(angle=90, hjust=1)) +
-ggsave (paste(wd_output,"delta_distribution/",DATAFRAME,"_ratio_pairwise_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
-
-  
+# 
+#  ggplot(get(DATAFRAME)) +
+# aes(x = ratio_pi) +
+# geom_histogram() +
+# facet_wrap(~feature, scales = "free")  +
+# theme(axis.text.x = element_text(angle=90, hjust=1)) +
+# ggsave (paste(wd_output,"delta_distribution/",DATAFRAME,"_ratio_pairwise_distribution_per_feature.pdf", sep=""), width = 25, height = 25, units = "cm")
+# 
+#   
  # Delta delta
  
   ggplot(get(DATAFRAME), aes(x=(delta_w_delta_p))) + 
 geom_histogram() +
 theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-ggsave (paste(wd_output,DATAFRAME,"_delta_D_distribution.pdf", sep=""))
+ggsave (paste(wd_output,"delta_distribution/",DATAFRAME,"_delta_D_distribution.pdf", sep=""))
   # Plot de la distribución de delta para cada feature
  ggplot(get(DATAFRAME)) + 
 aes(x = delta_w_delta_p) +
@@ -1027,7 +1126,6 @@ ggsave (paste(wd_output,"delta_distribution/",DATAFRAME,"_delta_D_distribution_p
 }
 
 ```
-
 
 ```{r}
 ggplot (data=c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto, aes(log(ave_watterson.x) , delta_watterson_corrected ))+
@@ -1060,6 +1158,7 @@ Como la mayoría son no normales hacemos test de U-Mann Whitney.
 ## U-Mann Whitney delta distribution
 ```{r}
 DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto")
+
 
 for (DATAFRAME in DATAFRAMES) 
 {
@@ -1168,10 +1267,10 @@ comparison_pops_auto_summary <- comparison_pops_auto %>%
    se_mean_delta_watterson = sd(boot(delta_watterson_corrected, sample.wtd.mean, R = 100)$t),
    mean_delta_pairwise=mean(delta_pairwise_corrected, na.rm = TRUE),
    se_mean_delta_pairwise = sd(boot(delta_pairwise_corrected, sample.wtd.mean, R = 100)$t),
-   mean_delta_w_delta_p=mean(delta_w_delta_p, na.rm = TRUE),
+  mean_delta_w_delta_p=mean(delta_w_delta_p, na.rm = TRUE),
    se_mean_delta_w_delta_p = sd(boot(delta_w_delta_p, sample.wtd.mean, R = 100)$t))
    
-write.table(comparison_pops_auto_summary,paste0(wd_output, "df/comparison_pops_auto_delta_summary.csv"), row.names = F, quote = F, sep=";", dec=",")
+write.table(comparison_pops_auto_summary,paste0(wd_output, "df/comparison_pops_auto_delta_summary_ND-ND_0_transformation.csv"), row.names = F, quote = F, sep=";", dec=",")
 
 # Xchr tabla con todas las pops
 comparison_pops_Xchr <- rbind (c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X, c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X, c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X) %>% 
@@ -1314,6 +1413,7 @@ ggsave (paste(wd_output,"delta_pairwise_corrected_all_pops_Xchr_separated.pdf", 
 
 ## *Delta watterson vs genomic variable (lm)
 
+Ahora mismo no lo he corrido a la espera de lo que me diga godoy.
 ```{r}
 DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto")
 FEATURES=c("CDS", "Intron", "Intergenic")
@@ -1332,8 +1432,6 @@ ggplot (get(DATAFRAME) %>% filter (feature=="CDS" | feature=="Intron" | feature=
 }
 }
 #}
-
-
 ```
 #### Modelling
 
@@ -1852,12 +1950,7 @@ ggplot(comparison_pops_auto_GROUPED_BY_DELTA_W_sum,
          strip.text.x = element_text(size = 6, angle = 45),
          legend.position = "none")+
   ggsave(paste(wd_output,ruta_plot,"genomic_varible_vs_delta_binarize_gain_vs_rest_distribution.pdf",sep=""), width = 90, height = 190, units ="mm")
-
-
 ```
-
-
-
 
 ## *Boxplot & mean category
 NO LO CORRO!
@@ -2005,18 +2098,18 @@ plot(m)
 
 ```
 
+# QUADRANT
+# SI SE VUELVE A CORRER MODIFICAR
+En teoría ya no hace falta volver a correr las tablas, porque ya tengo variabe que son evolutionary_watterson y diversity_watterson (y tb para pi) dentro de mis tablas auto. Por tanto, lo que tendría que modificar sería el script. Tb tengo que ordenar factores:
+..$evolution_category_pairwise <- factor (..$evolution_category_pairwise, levels=c("D_ND_pairwise", "D_D_pairwise", "ND_ND_pairwise", "ND_D_pairwise"))
+..$diversity_category <- factor (..$diversity_category, levels=c("HD_pairwise", "LD_pairwise"))
 
-# QUADRANTS
 # --> Create DF: Regions HD-LD 
 
 ```{r}
 RUTA_CUADRANTES<-"cuadrantes/"
 
 DATAFRAMES=c("c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto", "c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto", "c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto")
-
-# "c_lp_sm_n012_diversity_windows_X_c_lp_do_n012_diversity_windows_X" 
-# "c_ll_ki_n008_diversity_windows_X_c_ll_no_n008_diversity_windows_X" 
-# "c_ll_ki_n008_diversity_windows_X_c_ll_po_n008_diversity_windows_X"
 
 for (DATAFRAME in DATAFRAMES) 
 {
@@ -2030,16 +2123,21 @@ for (DATAFRAME in DATAFRAMES)
   min_bootleneck_pop_value_pairwise <- as.numeric(density_min_values_pairwise %>% dplyr::filter(pop==POP2) %>% .[1,2] )
    
   data_diversity_categories_pairwise <- get(DATAFRAME) %>% 
-  mutate (evolution_category=
+  mutate (evolution_category_pairwise=
             ifelse (log10(ave_pairwise.x)>min_non_bootleneck_pop_value_pairwise & log10(ave_pairwise.y)>min_bootleneck_pop_value_pairwise, "D_D_pairwise",
             ifelse (log10(ave_pairwise.x)>min_non_bootleneck_pop_value_pairwise & log10(ave_pairwise.y)<min_bootleneck_pop_value_pairwise, "D_ND_pairwise",
             ifelse (log10(ave_pairwise.x)<min_non_bootleneck_pop_value_pairwise & log10(ave_pairwise.y)<min_bootleneck_pop_value_pairwise, "ND_ND_pairwise",
             ifelse (log10(ave_pairwise.x)<min_non_bootleneck_pop_value_pairwise & log10(ave_pairwise.y)>min_bootleneck_pop_value_pairwise, "ND_D_pairwise",NA))))) %>% 
-  mutate (diversity_category=
+  mutate (diversity_category_pairwise=
             ifelse (log10(ave_pairwise.x)>min_non_bootleneck_pop_value_pairwise, "HD_pairwise",
-            ifelse (log10(ave_pairwise.x)<min_non_bootleneck_pop_value_pairwise, "LD_pairwise",NA)))
+            ifelse (log10(ave_pairwise.x)<min_non_bootleneck_pop_value_pairwise, "LD_pairwise",NA)))%>% 
+    mutate (delta_pairwise_corrected_2=ifelse(evolution_category_pairwise=="ND_ND_pairwise", "0", delta_pairwise_corrected)) %>% 
+    select (-delta_pairwise_corrected) %>% 
+    rename (delta_pairwise_corrected=delta_pairwise_corrected_2)
 
-data_diversity_categories_pairwise$evolution_category <- factor (data_diversity_categories_pairwise$evolution_category, levels=c("D_ND_pairwise", "D_D_pairwise", "ND_ND_pairwise", "ND_D_pairwise"))
+data_diversity_categories_pairwise$delta_pairwise_corrected <- as.numeric(data_diversity_categories_pairwise$delta_pairwise_corrected)
+
+data_diversity_categories_pairwise$evolution_category_pairwise <- factor (data_diversity_categories_pairwise$evolution_category_pairwise, levels=c("D_ND_pairwise", "D_D_pairwise", "ND_ND_pairwise", "ND_D_pairwise"))
 data_diversity_categories_pairwise$diversity_category <- factor (data_diversity_categories_pairwise$diversity_category, levels=c("HD_pairwise", "LD_pairwise"))
 
   assign(paste0(POP1, "_diversity_", POP2, "_diversity_categories_pairwise"), data_diversity_categories_pairwise)
@@ -2053,7 +2151,7 @@ summary1_pairwise <- data_diversity_categories_pairwise %>%
   
   
 summary_pairwise <- data_diversity_categories_pairwise %>% 
-    group_by(evolution_category, feature) %>% 
+    group_by(evolution_category_pairwise, feature) %>% 
     summarise(counts_windows=n()) %>% 
     full_join(summary1_pairwise) %>% 
     mutate (proportion=counts_windows/total*100) %>% 
@@ -2063,7 +2161,7 @@ assign(paste0(POP1, "_diversity_", POP2, "_summary_pairwise"), summary_pairwise)
 #write.table(summary_pairwise, paste0(wd_output,RUTA_CUADRANTES,POP1, "_diversity_", POP2, "_summary_pairwise"), row.names = F, quote=F)
   
     # Plot de las features de interes
-    ggplot(data=data_diversity_categories_pairwise %>% filter (feature %in% c("CDS", "Intron","Intergenic")), aes(x=log10(ave_pairwise.x) ,y=log10(ave_pairwise.y) , colour=evolution_category )) +
+    ggplot(data=data_diversity_categories_pairwise %>% filter (feature %in% c("CDS", "Intron","Intergenic")), aes(x=log10(ave_pairwise.x) ,y=log10(ave_pairwise.y) , colour=evolution_category_pairwise )) +
     geom_point(alpha = 1/100) +
     geom_abline(intercept = 0, color='grey20') +
     geom_hline(yintercept= min_bootleneck_pop_value_pairwise, color='grey20') +
@@ -2078,22 +2176,27 @@ assign(paste0(POP1, "_diversity_", POP2, "_summary_pairwise"), summary_pairwise)
   min_bootleneck_pop_value_watterson <- as.numeric(density_min_values_watterson %>% dplyr::filter(pop==POP2) %>% .[1,2] )
   
   data_diversity_categories_watterson <- get(DATAFRAME) %>% 
-  mutate (evolution_category=
+  mutate (evolution_category_watterson=
             ifelse (log10(ave_watterson.x)>min_non_bootleneck_pop_value_watterson & log10(ave_watterson.y)>min_bootleneck_pop_value_watterson, "D_D_watterson",
             ifelse (log10(ave_watterson.x)>min_non_bootleneck_pop_value_watterson & log10(ave_watterson.y)<min_bootleneck_pop_value_watterson, "D_ND_watterson",
             ifelse (log10(ave_watterson.x)<min_non_bootleneck_pop_value_watterson & log10(ave_watterson.y)<min_bootleneck_pop_value_watterson, "ND_ND_watterson",
             ifelse (log10(ave_watterson.x)<min_non_bootleneck_pop_value_watterson & log10(ave_watterson.y)>min_bootleneck_pop_value_watterson, "ND_D_watterson",NA))))) %>% 
-  mutate (diversity_category=
+  mutate (diversity_category_watterson=
             ifelse (log10(ave_watterson.x)>min_non_bootleneck_pop_value_watterson, "HD_watterson",
-            ifelse (log10(ave_watterson.x)<min_non_bootleneck_pop_value_watterson, "LD_watterson",NA)))
-
-data_diversity_categories_watterson$evolution_category <- factor (data_diversity_categories_watterson$evolution_category, levels=c("D_ND_watterson", "D_D_watterson", "ND_ND_watterson", "ND_D_watterson"))
+            ifelse (log10(ave_watterson.x)<min_non_bootleneck_pop_value_watterson, "LD_watterson",NA))) %>% 
+    mutate (delta_watterson_corrected_2=ifelse(evolution_category_watterson=="ND_ND_watterson", "0", delta_watterson_corrected)) %>% 
+    select (-delta_watterson_corrected) %>% 
+    rename (delta_watterson_corrected=delta_watterson_corrected_2)
+  
+data_diversity_categories_watterson$delta_watterson_corrected <- as.numeric(data_diversity_categories_watterson$delta_watterson_corrected)
+  
+data_diversity_categories_watterson$evolution_category_watterson <- factor (data_diversity_categories_watterson$evolution_category_watterson, levels=c("D_ND_watterson", "D_D_watterson", "ND_ND_watterson", "ND_D_watterson"))
 data_diversity_categories_watterson$diversity_category <- factor (data_diversity_categories_watterson$diversity_category, levels=c("HD_watterson", "LD_watterson"))
 
   assign(paste0(POP1, "_diversity_", POP2, "_diversity_categories_watterson"), data_diversity_categories_watterson)
   
       # Plot de las features de interes
-   ggplot(data=data_diversity_categories_watterson %>% filter (feature %in% c("CDS", "Intron","Intergenic")), aes(x=log10(ave_watterson.x) ,y=log10(ave_watterson.y) , colour=evolution_category )) +
+   ggplot(data=data_diversity_categories_watterson %>% filter (feature %in% c("CDS", "Intron","Intergenic")), aes(x=log10(ave_watterson.x) ,y=log10(ave_watterson.y) , colour=evolution_category_watterson )) +
     geom_point(alpha = 1/100) +
     geom_abline(intercept = 0, color='grey20') +
     geom_hline(yintercept= min_bootleneck_pop_value_watterson, color='grey20') +
@@ -2110,7 +2213,7 @@ summary1_watterson <- data_diversity_categories_watterson %>%
     summarise(total=n()) 
   
 summary_watterson <- data_diversity_categories_watterson %>% 
-    group_by(evolution_category, feature) %>% 
+    group_by(evolution_category_watterson, feature) %>% 
     summarise(counts_windows=n()) %>% 
     full_join(summary1_pairwise) %>% 
     mutate (proportion=counts_windows/total*100) %>% 
@@ -2123,7 +2226,8 @@ assign(paste0(POP1, "_diversity_", POP2, "_summary_watterson"), summary_watterso
 
 ```
 
-# Calculamos porcentajes en cuadrantes
+
+## Calculamos porcentajes en cuadrantes
 ```{r}
 
 windows_quadrant_distribution <- rbind (c_ll_ki_n008_diversity_c_ll_no_n008_summary_pairwise, c_ll_ki_n008_diversity_c_ll_no_n008_summary_watterson, c_ll_ki_n008_diversity_c_ll_po_n008_summary_pairwise, c_ll_ki_n008_diversity_c_ll_po_n008_summary_watterson, c_lp_sm_n012_diversity_c_lp_do_n012_summary_pairwise, c_lp_sm_n012_diversity_c_lp_do_n012_summary_watterson)
