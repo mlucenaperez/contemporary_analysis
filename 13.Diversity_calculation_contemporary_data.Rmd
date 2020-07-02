@@ -151,7 +151,7 @@ data_diversity <- read.table(paste(wd_out, "global.per.unit.averages.chr.all.reg
 # Está bien!
 ```
 ## Modifying dataframe
-##1. Filtering por tamaño y transcritos
+##1.$$ AQUI! Filtering por tamaño y transcritos
 
 ```{r}
 # Ojo los lncRNA tienen más de un trasncrito, así que hay que eliminarlo. 
@@ -167,8 +167,17 @@ all_lncRNA_sum_lenght_repeted_large_length <- all_lncRNA_sum_lenght_repeted %>% 
 # Elimino duplicados en caso de que haya más de un transcrito con la misma longitud, quedandome con uno al azar--> Esta tabla sería la buena, con la que me tengo que quedar, asi que hago antijoin para lograr lo que tengo que tirar. 
 all_lncRNA_sum_lenght_repeted_large_length_no_duplicates <- all_lncRNA_sum_lenght_repeted_large_length[!duplicated(all_lncRNA_sum_lenght_repeted_large_length$id_gene),]
 
+
+# La tabla que me tengo que quedar de los que tienen más de un transcrito.
+all_lncRNA_sum_lenght_repeted_large_length_no_duplicates
+# La tabla de
+
+
 # Selecciono el id de todos estos.
 all_lncRNA_sum_lenght_repeted_large_length_no_duplicates_unique_id  <- dplyr::anti_join(all_lncRNA, all_lncRNA_sum_lenght_repeted_large_length_no_duplicates, by=c("id_gene", "new_id")) %>% dplyr::select("unique_id")
+
+
+
 
 
 data_diversity_pre <- data_diversity %>% ungroup(.) %>%  
