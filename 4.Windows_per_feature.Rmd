@@ -1128,7 +1128,7 @@ ggsave (paste(wd_output,"delta_distribution/",DATAFRAME,"_delta_D_distribution_p
 ```
 
 ```{r}
-ggplot (data=c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto, aes(log(ave_watterson.x) , delta_watterson_corrected ))+
+ggplot (data=c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto, aes(log10(ave_watterson.x) , delta_watterson_corrected))+
   geom_point()+
   geom_smooth()
 ```
@@ -1167,9 +1167,37 @@ for (DATAFRAME in DATAFRAMES)
   POPULATION1=get(DATAFRAME) %>% select(Population.x) %>% mutate(Population.x=as.character(Population.x)) %>% .[1,1] 
   POPULATION2=get(DATAFRAME) %>% select(Population.y) %>% mutate(Population.y=as.character(Population.y)) %>% .[1,1] 
   
-wilcox_test_df <- pairwise.wilcox.test(get(DATAFRAME)$delta_w_delta_p, get(DATAFRAME)$feature, p.adjust.method = "bonferroni") 
+# wilcox_test_df <- pairwise.wilcox.test(get(DATAFRAME)$delta_w_delta_p, get(DATAFRAME)$feature, p.adjust.method = "bonferroni") 
+# 
+# wilcox_test_df_reshape <-melt(wilcox_test_df[[3]]) %>% 
+#   filter (!is.na(value)) %>% 
+#   mutate (SIG=ifelse(value<0.05, "SIGN", "no")) %>% 
+#   mutate (comparison = paste0(POP1,"_", POP2)) %>% 
+#   mutate (method = "wilcox.test") %>% 
+#   mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+#   ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+#   ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+#   select (-comparison)
+# 
+# write.table(format(wilcox_test_df_reshape, digits=8, scientific=T), paste(wd_output,"delta_distribution/",DATAFRAME,"_wilcox_test.txt",sep=""), row.names = F, quote=F)
 
-wilcox_test_df_reshape <-melt(wilcox_test_df[[3]]) %>% 
+# Pi
+wilcox_test_df_delta_pi <- pairwise.wilcox.test(get(DATAFRAME)$delta_pairwise_corrected, get(DATAFRAME)$feature, p.adjust.method = "bonferroni") 
+wilcox_test_df_delta_pi_reshape <-melt(wilcox_test_df_delta_pi[[3]]) %>% 
+  filter (!is.na(value)) %>% 
+  mutate (SIG=ifelse(value<0.05, "SIGN", "no")) %>% 
+  mutate (comparison = paste0(POP1,"_", POP2)) %>% 
+  mutate (method = "wilcox.test") %>% 
+  mutate (pop1_pop2 = ifelse (comparison == "c_ll_ki_n008_c_ll_po_n008", "Kirov_Poland",
+  ifelse (comparison == "c_ll_ki_n008_c_ll_no_n008", "Kirov_Norway",
+  ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
+  select (-comparison)
+write.table(format(wilcox_test_df_delta_pi_reshape, digits=8, scientific=T), paste(wd_output,"delta_distribution/",DATAFRAME,"_delta_pi_wilcox_test.txt",sep=""), row.names = F, quote=F)
+
+# Watterson
+wilcox_test_df_delta_watterson <- pairwise.wilcox.test(get(DATAFRAME)$delta_watterson_corrected, get(DATAFRAME)$feature, p.adjust.method = "bonferroni") 
+
+wilcox_test_df_delta_watterson_reshape <-melt(wilcox_test_df_delta_watterson[[3]]) %>% 
   filter (!is.na(value)) %>% 
   mutate (SIG=ifelse(value<0.05, "SIGN", "no")) %>% 
   mutate (comparison = paste0(POP1,"_", POP2)) %>% 
@@ -1179,8 +1207,7 @@ wilcox_test_df_reshape <-melt(wilcox_test_df[[3]]) %>%
   ifelse (comparison == "c_lp_sm_n012_c_lp_do_n012", "Andujar_Donana", "NA")))) %>% 
   select (-comparison)
 
-write.table(format(wilcox_test_df_reshape, digits=8, scientific=T), paste(wd_output,"delta_distribution/",DATAFRAME,"_wilcox_test.txt",sep=""), row.names = F, quote=F)
-
+write.table(format(wilcox_test_df_delta_watterson_reshape, digits=8, scientific=T), paste(wd_output,"delta_distribution/",DATAFRAME,"_delta_watterson_wilcox_test.txt",sep=""), row.names = F, quote=F)
 }
 
 ```
@@ -1197,6 +1224,19 @@ $RUTA/c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto_wi
 <(tail -n +2 $RUTA/c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto_wilcox_test.txt ) \
 <(tail -n +2 $RUTA/c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto_wilcox_test.txt )  \
 > $RUTA/all_popx_windows_delta_D_distribution_auto_wilcox_test.txt
+
+cat \
+$RUTA/c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto_delta_watterson_wilcox_test.txt \
+<(tail -n +2 $RUTA/c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto_delta_watterson_wilcox_test.txt ) \
+<(tail -n +2 $RUTA/c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto_delta_watterson_wilcox_test.txt )  \
+> $RUTA/all_popx_windows_delta_watterson_distribution_auto_wilcox_test.txt
+
+cat \
+$RUTA/c_lp_sm_n012_diversity_windows_auto_c_lp_do_n012_diversity_windows_auto_delta_pi_wilcox_test.txt \
+<(tail -n +2 $RUTA/c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto_delta_pi_wilcox_test.txt ) \
+<(tail -n +2 $RUTA/c_ll_ki_n008_diversity_windows_auto_c_ll_po_n008_diversity_windows_auto_delta_pi_wilcox_test.txt )  \
+> $RUTA/all_popx_windows_delta_pi_distribution_auto_wilcox_test.txt
+
 ```
 
 <!-- ## *Delta watterson and delta pi per pop and feature. -->
@@ -1494,8 +1534,11 @@ for (DATAFRAME in DATAFRAMES)
          ifelse (delta_w_delta_p > 0.1, "B_deltaD_gain", "rest_of_distribution")) %>% 
   dplyr::mutate (log10_watterson.x=log10(ave_watterson.x)) %>% 
   dplyr::mutate (log10_pairwise.x=log10(ave_pairwise.x))
-      assign(paste0(DATAFRAME, "_GROUPED_BY_DELTA"), group_df) 
+        assign(paste0(DATAFRAME, "_GROUPED_BY_DELTA"), group_df) 
 }
+
+
+c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto_GROUPED_BY_DELTA$GROUP_DELTA_W <- factor (c_ll_ki_n008_diversity_windows_auto_c_ll_no_n008_diversity_windows_auto_GROUPED_BY_DELTA$GROUP_DELTA_W, levels=c("rest_of_distribution", "B_watterson_gain"))
 
 ```
 
@@ -1922,6 +1965,9 @@ comparison_pops_auto_GROUPED_BY_DELTA_W_sum <- drop_na(comparison_pops_auto_GROU
 comparison_pops_auto_GROUPED_BY_DELTA_W_sum$feature <-  factor (comparison_pops_auto_GROUPED_BY_DELTA_W_sum$feature, levels=c("Intrg", "Intron", "CDS"))
 comparison_pops_auto_GROUPED_BY_DELTA_W_sum$comparison <-  factor (comparison_pops_auto_GROUPED_BY_DELTA_W_sum$comparison, levels=c("KIR-POL", "KIR-NOR", "AND-DON"))
 
+comparison_pops_auto_GROUPED_BY_DELTA_W_sum$GROUP_DELTA_W <-  factor (comparison_pops_auto_GROUPED_BY_DELTA_W_sum$GROUP_DELTA_W, levels=c("rest_of_distribution", "B_watterson_gain"))
+
+
 write.table(comparison_pops_auto_GROUPED_BY_DELTA_W_sum,paste0(wd_output, "df/comparison_pops_auto_GROUPED_BY_DELTA_W_summary_gain_vs_rest_distribution.csv"), row.names = F, quote = F, sep=";", dec=",")
 
 ```
@@ -1932,7 +1978,7 @@ write.table(comparison_pops_auto_GROUPED_BY_DELTA_W_sum,paste0(wd_output, "df/co
 ruta_plot <- "plot_article/"
 
 ggplot(comparison_pops_auto_GROUPED_BY_DELTA_W_sum, 
-       aes (GROUP_DELTA_W, mean_value, color=GROUP_DELTA_W, fill=GROUP_DELTA_W)) +
+       aes (GROUP_DELTA_W, mean_value, fill=GROUP_DELTA_W)) +
   facet_grid(genomic_variable~comparison+feature, 
              scales = "free")+
   geom_col() +
@@ -1948,7 +1994,7 @@ ggplot(comparison_pops_auto_GROUPED_BY_DELTA_W_sum,
          axis.text.y = element_text(size=6),
          strip.placement = "outside", 
          strip.text.x = element_text(size = 6, angle = 45),
-         legend.position = "none")+
+         legend.position = "none") +
   ggsave(paste(wd_output,ruta_plot,"genomic_varible_vs_delta_binarize_gain_vs_rest_distribution.pdf",sep=""), width = 90, height = 190, units ="mm")
 ```
 
@@ -2961,7 +3007,7 @@ write.table(all_pops_filtered_LD_gather_sum,paste0(wd_output, "df/comparison_pop
 
 ```
 
-### *Mean HD LD
+### *Mean article HD LD
 
 ```{r}
 ## Mean HD all variables all comparisons ##
