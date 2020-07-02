@@ -121,18 +121,12 @@ unset recombination_rate
 done
 done
 
-
 # Convierto este archivo tsv en un archivo bed
 
 # Elimino los valores negativos, y en algunos csos en los que teanto el mapap genetico como fisico está invertido le doy la vuelta a los valores. 
 
-
 grep -v "-" Felis_catus_v8_recombination_rate.tsv | awk -v OFS='\t' '{if ($4 < $3) print $1,$4,$3,$7,$2; else print $1,$3,$4,$7,$2}' > Felis_catus_v8_recombination_rate.bed
-	 
-
 ```
-
-
 
 Hay 8328 comparaciones
 
@@ -141,10 +135,7 @@ wc -l Felis_catus_v8_recombination_rate.bed
 
 En el txv tengo 8347 valores, por tanto tengo 19 comparaciones que no están, porque tengo 19 cromosomas y el primer valor no se puede comparar con nada. en el bed tengo 7508 porque me he quitado los negativos. 
 
- 
-
 #1. Media de los valores de recombinación sacados por pares, para ventanas de 2Mb
-
 
 ## 1.1 Coordinadas de las ventanas
 
@@ -154,19 +145,14 @@ bedtools makewindows -g /home/mlucena/grupolince/reference_genomes/felis_catus_g
 
 ```
 
-
 ## 1.2 Interseccion con los valores de recombinación por pares de SNPs
 
 ```{bash}
-
 bedtools intersect -a Felis_catus_v8_window_2Mb.bed -b Felis_catus_v8_recombination_rate.bed -wa -wb > Felis_catus_v8_window_2Mb_recombination_rate_all_info.bed
-
 
 wc -l Felis_catus_v8_window_2Mb_recombination_rate_all_info.bed
 # 8762 Felis_catus_v8_window_2Mb_recombination_rate_all_info.bed
-
 ```
-
 
 Si nos fijamos antes había 7508 comparaciones entre SNPs y se han unido en 8762 ventanas, ¿cómo puede haber más?
 
@@ -291,7 +277,6 @@ Algunos, pero no muchos, de todas formas no se afectaría si agrupamos. así que
 ##1.3 Agrupamos en ventanas.
 
 ```{bash}
-
 # Ahora calculamos el recombination rate para cada ventana de 2Mb de la siguiente manera:
 
 bedtools groupby -i Felis_catus_v8_window_2Mb_recombination_rate_all_info.bed -g 1,2,3 -c 7,8 -o mean,distinct > Felis_catus_v8_window_2Mb_recombination_rate.bed
